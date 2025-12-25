@@ -17,12 +17,15 @@
 		10436F0B2EFD1F1E00B368D9 /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EF62EFD1F1E00B368D9 /* NotificationManagerTests.swift */; };
 		10436F0C2EFD1F1E00B368D9 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EEF2EFD1F1E00B368D9 /* NotificationManager.swift */; };
 		10436F0D2EFD1F1E00B368D9 /* MainScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EFA2EFD1F1E00B368D9 /* MainScreenView.swift */; };
-		10436F0E2EFD1F1E00B368D9 /* MealModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EF22EFD1F1E00B368D9 /* MealModels.swift */; };
 		10436F0F2EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436F012EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift */; };
 		10436F102EFD1F1E00B368D9 /* FlowchartWireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EEB2EFD1F1E00B368D9 /* FlowchartWireView.swift */; };
 		10436F112EFD1F1E00B368D9 /* SensoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EF02EFD1F1E00B368D9 /* SensoryService.swift */; };
 		10436F122EFD1F1E00B368D9 /* MainViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EF82EFD1F1E00B368D9 /* MainViewModel.swift */; };
 		10436F132EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436F022EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift */; };
+		21A714312C15D1FB3CEFA46A /* Meal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DF2AC490C77147EF67FA03B /* Meal.swift */; };
+		D62B6A603E9A438FDEE103CB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F266B081A06856F178B950DC /* SettingsView.swift */; };
+		DFF00FA35EA76A89054B4FA4 /* JournalBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA58E7619E6CBC3E85734DE /* JournalBlockView.swift */; };
+		FF0B321DF6484164ADC1CC51 /* SmileyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E379492D3060B285DF914E /* SmileyState.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,6 +46,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		09E379492D3060B285DF914E /* SmileyState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SmileyState.swift; sourceTree = "<group>"; };
 		10436EA32EFD1ADA00B368D9 /* Yoga of Eating.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Yoga of Eating.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		10436EB02EFD1ADB00B368D9 /* Yoga of EatingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Yoga of EatingTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		10436EBA2EFD1ADB00B368D9 /* Yoga of EatingUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Yoga of EatingUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -51,7 +55,6 @@
 		10436EEE2EFD1F1E00B368D9 /* MealLogicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealLogicService.swift; sourceTree = "<group>"; };
 		10436EEF2EFD1F1E00B368D9 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		10436EF02EFD1F1E00B368D9 /* SensoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensoryService.swift; sourceTree = "<group>"; };
-		10436EF22EFD1F1E00B368D9 /* MealModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealModels.swift; sourceTree = "<group>"; };
 		10436EF42EFD1F1E00B368D9 /* MainViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewModelTests.swift; sourceTree = "<group>"; };
 		10436EF52EFD1F1E00B368D9 /* MealLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealLogicTests.swift; sourceTree = "<group>"; };
 		10436EF62EFD1F1E00B368D9 /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
@@ -62,6 +65,9 @@
 		10436EFF2EFD1F1E00B368D9 /* Yoga_of_EatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Yoga_of_EatingTests.swift; sourceTree = "<group>"; };
 		10436F012EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Yoga_of_EatingUITests.swift; sourceTree = "<group>"; };
 		10436F022EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Yoga_of_EatingUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		8DF2AC490C77147EF67FA03B /* Meal.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Meal.swift; sourceTree = "<group>"; };
+		F266B081A06856F178B950DC /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		FEA58E7619E6CBC3E85734DE /* JournalBlockView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = JournalBlockView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,7 +137,8 @@
 		10436EF32EFD1F1E00B368D9 /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				10436EF22EFD1F1E00B368D9 /* MealModels.swift */,
+				8DF2AC490C77147EF67FA03B /* Meal.swift */,
+				09E379492D3060B285DF914E /* SmileyState.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -158,6 +165,8 @@
 			isa = PBXGroup;
 			children = (
 				10436EFA2EFD1F1E00B368D9 /* MainScreenView.swift */,
+				F266B081A06856F178B950DC /* SettingsView.swift */,
+				FEA58E7619E6CBC3E85734DE /* JournalBlockView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -201,6 +210,8 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 10436EC42EFD1ADB00B368D9 /* Build configuration list for PBXNativeTarget "Yoga of Eating" */;
 			buildPhases = (
+				838323E1A1509BFF74CB23C2 /* SwiftFormat */,
+				2E14653B40B3CCB95435C7E0 /* SwiftLint */,
 				10436E9F2EFD1ADA00B368D9 /* Sources */,
 				10436EA02EFD1ADA00B368D9 /* Frameworks */,
 				10436EA12EFD1ADA00B368D9 /* Resources */,
@@ -210,8 +221,6 @@
 			dependencies = (
 			);
 			name = "Yoga of Eating";
-			packageProductDependencies = (
-			);
 			productName = "Yoga of Eating";
 			productReference = 10436EA32EFD1ADA00B368D9 /* Yoga of Eating.app */;
 			productType = "com.apple.product-type.application";
@@ -230,8 +239,6 @@
 				10436EB22EFD1ADB00B368D9 /* PBXTargetDependency */,
 			);
 			name = "Yoga of EatingTests";
-			packageProductDependencies = (
-			);
 			productName = "Yoga of EatingTests";
 			productReference = 10436EB02EFD1ADB00B368D9 /* Yoga of EatingTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -250,8 +257,6 @@
 				10436EBC2EFD1ADB00B368D9 /* PBXTargetDependency */,
 			);
 			name = "Yoga of EatingUITests";
-			packageProductDependencies = (
-			);
 			productName = "Yoga of EatingUITests";
 			productReference = 10436EBA2EFD1ADB00B368D9 /* Yoga of EatingUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -325,6 +330,47 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		2E14653B40B3CCB95435C7E0 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\nif which swiftlint >/dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+		};
+		838323E1A1509BFF74CB23C2 /* SwiftFormat */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftFormat;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\nif which swiftformat >/dev/null; then\n  swiftformat .\nelse\n  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		10436E9F2EFD1ADA00B368D9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -339,12 +385,15 @@
 				10436F0B2EFD1F1E00B368D9 /* NotificationManagerTests.swift in Sources */,
 				10436F0C2EFD1F1E00B368D9 /* NotificationManager.swift in Sources */,
 				10436F0D2EFD1F1E00B368D9 /* MainScreenView.swift in Sources */,
-				10436F0E2EFD1F1E00B368D9 /* MealModels.swift in Sources */,
 				10436F0F2EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift in Sources */,
 				10436F102EFD1F1E00B368D9 /* FlowchartWireView.swift in Sources */,
 				10436F112EFD1F1E00B368D9 /* SensoryService.swift in Sources */,
 				10436F122EFD1F1E00B368D9 /* MainViewModel.swift in Sources */,
 				10436F132EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift in Sources */,
+				21A714312C15D1FB3CEFA46A /* Meal.swift in Sources */,
+				FF0B321DF6484164ADC1CC51 /* SmileyState.swift in Sources */,
+				D62B6A603E9A438FDEE103CB /* SettingsView.swift in Sources */,
+				DFF00FA35EA76A89054B4FA4 /* JournalBlockView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -505,6 +554,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -549,6 +599,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

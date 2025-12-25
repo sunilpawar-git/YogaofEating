@@ -7,42 +7,40 @@ struct FlowchartWire: Shape {
     var amplitude: CGFloat = 10
     var frequency: CGFloat = 2
     var phase: CGFloat // For animation
-    
+
     var animatableData: CGFloat {
-        get { phase }
-        set { phase = newValue }
+        get { self.phase }
+        set { self.phase = newValue }
     }
-    
-    func path(in rect: CGRect) -> Path {
+
+    func path(in _: CGRect) -> Path {
         var path = Path()
-        path.move(to: startPoint)
-        
+        path.move(to: self.startPoint)
+
         let steps = 50
-        for i in 0...steps {
-            let t = CGFloat(i) / CGFloat(steps)
-            let x = startPoint.x + (endPoint.x - startPoint.x) * t
-            let y = startPoint.y + (endPoint.y - startPoint.y) * t
-            
+        for stepIndex in 0...steps {
+            let progress = CGFloat(stepIndex) / CGFloat(steps)
+            let basePointX = self.startPoint.x + (self.endPoint.x - self.startPoint.x) * progress
+            let basePointY = self.startPoint.y + (self.endPoint.y - self.startPoint.y) * progress
+
             // Add squiggly offsets based on sine wave
-            let sineOffset = sin(t * pi * 2 * frequency + phase) * amplitude
-            
+            let sineOffset = sin(progress * .pi * 2 * self.frequency + self.phase) * self.amplitude
+
             // Perpendicular offset for organic feel
-            let dx = endPoint.x - startPoint.x
-            let dy = endPoint.y - startPoint.y
-            let len = sqrt(dx*dx + dy*dy)
-            let ux = -dy / len
-            let uy = dx / len
-            
-            let finalX = x + ux * sineOffset
-            let finalY = y + uy * sineOffset
-            
+            let diffX = self.endPoint.x - self.startPoint.x
+            let diffY = self.endPoint.y - self.startPoint.y
+            let length = sqrt(diffX * diffX + diffY * diffY)
+            let unitX = -diffY / length
+            let unitY = diffX / length
+
+            let finalX = basePointX + unitX * sineOffset
+            let finalY = basePointY + unitY * sineOffset
+
             path.addLine(to: CGPoint(x: finalX, y: finalY))
         }
-        
+
         return path
     }
-    
-    private let pi = CGFloat.pi
 }
 
 /// A view wrapper that animates the FlowchartWire.
@@ -50,13 +48,13 @@ struct FlowchartWireView: View {
     let startPoint: CGPoint
     let endPoint: CGPoint
     @State private var phase: CGFloat = 0
-    
+
     var body: some View {
-        FlowchartWire(startPoint: startPoint, endPoint: endPoint, phase: phase)
+        FlowchartWire(startPoint: self.startPoint, endPoint: self.endPoint, phase: self.phase)
             .stroke(Color.primary.opacity(0.6), style: StrokeStyle(lineWidth: 3, lineCap: .round))
             .onAppear {
                 withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
-                    phase = .pi * 2
+                    self.phase = .pi * 2
                 }
             }
     }

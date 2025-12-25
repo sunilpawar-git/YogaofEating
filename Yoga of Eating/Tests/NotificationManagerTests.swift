@@ -1,58 +1,61 @@
 #if canImport(XCTest)
-import XCTest
-import UserNotifications
+    import UserNotifications
+    import XCTest
 
-final class NotificationManagerTests: XCTestCase {
-    var sut: NotificationManager!
-    var mockCenter: MockNotificationCenter!
-    
-    override func setUp() {
-        super.setUp()
-        mockCenter = MockNotificationCenter()
-        sut = NotificationManager(center: mockCenter)
-    }
-    
-    override func tearDown() {
-        sut = nil
-        mockCenter = nil
-        super.tearDown()
-    }
-    
-    func test_scheduleMorningNudge_createsRequest() {
-        sut.scheduleMorningNudge()
-        
-        XCTAssertEqual(mockCenter.requests.count, 1)
-        let request = mockCenter.requests.first
-        XCTAssertEqual(request?.content.title, "Good Morning!")
-        XCTAssertTrue(request?.trigger is UNCalendarNotificationTrigger)
-    }
-    
-    func test_scheduleMealReminder_createsRequest() {
-        sut.scheduleMealReminder(label: "Lunch", hour: 11, minute: 0)
-        
-        XCTAssertEqual(mockCenter.requests.count, 1)
-        let request = mockCenter.requests.first
-        XCTAssertEqual(request?.content.title, "Meal Time")
-        XCTAssertTrue(request?.content.body.contains("lunch") ?? false)
-    }
-}
+    final class NotificationManagerTests: XCTestCase {
+        var sut: NotificationManager!
+        var mockCenter: MockNotificationCenter!
 
-// Mock for UNUserNotificationCenter
-class MockNotificationCenter: NotificationCenterProtocol {
-    var requests: [UNNotificationRequest] = []
-    
-    func add(_ request: UNNotificationRequest, withCompletionHandler completionHandler: ((Error?) -> Void)?) {
-        requests.append(request)
-        completionHandler?(nil)
+        override func setUp() {
+            super.setUp()
+            self.mockCenter = MockNotificationCenter()
+            self.sut = NotificationManager(center: self.mockCenter)
+        }
+
+        override func tearDown() {
+            self.sut = nil
+            self.mockCenter = nil
+            super.tearDown()
+        }
+
+        func test_scheduleMorningNudge_createsRequest() {
+            self.sut.scheduleMorningNudge()
+
+            XCTAssertEqual(self.mockCenter.requests.count, 1)
+            let request = self.mockCenter.requests.first
+            XCTAssertEqual(request?.content.title, "Good Morning!")
+            XCTAssertTrue(request?.trigger is UNCalendarNotificationTrigger)
+        }
+
+        func test_scheduleMealReminder_createsRequest() {
+            self.sut.scheduleMealReminder(label: "Lunch", hour: 11, minute: 0)
+
+            XCTAssertEqual(self.mockCenter.requests.count, 1)
+            let request = self.mockCenter.requests.first
+            XCTAssertEqual(request?.content.title, "Meal Time")
+            XCTAssertTrue(request?.content.body.contains("lunch") ?? false)
+        }
     }
-    
-    func requestAuthorization(options: UNAuthorizationOptions, completionHandler: @escaping (Bool, Error?) -> Void) {
-        completionHandler(true, nil)
+
+    // Mock for UNUserNotificationCenter
+    class MockNotificationCenter: NotificationCenterProtocol {
+        var requests: [UNNotificationRequest] = []
+
+        func add(_ request: UNNotificationRequest, withCompletionHandler completionHandler: ((Error?) -> Void)?) {
+            self.requests.append(request)
+            completionHandler?(nil)
+        }
+
+        func requestAuthorization(
+            options _: UNAuthorizationOptions,
+            completionHandler: @escaping (Bool, Error?) -> Void
+        ) {
+            completionHandler(true, nil)
+        }
+
+        func removeAllPendingNotificationRequests() {
+            self.requests.removeAll()
+        }
     }
-    
-    func removeAllPendingNotificationRequests() {
-        requests.removeAll()
-    }
-}
 
 #endif
