@@ -8,9 +8,9 @@ enum MealType: String, Codable, CaseIterable {
     case snacks
     case drinks
 
-    /// Returns suggested meal type based on current time
-    static func suggestedMealType() -> MealType {
-        let hour = Calendar.current.component(.hour, from: Date())
+    /// Returns suggested meal type based on the provided date
+    static func suggestedMealType(for date: Date = Date()) -> MealType {
+        let hour = Calendar.current.component(.hour, from: date)
 
         switch hour {
         case 6..<11:

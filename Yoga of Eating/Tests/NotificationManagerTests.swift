@@ -1,7 +1,9 @@
 #if canImport(XCTest)
     import UserNotifications
     import XCTest
+    @testable import Yoga_of_Eating
 
+    @MainActor
     final class NotificationManagerTests: XCTestCase {
         var sut: NotificationManager!
         var mockCenter: MockNotificationCenter!
@@ -38,7 +40,8 @@
     }
 
     // Mock for UNUserNotificationCenter
-    class MockNotificationCenter: NotificationCenterProtocol {
+    @MainActor
+    final class MockNotificationCenter: NotificationCenterProtocol {
         var requests: [UNNotificationRequest] = []
 
         func add(_ request: UNNotificationRequest, withCompletionHandler completionHandler: ((Error?) -> Void)?) {

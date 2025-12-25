@@ -1,5 +1,6 @@
 #if canImport(XCTest)
     import XCTest
+    @testable import Yoga_of_Eating
 
     @MainActor
     final class MainViewModelTests: XCTestCase {
@@ -20,7 +21,7 @@
 
         func test_initialState_isNeutral() {
             XCTAssertEqual(self.sut.smileyState.scale, 1.0)
-            XCTAssertEqual(self.sut.smileyState.mood, .serene)
+            XCTAssertEqual(self.sut.smileyState.mood, .neutral)
             XCTAssertTrue(self.sut.meals.isEmpty)
         }
 
@@ -37,8 +38,36 @@
             self.sut.updateMeal(mealId, description: "Salad")
 
             XCTAssertEqual(self.sut.meals.count, 1)
-            XCTAssertEqual(self.sut.meals.first?.description, "Salad")
+            XCTAssertEqual(self.sut.meals.first?.items, ["Salad"])
             XCTAssertEqual(self.sut.smileyState.scale, 0.9)
+        }
+
+        func test_updatingMeal_withTypeAndItems_updatesCorrectly() throws {
+            self.sut.createNewMeal()
+            let mealId = try XCTUnwrap(self.sut.meals.first).id
+
+            self.sut.updateMeal(mealId, mealType: .dinner, items: ["Soup", "Bread"])
+
+            XCTAssertEqual(self.sut.meals.first?.mealType, .dinner)
+            XCTAssertEqual(self.sut.meals.first?.items, ["Soup", "Bread"])
+        }
+
+        func test_deletingMeal_updatesState() throws {
+            self.sut.createNewMeal()
+            let mealId = try XCTUnwrap(self.sut.meals.first).id
+
+            self.sut.deleteMeal(mealId)
+
+            XCTAssertTrue(self.sut.meals.isEmpty)
+            XCTAssertEqual(self.sut.smileyState.mood, .neutral)
+        }
+
+        func test_resetDay_clearsEverything() {
+            self.sut.createNewMeal()
+            self.sut.resetDay()
+
+            XCTAssertTrue(self.sut.meals.isEmpty)
+            XCTAssertEqual(self.sut.smileyState.mood, .neutral)
         }
     }
 
