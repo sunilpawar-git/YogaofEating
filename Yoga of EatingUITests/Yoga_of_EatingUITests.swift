@@ -1,3 +1,4 @@
+#if canImport(XCTest)
 //
 //  Yoga_of_EatingUITests.swift
 //  Yoga of EatingUITests
@@ -39,3 +40,5 @@ final class Yoga_of_EatingUITests: XCTestCase {
         }
     }
 }
+
+#endif

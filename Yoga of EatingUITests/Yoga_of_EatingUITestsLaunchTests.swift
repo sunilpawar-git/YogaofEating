@@ -1,3 +1,4 @@
+#if canImport(XCTest)
 //
 //  Yoga_of_EatingUITestsLaunchTests.swift
 //  Yoga of EatingUITests
@@ -31,3 +32,5 @@ final class Yoga_of_EatingUITestsLaunchTests: XCTestCase {
         add(attachment)
     }
 }
+
+#endif
