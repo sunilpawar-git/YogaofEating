@@ -4,6 +4,7 @@ import Foundation
 /// Adapts the Smiley's state based on meal choices.
 protocol MealLogicProvider {
     func calculateHealthScore(for description: String) -> Double
+    func calculateHealthScore(for items: [String]) -> Double
     func calculateNextState(from currentState: SmileyState, healthScore: Double) -> SmileyState
 }
 
@@ -27,6 +28,16 @@ class MealLogicService: MealLogicProvider {
         }
 
         return max(0.0, min(1.0, score))
+    }
+
+    /// Calculates aggregate health score for multiple items.
+    /// Returns average score across all items.
+    func calculateHealthScore(for items: [String]) -> Double {
+        guard !items.isEmpty else { return 0.5 }
+
+        let scores = items.map { self.calculateHealthScore(for: $0) }
+        let totalScore = scores.reduce(0.0, +)
+        return totalScore / Double(scores.count)
     }
 
     /// Determines the next scale and mood for the Smiley.

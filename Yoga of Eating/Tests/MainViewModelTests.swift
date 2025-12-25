@@ -51,6 +51,11 @@
             self.mockScore
         }
 
+        func calculateHealthScore(for items: [String]) -> Double {
+            guard !items.isEmpty else { return 0.5 }
+            return self.mockScore
+        }
+
         func calculateNextState(from _: SmileyState, healthScore _: Double) -> SmileyState {
             self.nextState
         }

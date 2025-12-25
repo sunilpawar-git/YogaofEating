@@ -15,8 +15,8 @@ struct MainScreenView: View {
                     self.backgroundGradient
                         .ignoresSafeArea()
 
-                    ScrollViewReader { proxy in
-                        ScrollView {
+                    ScrollView(showsIndicators: false) {
+                        ScrollViewReader { proxy in
                             VStack(spacing: 0) {
                                 // Date Header
                                 Text(self.formattedDate)
@@ -29,17 +29,33 @@ struct MainScreenView: View {
                                 ZStack(alignment: .top) {
                                     // The "Life Line"
                                     Rectangle()
-                                        .fill(Color.primary.opacity(0.1))
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [.primary.opacity(0.1), .primary.opacity(0.05)],
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            )
+                                        )
                                         .frame(width: 2)
-                                        .padding(.vertical, 20)
+                                        .padding(.top, 20)
+                                        .frame(maxHeight: .infinity)
 
                                     VStack(spacing: 30) {
                                         ForEach(self.viewModel.meals) { meal in
                                             JournalBlockView(
                                                 meal: meal,
                                                 isBreathing: self.breathingMeals.contains(meal.id),
-                                                onUpdate: { newText in
-                                                    self.viewModel.updateMeal(meal.id, description: newText)
+                                                onUpdate: { mealType, newItems in
+                                                    self.viewModel.updateMeal(
+                                                        meal.id,
+                                                        mealType: mealType,
+                                                        items: newItems
+                                                    )
+                                                },
+                                                onDelete: {
+                                                    withAnimation(.spring()) {
+                                                        self.viewModel.deleteMeal(meal.id)
+                                                    }
                                                 }
                                             )
                                             .id(meal.id)
@@ -55,12 +71,21 @@ struct MainScreenView: View {
 
                                 Spacer(minLength: 100)
                             }
-                        }
-                        .onChange(of: self.viewModel.meals.count) { _, _ in
-                            withAnimation {
-                                proxy.scrollTo("bottom", anchor: .bottom)
+                            .onChange(of: self.viewModel.meals.count) { _, _ in
+                                withAnimation {
+                                    proxy.scrollTo("bottom", anchor: .bottom)
+                                }
                             }
                         }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder),
+                            to: nil,
+                            from: nil,
+                            for: nil
+                        )
                     }
                 }
             }
