@@ -37,42 +37,38 @@ class MainViewModel: ObservableObject {
         }
     }
     
-    /// Adds or updates a meal for a specific type.
-    func addMeal(description: String, type: MealType) {
-        // Ensure we are on a fresh slate if the day changed while app was in background
+    /// Adds a new empty meal entry. Triggered by tapping the Smiley.
+    func createNewMeal() {
         checkAndResetIfNewDay()
-        
-        let healthScore = logicService.calculateHealthScore(for: description)
-        
-        let newMeal = Meal(
-            type: type,
-            description: description,
-            healthScore: healthScore
-        )
-        
-        // Overwrite if meal for this type already exists for today
-        if let index = meals.firstIndex(where: { $0.type == type }) {
-            meals[index] = newMeal
-        } else {
+        let newMeal = Meal()
+        withAnimation(.spring()) {
             meals.append(newMeal)
         }
+    }
+    
+    /// Updates an existing meal's description and recalculates health.
+    func updateMeal(_ mealId: UUID, description: String) {
+        guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
         
-        // Update Smiley state based on this meal
+        let healthScore = logicService.calculateHealthScore(for: description)
+        meals[index].description = description
+        meals[index].healthScore = healthScore
+        
+        // Update Smiley state based on the CUMULATIVE health of the day
+        // For simplicity, we'll take the average health score or the latest impact
+        updateSmileyState(with: healthScore)
+    }
+    
+    private func updateSmileyState(with healthScore: Double) {
         let nextState = logicService.calculateNextState(from: smileyState, healthScore: healthScore)
         
         // Sensory Feedback
         SensoryService.shared.playNudge(style: healthScore < 0.4 ? .heavy : .light)
         SensoryService.shared.playSound(for: nextState.scale)
         
-        // Smoothly update smiley state
         withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
             self.smileyState = nextState
         }
-    }
-    
-    /// Returns the current meal description for a specific type, if any.
-    func mealDescription(for type: MealType) -> String {
-        return meals.first(where: { $0.type == type })?.description ?? ""
     }
     
     /// Resets the day's progress (at midnight or via manual reset).

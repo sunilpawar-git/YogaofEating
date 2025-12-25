@@ -28,7 +28,7 @@ final class NotificationManagerTests: XCTestCase {
     }
     
     func test_scheduleMealReminder_createsRequest() {
-        sut.scheduleMealReminder(for: .lunch, hour: 11, minute: 0)
+        sut.scheduleMealReminder(label: "Lunch", hour: 11, minute: 0)
         
         XCTAssertEqual(mockCenter.requests.count, 1)
         let request = mockCenter.requests.first

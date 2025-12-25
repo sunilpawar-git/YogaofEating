@@ -1,26 +1,18 @@
 import Foundation
 
 /// Represents a single meal entry in the "Yoga of Eating".
-struct Meal: Identifiable, Codable {
+struct Meal: Identifiable, Codable, Equatable {
     let id: UUID
     let timestamp: Date
-    let type: MealType
-    let description: String
-    let healthScore: Double // 0.0 (unhealthy) to 1.0 (very healthy)
+    var description: String
+    var healthScore: Double // 0.0 (unhealthy) to 1.0 (very healthy)
     
-    init(id: UUID = UUID(), timestamp: Date = Date(), type: MealType, description: String, healthScore: Double) {
+    init(id: UUID = UUID(), timestamp: Date = Date(), description: String = "", healthScore: Double = 0.5) {
         self.id = id
         self.timestamp = timestamp
-        self.type = type
         self.description = description
         self.healthScore = healthScore
     }
-}
-
-enum MealType: String, Codable, CaseIterable {
-    case breakfast
-    case lunch
-    case dinner
 }
 
 /// Represents the visual and physiological state of the Smiley friend.

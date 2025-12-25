@@ -45,10 +45,10 @@ class NotificationManager {
     }
     
     /// Individual meal reminders.
-    func scheduleMealReminder(for type: MealType, hour: Int, minute: Int) {
+    func scheduleMealReminder(label: String, hour: Int, minute: Int) {
         let content = UNMutableNotificationContent()
         content.title = "Meal Time"
-        content.body = "What are you planning for \(type.rawValue.lowercased())? Let your friend know."
+        content.body = "What are you planning for \(label.lowercased())? Let your friend know."
         content.sound = .default
         
         var dateComponents = DateComponents()
@@ -56,7 +56,7 @@ class NotificationManager {
         dateComponents.minute = minute
         
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-        let request = UNNotificationRequest(identifier: "meal_reminer_\(type.rawValue)", content: content, trigger: trigger)
+        let request = UNNotificationRequest(identifier: "meal_reminder_\(label)", content: content, trigger: trigger)
         
         center.add(request, withCompletionHandler: nil)
     }

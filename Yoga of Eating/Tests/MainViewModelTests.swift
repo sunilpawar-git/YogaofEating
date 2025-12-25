@@ -28,7 +28,13 @@ final class MainViewModelTests: XCTestCase {
         mockLogic.mockScore = 0.9
         mockLogic.nextState = SmileyState(scale: 0.9, mood: .serene)
         
-        sut.addMeal(description: "Salad", type: .lunch)
+        sut.createNewMeal()
+        guard let mealId = sut.meals.first?.id else {
+            XCTFail("Meal not created")
+            return
+        }
+        
+        sut.updateMeal(mealId, description: "Salad")
         
         XCTAssertEqual(sut.meals.count, 1)
         XCTAssertEqual(sut.meals.first?.description, "Salad")
