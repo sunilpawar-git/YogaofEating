@@ -1,5 +1,10 @@
+import AudioToolbox
 import AVFoundation
-import UIKit
+#if canImport(UIKit)
+    import UIKit
+#elseif canImport(AppKit)
+    import AppKit
+#endif
 
 /// Handles high-fidelity sensory feedback for a "Yoga" feel.
 class SensoryService {
@@ -8,23 +13,77 @@ class SensoryService {
     private var audioPlayer: AVAudioPlayer?
 
     private init() {
-        // Pre-configure audio session
-        try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
-        try? AVAudioSession.sharedInstance().setActive(true)
+        #if canImport(UIKit)
+            // Pre-configure audio session (iOS only)
+            try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
+            try? AVAudioSession.sharedInstance().setActive(true)
+        #endif
     }
 
     /// Provides a mindful haptic "nudge".
-    func playNudge(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
-        let generator = UIImpactFeedbackGenerator(style: style)
-        generator.prepare()
-        generator.impactOccurred()
+    func playNudge(style: FeedbackStyle = .medium) {
+        #if canImport(UIKit)
+            let generator = UIImpactFeedbackGenerator(style: style.uiStyle)
+            generator.prepare()
+            generator.impactOccurred()
+        #elseif canImport(AppKit)
+            // macOS haptic feedback
+            let performer = NSHapticFeedbackManager.defaultPerformer
+            let hapticStyle: NSHapticFeedbackManager.FeedbackPattern = switch style {
+            case .light:
+                .generic
+            case .medium:
+                .alignment
+            case .heavy, .soft:
+                .levelChange
+            }
+            performer.perform(hapticStyle, performanceTime: .default)
+        #endif
     }
 
-    /// Plays a low-frequency mindful sound.
-    func playSound(for scale: Double) {
-        // In a real app, we'd load a small .wav file.
-        // For this demo, we use a system sound or a simplified trigger.
-        let systemSoundID: SystemSoundID = scale > 1.0 ? 1057 : 1103 // Thump vs Tink
+    /// Cross-platform feedback style enum
+    enum FeedbackStyle {
+        case light
+        case medium
+        case heavy
+        case soft
+
+        #if canImport(UIKit)
+            var uiStyle: UIImpactFeedbackGenerator.FeedbackStyle {
+                switch self {
+                case .light:
+                    .light
+                case .medium:
+                    .medium
+                case .heavy:
+                    .heavy
+                case .soft:
+                    .medium
+                }
+            }
+        #endif
+    }
+
+    /// Plays a system sound based on AI suggestions
+    func playSound(named soundName: String) {
+        let systemSoundID: SystemSoundID = switch soundName.lowercased() {
+        case "chime":
+            1016
+        case "thump":
+            1057
+        case "tink":
+            1103
+        case "heavy_thump":
+            1050
+        default:
+            1103
+        }
         AudioServicesPlaySystemSound(systemSoundID)
+    }
+
+    /// Legacy method for scale-based sounds
+    func playSound(for scale: Double) {
+        let soundName = scale > 1.0 ? "thump" : "tink"
+        self.playSound(named: soundName)
     }
 }

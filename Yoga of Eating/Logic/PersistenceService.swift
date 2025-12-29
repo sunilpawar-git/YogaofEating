@@ -2,7 +2,7 @@ import Foundation
 
 /// Handles persistent storage of app data using JSON files.
 /// Saves meals and smiley state to the documents directory.
-class PersistenceService {
+class PersistenceService: PersistenceServiceProtocol {
     static let shared = PersistenceService()
 
     private let fileName = "yoga_of_eating_data.json"

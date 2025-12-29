@@ -15,6 +15,7 @@ extension UNUserNotificationCenter: NotificationCenterProtocol {}
 
 /// Manages mindful nudges and meal planning reminders.
 class NotificationManager {
+    static let shared = NotificationManager()
     private let center: NotificationCenterProtocol
 
     init(center: NotificationCenterProtocol = UNUserNotificationCenter.current()) {
@@ -33,6 +34,10 @@ class NotificationManager {
 
     /// The "Morning Nudge" to plan the day's meals.
     func scheduleMorningNudge() {
+        guard UserDefaults.standard.bool(forKey: "morning_nudge_enabled") else {
+            return
+        }
+
         let content = UNMutableNotificationContent()
         content.title = "Good Morning!"
         content.body = "Time to plan your mindful meals for today. The Smiley is waiting for you 🙂"
@@ -49,6 +54,10 @@ class NotificationManager {
 
     /// Individual meal reminders.
     func scheduleMealReminder(label: String, hour: Int, minute: Int) {
+        guard UserDefaults.standard.bool(forKey: "meal_reminders_enabled") else {
+            return
+        }
+
         let content = UNMutableNotificationContent()
         content.title = "Meal Time"
         content.body = "What are you planning for \(label.lowercased())? Let your friend know."
@@ -62,5 +71,10 @@ class NotificationManager {
         let request = UNNotificationRequest(identifier: "meal_reminder_\(label)", content: content, trigger: trigger)
 
         self.center.add(request, withCompletionHandler: nil)
+    }
+
+    /// Clears all pending notifications.
+    func cancelAllNotifications() {
+        self.center.removeAllPendingNotificationRequests()
     }
 }

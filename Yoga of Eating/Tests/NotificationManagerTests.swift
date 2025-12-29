@@ -12,11 +12,20 @@
             super.setUp()
             self.mockCenter = MockNotificationCenter()
             self.sut = NotificationManager(center: self.mockCenter)
+
+            // Enable notification settings for tests
+            UserDefaults.standard.set(true, forKey: "morning_nudge_enabled")
+            UserDefaults.standard.set(true, forKey: "meal_reminders_enabled")
         }
 
         override func tearDown() {
             self.sut = nil
             self.mockCenter = nil
+
+            // Clean up UserDefaults
+            UserDefaults.standard.removeObject(forKey: "morning_nudge_enabled")
+            UserDefaults.standard.removeObject(forKey: "meal_reminders_enabled")
+
             super.tearDown()
         }
 
