@@ -56,27 +56,18 @@ struct JournalBlockView: View {
                     // We remove the explicit Divider view for minimalism
 
                     VStack(alignment: .leading, spacing: 4) {
-                        // Multi-line text editor for items - Serif, slightly larger
-                        TextEditor(text: self.$rawText)
+                        // Multi-line text field for items - Serif, slightly larger
+                        TextField("What are you eating?", text: self.$rawText, axis: .vertical)
                             .font(.system(size: 17, weight: .regular, design: .serif))
-                            .frame(minHeight: 44) // Smaller minimum height
-                            .scrollContentBackground(.hidden)
+                            .foregroundColor(.primary)
+                            .tint(.blue)
                             .focused(self.$isFocused)
                             .onChange(of: self.rawText) { _, newValue in
                                 let items = self.parseItems(from: newValue)
                                 self.onUpdate(self.selectedMealType, items)
                             }
-                            .toolbar {
-                                ToolbarItemGroup(placement: .keyboard) {
-                                    Spacer()
-                                    Button("Done") {
-                                        self.isFocused = false
-                                    }
-                                    .fontWeight(.semibold)
-                                }
-                            }
 
-                        // Footer: Item counter and Done button
+                        // Footer: Item counter only
                         HStack {
                             if !self.parsedItems.isEmpty {
                                 Text("\(self.parsedItems.count) item\(self.parsedItems.count == 1 ? "" : "s")")
@@ -85,23 +76,8 @@ struct JournalBlockView: View {
                             }
 
                             Spacer()
-
-                            if self.isFocused {
-                                Button {
-                                    self.isFocused = false
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Text("Done")
-                                        Image(systemName: "checkmark.circle.fill")
-                                    }
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                                    .foregroundColor(.blue)
-                                }
-                                .transition(.scale.combined(with: .opacity))
-                            }
                         }
                         .padding(.top, 4)
-                        .animation(.spring(response: 0.3), value: self.isFocused)
                     }
                 }
             }
