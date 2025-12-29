@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(AppKit)
+    import AppKit
+#endif
 
 @MainActor
 struct MainScreenView: View {
@@ -6,6 +9,7 @@ struct MainScreenView: View {
     @State private var breathingMeals: Set<UUID> = []
 
     @State private var showingSettings = false
+    @FocusState private var isAnyFieldFocused: Bool
 
     var body: some View {
         NavigationStack {
@@ -79,26 +83,48 @@ struct MainScreenView: View {
                         }
                     }
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        UIApplication.shared.sendAction(
-                            #selector(UIResponder.resignFirstResponder),
-                            to: nil,
-                            from: nil,
-                            for: nil
-                        )
-                    }
+                    #if canImport(UIKit)
+                        .onTapGesture {
+                            UIApplication.shared.sendAction(
+                                #selector(UIResponder.resignFirstResponder),
+                                to: nil,
+                                from: nil,
+                                for: nil
+                            )
+                        }
+                    #endif
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        self.showingSettings = true
-                    } label: {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.secondary.opacity(0.6))
+                #if canImport(UIKit)
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            self.showingSettings = true
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.secondary.opacity(0.6))
+                        }
                     }
-                }
+
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            self.isAnyFieldFocused = false
+                        }
+                        .fontWeight(.semibold)
+                    }
+                #elseif canImport(AppKit)
+                    ToolbarItem(placement: .automatic) {
+                        Button {
+                            self.showingSettings = true
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.secondary.opacity(0.6))
+                        }
+                    }
+                #endif
             }
             .sheet(isPresented: self.$showingSettings) {
                 SettingsView()
@@ -108,8 +134,8 @@ struct MainScreenView: View {
 
     private var smileyAddButton: some View {
         VStack(spacing: 12) {
-            SmileyRealityView(state: self.viewModel.smileyState)
-                .frame(width: 140, height: 140)
+            SmileyView(state: self.viewModel.smileyState)
+                .frame(width: 160, height: 160)
                 .onTapGesture {
                     self.viewModel.createNewMeal()
                     SensoryService.shared.playNudge(style: .medium)
@@ -125,7 +151,11 @@ struct MainScreenView: View {
 
     private var backgroundGradient: some View {
         ZStack {
-            Color(UIColor.systemBackground)
+            #if canImport(AppKit)
+                Color(NSColor.controlBackgroundColor)
+            #else
+                Color(uiColor: .systemBackground)
+            #endif
             LinearGradient(
                 colors: [
                     Color.orange.opacity(0.05),
