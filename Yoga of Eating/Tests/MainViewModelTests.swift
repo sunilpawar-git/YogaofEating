@@ -6,16 +6,19 @@
     final class MainViewModelTests: XCTestCase {
         var sut: MainViewModel!
         var mockLogic: MockMealLogicService!
+        var mockPersistence: MockPersistenceService!
 
         override func setUp() {
             super.setUp()
             self.mockLogic = MockMealLogicService()
-            self.sut = MainViewModel(logicService: self.mockLogic)
+            self.mockPersistence = MockPersistenceService()
+            self.sut = MainViewModel(logicService: self.mockLogic, persistenceService: self.mockPersistence)
         }
 
         override func tearDown() {
             self.sut = nil
             self.mockLogic = nil
+            self.mockPersistence = nil
             super.tearDown()
         }
 
@@ -87,6 +90,24 @@
 
         func calculateNextState(from _: SmileyState, healthScore _: Double) -> SmileyState {
             self.nextState
+        }
+    }
+
+    // Mock Persistence Service for Testing
+    class MockPersistenceService: PersistenceServiceProtocol {
+        var savedData: PersistenceService.AppData?
+
+        func load() -> PersistenceService.AppData? {
+            // Return nil for tests to start with clean state
+            nil
+        }
+
+        func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date) {
+            self.savedData = PersistenceService.AppData(
+                meals: meals,
+                smileyState: smileyState,
+                lastResetDate: lastResetDate
+            )
         }
     }
 
