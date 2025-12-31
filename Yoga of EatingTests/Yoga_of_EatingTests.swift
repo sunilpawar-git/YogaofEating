@@ -5,8 +5,21 @@
 //
     //  Created by Sunil Pawar on 25/12/25.
 //
+    //  NOTE: This is the main test file. All other test files in the "Yoga of EatingTests" target
+    //  are automatically discovered by XCTest. Test files include:
+    //  - MainViewModelTests.swift
+    //  - MainViewModelAIAnalysisTests.swift
+    //  - AILogicServiceTests.swift
+    //  - AuthServiceTests.swift
+    //  - SensoryServiceTests.swift
+    //  - MealTests.swift
+    //  - PersistenceServiceTests.swift
+    //  - SmileyViewTests.swift
+    //  - MealLogicTests.swift
+    //  - NotificationManagerTests.swift
 
     import XCTest
+    @testable import Yoga_of_Eating
 
     final class Yoga_of_EatingTests: XCTestCase {
         override func setUpWithError() throws {

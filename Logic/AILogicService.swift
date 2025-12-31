@@ -3,7 +3,7 @@ import FirebaseFunctions
 import Foundation
 
 /// Service to interact with the server-side AI logic via Firebase Cloud Functions.
-class AILogicService: MealLogicProvider {
+class AILogicService: AIAnalysisProvider {
     private var functions: Functions?
 
     /// Initialize with optional Firebase Functions instance for dependency injection
