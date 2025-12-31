@@ -17,6 +17,24 @@ struct YogaOfEatingApp: App {
         print("🔥 Firebase initialized")
         print("📱 Yoga of Eating app starting...")
 
+        // Check if running UI tests and reset data if needed
+        if CommandLine.arguments.contains("--uitesting") {
+            print("🧪 UI Testing mode - clearing all data")
+
+            // Clear UserDefaults
+            if let bundleID = Bundle.main.bundleIdentifier {
+                UserDefaults.standard.removePersistentDomain(forName: bundleID)
+                UserDefaults.standard.synchronize()
+            }
+
+            // Clear persisted JSON data file
+            if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                let dataFileURL = documentsURL.appendingPathComponent("yoga_of_eating_data.json")
+                try? FileManager.default.removeItem(at: dataFileURL)
+                print("🧪 Removed persisted data file")
+            }
+        }
+
         // Request permissions and schedule daily nudges on startup
         NotificationManager.shared.requestPermissions()
         NotificationManager.shared.scheduleMorningNudge()

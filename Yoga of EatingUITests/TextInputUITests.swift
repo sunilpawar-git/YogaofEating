@@ -8,6 +8,7 @@
         override func setUpWithError() throws {
             continueAfterFailure = false
             self.app = XCUIApplication()
+            self.app.launchArguments = ["--uitesting"]
             self.app.launch()
         }
 
@@ -46,8 +47,16 @@
             firstTextField.tap()
             firstTextField.typeText("Breakfast meal")
 
+            // Dismiss keyboard before adding second meal
+            let doneButton = self.app.buttons["Done"]
+            if doneButton.exists {
+                doneButton.tap()
+            }
+            sleep(1)
+
             // Add second meal
             addButton.tap()
+            sleep(1)
             let textFields = self.app.textFields
             XCTAssertTrue(textFields.count >= 2)
 
