@@ -9,8 +9,8 @@ extension MainViewModel {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
         let description = items.joined(separator: ", ")
 
-        // Only proceed if we are using the AILogicService
-        guard let aiService = logicService as? AILogicService else {
+        // Only proceed if we are using a service that supports AI analysis
+        guard let aiService = logicService as? AIAnalysisProvider else {
             // If strictly local service, just update smiley state with current score
             let currentScore = meals[index].healthScore
             updateSmileyState(with: currentScore)
