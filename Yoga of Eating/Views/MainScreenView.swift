@@ -141,24 +141,25 @@ struct MainScreenView: View {
     }
 
     private var smileyAddButton: some View {
-        VStack(spacing: 16) {
-            SmileyView(state: self.viewModel.smileyState)
-                .frame(width: 120, height: 120) // Good thumb-friendly size
-                .contentShape(Circle()) // Ensure entire area is tappable
-                .accessibilityIdentifier("smiley-view")
-                .onTapGesture {
-                    self.viewModel.createNewMeal()
-                    SensoryService.shared.playNudge(style: .medium)
-                }
+        Button(action: {
+            self.viewModel.createNewMeal()
+            SensoryService.shared.playNudge(style: .medium)
+        }) {
+            VStack(spacing: 16) {
+                SmileyView(state: self.viewModel.smileyState)
+                    .frame(width: 120, height: 120)
 
-            Text("TAP TO LOG")
-                .font(.system(.caption, design: .monospaced))
-                .fontWeight(.bold)
-                .foregroundColor(.secondary)
-                .kerning(2)
+                Text("TAP TO LOG")
+                    .font(.system(.caption, design: .monospaced))
+                    .fontWeight(.bold)
+                    .foregroundColor(.secondary)
+                    .kerning(2)
+            }
+            .frame(minHeight: 160)
         }
-        .frame(minHeight: 160) // Ensure consistent spacing
+        .buttonStyle(.plain)
         .accessibilityIdentifier("add-meal-button")
+        .accessibilityLabel("Add Meal")
     }
 
     private var backgroundGradient: some View {

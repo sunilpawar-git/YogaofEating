@@ -137,6 +137,7 @@ struct SettingsView: View {
                         Text("Dark").tag(2)
                     }
                     .accessibilityIdentifier("theme-picker")
+                    .accessibilityLabel("Theme")
                 }
 
                 Section("Notifications") {

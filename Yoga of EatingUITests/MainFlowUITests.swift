@@ -8,6 +8,7 @@
         override func setUpWithError() throws {
             continueAfterFailure = false
             self.app = XCUIApplication()
+            self.app.launchArguments = ["--uitesting"]
             self.app.launch()
         }
 
@@ -136,7 +137,15 @@
                     let textField = textFields.element(boundBy: i - 1)
                     textField.tap()
                     textField.typeText("Meal \(i)")
-                    sleep(1)
+
+                    // Dismiss keyboard before next iteration
+                    if i < 3 {
+                        let doneButton = self.app.buttons["Done"]
+                        if doneButton.exists {
+                            doneButton.tap()
+                        }
+                        sleep(1)
+                    }
                 }
             }
 
