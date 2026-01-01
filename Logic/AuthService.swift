@@ -9,11 +9,22 @@ import GoogleSignIn
     import AppKit
 #endif
 
+/// Protocol representing an authenticated user
+protocol AuthUser {
+    var uid: String { get }
+    var displayName: String? { get }
+    var email: String? { get }
+}
+
+extension FirebaseAuth.User: AuthUser {
+    // These properties already exist on FirebaseAuth.User
+}
+
 /// Protocol for authentication services, enabling dependency injection and testing
 @MainActor
 protocol AuthServiceProtocol: ObservableObject {
     /// The currently authenticated Firebase user
-    var currentUser: User? { get set }
+    var currentUser: AuthUser? { get set }
 
     /// Sign in with Google account
     func signInWithGoogle() async throws
@@ -29,7 +40,12 @@ class AuthService: ObservableObject, AuthServiceProtocol {
     private nonisolated(unsafe) static var _shared: AuthService?
 
     static var shared: AuthService {
-        if _shared == nil {
+        // Return a dummy instance during unit tests to prevent Firebase access
+        if NSClassFromString("XCTestCase") != nil {
+            if _shared == nil {
+                _shared = AuthService(currentUser: nil)
+            }
+        } else if _shared == nil {
             _shared = AuthService(initializeFromFirebase: true)
         }
         guard let shared = _shared else {
@@ -38,7 +54,7 @@ class AuthService: ObservableObject, AuthServiceProtocol {
         return shared
     }
 
-    @Published var currentUser: User?
+    @Published var currentUser: AuthUser?
 
     // Private initializer for singleton - only called when shared is first accessed
     private init(initializeFromFirebase: Bool) {

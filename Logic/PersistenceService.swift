@@ -19,35 +19,57 @@ class PersistenceService: PersistenceServiceProtocol {
         let meals: [Meal]
         let smileyState: SmileyState
         let lastResetDate: Date
+        let historicalData: HistoricalData
     }
 
-    /// Saves the current state of the app
-    func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date) {
-        let data = AppData(meals: meals, smileyState: smileyState, lastResetDate: lastResetDate)
+    /// Saves the current state of the app including historical data
+    func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {
+        let data = AppData(
+            meals: meals,
+            smileyState: smileyState,
+            lastResetDate: lastResetDate,
+            historicalData: historicalData
+        )
 
         Task(priority: .background) {
             guard let url = self.fileURL else { return }
             do {
                 let encoded = try JSONEncoder().encode(data)
                 try encoded.write(to: url, options: .atomic)
-                print("Saved data to \(url.path)")
             } catch {
-                print("Failed to save data: \(error)")
+                // Silently fail or log to a proper logging service
             }
         }
     }
 
     /// Loads the saved state of the app
+    /// Handles migration from old data format (without historicalData field)
     func load() -> AppData? {
         guard let url = fileURL else { return nil }
         do {
             let data = try Data(contentsOf: url)
             let decoded = try JSONDecoder().decode(AppData.self, from: data)
-            print("Loaded data from \(url.path)")
             return decoded
         } catch {
-            print("Failed to load data (might be first run): \(error)")
+            // Try loading old format without historicalData (migration)
+            if let data = try? Data(contentsOf: url),
+               let oldData = try? JSONDecoder().decode(OldAppData.self, from: data)
+            {
+                return AppData(
+                    meals: oldData.meals,
+                    smileyState: oldData.smileyState,
+                    lastResetDate: oldData.lastResetDate,
+                    historicalData: HistoricalData() // Empty historical data for migration
+                )
+            }
             return nil
         }
+    }
+
+    /// Old data structure for migration (without historicalData)
+    private struct OldAppData: Codable {
+        let meals: [Meal]
+        let smileyState: SmileyState
+        let lastResetDate: Date
     }
 }

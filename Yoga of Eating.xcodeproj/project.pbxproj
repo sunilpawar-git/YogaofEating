@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0238A131709D2CDD51E0477F /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4A480693167DDCBC159A7B /* Mocks.swift */; };
 		10436F042EFD1F1E00B368D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10436EFC2EFD1F1E00B368D9 /* Assets.xcassets */; };
 		10436F062EFD1F1E00B368D9 /* Yoga_of_EatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EFF2EFD1F1E00B368D9 /* Yoga_of_EatingTests.swift */; };
 		10436F072EFD1F1E00B368D9 /* YogaOfEatingApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EFD2EFD1F1E00B368D9 /* YogaOfEatingApp.swift */; };
@@ -43,6 +44,9 @@
 		1092197E2F04FE9E00B05B67 /* MainFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092197B2F04FE9E00B05B67 /* MainFlowUITests.swift */; };
 		1092197F2F04FE9E00B05B67 /* TextInputUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092197D2F04FE9E00B05B67 /* TextInputUITests.swift */; };
 		109219802F04FE9E00B05B67 /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092197C2F04FE9E00B05B67 /* SettingsUITests.swift */; };
+		109219842F056BC200B05B67 /* DailySmileySnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219812F056BC200B05B67 /* DailySmileySnapshotTests.swift */; };
+		109219852F056BC200B05B67 /* HistoricalDataServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219822F056BC200B05B67 /* HistoricalDataServiceTests.swift */; };
+		109219862F056BC200B05B67 /* HistoricalDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219832F056BC200B05B67 /* HistoricalDataTests.swift */; };
 		109B2C5C2F013C0800CFD6AA /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5B2F013C0800CFD6AA /* FirebaseAI */; };
 		109B2C5E2F013C0800CFD6AA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5D2F013C0800CFD6AA /* FirebaseAuth */; };
 		109B2C602F013C0800CFD6AA /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5F2F013C0800CFD6AA /* FirebaseCore */; };
@@ -51,6 +55,17 @@
 		109B2C6B2F01420500CFD6AA /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C6A2F01420500CFD6AA /* GoogleSignIn */; };
 		109B2C6D2F01420500CFD6AA /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C6C2F01420500CFD6AA /* GoogleSignInSwift */; };
 		109B2C6F2F01438B00CFD6AA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 109B2C6E2F01438B00CFD6AA /* GoogleService-Info.plist */; };
+		33497F5FDCAC4DC31A2E72EB /* CloudSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6EFC72F5553B8D394479DE /* CloudSyncService.swift */; };
+		37354AE5BC5560C436A455F6 /* DailySmileySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23135414D6F0C9407245CACD /* DailySmileySnapshot.swift */; };
+		823CEDFBCE9064CFD0B0B882 /* DayMealPopupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F06421BF5AD2F41FCBF3DA30 /* DayMealPopupView.swift */; };
+		8CA1C8E462AD1DD96074F305 /* YearlyCalendarUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CFF3F60C3D807E9662A42F /* YearlyCalendarUITests.swift */; };
+		92846FF8F5C1EE39FA0C555D /* HistoricalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999425CCB59137FDA9CD551A /* HistoricalData.swift */; };
+		9F3688517FB8A62475A60977 /* YearlyCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42401AA29752522F676434E5 /* YearlyCalendarView.swift */; };
+		C32EC25B8984221CB6188524 /* HistoricalDataSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3983B88B076CB058A25059D4 /* HistoricalDataSyncTests.swift */; };
+		D3964E209A46B8D99F99D30C /* HistoricalDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F25492CE6BC081720974D7B /* HistoricalDataService.swift */; };
+		D7FDF157906CB6F7E4EACC33 /* DayCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE4AF211150944A9D75A17C /* DayCell.swift */; };
+		FAFC578F20AC8DD819637E3E /* YearlyCalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AB407785D4598B94A80A09C /* YearlyCalendarViewModel.swift */; };
+		FBC55970744A36310869279B /* YearlyCalendarViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344B0BC5F73F8E1F8DF39F2B /* YearlyCalendarViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -110,8 +125,23 @@
 		1092197B2F04FE9E00B05B67 /* MainFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowUITests.swift; sourceTree = "<group>"; };
 		1092197C2F04FE9E00B05B67 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
 		1092197D2F04FE9E00B05B67 /* TextInputUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInputUITests.swift; sourceTree = "<group>"; };
+		109219812F056BC200B05B67 /* DailySmileySnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailySmileySnapshotTests.swift; sourceTree = "<group>"; };
+		109219822F056BC200B05B67 /* HistoricalDataServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalDataServiceTests.swift; sourceTree = "<group>"; };
+		109219832F056BC200B05B67 /* HistoricalDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalDataTests.swift; sourceTree = "<group>"; };
 		109B2C6E2F01438B00CFD6AA /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		1AB407785D4598B94A80A09C /* YearlyCalendarViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YearlyCalendarViewModel.swift; sourceTree = "<group>"; };
+		23135414D6F0C9407245CACD /* DailySmileySnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DailySmileySnapshot.swift; path = DailySmileySnapshot.swift; sourceTree = "<group>"; };
+		344B0BC5F73F8E1F8DF39F2B /* YearlyCalendarViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YearlyCalendarViewModelTests.swift; sourceTree = "<group>"; };
+		3983B88B076CB058A25059D4 /* HistoricalDataSyncTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HistoricalDataSyncTests.swift; sourceTree = "<group>"; };
+		42401AA29752522F676434E5 /* YearlyCalendarView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YearlyCalendarView.swift; sourceTree = "<group>"; };
+		8A6EFC72F5553B8D394479DE /* CloudSyncService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudSyncService.swift; sourceTree = "<group>"; };
+		8EE4AF211150944A9D75A17C /* DayCell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DayCell.swift; sourceTree = "<group>"; };
+		999425CCB59137FDA9CD551A /* HistoricalData.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoricalData.swift; path = HistoricalData.swift; sourceTree = "<group>"; };
+		9A4A480693167DDCBC159A7B /* Mocks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Mocks.swift; sourceTree = "<group>"; };
+		9F25492CE6BC081720974D7B /* HistoricalDataService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoricalDataService.swift; path = HistoricalDataService.swift; sourceTree = "<group>"; };
 		AA000001000000000000001A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D1CFF3F60C3D807E9662A42F /* YearlyCalendarUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YearlyCalendarUITests.swift; sourceTree = "<group>"; };
+		F06421BF5AD2F41FCBF3DA30 /* DayMealPopupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DayMealPopupView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -196,6 +226,12 @@
 				10436F282EFD985300B368D9 /* SmileyViewTests.swift */,
 				10436EF52EFD1F1E00B368D9 /* MealLogicTests.swift */,
 				10436EF62EFD1F1E00B368D9 /* NotificationManagerTests.swift */,
+				109219812F056BC200B05B67 /* DailySmileySnapshotTests.swift */,
+				109219822F056BC200B05B67 /* HistoricalDataServiceTests.swift */,
+				109219832F056BC200B05B67 /* HistoricalDataTests.swift */,
+				9A4A480693167DDCBC159A7B /* Mocks.swift */,
+				344B0BC5F73F8E1F8DF39F2B /* YearlyCalendarViewModelTests.swift */,
+				3983B88B076CB058A25059D4 /* HistoricalDataSyncTests.swift */,
 			);
 			path = "Yoga of EatingTests";
 			sourceTree = "<group>";
@@ -208,6 +244,7 @@
 				1092197D2F04FE9E00B05B67 /* TextInputUITests.swift */,
 				10436F012EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift */,
 				10436F022EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift */,
+				D1CFF3F60C3D807E9662A42F /* YearlyCalendarUITests.swift */,
 			);
 			path = "Yoga of EatingUITests";
 			sourceTree = "<group>";
@@ -219,6 +256,8 @@
 				1092194D2F04EA0F00B05B67 /* MealTypeSelectorView.swift */,
 				1092194E2F04EA0F00B05B67 /* MealTypeTag.swift */,
 				1092194F2F04EA0F00B05B67 /* SmileyView.swift */,
+				8EE4AF211150944A9D75A17C /* DayCell.swift */,
+				F06421BF5AD2F41FCBF3DA30 /* DayMealPopupView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -232,6 +271,8 @@
 				109219582F04EA4100B05B67 /* NotificationManager.swift */,
 				109219592F04EA4100B05B67 /* PersistenceService.swift */,
 				1092195A2F04EA4100B05B67 /* SensoryService.swift */,
+				9F25492CE6BC081720974D7B /* HistoricalDataService.swift */,
+				8A6EFC72F5553B8D394479DE /* CloudSyncService.swift */,
 			);
 			path = Logic;
 			sourceTree = "<group>";
@@ -241,6 +282,8 @@
 			children = (
 				109219622F04EA5300B05B67 /* Meal.swift */,
 				109219632F04EA5300B05B67 /* SmileyState.swift */,
+				23135414D6F0C9407245CACD /* DailySmileySnapshot.swift */,
+				999425CCB59137FDA9CD551A /* HistoricalData.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -250,6 +293,7 @@
 			children = (
 				109219672F04EA6300B05B67 /* MainViewModel.swift */,
 				109219682F04EA6300B05B67 /* MainViewModel+AIAnalysis.swift */,
+				1AB407785D4598B94A80A09C /* YearlyCalendarViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -261,8 +305,17 @@
 				1092196D2F04EA7100B05B67 /* JournalBlockView.swift */,
 				1092196E2F04EA7100B05B67 /* MainScreenView.swift */,
 				1092196F2F04EA7100B05B67 /* SettingsView.swift */,
+				642D326D46A6D37A2AD473C7 /* Components */,
+				42401AA29752522F676434E5 /* YearlyCalendarView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		642D326D46A6D37A2AD473C7 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Components;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -463,6 +516,14 @@
 				109219542F04EA0F00B05B67 /* SmileyView.swift in Sources */,
 				1092196A2F04EA6300B05B67 /* MainViewModel+AIAnalysis.swift in Sources */,
 				1092196B2F04EA6300B05B67 /* MainViewModel.swift in Sources */,
+				37354AE5BC5560C436A455F6 /* DailySmileySnapshot.swift in Sources */,
+				92846FF8F5C1EE39FA0C555D /* HistoricalData.swift in Sources */,
+				D3964E209A46B8D99F99D30C /* HistoricalDataService.swift in Sources */,
+				FAFC578F20AC8DD819637E3E /* YearlyCalendarViewModel.swift in Sources */,
+				9F3688517FB8A62475A60977 /* YearlyCalendarView.swift in Sources */,
+				D7FDF157906CB6F7E4EACC33 /* DayCell.swift in Sources */,
+				823CEDFBCE9064CFD0B0B882 /* DayMealPopupView.swift in Sources */,
+				33497F5FDCAC4DC31A2E72EB /* CloudSyncService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -481,6 +542,12 @@
 				10436F262EFD985300B368D9 /* NotificationManagerTests.swift in Sources */,
 				10436F252EFD984D00B368D9 /* MealLogicTests.swift in Sources */,
 				10436F062EFD1F1E00B368D9 /* Yoga_of_EatingTests.swift in Sources */,
+				109219842F056BC200B05B67 /* DailySmileySnapshotTests.swift in Sources */,
+				109219852F056BC200B05B67 /* HistoricalDataServiceTests.swift in Sources */,
+				109219862F056BC200B05B67 /* HistoricalDataTests.swift in Sources */,
+				0238A131709D2CDD51E0477F /* Mocks.swift in Sources */,
+				FBC55970744A36310869279B /* YearlyCalendarViewModelTests.swift in Sources */,
+				C32EC25B8984221CB6188524 /* HistoricalDataSyncTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -493,6 +560,7 @@
 				1092197E2F04FE9E00B05B67 /* MainFlowUITests.swift in Sources */,
 				1092197F2F04FE9E00B05B67 /* TextInputUITests.swift in Sources */,
 				109219802F04FE9E00B05B67 /* SettingsUITests.swift in Sources */,
+				8CA1C8E462AD1DD96074F305 /* YearlyCalendarUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

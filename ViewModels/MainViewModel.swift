@@ -3,9 +3,10 @@ import Foundation
 import SwiftUI
 
 /// Protocol for persistence operations to enable testing
+@MainActor
 protocol PersistenceServiceProtocol {
     func load() -> PersistenceService.AppData?
-    func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date)
+    func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData)
 }
 
 /// Central state manager for the Yoga of Eating app.
@@ -18,18 +19,22 @@ class MainViewModel: ObservableObject {
 
     let logicService: MealLogicProvider
     let persistenceService: PersistenceServiceProtocol
+    let historicalService: any HistoricalDataServiceProtocol
 
-    init(logicService: MealLogicProvider? = nil, persistenceService: PersistenceServiceProtocol? = nil) {
+    init(
+        logicService: MealLogicProvider? = nil,
+        persistenceService: PersistenceServiceProtocol? = nil,
+        historicalService: (any HistoricalDataServiceProtocol)? = nil
+    ) {
         self.logicService = logicService ?? AILogicService()
         self.persistenceService = persistenceService ?? PersistenceService.shared
-        print("🚀 MainViewModel initialized with \(type(of: self.logicService))")
-        if self.logicService is AILogicService {
-            print("✅ AI Integration is ACTIVE - Gemini will analyze meals!")
-        } else {
-            print("⚠️ Using local logic service (no AI)")
+        self.historicalService = historicalService ?? HistoricalDataService()
+
+        // Skip data loading and monitoring if unit testing to avoid interference
+        if NSClassFromString("XCTestCase") == nil {
+            self.loadData()
+            self.setupResetMonitoring()
         }
-        self.loadData()
-        self.setupResetMonitoring()
     }
 
     /// Loads persisted data or starts fresh
@@ -38,6 +43,7 @@ class MainViewModel: ObservableObject {
             self.meals = data.meals
             self.smileyState = data.smileyState
             self.lastResetDate = data.lastResetDate
+            self.historicalService.historicalData = data.historicalData
 
             // Still check if we need to reset for a new day since the last save
             self.checkAndResetIfNewDay()
@@ -49,7 +55,8 @@ class MainViewModel: ObservableObject {
         self.persistenceService.save(
             meals: self.meals,
             smileyState: self.smileyState,
-            lastResetDate: self.lastResetDate
+            lastResetDate: self.lastResetDate,
+            historicalData: self.historicalService.historicalData
         )
     }
 
@@ -81,12 +88,10 @@ class MainViewModel: ObservableObject {
     func createNewMeal(mealType: MealType? = nil) {
         self.checkAndResetIfNewDay()
         let newMeal = Meal(mealType: mealType)
-        print("➕ Creating new meal - ID: \(newMeal.id), Type: \(newMeal.mealType.rawValue)")
         withAnimation(.spring()) {
             self.meals.append(newMeal)
         }
         self.saveData()
-        print("📋 Total meals: \(self.meals.count)")
     }
 
     /// Updates an existing meal's description and recalculates health.
@@ -99,9 +104,6 @@ class MainViewModel: ObservableObject {
     func updateMealItems(_ mealId: UUID, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
-        let description = items.joined(separator: ", ")
-        print("🍽️ Meal updated - ID: \(mealId), Items: \(description)")
-
         // Local synchronous update for immediate feedback
         let healthScore = self.logicService.calculateHealthScore(for: items)
         self.meals[index].items = items
@@ -111,10 +113,6 @@ class MainViewModel: ObservableObject {
 
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
-        print(
-            "😊 Smiley state updated immediately - Mood: \(self.smileyState.mood.rawValue), "
-                + "Scale: \(self.smileyState.scale)"
-        )
 
         // Trigger async AI analysis for refined scoring
         Task {
@@ -126,23 +124,14 @@ class MainViewModel: ObservableObject {
     func updateMeal(_ mealId: UUID, mealType: MealType, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
-        let description = items.joined(separator: ", ")
-        print("🍽️ Meal updated - ID: \(mealId), Type: \(mealType), Items: \(description)")
-
         // Local synchronous update
         let healthScore = self.logicService.calculateHealthScore(for: items)
         self.meals[index].mealType = mealType
         self.meals[index].items = items
         self.meals[index].healthScore = healthScore
         self.saveData()
-        print("📝 Local healthScore set to: \(healthScore)")
-
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
-        print(
-            "😊 Smiley state updated immediately - Mood: \(self.smileyState.mood.rawValue), "
-                + "Scale: \(self.smileyState.scale)"
-        )
 
         // Trigger async AI analysis
         Task {
@@ -173,11 +162,6 @@ class MainViewModel: ObservableObject {
             from: self.smileyState,
             healthScore: healthScore
         )
-        print(
-            "🔄 Updating smiley - HealthScore: \(healthScore), "
-                + "Current mood: \(self.smileyState.mood.rawValue) -> New mood: \(nextState.mood.rawValue), "
-                + "Scale: \(self.smileyState.scale) -> \(nextState.scale)"
-        )
 
         // Only provide haptic feedback when explicitly requested (e.g., after user finishes typing)
         // Note: Sounds are disabled as they were found to be irritating during typing
@@ -200,7 +184,6 @@ class MainViewModel: ObservableObject {
     /// Updates smiley state based on all current meals' health scores.
     private func updateSmileyStateFromAllMeals(withFeedback: Bool = false) {
         guard !self.meals.isEmpty else {
-            print("📭 No meals found, setting smiley to neutral")
             withAnimation(.spring()) {
                 self.smileyState = .neutral
             }
@@ -210,19 +193,26 @@ class MainViewModel: ObservableObject {
         // Calculate average health score from all meals
         let totalScore = self.meals.map(\.healthScore).reduce(0.0, +)
         let avgScore = totalScore / Double(self.meals.count)
-        print(
-            "📊 Calculating smiley from \(self.meals.count) meals - Average score: \(avgScore)"
-        )
 
         self.updateSmileyState(with: avgScore, withFeedback: withFeedback)
     }
 
     /// Resets the day's progress (at midnight or via manual reset).
     func resetDay() {
+        // 1. Archive current day's data BEFORE clearing
+        self.historicalService.archiveCurrentDay(
+            meals: self.meals,
+            state: self.smileyState,
+            date: self.lastResetDate
+        )
+
+        // 2. Reset for new day
         withAnimation(.easeOut) {
             self.smileyState = .neutral
             self.meals = []
         }
+
+        // 3. Save both current and historical data
         self.saveData()
     }
 }

@@ -12,7 +12,8 @@
             let originalData = PersistenceService.AppData(
                 meals: meals,
                 smileyState: state,
-                lastResetDate: date
+                lastResetDate: date,
+                historicalData: HistoricalData()
             )
 
             // Encode

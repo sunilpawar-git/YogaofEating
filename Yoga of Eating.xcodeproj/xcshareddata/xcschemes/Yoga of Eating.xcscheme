@@ -51,6 +51,26 @@
                ReferencedContainer = "container:Yoga of Eating.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "10436EAF2EFD1ADB00B368D9"
+               BuildableName = "Yoga of EatingTests.xctest"
+               BlueprintName = "Yoga of EatingTests"
+               ReferencedContainer = "container:Yoga of Eating.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "10436EAF2EFD1ADB00B368D9"
+               BuildableName = "Yoga of EatingTests.xctest"
+               BlueprintName = "Yoga of EatingTests"
+               ReferencedContainer = "container:Yoga of Eating.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
