@@ -7,18 +7,25 @@
         var sut: MainViewModel!
         var mockLogic: MockMealLogicService!
         var mockPersistence: MockPersistenceService!
+        var mockHistorical: MockHistoricalDataService!
 
         override func setUp() {
             super.setUp()
             self.mockLogic = MockMealLogicService()
             self.mockPersistence = MockPersistenceService()
-            self.sut = MainViewModel(logicService: self.mockLogic, persistenceService: self.mockPersistence)
+            self.mockHistorical = MockHistoricalDataService()
+            self.sut = MainViewModel(
+                logicService: self.mockLogic,
+                persistenceService: self.mockPersistence,
+                historicalService: self.mockHistorical
+            )
         }
 
         override func tearDown() {
             self.sut = nil
             self.mockLogic = nil
             self.mockPersistence = nil
+            self.mockHistorical = nil
             super.tearDown()
         }
 
@@ -72,42 +79,20 @@
             XCTAssertTrue(self.sut.meals.isEmpty)
             XCTAssertEqual(self.sut.smileyState.mood, .neutral)
         }
-    }
 
-    // Simple Mock for Testing
-    class MockMealLogicService: MealLogicProvider {
-        var mockScore: Double = 0.5
-        var nextState = SmileyState.neutral
+        func test_resetDay_archivesData() {
+            // Given
+            self.sut.createNewMeal()
+            let initialMeals = self.sut.meals
+            let initialDate = self.sut.lastResetDate
 
-        func calculateHealthScore(for _: String) -> Double {
-            self.mockScore
-        }
+            // When
+            self.sut.resetDay()
 
-        func calculateHealthScore(for items: [String]) -> Double {
-            guard !items.isEmpty else { return 0.5 }
-            return self.mockScore
-        }
-
-        func calculateNextState(from _: SmileyState, healthScore _: Double) -> SmileyState {
-            self.nextState
-        }
-    }
-
-    // Mock Persistence Service for Testing
-    class MockPersistenceService: PersistenceServiceProtocol {
-        var savedData: PersistenceService.AppData?
-
-        func load() -> PersistenceService.AppData? {
-            // Return nil for tests to start with clean state
-            nil
-        }
-
-        func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date) {
-            self.savedData = PersistenceService.AppData(
-                meals: meals,
-                smileyState: smileyState,
-                lastResetDate: lastResetDate
-            )
+            // Then
+            XCTAssertNotNil(self.mockHistorical.archivedMeals)
+            XCTAssertEqual(self.mockHistorical.archivedMeals?.count, initialMeals.count)
+            XCTAssertEqual(self.mockHistorical.archivedDate, initialDate)
         }
     }
 

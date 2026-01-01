@@ -12,6 +12,12 @@ struct YogaOfEatingApp: App {
     private var theme: Int = 0 // 0: System, 1: Light, 2: Dark
 
     init() {
+        // Skip all initialization if running unit tests to prevent malloc errors
+        guard NSClassFromString("XCTestCase") == nil else {
+            print("🧪 Unit testing mode - skipping Firebase and notification setup")
+            return
+        }
+
         // Initialize Firebase
         FirebaseApp.configure()
         print("🔥 Firebase initialized")
@@ -43,12 +49,17 @@ struct YogaOfEatingApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainScreenView()
-                .environmentObject(self.viewModel)
-                .preferredColorScheme(self.colorScheme)
-                .onOpenURL { url in
-                    GIDSignIn.sharedInstance.handle(url)
-                }
+            if NSClassFromString("XCTestCase") != nil {
+                // Show placeholder during unit tests to avoid SwiftUI issues
+                Text("Unit Testing...")
+            } else {
+                MainScreenView()
+                    .environmentObject(self.viewModel)
+                    .preferredColorScheme(self.colorScheme)
+                    .onOpenURL { url in
+                        GIDSignIn.sharedInstance.handle(url)
+                    }
+            }
         }
     }
 

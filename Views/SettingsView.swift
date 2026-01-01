@@ -47,19 +47,40 @@ struct SettingsView: View {
             Form {
                 Section("Cloud Sync") {
                     if let user = authService.currentUser {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(user.displayName ?? "User")
-                                    .font(.headline)
-                                Text(user.email ?? "")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(user.displayName ?? "User")
+                                        .font(.headline)
+                                    Text(user.email ?? "")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Button("Sign Out") {
+                                    self.authService.signOut()
+                                }
+                                .foregroundColor(.red)
                             }
-                            Spacer()
-                            Button("Sign Out") {
-                                self.authService.signOut()
+
+                            Button(action: {
+                                Task {
+                                    do {
+                                        try await self.viewModel.historicalService.syncToFirebase()
+                                    } catch {
+                                        // Handle sync error (e.g., show alert)
+                                    }
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                    Text("Sync with Cloud")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(8)
                             }
-                            .foregroundColor(.red)
                         }
                     } else {
                         Button(action: {
@@ -138,6 +159,16 @@ struct SettingsView: View {
                     }
                     .accessibilityIdentifier("theme-picker")
                     .accessibilityLabel("Theme")
+                }
+
+                Section("Insights") {
+                    NavigationLink {
+                        YearlyCalendarView(viewModel: YearlyCalendarViewModel(historicalService: self.viewModel
+                                .historicalService))
+                    } label: {
+                        Label("Yearly Smiley Heatmap", systemImage: "calendar.badge.clock")
+                    }
+                    .accessibilityIdentifier("yearly-heatmap-link")
                 }
 
                 Section("Notifications") {
