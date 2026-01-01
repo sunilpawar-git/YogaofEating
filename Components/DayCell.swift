@@ -12,9 +12,20 @@ struct DayCell: View {
             .aspectRatio(1, contentMode: .fit)
             .overlay(
                 RoundedRectangle(cornerRadius: 3)
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
+                    .stroke(
+                        self.isToday ? Color.primary : Color.primary.opacity(0.1),
+                        lineWidth: self.isToday ? 1.5 : 0.5
+                    )
             )
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier(self.isToday ? "heatmap-cell-today" : "heatmap-cell")
+            .accessibilityLabel(self.accessibilityLabelText)
+            .accessibilityAddTraits(.isButton)
             .help(self.accessibilityLabelText)
+    }
+
+    private var isToday: Bool {
+        Calendar.current.isDateInToday(self.date)
     }
 
     private var backgroundColor: Color {
