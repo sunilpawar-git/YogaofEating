@@ -81,5 +81,38 @@
             // For now, we'll just check if snapshots are updated (expected to be empty for 2025 in this mock)
             XCTAssertTrue(self.sut.snapshots.isEmpty)
         }
+
+        func test_yearDates_hasCorrectCountAndStart() {
+            // Given
+            self.sut.selectedYear = 2024 // Leap year
+
+            // When
+            let dates = self.sut.allDates
+
+            // Then
+            XCTAssertEqual(dates.count, 366)
+            let calendar = Calendar.current
+            let firstDate = dates.first!
+            XCTAssertEqual(calendar.component(.month, from: firstDate), 1)
+            XCTAssertEqual(calendar.component(.day, from: firstDate), 1)
+            XCTAssertEqual(calendar.component(.year, from: firstDate), 2024)
+        }
+
+        func test_monthLabelOffsets_calculatedCorrectly() {
+            // Given
+            self.sut.selectedYear = 2024 // Jan 1, 2024 was a Monday (week 1)
+
+            // When
+            let months = self.sut.monthLabels
+
+            // Then
+            XCTAssertEqual(months.count, 12)
+            XCTAssertEqual(months[0].name, "Jan")
+            XCTAssertEqual(months[0].weekOffset, 0) // First week of the year
+
+            // Feb 1, 2024 (Thursday) should be week 5 relative to Jan 1
+            XCTAssertEqual(months[1].name, "Feb")
+            XCTAssertGreaterThan(months[1].weekOffset, 0)
+        }
     }
 #endif

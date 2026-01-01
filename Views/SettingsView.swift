@@ -96,6 +96,16 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("Insights") {
+                    NavigationLink {
+                        YearlyCalendarView(viewModel: YearlyCalendarViewModel(historicalService: self.viewModel
+                                .historicalService))
+                    } label: {
+                        Label("Yearly Smiley Heatmap", systemImage: "calendar.badge.clock")
+                    }
+                    .accessibilityIdentifier("yearly-heatmap-link")
+                }
+
                 Section("Personal Details") {
                     HStack {
                         Text("Name")
@@ -159,16 +169,6 @@ struct SettingsView: View {
                     }
                     .accessibilityIdentifier("theme-picker")
                     .accessibilityLabel("Theme")
-                }
-
-                Section("Insights") {
-                    NavigationLink {
-                        YearlyCalendarView(viewModel: YearlyCalendarViewModel(historicalService: self.viewModel
-                                .historicalService))
-                    } label: {
-                        Label("Yearly Smiley Heatmap", systemImage: "calendar.badge.clock")
-                    }
-                    .accessibilityIdentifier("yearly-heatmap-link")
                 }
 
                 Section("Notifications") {
