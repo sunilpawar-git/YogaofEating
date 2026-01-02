@@ -85,13 +85,23 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _: UIApplication,
         didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // Initialize Firebase
-        FirebaseApp.configure()
-        print("🔥 Firebase initialized (AppDelegate)")
-
-        // Initialize AuthService early
-        _ = AuthService.shared
-        print("👤 AuthService initialized (AppDelegate)")
+        // Skip Firebase initialization in test/CI environments
+        let isTestEnvironment = NSClassFromString("XCTestCase") != nil
+        let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
+        
+        if !isTestEnvironment && !isCIEnvironment {
+            // Initialize Firebase only in non-test environments
+            if FirebaseApp.app() == nil {
+                FirebaseApp.configure()
+                print("🔥 Firebase initialized (AppDelegate)")
+            }
+            
+            // Initialize AuthService early
+            _ = AuthService.shared
+            print("👤 AuthService initialized (AppDelegate)")
+        } else {
+            print("🧪 Skipping Firebase initialization in test/CI environment")
+        }
 
         return true
     }

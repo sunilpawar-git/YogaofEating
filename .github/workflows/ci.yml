@@ -79,6 +79,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-deriveddata-
           
+    - name: Resolve Swift Package dependencies
+      run: |
+        xcodebuild -resolvePackageDependencies \
+          -project "Yoga of Eating.xcodeproj" \
+          -scheme "Yoga of Eating"
+          
     - name: List available simulators
       run: xcrun simctl list devices available
       
