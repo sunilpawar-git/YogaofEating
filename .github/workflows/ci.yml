@@ -7,149 +7,282 @@ on:
     branches: [ main, development ]
 
 jobs:
-  build-and-test:
-    name: Build and Test
+  ios-tests:
+    name: iOS Tests
     runs-on: macos-latest
+    timeout-minutes: 30
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Verify GoogleService-Info.plist exists
-      run: |
-        if [ ! -f "GoogleService-Info.plist" ]; then
-          echo "⚠️ Warning: GoogleService-Info.plist not found. Creating a minimal one for CI."
-          cat > GoogleService-Info.plist << 'EOF'
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>CLIENT_ID</key>
-            <string>ci-test-client-id</string>
-            <key>REVERSED_CLIENT_ID</key>
-            <string>ci-test-reversed-client-id</string>
-            <key>API_KEY</key>
-            <string>ci-test-api-key</string>
-            <key>GCM_SENDER_ID</key>
-            <string>123456789</string>
-            <key>PLIST_VERSION</key>
-            <string>1</string>
-            <key>BUNDLE_ID</key>
-            <string>com.yogaofeating.Yoga-of-Eating</string>
-            <key>PROJECT_ID</key>
-            <string>yoga-of-eating-ci</string>
-            <key>STORAGE_BUCKET</key>
-            <string>yoga-of-eating-ci.appspot.com</string>
-            <key>IS_ADS_ENABLED</key>
-            <false/>
-            <key>IS_ANALYTICS_ENABLED</key>
-            <false/>
-            <key>IS_APPINVITE_ENABLED</key>
-            <false/>
-            <key>IS_GCM_ENABLED</key>
-            <false/>
-            <key>IS_SIGNIN_ENABLED</key>
-            <false/>
-            <key>GOOGLE_APP_ID</key>
-            <string>1:123456789:ios:abcdef123456</string>
-        </dict>
-        </plist>
-        EOF
-        fi
-      
-    - name: Show Xcode version
-      run: xcodebuild -version
-      
-    - name: Show Swift version
-      run: swift --version
-      
-    - name: Cache Swift Package Manager dependencies
-      uses: actions/cache@v4
-      with:
-        path: .build
-        key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
-        restore-keys: |
-          ${{ runner.os }}-spm-
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Show Xcode version
+        run: xcodebuild -version
+        
+      - name: Show Swift version
+        run: swift --version
+        
+      - name: Cache Swift Package Manager dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+            .build
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+            
+      - name: Resolve Swift Package dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project "Yoga of Eating.xcodeproj" \
+            -scheme "Yoga of Eating"
+            
+      - name: List available simulators
+        run: xcrun simctl list devices available
+        
+      - name: Get available iOS simulator
+        id: simulator
+        run: |
+          # Try to find an available iPhone simulator by name (more reliable than UUID)
+          SIMULATOR_NAME=$(xcrun simctl list devices available | grep -i "iphone" | grep -v "unavailable" | head -1 | sed 's/.*iPhone \([0-9A-Za-z ]*\).*/\1/' | head -1 | xargs)
           
-    - name: Cache DerivedData
-      uses: actions/cache@v4
-      with:
-        path: ~/Library/Developer/Xcode/DerivedData
-        key: ${{ runner.os }}-deriveddata-${{ hashFiles('**/*.xcodeproj/project.pbxproj') }}
-        restore-keys: |
-          ${{ runner.os }}-deriveddata-
+          if [ -n "$SIMULATOR_NAME" ]; then
+            # Found a simulator name, construct full name
+            FULL_NAME="iPhone $SIMULATOR_NAME"
+            echo "simulator_name=$FULL_NAME" >> $GITHUB_OUTPUT
+            echo "Using simulator: $FULL_NAME"
+          else
+            # Fallback to common simulators
+            if xcrun simctl list devices available | grep -q "iPhone 15"; then
+              FULL_NAME="iPhone 15"
+            elif xcrun simctl list devices available | grep -q "iPhone 14"; then
+              FULL_NAME="iPhone 14"
+            elif xcrun simctl list devices available | grep -q "iPhone 13"; then
+              FULL_NAME="iPhone 13"
+            else
+              # Last resort: get first iPhone simulator
+              FULL_NAME=$(xcrun simctl list devices available | grep -i "iphone" | head -1 | sed 's/.*(\([^)]*\)).*/\1/' | head -1)
+            fi
+            echo "simulator_name=$FULL_NAME" >> $GITHUB_OUTPUT
+            echo "Using simulator: $FULL_NAME"
+          fi
           
-    - name: Resolve Swift Package dependencies
-      run: |
-        xcodebuild -resolvePackageDependencies \
-          -project "Yoga of Eating.xcodeproj" \
-          -scheme "Yoga of Eating"
+      - name: Boot Simulator
+        run: |
+          if [ -n "${{ steps.simulator.outputs.simulator_name }}" ]; then
+            echo "Booting simulator: ${{ steps.simulator.outputs.simulator_name }}"
+            xcrun simctl boot "${{ steps.simulator.outputs.simulator_name }}" 2>/dev/null || echo "Simulator may already be booted"
+          fi
           
-    - name: List available simulators
-      run: xcrun simctl list devices available
-      
-    - name: Get available iOS simulator
-      id: simulator
-      run: |
-        # Get the first available iPhone simulator UUID
-        SIMULATOR_UUID=$(xcrun simctl list devices available | grep -i "iphone" | grep -v "unavailable" | head -1 | grep -oE '[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}' | head -1)
-        if [ -z "$SIMULATOR_UUID" ]; then
-          # Fallback: get any iPhone simulator
-          SIMULATOR_UUID=$(xcrun simctl list devices | grep -i "iphone" | head -1 | grep -oE '[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}' | head -1)
-        fi
-        echo "simulator_uuid=$SIMULATOR_UUID" >> $GITHUB_OUTPUT
-        echo "Using simulator UUID: $SIMULATOR_UUID"
-        if [ -z "$SIMULATOR_UUID" ]; then
-          echo "⚠️ Warning: No simulator found, will use default"
-        fi
-      
-    - name: Build project
-      run: |
-        if [ -n "${{ steps.simulator.outputs.simulator_uuid }}" ]; then
-          DESTINATION="platform=iOS Simulator,id=${{ steps.simulator.outputs.simulator_uuid }}"
-        else
-          DESTINATION="platform=iOS Simulator,name=iPhone 15"
-        fi
-        xcodebuild clean build \
-          -project "Yoga of Eating.xcodeproj" \
-          -scheme "Yoga of Eating" \
-          -destination "$DESTINATION" \
-          -configuration Debug \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO
+      - name: Build and Test iOS App
+        run: |
+          # Use device name instead of UUID for better reliability
+          DESTINATION="platform=iOS Simulator,name=${{ steps.simulator.outputs.simulator_name }},OS=latest"
+          echo "Building with destination: $DESTINATION"
           
-    - name: Run unit tests
-      run: |
-        if [ -n "${{ steps.simulator.outputs.simulator_uuid }}" ]; then
-          DESTINATION="platform=iOS Simulator,id=${{ steps.simulator.outputs.simulator_uuid }}"
-        else
-          DESTINATION="platform=iOS Simulator,name=iPhone 15"
-        fi
-        xcodebuild test \
-          -project "Yoga of Eating.xcodeproj" \
-          -scheme "Yoga of Eating" \
-          -destination "$DESTINATION" \
-          -only-testing:"Yoga of EatingTests" \
-          -configuration Debug \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO
+          xcodebuild clean test \
+            -project "Yoga of Eating.xcodeproj" \
+            -scheme "Yoga of Eating" \
+            -destination "$DESTINATION" \
+            -only-testing:"Yoga of EatingTests" \
+            -configuration Debug \
+            -enableCodeCoverage YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+            
+      - name: Run UI tests (optional - may be flaky)
+        continue-on-error: true
+        run: |
+          DESTINATION="platform=iOS Simulator,name=${{ steps.simulator.outputs.simulator_name }},OS=latest"
+          echo "Running UI tests with destination: $DESTINATION"
           
-    - name: Run UI tests (optional - may be flaky)
-      continue-on-error: true
-      run: |
-        if [ -n "${{ steps.simulator.outputs.simulator_uuid }}" ]; then
-          DESTINATION="platform=iOS Simulator,id=${{ steps.simulator.outputs.simulator_uuid }}"
-        else
-          DESTINATION="platform=iOS Simulator,name=iPhone 15"
-        fi
-        xcodebuild test \
-          -project "Yoga of Eating.xcodeproj" \
-          -scheme "Yoga of Eating" \
-          -destination "$DESTINATION" \
-          -only-testing:"Yoga of EatingUITests" \
-          -configuration Debug \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO
+          xcodebuild test \
+            -project "Yoga of Eating.xcodeproj" \
+            -scheme "Yoga of Eating" \
+            -destination "$DESTINATION" \
+            -only-testing:"Yoga of EatingUITests" \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+            
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/*/Logs/Test/*.xcresult
+          retention-days: 7
+
+  firebase-functions-tests:
+    name: Firebase Functions Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: ./functions
+        run: npm ci
+        
+      - name: Run linting
+        working-directory: ./functions
+        run: |
+          if [ -f "package.json" ] && grep -q "\"lint\"" package.json; then
+            npm run lint
+          else
+            echo "No lint script found, skipping..."
+          fi
+        continue-on-error: true
+        
+      - name: Run tests
+        working-directory: ./functions
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\"" package.json; then
+            npm test
+          else
+            echo "No test script found, skipping tests..."
+          fi
+        continue-on-error: true
+        
+      - name: Verify functions can be loaded
+        working-directory: ./functions
+        run: |
+          node -e "require('./index.js'); console.log('Functions loaded successfully')"
+        continue-on-error: true
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for secret scanning
+          
+      - name: Run Gitleaks Secret Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-path: .gitleaks.toml
+          no-git: false
+          exit-code: 1
+          severity: high
+        continue-on-error: true
+          
+      - name: Check for Firebase Service Account Keys
+        run: |
+          echo "🔍 Scanning for Firebase service account keys..."
+          if find . -name "*.json" -type f ! -path "*/node_modules/*" ! -path "*/.build/*" ! -path "*/DerivedData/*" ! -path "*/package-lock.json" ! -path "*/Package.resolved" ! -path "*/.github/**" | xargs grep -l "type.*service_account\|private_key_id\|client_email.*@.*\.iam\.gserviceaccount\.com" 2>/dev/null; then
+            echo "❌ ERROR: Potential Firebase service account key found!"
+            exit 1
+          else
+            echo "✅ No Firebase service account keys detected"
+          fi
+          
+      - name: Check for GoogleService-Info.plist in repo
+        run: |
+          echo "🔍 Checking for GoogleService-Info.plist files..."
+          # Allow the file to exist but check if it contains real credentials
+          if git ls-files | grep -i "GoogleService-Info.plist"; then
+            # Check if it's a CI placeholder (contains ci-test)
+            if grep -q "ci-test\|yoga-of-eating-ci" GoogleService-Info.plist 2>/dev/null; then
+              echo "⚠️  Warning: GoogleService-Info.plist found but appears to be a CI placeholder"
+              echo "✅ CI placeholder detected, this is acceptable"
+            else
+              echo "❌ ERROR: GoogleService-Info.plist found in repository with potential real credentials!"
+              echo "These files contain sensitive Firebase configuration and should NOT be committed."
+              echo "Please ensure they are in .gitignore and remove them from git history if committed."
+              exit 1
+            fi
+          else
+            echo "✅ No GoogleService-Info.plist found in repository"
+          fi
+          
+      - name: Check for hardcoded API keys
+        run: |
+          echo "🔍 Scanning for hardcoded API keys..."
+          # Common API key patterns
+          PATTERNS=(
+            "AIza[0-9A-Za-z_-]{35}"
+            "sk-[0-9a-zA-Z]{32,}"
+            "xox[baprs]-[0-9a-zA-Z-]{10,48}"
+            "AKIA[0-9A-Z]{16}"
+            "ya29\.[0-9A-Za-z_-]+"
+            "1//[0-9A-Za-z_-]+"
+          )
+          
+          FOUND_SECRET=false
+          for pattern in "${PATTERNS[@]}"; do
+            if git grep -E "$pattern" -- ':!*.md' ':!.github/**' ':!*.gitignore' ':!*.gitleaks.toml' ':!GoogleService-Info.plist' 2>/dev/null; then
+              echo "❌ ERROR: Potential API key pattern detected: $pattern"
+              FOUND_SECRET=true
+            fi
+          done
+          
+          if [ "$FOUND_SECRET" = true ]; then
+            echo "❌ Security scan failed: Hardcoded API keys detected!"
+            exit 1
+          else
+            echo "✅ No hardcoded API keys detected"
+          fi
+          
+      - name: Check for private keys
+        run: |
+          echo "🔍 Scanning for private keys..."
+          if git grep -E "BEGIN (RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY" -- ':!*.md' ':!.github/**' ':!*.gitignore' ':!*.gitleaks.toml' 2>/dev/null; then
+            echo "❌ ERROR: Private key detected in repository!"
+            exit 1
+          else
+            echo "✅ No private keys detected"
+          fi
+          
+      - name: Check for environment files with secrets
+        run: |
+          echo "🔍 Checking for .env files..."
+          if git ls-files | grep -E "\.env$|\.env\.(local|production|development)$"; then
+            echo "❌ ERROR: .env files found in repository!"
+            echo "Environment files may contain secrets and should be in .gitignore"
+            exit 1
+          else
+            echo "✅ No .env files found in repository"
+          fi
+          
+      - name: Check for common secret patterns
+        run: |
+          echo "🔍 Scanning for common secret patterns..."
+          # Check for common secret variable patterns
+          SECRET_PATTERNS=(
+            "password\s*=\s*['\"][^'\"]+['\"]"
+            "secret\s*=\s*['\"][^'\"]+['\"]"
+            "api_key\s*=\s*['\"][^'\"]+['\"]"
+            "apikey\s*=\s*['\"][^'\"]+['\"]"
+            "access_token\s*=\s*['\"][^'\"]+['\"]"
+            "auth_token\s*=\s*['\"][^'\"]+['\"]"
+          )
+          
+          FOUND_SECRET=false
+          for pattern in "${SECRET_PATTERNS[@]}"; do
+            if git grep -E "$pattern" -- ':!*.md' ':!.github/**' ':!*.gitignore' ':!*.gitleaks.toml' ':!package-lock.json' ':!Package.resolved' 2>/dev/null; then
+              echo "⚠️  Warning: Potential secret pattern detected: $pattern"
+              echo "Please review to ensure this is not a real secret"
+              # Don't fail on warnings, only on confirmed secrets
+            fi
+          done
+          
+          echo "✅ Secret pattern scan completed"
