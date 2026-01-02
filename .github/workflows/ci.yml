@@ -198,20 +198,36 @@ jobs:
       - name: Check for GoogleService-Info.plist in repo
         run: |
           echo "🔍 Checking for GoogleService-Info.plist files..."
-          # Allow the file to exist but check if it contains real credentials
-          if git ls-files | grep -i "GoogleService-Info.plist"; then
-            # Check if it's a CI placeholder (contains ci-test)
-            if grep -q "ci-test\|yoga-of-eating-ci" GoogleService-Info.plist 2>/dev/null; then
-              echo "⚠️  Warning: GoogleService-Info.plist found but appears to be a CI placeholder"
+          # Check if file is tracked in git
+          if git ls-files | grep -qi "GoogleService-Info.plist"; then
+            echo "⚠️  GoogleService-Info.plist is tracked in git"
+            
+            # Check if it contains placeholder values (CI-safe)
+            if grep -qi "ci-test\|yoga-of-eating-ci\|123456789\|abcdef123456" GoogleService-Info.plist 2>/dev/null; then
               echo "✅ CI placeholder detected, this is acceptable"
             else
-              echo "❌ ERROR: GoogleService-Info.plist found in repository with potential real credentials!"
-              echo "These files contain sensitive Firebase configuration and should NOT be committed."
-              echo "Please ensure they are in .gitignore and remove them from git history if committed."
-              exit 1
+              # Check if it contains real-looking API keys (starts with AIza and is long enough)
+              if grep -qiE "AIza[0-9A-Za-z_-]{30,}" GoogleService-Info.plist 2>/dev/null; then
+                echo "❌ ERROR: GoogleService-Info.plist found in repository with REAL credentials!"
+                echo "The file contains actual Firebase API keys and should NOT be committed."
+                echo ""
+                echo "To fix this:"
+                echo "1. Remove from git: git rm --cached GoogleService-Info.plist"
+                echo "2. Ensure it's in .gitignore"
+                echo "3. Commit the removal"
+                echo "4. Rotate your Firebase API keys if they were exposed"
+                exit 1
+              else
+                echo "⚠️  Warning: GoogleService-Info.plist is tracked but credentials look safe"
+                echo "Consider removing it from git tracking to be safe"
+              fi
             fi
           else
-            echo "✅ No GoogleService-Info.plist found in repository"
+            echo "✅ GoogleService-Info.plist is not tracked in git (correct)"
+            # Check if it exists locally but is ignored
+            if [ -f "GoogleService-Info.plist" ]; then
+              echo "ℹ️  File exists locally but is properly ignored (this is fine)"
+            fi
           fi
           
       - name: Check for hardcoded API keys
