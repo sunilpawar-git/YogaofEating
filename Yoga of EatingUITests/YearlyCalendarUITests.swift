@@ -30,7 +30,7 @@
             try self.test_navigatingToYearlyCalendar_fromSettings()
 
             // Check for today's cell highlight
-            let todayCell = self.app.otherElements["heatmap-cell-today"]
+            let todayCell = self.app.buttons["heatmap-cell-today"]
             XCTAssertTrue(todayCell.exists, "Today's cell should be highlighted and have a specific identifier")
         }
 

@@ -344,6 +344,8 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 10436EC72EFD1ADB00B368D9 /* Build configuration list for PBXNativeTarget "Yoga of EatingTests" */;
 			buildPhases = (
+				838323E1A1509BFF74CB23C2 /* SwiftFormat */,
+				2E14653B40B3CCB95435C7E0 /* SwiftLint */,
 				10436EAC2EFD1ADB00B368D9 /* Sources */,
 				10436EAD2EFD1ADB00B368D9 /* Frameworks */,
 				10436EAE2EFD1ADB00B368D9 /* Resources */,
@@ -362,6 +364,8 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 10436ECA2EFD1ADB00B368D9 /* Build configuration list for PBXNativeTarget "Yoga of EatingUITests" */;
 			buildPhases = (
+				838323E1A1509BFF74CB23C2 /* SwiftFormat */,
+				2E14653B40B3CCB95435C7E0 /* SwiftLint */,
 				10436EB62EFD1ADB00B368D9 /* Sources */,
 				10436EB72EFD1ADB00B368D9 /* Frameworks */,
 				10436EB82EFD1ADB00B368D9 /* Resources */,
@@ -469,7 +473,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\nif which swiftlint >/dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\nif which swiftlint >/dev/null; then\n  swiftlint lint --config \"${SRCROOT}/.swiftlint.yml\" \"${SRCROOT}/\"\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 		};
 		838323E1A1509BFF74CB23C2 /* SwiftFormat */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -488,7 +492,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\nif which swiftformat >/dev/null; then\n  swiftformat .\nelse\n  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"\nfi\n";
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\nif which swiftformat >/dev/null; then\n  swiftformat \"${SRCROOT}\" --config \"${SRCROOT}/.swiftformat\"\nelse\n  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -618,7 +622,7 @@
 				DEVELOPMENT_TEAM = CCVJR9P725;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -680,7 +684,7 @@
 				DEVELOPMENT_TEAM = CCVJR9P725;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
