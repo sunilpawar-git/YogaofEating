@@ -3,6 +3,7 @@ import FirebaseAuth
 import FirebaseCore
 import Foundation
 import GoogleSignIn
+
 #if canImport(UIKit)
     import UIKit
 #elseif canImport(AppKit)
@@ -16,94 +17,66 @@ protocol AuthUser {
     var email: String? { get }
 }
 
-extension FirebaseAuth.User: AuthUser {
-    // These properties already exist on FirebaseAuth.User
+extension FirebaseAuth.User: AuthUser {}
+
+/// Protocol for the underlying authentication provider to enable testability.
+@MainActor
+protocol AuthCoreProvider {
+    var currentUser: AuthUser? { get }
+    func signInWithGoogle() async throws -> AuthUser
+    func signOut() throws
+    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any
+    func restorePreviousSignIn() async throws -> AuthUser
 }
 
-/// Protocol for authentication services, enabling dependency injection and testing
+/// Firebase implementation of the AuthCoreProvider
 @MainActor
-protocol AuthServiceProtocol: ObservableObject {
-    /// The currently authenticated Firebase user
-    var currentUser: AuthUser? { get set }
-
-    /// Sign in with Google account
-    func signInWithGoogle() async throws
-
-    /// Sign out the current user
-    func signOut()
-}
-
-@MainActor
-class AuthService: ObservableObject, AuthServiceProtocol {
-    // Use a computed property to lazily create the shared instance
-    // This prevents Firebase access during module loading in tests
-    private nonisolated(unsafe) static var _shared: AuthService?
-
-    static var shared: AuthService {
-        // Return a dummy instance during unit tests to prevent Firebase access
-        if NSClassFromString("XCTestCase") != nil {
-            if _shared == nil {
-                _shared = AuthService(currentUser: nil)
-            }
-        } else if _shared == nil {
-            _shared = AuthService(initializeFromFirebase: true)
-        }
-        guard let shared = _shared else {
-            fatalError("Failed to initialize AuthService shared instance")
-        }
-        return shared
+class FirebaseAuthCoreProvider: AuthCoreProvider {
+    var currentUser: AuthUser? {
+        guard FirebaseApp.app() != nil else { return nil }
+        return Auth.auth().currentUser
     }
 
-    @Published var currentUser: AuthUser?
-
-    // Private initializer for singleton - only called when shared is first accessed
-    private init(initializeFromFirebase: Bool) {
-        if initializeFromFirebase, FirebaseApp.app() != nil {
-            self.currentUser = Auth.auth().currentUser
-        } else {
-            self.currentUser = nil
-        }
-    }
-
-    // Initializer for dependency injection in tests - does NOT access Firebase
-    init(currentUser: User? = nil) {
-        self.currentUser = currentUser
-    }
-
-    func signInWithGoogle() async throws {
-        // 1. Get client ID
+    func signInWithGoogle() async throws -> AuthUser {
         guard let clientID = FirebaseApp.app()?.options.clientID else {
-            let errorMsg = "Firebase Client ID not found"
-            throw NSError(domain: "AuthService", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+            throw NSError(
+                domain: "AuthService",
+                code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "Firebase Client ID not found"]
+            )
         }
 
-        // 2. Configure Google Sign In
         let config = GIDConfiguration(clientID: clientID)
         GIDSignIn.sharedInstance.configuration = config
 
-        // 3. Start sign in flow
         #if canImport(UIKit)
-            // iOS: Need root view controller
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let rootViewController = windowScene.windows.first?.rootViewController
             else {
-                let errorMsg = "No root view controller found"
-                throw NSError(domain: "AuthService", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+                throw NSError(
+                    domain: "AuthService",
+                    code: 0,
+                    userInfo: [NSLocalizedDescriptionKey: "No root view controller found"]
+                )
             }
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
         #elseif canImport(AppKit)
-            // macOS: Use key window for presentation
             guard let presentingWindow = NSApplication.shared.keyWindow else {
-                let errorMsg = "No key window found for Google Sign-In"
-                throw NSError(domain: "AuthService", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+                throw NSError(
+                    domain: "AuthService",
+                    code: 0,
+                    userInfo: [NSLocalizedDescriptionKey: "No key window found"]
+                )
             }
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presentingWindow)
         #endif
 
-        // 4. Authenticate with Firebase
         guard let idToken = result.user.idToken?.tokenString else {
-            let errorMsg = "Google ID Token missing"
-            throw NSError(domain: "AuthService", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+            throw NSError(
+                domain: "AuthService",
+                code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "Google ID Token missing"]
+            )
         }
 
         let credential = GoogleAuthProvider.credential(
@@ -112,20 +85,113 @@ class AuthService: ObservableObject, AuthServiceProtocol {
         )
 
         let authResult = try await Auth.auth().signIn(with: credential)
-        self.currentUser = authResult.user
+        return authResult.user
+    }
+
+    func signOut() throws {
+        guard FirebaseApp.app() != nil else { return }
+        try Auth.auth().signOut()
+        GIDSignIn.sharedInstance.signOut()
+    }
+
+    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any {
+        guard FirebaseApp.app() != nil else { return "no_firebase_handle" }
+        return Auth.auth().addStateDidChangeListener { _, user in
+            listener(user)
+        }
+    }
+
+    func restorePreviousSignIn() async throws -> AuthUser {
+        guard FirebaseApp.app() != nil else {
+            throw NSError(
+                domain: "AuthService",
+                code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "Firebase not configured"]
+            )
+        }
+        let user = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
+
+        let idToken = try await user.refreshTokensIfNeeded().idToken?.tokenString
+        let accessToken = user.accessToken.tokenString
+
+        guard let idToken else {
+            throw NSError(
+                domain: "AuthService",
+                code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "Failed to restore ID Token"]
+            )
+        }
+
+        let credential = GoogleAuthProvider.credential(
+            withIDToken: idToken,
+            accessToken: accessToken
+        )
+
+        let authResult = try await Auth.auth().signIn(with: credential)
+        return authResult.user
+    }
+}
+
+/// Protocol for authentication services, enabling dependency injection and testing
+@MainActor
+protocol AuthServiceProtocol: ObservableObject {
+    var currentUser: AuthUser? { get }
+    func signInWithGoogle() async throws
+    func signOut()
+}
+
+@MainActor
+class AuthService: ObservableObject, AuthServiceProtocol {
+    static let shared = AuthService()
+
+    @Published private(set) var currentUser: AuthUser?
+    private let provider: AuthCoreProvider
+    private var authListenerHandle: Any?
+
+    /// Initializer for production (uses Firebase)
+    private init() {
+        self.provider = FirebaseAuthCoreProvider()
+        self.currentUser = self.provider.currentUser
+        self.setupAuthStateListener()
+        self.restorePreviousSession()
+    }
+
+    /// Initializer for dependency injection (tests)
+    init(provider: AuthCoreProvider) {
+        self.provider = provider
+        self.currentUser = provider.currentUser
+        self.setupAuthStateListener()
+        self.restorePreviousSession()
+    }
+
+    private func restorePreviousSession() {
+        Task {
+            do {
+                _ = try await self.provider.restorePreviousSignIn()
+            } catch {
+                // Not necessarily an error if no previous session exists
+                print("No previous session to restore")
+            }
+        }
+    }
+
+    private func setupAuthStateListener() {
+        self.authListenerHandle = self.provider.addStateDidChangeListener { [weak self] user in
+            self?.currentUser = user
+        }
+    }
+
+    func signInWithGoogle() async throws {
+        let user = try await provider.signInWithGoogle()
+        self.currentUser = user
     }
 
     func signOut() {
-        // Only sign out from Firebase if it's configured
-        if FirebaseApp.app() != nil {
-            do {
-                try Auth.auth().signOut()
-                GIDSignIn.sharedInstance.signOut()
-            } catch {
-                print("Error signing out: \(error.localizedDescription)")
-            }
+        do {
+            try self.provider.signOut()
+            self.currentUser = nil
+        } catch {
+            print("Error signing out: \(error.localizedDescription)")
         }
-        // Always clear the current user
-        self.currentUser = nil
     }
 }

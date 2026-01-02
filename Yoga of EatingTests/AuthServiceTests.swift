@@ -1,27 +1,88 @@
-#if canImport(XCTest)
-    import XCTest
+import XCTest
+@testable import Yoga_of_Eating
 
-    // NOTE: AuthService tests are disabled because they require Firebase to be configured.
-    //
-    // The AuthService class accesses Firebase Auth and Google Sign-In SDKs, which cannot
-    // be safely initialized in a unit test environment without the full Firebase setup.
-    //
-    // To test AuthService functionality, use:
-    // 1. Integration tests with Firebase Emulator Suite
-    // 2. UI tests that run with the full app context
-    // 3. Manual testing in development builds
-    //
-    // The following tests would be implemented if Firebase mocking was available:
-    // - test_signOut_clearsCurrentUser()
-    // - test_initialState_withNilUser_hasNoCurrentUser()
-    // - test_signInWithGoogle_throwsError_whenClientIDMissing()
-    // - test_signInWithGoogle_updatesCurrentUser_onSuccess()
+@MainActor
+final class AuthServiceTests: XCTestCase {
+    var authService: AuthService!
+    var mockProvider: MockAuthCoreProvider!
 
-    final class AuthServiceTests: XCTestCase {
-        func test_placeholder() {
-            // This is a placeholder test to ensure the test target compiles.
-            // Actual AuthService testing requires Firebase integration.
-            XCTAssertTrue(true, "AuthService tests are skipped - Firebase not available in test environment")
-        }
+    override func setUp() {
+        super.setUp()
+        self.mockProvider = MockAuthCoreProvider()
+        self.authService = AuthService(provider: self.mockProvider)
     }
-#endif
+
+    override func tearDown() {
+        self.authService = nil
+        self.mockProvider = nil
+        super.tearDown()
+    }
+
+    func test_initialState_reflectsProviderUser() {
+        // Given
+        let expectedUser = MockAuthUser(uid: "initial_uid", displayName: "Initial", email: "initial@example.com")
+        self.mockProvider.currentUser = expectedUser
+
+        // When (re-initializing ensures initial state is captured)
+        self.authService = AuthService(provider: self.mockProvider)
+
+        // Then
+        XCTAssertEqual(self.authService.currentUser?.uid, expectedUser.uid)
+    }
+
+    func test_signInWithGoogle_updatesCurrentUser() async throws {
+        // When
+        try await self.authService.signInWithGoogle()
+
+        // Then
+        XCTAssertTrue(self.mockProvider.signInCalled)
+        XCTAssertNotNil(self.authService.currentUser)
+        XCTAssertEqual(self.authService.currentUser?.uid, "mock_uid")
+    }
+
+    func test_signOut_clearsCurrentUser() {
+        // Given
+        self.mockProvider.simulateStateChange(user: MockAuthUser(uid: "some_uid", displayName: nil, email: nil))
+        XCTAssertNotNil(self.authService.currentUser)
+
+        // When
+        self.authService.signOut()
+
+        // Then
+        XCTAssertTrue(self.mockProvider.signOutCalled)
+        XCTAssertNil(self.authService.currentUser)
+    }
+
+    func test_authStateChangeListener_updatesCurrentUser() {
+        // Given
+        XCTAssertNil(self.authService.currentUser)
+
+        // When (Simulate provider notifying about a new user)
+        let newUser = MockAuthUser(uid: "new_uid", displayName: "New", email: "new@example.com")
+        self.mockProvider.simulateStateChange(user: newUser)
+
+        // Then
+        XCTAssertEqual(self.authService.currentUser?.uid, "new_uid")
+    }
+
+    func test_initialization_restoresPreviousSession() async {
+        // Given
+        let provider = MockAuthCoreProvider()
+
+        // When
+        _ = AuthService(provider: provider)
+
+        // Then - Wait for the restoration Task to execute
+        for _ in 0..<10 {
+            if provider.restorePreviousSignInCalled {
+                break
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000) // 0.05s
+        }
+
+        XCTAssertTrue(
+            provider.restorePreviousSignInCalled,
+            "restorePreviousSignIn should have been called during initialization"
+        )
+    }
+}

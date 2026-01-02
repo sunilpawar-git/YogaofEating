@@ -21,6 +21,11 @@ struct YogaOfEatingApp: App {
         // Initialize Firebase
         FirebaseApp.configure()
         print("🔥 Firebase initialized")
+
+        // Initialize AuthService early to start listening for session restoration
+        _ = AuthService.shared
+        print("👤 AuthService initialized")
+
         print("📱 Yoga of Eating app starting...")
 
         // Check if running UI tests and reset data if needed

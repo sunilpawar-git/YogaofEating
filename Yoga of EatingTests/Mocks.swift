@@ -24,6 +24,60 @@ class MockAuthService: AuthServiceProtocol {
     }
 }
 
+struct MockAuthUser: AuthUser {
+    var uid: String
+    var displayName: String?
+    var email: String?
+}
+
+@MainActor
+class MockAuthCoreProvider: AuthCoreProvider {
+    var currentUser: AuthUser?
+    var signInCalled = false
+    var signOutCalled = false
+    var restorePreviousSignInCalled = false
+    var shouldThrowError = false
+    var listener: ((AuthUser?) -> Void)?
+
+    func signInWithGoogle() async throws -> AuthUser {
+        self.signInCalled = true
+        if self.shouldThrowError {
+            throw NSError(domain: "Auth", code: 1, userInfo: [NSLocalizedDescriptionKey: "Mock Error"])
+        }
+        let user = MockAuthUser(uid: "mock_uid", displayName: "Mock User", email: "mock@example.com")
+        return user
+    }
+
+    func signOut() throws {
+        self.signOutCalled = true
+        if self.shouldThrowError {
+            throw NSError(domain: "Auth", code: 2, userInfo: [NSLocalizedDescriptionKey: "Sign Out Error"])
+        }
+        self.currentUser = nil
+    }
+
+    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any {
+        self.listener = listener
+        return "mock_handle"
+    }
+
+    func simulateStateChange(user: AuthUser?) {
+        self.currentUser = user
+        self.listener?(user)
+    }
+
+    func restorePreviousSignIn() async throws -> AuthUser {
+        self.restorePreviousSignInCalled = true
+        if self.shouldThrowError {
+            throw NSError(domain: "Auth", code: 3, userInfo: [NSLocalizedDescriptionKey: "Restore Error"])
+        }
+        let user = MockAuthUser(uid: "restored_uid", displayName: "Restored User", email: "restored@example.com")
+        self.currentUser = user
+        self.listener?(user)
+        return user
+    }
+}
+
 /// Mock for CloudSyncService
 @MainActor
 class MockCloudSyncService: CloudSyncServiceProtocol {

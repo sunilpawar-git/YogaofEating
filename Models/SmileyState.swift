@@ -8,7 +8,7 @@ struct SmileyState: Codable {
     /// The emotional mood of the smiley (e.g., serene, overwhelmed).
     var mood: SmileyMood
 
-    static let neutral = SmileyState(scale: 1.0, mood: .neutral)
+    nonisolated static let neutral = SmileyState(scale: 1.0, mood: .neutral)
 }
 
 enum SmileyMood: String, Codable {
