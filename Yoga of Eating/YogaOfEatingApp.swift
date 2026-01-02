@@ -6,7 +6,8 @@ import SwiftUI
 @main
 struct YogaOfEatingApp: App {
     // Connect App Delegate
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self)
+    var delegate
 
     // Shared state across the app
     @StateObject private var viewModel = MainViewModel()
@@ -95,12 +96,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
-    // Handle URL callbacks for Google Sign-In (iOS 9+)
-    func application(
-        _: UIApplication,
-        open url: URL,
-        options _: [UIApplication.OpenURLOptionsKey: Any] = [:]
-    ) -> Bool {
-        GIDSignIn.sharedInstance.handle(url)
-    }
+    // Note: URL handling for Google Sign-In is done via SwiftUI's onOpenURL modifier
+    // in WindowGroup, which uses the modern UIScene lifecycle approach.
 }

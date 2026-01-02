@@ -58,7 +58,7 @@ struct FAQItem: View {
                     .font(.body)
                     .foregroundColor(.secondary)
                     .padding(.bottom, 4)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.opacity)
             }
         }
         .padding(.vertical, 4)
