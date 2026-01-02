@@ -1,0 +1,999 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0238A131709D2CDD51E0477F /* Mocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A4A480693167DDCBC159A7B /* Mocks.swift */; };
+		10436F042EFD1F1E00B368D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10436EFC2EFD1F1E00B368D9 /* Assets.xcassets */; };
+		10436F062EFD1F1E00B368D9 /* Yoga_of_EatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EFF2EFD1F1E00B368D9 /* Yoga_of_EatingTests.swift */; };
+		10436F072EFD1F1E00B368D9 /* YogaOfEatingApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EFD2EFD1F1E00B368D9 /* YogaOfEatingApp.swift */; };
+		10436F0F2EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436F012EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift */; };
+		10436F132EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436F022EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift */; };
+		10436F202EFD951500B368D9 /* MealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436F1E2EFD951500B368D9 /* MealTests.swift */; };
+		10436F212EFD951500B368D9 /* PersistenceServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436F1F2EFD951500B368D9 /* PersistenceServiceTests.swift */; };
+		10436F242EFD984300B368D9 /* MainViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EF42EFD1F1E00B368D9 /* MainViewModelTests.swift */; };
+		10436F252EFD984D00B368D9 /* MealLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EF52EFD1F1E00B368D9 /* MealLogicTests.swift */; };
+		10436F262EFD985300B368D9 /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436EF62EFD1F1E00B368D9 /* NotificationManagerTests.swift */; };
+		10436F272EFD985300B368D9 /* SmileyViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10436F282EFD985300B368D9 /* SmileyViewTests.swift */; };
+		109219442F04D9EB00B05B67 /* AILogicServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219402F04D9EB00B05B67 /* AILogicServiceTests.swift */; };
+		109219452F04D9EB00B05B67 /* SensoryServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219432F04D9EB00B05B67 /* SensoryServiceTests.swift */; };
+		109219462F04D9EB00B05B67 /* AuthServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219412F04D9EB00B05B67 /* AuthServiceTests.swift */; };
+		109219472F04D9EB00B05B67 /* MainViewModelAIAnalysisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219422F04D9EB00B05B67 /* MainViewModelAIAnalysisTests.swift */; };
+		109219512F04EA0F00B05B67 /* FlowchartWireView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092194C2F04EA0F00B05B67 /* FlowchartWireView.swift */; };
+		109219522F04EA0F00B05B67 /* MealTypeSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092194D2F04EA0F00B05B67 /* MealTypeSelectorView.swift */; };
+		109219532F04EA0F00B05B67 /* MealTypeTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092194E2F04EA0F00B05B67 /* MealTypeTag.swift */; };
+		109219542F04EA0F00B05B67 /* SmileyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092194F2F04EA0F00B05B67 /* SmileyView.swift */; };
+		1092195C2F04EA4100B05B67 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219562F04EA4100B05B67 /* AuthService.swift */; };
+		1092195D2F04EA4100B05B67 /* PersistenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219592F04EA4100B05B67 /* PersistenceService.swift */; };
+		1092195E2F04EA4100B05B67 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219582F04EA4100B05B67 /* NotificationManager.swift */; };
+		1092195F2F04EA4100B05B67 /* SensoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092195A2F04EA4100B05B67 /* SensoryService.swift */; };
+		109219602F04EA4100B05B67 /* MealLogicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219572F04EA4100B05B67 /* MealLogicService.swift */; };
+		109219612F04EA4100B05B67 /* AILogicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219552F04EA4100B05B67 /* AILogicService.swift */; };
+		109219652F04EA5300B05B67 /* SmileyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219632F04EA5300B05B67 /* SmileyState.swift */; };
+		109219662F04EA5300B05B67 /* Meal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219622F04EA5300B05B67 /* Meal.swift */; };
+		1092196A2F04EA6300B05B67 /* MainViewModel+AIAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219682F04EA6300B05B67 /* MainViewModel+AIAnalysis.swift */; };
+		1092196B2F04EA6300B05B67 /* MainViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219672F04EA6300B05B67 /* MainViewModel.swift */; };
+		109219712F04EA7100B05B67 /* JournalBlockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092196D2F04EA7100B05B67 /* JournalBlockView.swift */; };
+		109219722F04EA7100B05B67 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092196F2F04EA7100B05B67 /* SettingsView.swift */; };
+		109219732F04EA7100B05B67 /* FAQView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092196C2F04EA7100B05B67 /* FAQView.swift */; };
+		109219742F04EA7100B05B67 /* MainScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092196E2F04EA7100B05B67 /* MainScreenView.swift */; };
+		1092197E2F04FE9E00B05B67 /* MainFlowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092197B2F04FE9E00B05B67 /* MainFlowUITests.swift */; };
+		1092197F2F04FE9E00B05B67 /* TextInputUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092197D2F04FE9E00B05B67 /* TextInputUITests.swift */; };
+		109219802F04FE9E00B05B67 /* SettingsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1092197C2F04FE9E00B05B67 /* SettingsUITests.swift */; };
+		109219842F056BC200B05B67 /* DailySmileySnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219812F056BC200B05B67 /* DailySmileySnapshotTests.swift */; };
+		109219852F056BC200B05B67 /* HistoricalDataServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219822F056BC200B05B67 /* HistoricalDataServiceTests.swift */; };
+		109219862F056BC200B05B67 /* HistoricalDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109219832F056BC200B05B67 /* HistoricalDataTests.swift */; };
+		109B2C5C2F013C0800CFD6AA /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5B2F013C0800CFD6AA /* FirebaseAI */; };
+		109B2C5E2F013C0800CFD6AA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5D2F013C0800CFD6AA /* FirebaseAuth */; };
+		109B2C602F013C0800CFD6AA /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5F2F013C0800CFD6AA /* FirebaseCore */; };
+		109B2C622F013C0800CFD6AA /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C612F013C0800CFD6AA /* FirebaseFirestore */; };
+		109B2C642F013C0800CFD6AA /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C632F013C0800CFD6AA /* FirebaseFunctions */; };
+		109B2C6B2F01420500CFD6AA /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C6A2F01420500CFD6AA /* GoogleSignIn */; };
+		109B2C6D2F01420500CFD6AA /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C6C2F01420500CFD6AA /* GoogleSignInSwift */; };
+		109B2C6F2F01438B00CFD6AA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 109B2C6E2F01438B00CFD6AA /* GoogleService-Info.plist */; };
+		33497F5FDCAC4DC31A2E72EB /* CloudSyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6EFC72F5553B8D394479DE /* CloudSyncService.swift */; };
+		37354AE5BC5560C436A455F6 /* DailySmileySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23135414D6F0C9407245CACD /* DailySmileySnapshot.swift */; };
+		823CEDFBCE9064CFD0B0B882 /* DayMealPopupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F06421BF5AD2F41FCBF3DA30 /* DayMealPopupView.swift */; };
+		8CA1C8E462AD1DD96074F305 /* YearlyCalendarUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CFF3F60C3D807E9662A42F /* YearlyCalendarUITests.swift */; };
+		92846FF8F5C1EE39FA0C555D /* HistoricalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999425CCB59137FDA9CD551A /* HistoricalData.swift */; };
+		9F3688517FB8A62475A60977 /* YearlyCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42401AA29752522F676434E5 /* YearlyCalendarView.swift */; };
+		C32EC25B8984221CB6188524 /* HistoricalDataSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3983B88B076CB058A25059D4 /* HistoricalDataSyncTests.swift */; };
+		D3964E209A46B8D99F99D30C /* HistoricalDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F25492CE6BC081720974D7B /* HistoricalDataService.swift */; };
+		D7FDF157906CB6F7E4EACC33 /* DayCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE4AF211150944A9D75A17C /* DayCell.swift */; };
+		FAFC578F20AC8DD819637E3E /* YearlyCalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AB407785D4598B94A80A09C /* YearlyCalendarViewModel.swift */; };
+		FBC55970744A36310869279B /* YearlyCalendarViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 344B0BC5F73F8E1F8DF39F2B /* YearlyCalendarViewModelTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		10436EB12EFD1ADB00B368D9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 10436E9B2EFD1ADA00B368D9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 10436EA22EFD1ADA00B368D9;
+			remoteInfo = "Yoga of Eating";
+		};
+		10436EBB2EFD1ADB00B368D9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 10436E9B2EFD1ADA00B368D9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 10436EA22EFD1ADA00B368D9;
+			remoteInfo = "Yoga of Eating";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		10436EA32EFD1ADA00B368D9 /* Yoga of Eating.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Yoga of Eating.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		10436EB02EFD1ADB00B368D9 /* Yoga of EatingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Yoga of EatingTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		10436EBA2EFD1ADB00B368D9 /* Yoga of EatingUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Yoga of EatingUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		10436EF42EFD1F1E00B368D9 /* MainViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewModelTests.swift; sourceTree = "<group>"; };
+		10436EF52EFD1F1E00B368D9 /* MealLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealLogicTests.swift; sourceTree = "<group>"; };
+		10436EF62EFD1F1E00B368D9 /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
+		10436EFC2EFD1F1E00B368D9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		10436EFD2EFD1F1E00B368D9 /* YogaOfEatingApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YogaOfEatingApp.swift; sourceTree = "<group>"; };
+		10436EFF2EFD1F1E00B368D9 /* Yoga_of_EatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Yoga_of_EatingTests.swift; sourceTree = "<group>"; };
+		10436F012EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Yoga_of_EatingUITests.swift; sourceTree = "<group>"; };
+		10436F022EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Yoga_of_EatingUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		10436F1E2EFD951500B368D9 /* MealTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealTests.swift; sourceTree = "<group>"; };
+		10436F1F2EFD951500B368D9 /* PersistenceServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceServiceTests.swift; sourceTree = "<group>"; };
+		10436F282EFD985300B368D9 /* SmileyViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmileyViewTests.swift; sourceTree = "<group>"; };
+		109219402F04D9EB00B05B67 /* AILogicServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AILogicServiceTests.swift; sourceTree = "<group>"; };
+		109219412F04D9EB00B05B67 /* AuthServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthServiceTests.swift; sourceTree = "<group>"; };
+		109219422F04D9EB00B05B67 /* MainViewModelAIAnalysisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewModelAIAnalysisTests.swift; sourceTree = "<group>"; };
+		109219432F04D9EB00B05B67 /* SensoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensoryServiceTests.swift; sourceTree = "<group>"; };
+		1092194C2F04EA0F00B05B67 /* FlowchartWireView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowchartWireView.swift; sourceTree = "<group>"; };
+		1092194D2F04EA0F00B05B67 /* MealTypeSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealTypeSelectorView.swift; sourceTree = "<group>"; };
+		1092194E2F04EA0F00B05B67 /* MealTypeTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealTypeTag.swift; sourceTree = "<group>"; };
+		1092194F2F04EA0F00B05B67 /* SmileyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmileyView.swift; sourceTree = "<group>"; };
+		109219552F04EA4100B05B67 /* AILogicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AILogicService.swift; sourceTree = "<group>"; };
+		109219562F04EA4100B05B67 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		109219572F04EA4100B05B67 /* MealLogicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MealLogicService.swift; sourceTree = "<group>"; };
+		109219582F04EA4100B05B67 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		109219592F04EA4100B05B67 /* PersistenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceService.swift; sourceTree = "<group>"; };
+		1092195A2F04EA4100B05B67 /* SensoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensoryService.swift; sourceTree = "<group>"; };
+		109219622F04EA5300B05B67 /* Meal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Meal.swift; sourceTree = "<group>"; };
+		109219632F04EA5300B05B67 /* SmileyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmileyState.swift; sourceTree = "<group>"; };
+		109219672F04EA6300B05B67 /* MainViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewModel.swift; sourceTree = "<group>"; };
+		109219682F04EA6300B05B67 /* MainViewModel+AIAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MainViewModel+AIAnalysis.swift"; sourceTree = "<group>"; };
+		1092196C2F04EA7100B05B67 /* FAQView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FAQView.swift; sourceTree = "<group>"; };
+		1092196D2F04EA7100B05B67 /* JournalBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalBlockView.swift; sourceTree = "<group>"; };
+		1092196E2F04EA7100B05B67 /* MainScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreenView.swift; sourceTree = "<group>"; };
+		1092196F2F04EA7100B05B67 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		1092197B2F04FE9E00B05B67 /* MainFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlowUITests.swift; sourceTree = "<group>"; };
+		1092197C2F04FE9E00B05B67 /* SettingsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUITests.swift; sourceTree = "<group>"; };
+		1092197D2F04FE9E00B05B67 /* TextInputUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInputUITests.swift; sourceTree = "<group>"; };
+		109219812F056BC200B05B67 /* DailySmileySnapshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailySmileySnapshotTests.swift; sourceTree = "<group>"; };
+		109219822F056BC200B05B67 /* HistoricalDataServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalDataServiceTests.swift; sourceTree = "<group>"; };
+		109219832F056BC200B05B67 /* HistoricalDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoricalDataTests.swift; sourceTree = "<group>"; };
+		109B2C6E2F01438B00CFD6AA /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		1AB407785D4598B94A80A09C /* YearlyCalendarViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YearlyCalendarViewModel.swift; sourceTree = "<group>"; };
+		23135414D6F0C9407245CACD /* DailySmileySnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DailySmileySnapshot.swift; path = DailySmileySnapshot.swift; sourceTree = "<group>"; };
+		344B0BC5F73F8E1F8DF39F2B /* YearlyCalendarViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YearlyCalendarViewModelTests.swift; sourceTree = "<group>"; };
+		3983B88B076CB058A25059D4 /* HistoricalDataSyncTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HistoricalDataSyncTests.swift; sourceTree = "<group>"; };
+		42401AA29752522F676434E5 /* YearlyCalendarView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YearlyCalendarView.swift; sourceTree = "<group>"; };
+		8A6EFC72F5553B8D394479DE /* CloudSyncService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudSyncService.swift; sourceTree = "<group>"; };
+		8EE4AF211150944A9D75A17C /* DayCell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DayCell.swift; sourceTree = "<group>"; };
+		999425CCB59137FDA9CD551A /* HistoricalData.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoricalData.swift; path = HistoricalData.swift; sourceTree = "<group>"; };
+		9A4A480693167DDCBC159A7B /* Mocks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Mocks.swift; sourceTree = "<group>"; };
+		9F25492CE6BC081720974D7B /* HistoricalDataService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HistoricalDataService.swift; path = HistoricalDataService.swift; sourceTree = "<group>"; };
+		AA000001000000000000001A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D1CFF3F60C3D807E9662A42F /* YearlyCalendarUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = YearlyCalendarUITests.swift; sourceTree = "<group>"; };
+		F06421BF5AD2F41FCBF3DA30 /* DayMealPopupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DayMealPopupView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		10436EA02EFD1ADA00B368D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				109B2C5C2F013C0800CFD6AA /* FirebaseAI in Frameworks */,
+				109B2C622F013C0800CFD6AA /* FirebaseFirestore in Frameworks */,
+				109B2C6D2F01420500CFD6AA /* GoogleSignInSwift in Frameworks */,
+				109B2C642F013C0800CFD6AA /* FirebaseFunctions in Frameworks */,
+				109B2C602F013C0800CFD6AA /* FirebaseCore in Frameworks */,
+				109B2C5E2F013C0800CFD6AA /* FirebaseAuth in Frameworks */,
+				109B2C6B2F01420500CFD6AA /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10436EAD2EFD1ADB00B368D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10436EB72EFD1ADB00B368D9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		10436E9A2EFD1ADA00B368D9 = {
+			isa = PBXGroup;
+			children = (
+				10436EFE2EFD1F1E00B368D9 /* Yoga of Eating */,
+				10436F002EFD1F1E00B368D9 /* Yoga of EatingTests */,
+				10436F032EFD1F1E00B368D9 /* Yoga of EatingUITests */,
+				10436EA42EFD1ADA00B368D9 /* Products */,
+				109B2C6E2F01438B00CFD6AA /* GoogleService-Info.plist */,
+				109219502F04EA0F00B05B67 /* Components */,
+				1092195B2F04EA4100B05B67 /* Logic */,
+				109219642F04EA5300B05B67 /* Models */,
+				109219692F04EA6300B05B67 /* ViewModels */,
+				109219702F04EA7100B05B67 /* Views */,
+			);
+			sourceTree = "<group>";
+		};
+		10436EA42EFD1ADA00B368D9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				10436EA32EFD1ADA00B368D9 /* Yoga of Eating.app */,
+				10436EB02EFD1ADB00B368D9 /* Yoga of EatingTests.xctest */,
+				10436EBA2EFD1ADB00B368D9 /* Yoga of EatingUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		10436EFE2EFD1F1E00B368D9 /* Yoga of Eating */ = {
+			isa = PBXGroup;
+			children = (
+				10436EFC2EFD1F1E00B368D9 /* Assets.xcassets */,
+				10436EFD2EFD1F1E00B368D9 /* YogaOfEatingApp.swift */,
+				AA000001000000000000001A /* Info.plist */,
+			);
+			path = "Yoga of Eating";
+			sourceTree = "<group>";
+		};
+		10436F002EFD1F1E00B368D9 /* Yoga of EatingTests */ = {
+			isa = PBXGroup;
+			children = (
+				10436EFF2EFD1F1E00B368D9 /* Yoga_of_EatingTests.swift */,
+				10436EF42EFD1F1E00B368D9 /* MainViewModelTests.swift */,
+				109219422F04D9EB00B05B67 /* MainViewModelAIAnalysisTests.swift */,
+				109219402F04D9EB00B05B67 /* AILogicServiceTests.swift */,
+				109219412F04D9EB00B05B67 /* AuthServiceTests.swift */,
+				109219432F04D9EB00B05B67 /* SensoryServiceTests.swift */,
+				10436F1E2EFD951500B368D9 /* MealTests.swift */,
+				10436F1F2EFD951500B368D9 /* PersistenceServiceTests.swift */,
+				10436F282EFD985300B368D9 /* SmileyViewTests.swift */,
+				10436EF52EFD1F1E00B368D9 /* MealLogicTests.swift */,
+				10436EF62EFD1F1E00B368D9 /* NotificationManagerTests.swift */,
+				109219812F056BC200B05B67 /* DailySmileySnapshotTests.swift */,
+				109219822F056BC200B05B67 /* HistoricalDataServiceTests.swift */,
+				109219832F056BC200B05B67 /* HistoricalDataTests.swift */,
+				9A4A480693167DDCBC159A7B /* Mocks.swift */,
+				344B0BC5F73F8E1F8DF39F2B /* YearlyCalendarViewModelTests.swift */,
+				3983B88B076CB058A25059D4 /* HistoricalDataSyncTests.swift */,
+			);
+			path = "Yoga of EatingTests";
+			sourceTree = "<group>";
+		};
+		10436F032EFD1F1E00B368D9 /* Yoga of EatingUITests */ = {
+			isa = PBXGroup;
+			children = (
+				1092197B2F04FE9E00B05B67 /* MainFlowUITests.swift */,
+				1092197C2F04FE9E00B05B67 /* SettingsUITests.swift */,
+				1092197D2F04FE9E00B05B67 /* TextInputUITests.swift */,
+				10436F012EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift */,
+				10436F022EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift */,
+				D1CFF3F60C3D807E9662A42F /* YearlyCalendarUITests.swift */,
+			);
+			path = "Yoga of EatingUITests";
+			sourceTree = "<group>";
+		};
+		109219502F04EA0F00B05B67 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				1092194C2F04EA0F00B05B67 /* FlowchartWireView.swift */,
+				1092194D2F04EA0F00B05B67 /* MealTypeSelectorView.swift */,
+				1092194E2F04EA0F00B05B67 /* MealTypeTag.swift */,
+				1092194F2F04EA0F00B05B67 /* SmileyView.swift */,
+				8EE4AF211150944A9D75A17C /* DayCell.swift */,
+				F06421BF5AD2F41FCBF3DA30 /* DayMealPopupView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		1092195B2F04EA4100B05B67 /* Logic */ = {
+			isa = PBXGroup;
+			children = (
+				109219552F04EA4100B05B67 /* AILogicService.swift */,
+				109219562F04EA4100B05B67 /* AuthService.swift */,
+				109219572F04EA4100B05B67 /* MealLogicService.swift */,
+				109219582F04EA4100B05B67 /* NotificationManager.swift */,
+				109219592F04EA4100B05B67 /* PersistenceService.swift */,
+				1092195A2F04EA4100B05B67 /* SensoryService.swift */,
+				9F25492CE6BC081720974D7B /* HistoricalDataService.swift */,
+				8A6EFC72F5553B8D394479DE /* CloudSyncService.swift */,
+			);
+			path = Logic;
+			sourceTree = "<group>";
+		};
+		109219642F04EA5300B05B67 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				109219622F04EA5300B05B67 /* Meal.swift */,
+				109219632F04EA5300B05B67 /* SmileyState.swift */,
+				23135414D6F0C9407245CACD /* DailySmileySnapshot.swift */,
+				999425CCB59137FDA9CD551A /* HistoricalData.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		109219692F04EA6300B05B67 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				109219672F04EA6300B05B67 /* MainViewModel.swift */,
+				109219682F04EA6300B05B67 /* MainViewModel+AIAnalysis.swift */,
+				1AB407785D4598B94A80A09C /* YearlyCalendarViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		109219702F04EA7100B05B67 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				1092196C2F04EA7100B05B67 /* FAQView.swift */,
+				1092196D2F04EA7100B05B67 /* JournalBlockView.swift */,
+				1092196E2F04EA7100B05B67 /* MainScreenView.swift */,
+				1092196F2F04EA7100B05B67 /* SettingsView.swift */,
+				642D326D46A6D37A2AD473C7 /* Components */,
+				42401AA29752522F676434E5 /* YearlyCalendarView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		642D326D46A6D37A2AD473C7 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Components;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		10436EA22EFD1ADA00B368D9 /* Yoga of Eating */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 10436EC42EFD1ADB00B368D9 /* Build configuration list for PBXNativeTarget "Yoga of Eating" */;
+			buildPhases = (
+				838323E1A1509BFF74CB23C2 /* SwiftFormat */,
+				2E14653B40B3CCB95435C7E0 /* SwiftLint */,
+				10436E9F2EFD1ADA00B368D9 /* Sources */,
+				10436EA02EFD1ADA00B368D9 /* Frameworks */,
+				10436EA12EFD1ADA00B368D9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Yoga of Eating";
+			productName = "Yoga of Eating";
+			productReference = 10436EA32EFD1ADA00B368D9 /* Yoga of Eating.app */;
+			productType = "com.apple.product-type.application";
+		};
+		10436EAF2EFD1ADB00B368D9 /* Yoga of EatingTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 10436EC72EFD1ADB00B368D9 /* Build configuration list for PBXNativeTarget "Yoga of EatingTests" */;
+			buildPhases = (
+				838323E1A1509BFF74CB23C2 /* SwiftFormat */,
+				2E14653B40B3CCB95435C7E0 /* SwiftLint */,
+				10436EAC2EFD1ADB00B368D9 /* Sources */,
+				10436EAD2EFD1ADB00B368D9 /* Frameworks */,
+				10436EAE2EFD1ADB00B368D9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				10436EB22EFD1ADB00B368D9 /* PBXTargetDependency */,
+			);
+			name = "Yoga of EatingTests";
+			productName = "Yoga of EatingTests";
+			productReference = 10436EB02EFD1ADB00B368D9 /* Yoga of EatingTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		10436EB92EFD1ADB00B368D9 /* Yoga of EatingUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 10436ECA2EFD1ADB00B368D9 /* Build configuration list for PBXNativeTarget "Yoga of EatingUITests" */;
+			buildPhases = (
+				838323E1A1509BFF74CB23C2 /* SwiftFormat */,
+				2E14653B40B3CCB95435C7E0 /* SwiftLint */,
+				10436EB62EFD1ADB00B368D9 /* Sources */,
+				10436EB72EFD1ADB00B368D9 /* Frameworks */,
+				10436EB82EFD1ADB00B368D9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				10436EBC2EFD1ADB00B368D9 /* PBXTargetDependency */,
+			);
+			name = "Yoga of EatingUITests";
+			productName = "Yoga of EatingUITests";
+			productReference = 10436EBA2EFD1ADB00B368D9 /* Yoga of EatingUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		10436E9B2EFD1ADA00B368D9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					10436EA22EFD1ADA00B368D9 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					10436EAF2EFD1ADB00B368D9 = {
+						CreatedOnToolsVersion = 26.2;
+						LastSwiftMigration = 2620;
+						TestTargetID = 10436EA22EFD1ADA00B368D9;
+					};
+					10436EB92EFD1ADB00B368D9 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 10436EA22EFD1ADA00B368D9;
+					};
+				};
+			};
+			buildConfigurationList = 10436E9E2EFD1ADA00B368D9 /* Build configuration list for PBXProject "Yoga of Eating" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 10436E9A2EFD1ADA00B368D9;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				109B2C5A2F013C0800CFD6AA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				109B2C692F01420500CFD6AA /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 10436EA42EFD1ADA00B368D9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				10436EA22EFD1ADA00B368D9 /* Yoga of Eating */,
+				10436EAF2EFD1ADB00B368D9 /* Yoga of EatingTests */,
+				10436EB92EFD1ADB00B368D9 /* Yoga of EatingUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		10436EA12EFD1ADA00B368D9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				10436F042EFD1F1E00B368D9 /* Assets.xcassets in Resources */,
+				109B2C6F2F01438B00CFD6AA /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10436EAE2EFD1ADB00B368D9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10436EB82EFD1ADB00B368D9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		2E14653B40B3CCB95435C7E0 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\nif which swiftlint >/dev/null; then\n  swiftlint lint --config \"${SRCROOT}/.swiftlint.yml\" \"${SRCROOT}/\"\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+		};
+		838323E1A1509BFF74CB23C2 /* SwiftFormat */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftFormat;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\nif which swiftformat >/dev/null; then\n  swiftformat \"${SRCROOT}\" --config \"${SRCROOT}/.swiftformat\"\nelse\n  echo \"warning: SwiftFormat not installed, download from https://github.com/nicklockwood/SwiftFormat\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		10436E9F2EFD1ADA00B368D9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				10436F072EFD1F1E00B368D9 /* YogaOfEatingApp.swift in Sources */,
+				109219512F04EA0F00B05B67 /* FlowchartWireView.swift in Sources */,
+				109219522F04EA0F00B05B67 /* MealTypeSelectorView.swift in Sources */,
+				109219532F04EA0F00B05B67 /* MealTypeTag.swift in Sources */,
+				109219652F04EA5300B05B67 /* SmileyState.swift in Sources */,
+				109219712F04EA7100B05B67 /* JournalBlockView.swift in Sources */,
+				109219722F04EA7100B05B67 /* SettingsView.swift in Sources */,
+				109219732F04EA7100B05B67 /* FAQView.swift in Sources */,
+				109219742F04EA7100B05B67 /* MainScreenView.swift in Sources */,
+				109219662F04EA5300B05B67 /* Meal.swift in Sources */,
+				1092195C2F04EA4100B05B67 /* AuthService.swift in Sources */,
+				1092195D2F04EA4100B05B67 /* PersistenceService.swift in Sources */,
+				1092195E2F04EA4100B05B67 /* NotificationManager.swift in Sources */,
+				1092195F2F04EA4100B05B67 /* SensoryService.swift in Sources */,
+				109219602F04EA4100B05B67 /* MealLogicService.swift in Sources */,
+				109219612F04EA4100B05B67 /* AILogicService.swift in Sources */,
+				109219542F04EA0F00B05B67 /* SmileyView.swift in Sources */,
+				1092196A2F04EA6300B05B67 /* MainViewModel+AIAnalysis.swift in Sources */,
+				1092196B2F04EA6300B05B67 /* MainViewModel.swift in Sources */,
+				37354AE5BC5560C436A455F6 /* DailySmileySnapshot.swift in Sources */,
+				92846FF8F5C1EE39FA0C555D /* HistoricalData.swift in Sources */,
+				D3964E209A46B8D99F99D30C /* HistoricalDataService.swift in Sources */,
+				FAFC578F20AC8DD819637E3E /* YearlyCalendarViewModel.swift in Sources */,
+				9F3688517FB8A62475A60977 /* YearlyCalendarView.swift in Sources */,
+				D7FDF157906CB6F7E4EACC33 /* DayCell.swift in Sources */,
+				823CEDFBCE9064CFD0B0B882 /* DayMealPopupView.swift in Sources */,
+				33497F5FDCAC4DC31A2E72EB /* CloudSyncService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10436EAC2EFD1ADB00B368D9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				10436F242EFD984300B368D9 /* MainViewModelTests.swift in Sources */,
+				109219442F04D9EB00B05B67 /* AILogicServiceTests.swift in Sources */,
+				109219452F04D9EB00B05B67 /* SensoryServiceTests.swift in Sources */,
+				109219462F04D9EB00B05B67 /* AuthServiceTests.swift in Sources */,
+				109219472F04D9EB00B05B67 /* MainViewModelAIAnalysisTests.swift in Sources */,
+				10436F272EFD985300B368D9 /* SmileyViewTests.swift in Sources */,
+				10436F202EFD951500B368D9 /* MealTests.swift in Sources */,
+				10436F212EFD951500B368D9 /* PersistenceServiceTests.swift in Sources */,
+				10436F262EFD985300B368D9 /* NotificationManagerTests.swift in Sources */,
+				10436F252EFD984D00B368D9 /* MealLogicTests.swift in Sources */,
+				10436F062EFD1F1E00B368D9 /* Yoga_of_EatingTests.swift in Sources */,
+				109219842F056BC200B05B67 /* DailySmileySnapshotTests.swift in Sources */,
+				109219852F056BC200B05B67 /* HistoricalDataServiceTests.swift in Sources */,
+				109219862F056BC200B05B67 /* HistoricalDataTests.swift in Sources */,
+				0238A131709D2CDD51E0477F /* Mocks.swift in Sources */,
+				FBC55970744A36310869279B /* YearlyCalendarViewModelTests.swift in Sources */,
+				C32EC25B8984221CB6188524 /* HistoricalDataSyncTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		10436EB62EFD1ADB00B368D9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				10436F0F2EFD1F1E00B368D9 /* Yoga_of_EatingUITests.swift in Sources */,
+				10436F132EFD1F1E00B368D9 /* Yoga_of_EatingUITestsLaunchTests.swift in Sources */,
+				1092197E2F04FE9E00B05B67 /* MainFlowUITests.swift in Sources */,
+				1092197F2F04FE9E00B05B67 /* TextInputUITests.swift in Sources */,
+				109219802F04FE9E00B05B67 /* SettingsUITests.swift in Sources */,
+				8CA1C8E462AD1DD96074F305 /* YearlyCalendarUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		10436EB22EFD1ADB00B368D9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 10436EA22EFD1ADA00B368D9 /* Yoga of Eating */;
+			targetProxy = 10436EB12EFD1ADB00B368D9 /* PBXContainerItemProxy */;
+		};
+		10436EBC2EFD1ADB00B368D9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 10436EA22EFD1ADA00B368D9 /* Yoga of Eating */;
+			targetProxy = 10436EBB2EFD1ADB00B368D9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		10436EC22EFD1ADB00B368D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = CCVJR9P725;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		10436EC32EFD1ADB00B368D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = CCVJR9P725;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		10436EC52EFD1ADB00B368D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CCVJR9P725;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Yoga of Eating/Info.plist";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yogaofeating.Yoga-of-Eating";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		10436EC62EFD1ADB00B368D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CCVJR9P725;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Yoga of Eating/Info.plist";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yogaofeating.Yoga-of-Eating";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		10436EC82EFD1ADB00B368D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CCVJR9P725;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yogaofeating.Yoga-of-EatingTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Yoga of Eating.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Yoga of Eating";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		10436EC92EFD1ADB00B368D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CCVJR9P725;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yogaofeating.Yoga-of-EatingTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Yoga of Eating.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Yoga of Eating";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		10436ECB2EFD1ADB00B368D9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CCVJR9P725;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yogaofeating.Yoga-of-EatingUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = "Yoga of Eating";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		10436ECC2EFD1ADB00B368D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CCVJR9P725;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.yogaofeating.Yoga-of-EatingUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = "Yoga of Eating";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		10436E9E2EFD1ADA00B368D9 /* Build configuration list for PBXProject "Yoga of Eating" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				10436EC22EFD1ADB00B368D9 /* Debug */,
+				10436EC32EFD1ADB00B368D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		10436EC42EFD1ADB00B368D9 /* Build configuration list for PBXNativeTarget "Yoga of Eating" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				10436EC52EFD1ADB00B368D9 /* Debug */,
+				10436EC62EFD1ADB00B368D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		10436EC72EFD1ADB00B368D9 /* Build configuration list for PBXNativeTarget "Yoga of EatingTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				10436EC82EFD1ADB00B368D9 /* Debug */,
+				10436EC92EFD1ADB00B368D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		10436ECA2EFD1ADB00B368D9 /* Build configuration list for PBXNativeTarget "Yoga of EatingUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				10436ECB2EFD1ADB00B368D9 /* Debug */,
+				10436ECC2EFD1ADB00B368D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		109B2C5A2F013C0800CFD6AA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.7.0;
+			};
+		};
+		109B2C692F01420500CFD6AA /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		109B2C5B2F013C0800CFD6AA /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 109B2C5A2F013C0800CFD6AA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
+		};
+		109B2C5D2F013C0800CFD6AA /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 109B2C5A2F013C0800CFD6AA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		109B2C5F2F013C0800CFD6AA /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 109B2C5A2F013C0800CFD6AA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		109B2C612F013C0800CFD6AA /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 109B2C5A2F013C0800CFD6AA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		109B2C632F013C0800CFD6AA /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 109B2C5A2F013C0800CFD6AA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		109B2C6A2F01420500CFD6AA /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 109B2C692F01420500CFD6AA /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		109B2C6C2F01420500CFD6AA /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 109B2C692F01420500CFD6AA /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 10436E9B2EFD1ADA00B368D9 /* Project object */;
+}
