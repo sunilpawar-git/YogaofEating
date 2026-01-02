@@ -39,13 +39,13 @@ struct SettingsView: View {
     @AppStorage("health_sync_enabled")
     private var isHealthSyncEnabled: Bool = false
 
-    @StateObject private var authService = AuthService.shared
+    @ObservedObject private var authService = AuthService.shared
     @State private var showingClearConfirmation = false
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Cloud Sync") {
+                Section("User Data") {
                     if let user = authService.currentUser {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
@@ -94,9 +94,7 @@ struct SettingsView: View {
                             }
                         })
                     }
-                }
 
-                Section("Insights") {
                     NavigationLink {
                         YearlyCalendarView(viewModel: YearlyCalendarViewModel(historicalService: self.viewModel
                                 .historicalService))

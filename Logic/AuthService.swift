@@ -148,6 +148,13 @@ class AuthService: ObservableObject, AuthServiceProtocol {
     private let provider: AuthCoreProvider
     private var authListenerHandle: Any?
 
+    // Task to track pending logout debounce
+    private var pendingLogoutTask: Task<Void, Never>?
+
+    // Flag to track if logout was explicitly requested by the user
+    // This allows us to ignore all transient nil states from Firebase
+    private var isExplicitlySigningOut = false
+
     /// Initializer for production (uses Firebase)
     private init() {
         self.provider = FirebaseAuthCoreProvider()
@@ -177,21 +184,66 @@ class AuthService: ObservableObject, AuthServiceProtocol {
 
     private func setupAuthStateListener() {
         self.authListenerHandle = self.provider.addStateDidChangeListener { [weak self] user in
-            self?.currentUser = user
+            guard let self else { return }
+
+            if let user {
+                // Valid user received - cancel any pending logout and update immediately
+                self.pendingLogoutTask?.cancel()
+                self.pendingLogoutTask = nil
+                self.isExplicitlySigningOut = false // Reset explicit flag
+                self.currentUser = user
+            } else {
+                // Nil user received.
+                // If we are explicitly signing out, accept it immediately.
+                if self.isExplicitlySigningOut {
+                    self.pendingLogoutTask?.cancel()
+                    self.currentUser = nil
+                    return
+                }
+
+                // Otherwise, debounce it!
+                // This protects against ANY transient nil state (token refresh, login flow, sync, etc.)
+
+                // Cancel any existing pending logout
+                self.pendingLogoutTask?.cancel()
+
+                // Create a new debounce task
+                self.pendingLogoutTask = Task { @MainActor in
+                    // Wait 2000ms (2s) to see if this is a transient nil state
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+
+                    // If we weren't cancelled, the nil state persisted - accept it
+                    // This handles real session revocations (remote logout)
+                    guard !Task.isCancelled else {
+                        return
+                    }
+
+                    self.currentUser = nil
+                    self.pendingLogoutTask = nil
+                }
+            }
         }
     }
 
     func signInWithGoogle() async throws {
+        self.isExplicitlySigningOut = false // Ensure we are ready to accept user
         let user = try await provider.signInWithGoogle()
         self.currentUser = user
     }
 
     func signOut() {
+        self.isExplicitlySigningOut = true
+
+        // Cancel any pending debounce
+        self.pendingLogoutTask?.cancel()
+        self.pendingLogoutTask = nil
+
         do {
             try self.provider.signOut()
             self.currentUser = nil
         } catch {
             print("Error signing out: \(error.localizedDescription)")
+            self.isExplicitlySigningOut = false // Reset if failed
         }
     }
 }

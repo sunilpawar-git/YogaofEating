@@ -140,13 +140,18 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
     /// Synchronizes historical data to Firebase.
     /// Requires an authenticated user.
     func syncToFirebase() async throws {
+        // Capture userId and snapshots upfront to prevent race conditions
+        // during the async upload loop
         guard let userId = self.authService.currentUser?.uid else {
             struct AuthError: Error {}
             throw AuthError()
         }
 
+        // Take a snapshot of the data to sync to avoid issues if data changes mid-sync
+        let snapshotsToSync = self.historicalData.dailySnapshots
+
         // Sequential sync of all local snapshots to cloud
-        for snapshot in self.historicalData.dailySnapshots {
+        for snapshot in snapshotsToSync {
             try await self.syncService.upload(snapshot: snapshot, userId: userId)
         }
     }
