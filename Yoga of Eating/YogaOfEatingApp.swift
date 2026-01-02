@@ -5,6 +5,9 @@ import SwiftUI
 @MainActor
 @main
 struct YogaOfEatingApp: App {
+    // Connect App Delegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+
     // Shared state across the app
     @StateObject private var viewModel = MainViewModel()
 
@@ -17,14 +20,6 @@ struct YogaOfEatingApp: App {
             print("🧪 Unit testing mode - skipping Firebase and notification setup")
             return
         }
-
-        // Initialize Firebase
-        FirebaseApp.configure()
-        print("🔥 Firebase initialized")
-
-        // Initialize AuthService early to start listening for session restoration
-        _ = AuthService.shared
-        print("👤 AuthService initialized")
 
         print("📱 Yoga of Eating app starting...")
 
@@ -47,6 +42,7 @@ struct YogaOfEatingApp: App {
         }
 
         // Request permissions and schedule daily nudges on startup
+        // Note: Firebase is now initialized in AppDelegate
         NotificationManager.shared.requestPermissions()
         NotificationManager.shared.scheduleMorningNudge()
         print("🔔 Notifications configured")
@@ -77,5 +73,34 @@ struct YogaOfEatingApp: App {
         default:
             nil
         }
+    }
+}
+
+/// Main App Delegate to handle lifecycle events and library initialization.
+/// Fixes "App Delegate does not conform to UIApplicationDelegate" warnings and ensures
+/// proper GIDSignIn swizzling and callback handling.
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _: UIApplication,
+        didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        // Initialize Firebase
+        FirebaseApp.configure()
+        print("🔥 Firebase initialized (AppDelegate)")
+
+        // Initialize AuthService early
+        _ = AuthService.shared
+        print("👤 AuthService initialized (AppDelegate)")
+
+        return true
+    }
+
+    // Handle URL callbacks for Google Sign-In (iOS 9+)
+    func application(
+        _: UIApplication,
+        open url: URL,
+        options _: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        GIDSignIn.sharedInstance.handle(url)
     }
 }
