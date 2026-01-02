@@ -1,0 +1,170 @@
+# Gitleaks configuration for Yoga of Eating project
+# Custom rules for detecting secrets and credentials
+
+title = "Yoga of Eating Secret Detection"
+
+[extend]
+# Use default Gitleaks rules
+useDefault = true
+
+[[rules]]
+id = "firebase-service-account"
+description = "Firebase Service Account JSON Key"
+regex = '''(?i)(?:firebase|gcp|google)(?:[^"']|"[^"]*")*["']type["']\s*:\s*["']service_account["']'''
+tags = ["firebase", "gcp", "google", "service-account"]
+entropy = 3.5
+
+[[rules]]
+id = "firebase-api-key"
+description = "Firebase API Key"
+regex = '''AIza[0-9A-Za-z_-]{35}'''
+tags = ["firebase", "api-key", "google"]
+entropy = 4.0
+
+[[rules]]
+id = "firebase-config-file"
+description = "Firebase Configuration File (GoogleService-Info.plist or google-services.json)"
+path = '''(?i)(googleService-Info\.plist|google-services\.json)'''
+tags = ["firebase", "config"]
+entropy = 0
+
+[[rules]]
+id = "gemini-api-key"
+description = "Google Gemini API Key"
+regex = '''(?i)(?:gemini|genai)[\s:=]+["']?([A-Za-z0-9_-]{32,})["']?'''
+tags = ["gemini", "google", "ai", "api-key"]
+entropy = 3.5
+
+[[rules]]
+id = "firebase-oauth-token"
+description = "Firebase OAuth Token"
+regex = '''ya29\.[0-9A-Za-z_-]+'''
+tags = ["firebase", "oauth", "google"]
+entropy = 3.5
+
+[[rules]]
+id = "firebase-refresh-token"
+description = "Firebase Refresh Token"
+regex = '''1//[0-9A-Za-z_-]+'''
+tags = ["firebase", "oauth", "google", "refresh-token"]
+entropy = 3.5
+
+[[rules]]
+id = "firebase-web-api-key"
+description = "Firebase Web API Key"
+regex = '''(?i)(?:firebase|web)[\s:=]+["']?(AIza[0-9A-Za-z_-]{35})["']?'''
+tags = ["firebase", "web", "api-key"]
+entropy = 4.0
+
+[[rules]]
+id = "firebase-database-url"
+description = "Firebase Realtime Database URL"
+regex = '''https://[a-z0-9-]+\.firebaseio\.com'''
+tags = ["firebase", "database", "url"]
+entropy = 2.0
+
+[[rules]]
+id = "firebase-storage-bucket"
+description = "Firebase Storage Bucket"
+regex = '''(?i)(?:firebase|storage)[\s:=]+["']?([a-z0-9-]+\.appspot\.com)["']?'''
+tags = ["firebase", "storage", "bucket"]
+entropy = 2.0
+
+[[rules]]
+id = "firebase-project-id"
+description = "Firebase Project ID in config"
+regex = '''(?i)["']project_id["']\s*:\s*["']([a-z0-9-]+)["']'''
+tags = ["firebase", "project"]
+entropy = 1.5
+
+[[rules]]
+id = "firebase-messaging-sender-id"
+description = "Firebase Cloud Messaging Sender ID"
+regex = '''(?i)["']messaging_sender_id["']\s*:\s*["']([0-9]{12})["']'''
+tags = ["firebase", "messaging", "fcm"]
+entropy = 2.0
+
+[[rules]]
+id = "firebase-app-id"
+description = "Firebase App ID"
+regex = '''(?i)["']app_id["']\s*:\s*["']([0-9]{1,2}:[0-9]{12}:[a-z]{2}:[a-z0-9]{32})["']'''
+tags = ["firebase", "app-id"]
+entropy = 3.0
+
+[[rules]]
+id = "private-key-rsa"
+description = "RSA Private Key"
+regex = '''-----BEGIN RSA PRIVATE KEY-----'''
+tags = ["key", "rsa", "private"]
+entropy = 0
+
+[[rules]]
+id = "private-key-ec"
+description = "EC Private Key"
+regex = '''-----BEGIN EC PRIVATE KEY-----'''
+tags = ["key", "ec", "private"]
+entropy = 0
+
+[[rules]]
+id = "private-key-openssh"
+description = "OpenSSH Private Key"
+regex = '''-----BEGIN OPENSSH PRIVATE KEY-----'''
+tags = ["key", "openssh", "private"]
+entropy = 0
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key Pattern"
+regex = '''(?i)(?:api[_-]?key|apikey)[\s:=]+["']?([A-Za-z0-9_-]{20,})["']?'''
+tags = ["api-key", "generic"]
+entropy = 3.0
+
+[[rules]]
+id = "generic-secret"
+description = "Generic Secret Pattern"
+regex = '''(?i)(?:secret|password|token)[\s:=]+["']?([A-Za-z0-9_+/=]{20,})["']?'''
+tags = ["secret", "password", "token"]
+entropy = 3.5
+
+# Allowlist common false positives
+[[allowlist]]
+description = "Test files and mocks"
+paths = [
+  '''.*test.*''',
+  '''.*Test.*''',
+  '''.*mock.*''',
+  '''.*Mock.*''',
+  '''.*spec.*''',
+  '''.*Spec.*'''
+]
+
+[[allowlist]]
+description = "Documentation files"
+paths = [
+  '''.*\.md$''',
+  '''.*\.txt$''',
+  '''README.*''',
+  '''CHANGELOG.*'''
+]
+
+[[allowlist]]
+description = "Git and CI files"
+paths = [
+  '''\.git/.*''',
+  '''\.github/.*''',
+  '''\.gitignore''',
+  '''\.gitleaks\.toml'''
+]
+
+[[allowlist]]
+description = "Dependencies and build files"
+paths = [
+  '''package-lock\.json''',
+  '''yarn\.lock''',
+  '''Podfile\.lock''',
+  '''Package\.resolved''',
+  '''.*/node_modules/.*''',
+  '''.*/\.build/.*''',
+  '''.*/DerivedData/.*'''
+]
+

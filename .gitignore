@@ -11,6 +11,18 @@ firebase-debug.*.log*
 .firebase/
 
 # Firebase config
+# CRITICAL: Never commit these files - they contain sensitive credentials
+GoogleService-Info.plist
+google-services.json
+google-services.json.backup
+*GoogleService-Info*.plist
+*google-services*.json
+
+# Firebase service account keys
+*service-account*.json
+*serviceAccount*.json
+*-service-account*.json
+firebase-adminsdk-*.json
 
 # Uncomment this if you'd like others to create their own Firebase project.
 # For a team working on the same Firebase project(s), it is recommended to leave
@@ -64,6 +76,29 @@ node_modules/
 
 # dotenv environment variables file
 .env
+.env.local
+.env.*.local
+.env.production
+.env.development
+*.env
+
+# API Keys and Secrets (extra safety)
+*secret*.json
+*key*.json
+*credential*.json
+*credentials*.json
+secrets/
+keys/
+credentials/
+
+# Private keys
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*.private
 
 # dataconnect generated files
 .dataconnect
