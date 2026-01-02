@@ -47,41 +47,45 @@ struct SettingsView: View {
             Form {
                 Section("User Data") {
                     if let user = authService.currentUser {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(user.displayName ?? "User")
-                                        .font(.headline)
-                                    Text(user.email ?? "")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                Spacer()
-                                Button("Sign Out") {
-                                    self.authService.signOut()
-                                }
-                                .foregroundColor(.red)
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(user.displayName ?? "User")
+                                    .font(.headline)
+                                Text(user.email ?? "")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
                             }
-
-                            Button(action: {
-                                Task {
-                                    do {
-                                        try await self.viewModel.historicalService.syncToFirebase()
-                                    } catch {
-                                        // Handle sync error (e.g., show alert)
-                                    }
-                                }
-                            }) {
-                                HStack {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                    Text("Sync with Cloud")
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(8)
+                            Spacer()
+                            Button("Sign Out") {
+                                print("🚪 Sign Out button tapped!")
+                                self.authService.signOut()
                             }
+                            .foregroundColor(.red)
                         }
+
+                        Button(action: {
+                            print("☁️ Sync with Cloud button tapped!")
+                            Task {
+                                do {
+                                    print("☁️ Starting cloud sync...")
+                                    try await self.viewModel.historicalService.syncToFirebase()
+                                    print("✅ Cloud sync completed successfully!")
+                                } catch {
+                                    print("❌ Cloud sync failed: \(error)")
+                                    print("❌ Error details: \(String(describing: error))")
+                                }
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text("Sync with Cloud")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(.borderless)
                     } else {
                         Button(action: {
                             Task {
