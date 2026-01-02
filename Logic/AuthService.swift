@@ -188,14 +188,18 @@ class AuthService: ObservableObject, AuthServiceProtocol {
 
             if let user {
                 // Valid user received - cancel any pending logout and update immediately
+                print("🔐 AuthState: User received - \(user.uid)")
                 self.pendingLogoutTask?.cancel()
                 self.pendingLogoutTask = nil
                 self.isExplicitlySigningOut = false // Reset explicit flag
                 self.currentUser = user
             } else {
                 // Nil user received.
+                print("🔐 AuthState: NIL user received! isExplicitlySigningOut=\(self.isExplicitlySigningOut)")
+
                 // If we are explicitly signing out, accept it immediately.
                 if self.isExplicitlySigningOut {
+                    print("🔐 AuthState: Accepting nil (explicit sign out)")
                     self.pendingLogoutTask?.cancel()
                     self.currentUser = nil
                     return
@@ -203,6 +207,7 @@ class AuthService: ObservableObject, AuthServiceProtocol {
 
                 // Otherwise, debounce it!
                 // This protects against ANY transient nil state (token refresh, login flow, sync, etc.)
+                print("🔐 AuthState: Starting 2s debounce for transient nil state...")
 
                 // Cancel any existing pending logout
                 self.pendingLogoutTask?.cancel()
@@ -215,9 +220,11 @@ class AuthService: ObservableObject, AuthServiceProtocol {
                     // If we weren't cancelled, the nil state persisted - accept it
                     // This handles real session revocations (remote logout)
                     guard !Task.isCancelled else {
+                        print("🔐 AuthState: Debounce cancelled (user recovered)")
                         return
                     }
 
+                    print("🔐 AuthState: Debounce completed - accepting nil user (session expired?)")
                     self.currentUser = nil
                     self.pendingLogoutTask = nil
                 }

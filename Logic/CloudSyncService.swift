@@ -24,14 +24,27 @@ class CloudSyncService: CloudSyncServiceProtocol {
     func upload(snapshot: DailySmileySnapshot, userId: String) async throws {
         guard let db = self.db else {
             // Skip during unit tests
+            print("☁️ CloudSync: Skipping upload (no db - likely unit test)")
             return
         }
         let dateString = self.dateFormatter.string(from: snapshot.date)
+        let docPath = "users/\(userId)/\(self.collectionName)/\(dateString)"
+        print("☁️ CloudSync: Uploading to \(docPath)")
+
         let docRef = db.collection("users").document(userId)
             .collection(self.collectionName).document(dateString)
 
         let data = try self.encode(snapshot)
-        try await docRef.setData(data)
+
+        do {
+            try await docRef.setData(data)
+            print("☁️ CloudSync: Successfully uploaded \(dateString)")
+        } catch {
+            print("☁️ CloudSync: Upload FAILED for \(dateString)")
+            print("☁️ CloudSync: Error type: \(type(of: error))")
+            print("☁️ CloudSync: Error: \(error)")
+            throw error
+        }
     }
 
     /// Fetches all snapshots for a given user from Firestore.
