@@ -44,41 +44,60 @@ jobs:
       - name: Get available iOS simulator
         id: simulator
         run: |
-          # Try to find an available iPhone simulator by name (more reliable than UUID)
-          SIMULATOR_NAME=$(xcrun simctl list devices available | grep -i "iphone" | grep -v "unavailable" | head -1 | sed 's/.*iPhone \([0-9A-Za-z ]*\).*/\1/' | head -1 | xargs)
+          echo "🔍 Detecting available iOS simulator..."
           
-          if [ -n "$SIMULATOR_NAME" ]; then
-            # Found a simulator name, construct full name
-            FULL_NAME="iPhone $SIMULATOR_NAME"
-            echo "simulator_name=$FULL_NAME" >> $GITHUB_OUTPUT
-            echo "Using simulator: $FULL_NAME"
+          # Default to iPhone 15 (most commonly available on GitHub Actions)
+          DEFAULT_SIMULATOR="iPhone 15"
+          
+          # Check if default simulator exists
+          if xcrun simctl list devices available | grep -qi "$DEFAULT_SIMULATOR"; then
+            FOUND_SIMULATOR="$DEFAULT_SIMULATOR"
+            echo "✅ Using default simulator: $FOUND_SIMULATOR"
           else
-            # Fallback to common simulators
-            if xcrun simctl list devices available | grep -q "iPhone 15"; then
-              FULL_NAME="iPhone 15"
-            elif xcrun simctl list devices available | grep -q "iPhone 14"; then
-              FULL_NAME="iPhone 14"
-            elif xcrun simctl list devices available | grep -q "iPhone 13"; then
-              FULL_NAME="iPhone 13"
-            else
-              # Last resort: get first iPhone simulator
-              FULL_NAME=$(xcrun simctl list devices available | grep -i "iphone" | head -1 | sed 's/.*(\([^)]*\)).*/\1/' | head -1)
+            echo "⚠️  Default simulator not found, searching alternatives..."
+            # Try other common simulators
+            ALTERNATIVES=("iPhone 14" "iPhone 13" "iPhone 12" "iPhone SE (3rd generation)")
+            
+            for sim in "${ALTERNATIVES[@]}"; do
+              if xcrun simctl list devices available | grep -qi "$sim"; then
+                FOUND_SIMULATOR="$sim"
+                echo "✅ Found alternative simulator: $FOUND_SIMULATOR"
+                break
+              fi
+            done
+            
+            # Last resort: get first available iPhone
+            if [ -z "$FOUND_SIMULATOR" ]; then
+              echo "⚠️  Searching for any available iPhone..."
+              # Extract device name: "    iPhone 15 Pro (UUID) (Available)" -> "iPhone 15 Pro"
+              FOUND_SIMULATOR=$(xcrun simctl list devices available | grep -i "iphone" | head -1 | awk -F'(' '{print $1}' | xargs)
             fi
-            echo "simulator_name=$FULL_NAME" >> $GITHUB_OUTPUT
-            echo "Using simulator: $FULL_NAME"
           fi
+          
+          if [ -z "$FOUND_SIMULATOR" ]; then
+            echo "❌ ERROR: No iPhone simulator found!"
+            echo "Available devices:"
+            xcrun simctl list devices
+            exit 1
+          fi
+          
+          echo "simulator_name=$FOUND_SIMULATOR" >> $GITHUB_OUTPUT
+          echo "✅ Selected simulator: $FOUND_SIMULATOR"
           
       - name: Boot Simulator
         run: |
-          if [ -n "${{ steps.simulator.outputs.simulator_name }}" ]; then
-            echo "Booting simulator: ${{ steps.simulator.outputs.simulator_name }}"
-            xcrun simctl boot "${{ steps.simulator.outputs.simulator_name }}" 2>/dev/null || echo "Simulator may already be booted"
+          SIMULATOR_NAME="${{ steps.simulator.outputs.simulator_name }}"
+          if [ -n "$SIMULATOR_NAME" ]; then
+            echo "Booting simulator: $SIMULATOR_NAME"
+            # Boot by name (simctl will find the matching device)
+            xcrun simctl boot "$SIMULATOR_NAME" 2>/dev/null || echo "Simulator may already be booted or boot failed (will continue)"
           fi
           
       - name: Build and Test iOS App
         run: |
-          # Use device name instead of UUID for better reliability
-          DESTINATION="platform=iOS Simulator,name=${{ steps.simulator.outputs.simulator_name }},OS=latest"
+          SIMULATOR_NAME="${{ steps.simulator.outputs.simulator_name }}"
+          # Use device name without OS specification (xcodebuild will use default/available OS)
+          DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
           echo "Building with destination: $DESTINATION"
           
           xcodebuild clean test \
@@ -95,7 +114,8 @@ jobs:
       - name: Run UI tests (optional - may be flaky)
         continue-on-error: true
         run: |
-          DESTINATION="platform=iOS Simulator,name=${{ steps.simulator.outputs.simulator_name }},OS=latest"
+          SIMULATOR_NAME="${{ steps.simulator.outputs.simulator_name }}"
+          DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
           echo "Running UI tests with destination: $DESTINATION"
           
           xcodebuild test \
