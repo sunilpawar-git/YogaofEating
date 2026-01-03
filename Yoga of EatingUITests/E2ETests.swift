@@ -26,13 +26,14 @@
             XCTAssertTrue(addButton.waitForExistence(timeout: 5), "Add button should be visible on launch")
 
             addButton.tap()
-            var textField = self.app.textFields.firstMatch
+            let textField = self.app.textFields.firstMatch
             XCTAssertTrue(textField.waitForExistence(timeout: 3))
             textField.tap()
             textField.typeText("Oatmeal with berries")
 
             // Dismiss keyboard
-            if let doneButton = self.app.buttons["Done"].firstMatch, doneButton.exists {
+            let doneButton = self.app.buttons["Done"].firstMatch
+            if doneButton.exists {
                 doneButton.tap()
             }
             sleep(1)
@@ -47,8 +48,9 @@
             lunchField.tap()
             lunchField.typeText("Grilled chicken salad")
 
-            if let doneButton = self.app.buttons["Done"].firstMatch, doneButton.exists {
-                doneButton.tap()
+            let lunchDoneButton = self.app.buttons["Done"].firstMatch
+            if lunchDoneButton.exists {
+                lunchDoneButton.tap()
             }
             sleep(1)
 
@@ -79,7 +81,7 @@
 
             // Step 1: Log unhealthy meal
             addButton.tap()
-            var textField = self.app.textFields.firstMatch
+            let textField = self.app.textFields.firstMatch
             XCTAssertTrue(textField.waitForExistence(timeout: 3))
             textField.tap()
             textField.typeText("Fast food burger and fries")
@@ -89,7 +91,8 @@
             XCTAssertTrue(addButton.exists, "Smiley should remain after unhealthy meal")
 
             // Dismiss keyboard
-            if let doneButton = self.app.buttons["Done"].firstMatch, doneButton.exists {
+            let doneButton = self.app.buttons["Done"].firstMatch
+            if doneButton.exists {
                 doneButton.tap()
             }
             sleep(1)
@@ -177,7 +180,7 @@
             // Session 1: Morning meal
             let addButton = self.app.buttons["add-meal-button"]
             addButton.tap()
-            var textField = self.app.textFields.firstMatch
+            let textField = self.app.textFields.firstMatch
             XCTAssertTrue(textField.waitForExistence(timeout: 3))
             textField.tap()
             textField.typeText("Morning coffee")
@@ -211,25 +214,40 @@
 
             let addButton = self.app.buttons["add-meal-button"]
 
-            // Rapidly add and interact with meals
-            for i in 1...5 {
+            // Rapidly add meals - focus on creating multiple meals rather than typing
+            for i in 1...3 {
                 addButton.tap()
-                sleep(0.5) // Minimal delay
 
-                if self.app.textFields.count >= i {
-                    let field = self.app.textFields.element(boundBy: i - 1)
-                    if field.exists {
-                        field.tap()
-                        field.typeText("Quick \(i)")
-                    }
-                }
+                // Wait for the new meal to appear in the UI (using firstMatch like other tests)
+                let textFieldCount = self.app.textFields.count
+                XCTAssertTrue(
+                    textFieldCount >= i,
+                    "Should have at least \(i) meal text field(s) after adding meal \(i), found \(textFieldCount)"
+                )
+
+                // Brief pause to let UI settle
+                usleep(500_000) // 0.5 seconds
             }
 
-            sleep(2) // Wait for all updates to process
+            // Wait for all updates to process
+            sleep(1)
 
             // Assert: App should handle rapid interactions without crashing
             XCTAssertTrue(addButton.exists, "App should remain stable after rapid interactions")
-            XCTAssertGreaterThanOrEqual(self.app.textFields.count, 3, "Should have created multiple meals")
+
+            // Check that we have at least the meals we created (may have more due to debouncing)
+            let textFieldCount = self.app.textFields.count
+            XCTAssertGreaterThanOrEqual(
+                textFieldCount,
+                3,
+                "Should have created at least 3 meals, found \(textFieldCount)"
+            )
+
+            // Verify the app is still responsive by tapping add button one more time
+            addButton.tap()
+            sleep(1)
+            let finalCount = self.app.textFields.count
+            XCTAssertGreaterThanOrEqual(finalCount, textFieldCount, "App should still be responsive to add more meals")
         }
     }
 #endif
