@@ -6,12 +6,18 @@ struct DayCell: View {
     let date: Date
     let snapshot: DailySmileySnapshot?
 
+    /// The size of the cell. Defaults to 16pt for backwards compatibility.
+    var cellSize: CGFloat = 16
+
+    /// The corner radius of the cell. Defaults to 3pt for backwards compatibility.
+    var cornerRadius: CGFloat = 3
+
     var body: some View {
-        RoundedRectangle(cornerRadius: 3)
+        RoundedRectangle(cornerRadius: self.cornerRadius)
             .fill(self.backgroundColor)
-            .aspectRatio(1, contentMode: .fit)
+            .frame(width: self.cellSize, height: self.cellSize)
             .overlay(
-                RoundedRectangle(cornerRadius: 3)
+                RoundedRectangle(cornerRadius: self.cornerRadius)
                     .stroke(
                         self.isToday ? Color.primary : Color.primary.opacity(0.1),
                         lineWidth: self.isToday ? 1.5 : 0.5
@@ -29,7 +35,7 @@ struct DayCell: View {
     }
 
     private var backgroundColor: Color {
-        guard let snapshot = self.snapshot else {
+        guard let snapshot else {
             return Color.primary.opacity(0.05) // Empty day
         }
 
@@ -58,7 +64,7 @@ struct DayCell: View {
         formatter.dateStyle = .medium
         let dateString = formatter.string(from: self.date)
 
-        if let snapshot = self.snapshot, !snapshot.isEmpty {
+        if let snapshot, !snapshot.isEmpty {
             return "\(dateString): \(snapshot.mealCount) meals, score \(Int(snapshot.averageHealthScore * 100))%"
         } else {
             return "\(dateString): No data"
@@ -67,9 +73,14 @@ struct DayCell: View {
 }
 
 #Preview {
-    HStack {
-        DayCell(date: Date(), snapshot: nil)
-            .frame(width: 20)
+    HStack(spacing: 8) {
+        // Small cell (legacy size)
+        DayCell(date: Date(), snapshot: nil, cellSize: 16, cornerRadius: 3)
+
+        // Medium cell (new default)
+        DayCell(date: Date(), snapshot: nil, cellSize: 32, cornerRadius: 4)
+
+        // Large cell with data
         DayCell(
             date: Date(),
             snapshot: DailySmileySnapshot(
@@ -79,9 +90,10 @@ struct DayCell: View {
                 meals: [Meal(id: UUID(), timestamp: Date(), mealType: .lunch, items: ["Salad"], healthScore: 0.9)],
                 mealCount: 1,
                 averageHealthScore: 0.9
-            )
+            ),
+            cellSize: 40,
+            cornerRadius: 5
         )
-        .frame(width: 20)
     }
     .padding()
 }
