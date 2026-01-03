@@ -154,9 +154,11 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
             
-      - name: Run UI tests (optional - may be flaky)
+      - name: Run UI tests (optional - only on main branch)
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
+          echo "🧪 Running UI tests (optional - may be flaky)"
           SIMULATOR_NAME="${{ steps.simulator.outputs.simulator_name }}"
           SIMULATOR_OS="${{ steps.simulator.outputs.simulator_os }}"
           
@@ -178,6 +180,12 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
+          
+      - name: Skip UI tests (info)
+        if: github.ref != 'refs/heads/main' && github.event_name != 'workflow_dispatch'
+        run: |
+          echo "⏭️  Skipping UI tests (only run on main branch or manual workflow dispatch)"
+          echo "💡 To run UI tests manually, use 'workflow_dispatch' event or push to main branch"
             
       - name: Upload test results
         if: always()
