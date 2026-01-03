@@ -14,30 +14,25 @@ struct YearlyCalendarView: View {
             GeometryReader { geometry in
                 let isPortrait = geometry.size.height > geometry.size.width
 
-                VStack(spacing: 0) {
-                    // Sticky Year Selector at top
-                    self.yearSelector
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
-                        .background(.ultraThinMaterial)
+                ScrollView(self.layoutConfig.gridDirection == .vertical ? .vertical : [.horizontal, .vertical]) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Year Selector at top of scroll content
+                        self.yearSelector
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 8)
 
-                    // Scrollable content
-                    ScrollView(self.layoutConfig.gridDirection == .vertical ? .vertical : [.horizontal, .vertical]) {
-                        VStack(alignment: .leading, spacing: 20) {
-                            // The Heatmap Grid
-                            self.heatmapGrid
-                                .padding()
-                                .background(Color.primary.opacity(0.02))
-                                .cornerRadius(12)
+                        // The Heatmap Grid
+                        self.heatmapGrid
+                            .padding()
+                            .background(Color.primary.opacity(0.02))
+                            .cornerRadius(12)
 
-                            // Legend at bottom
-                            self.legend
-                                .padding(.horizontal)
+                        // Legend at bottom
+                        self.legend
+                            .padding(.horizontal)
 
-                            // Bottom padding for safe area
-                            Color.clear.frame(height: 20)
-                        }
-                        .padding(.top, 8)
+                        // Bottom padding for safe area
+                        Color.clear.frame(height: 20)
                     }
                 }
                 .onChange(of: geometry.size) { _, newSize in
@@ -62,7 +57,7 @@ struct YearlyCalendarView: View {
                     Button("Done") { self.dismiss() }
                 }
             }
-            .popover(item: self.$viewModel.selectedSnapshot) { snapshot in
+            .sheet(item: self.$viewModel.selectedSnapshot) { snapshot in
                 DayMealPopupView(snapshot: snapshot)
                     .presentationDetents([.medium, .large])
             }
@@ -72,12 +67,12 @@ struct YearlyCalendarView: View {
     // MARK: - Year Selector
 
     private var yearSelector: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 20) {
             // Previous year button with larger tap target
             Button { self.viewModel.selectedYear -= 1 } label: {
-                Image(systemName: "chevron.left")
-                    .font(.title2.bold())
-                    .foregroundColor(.primary)
+                Image(systemName: "chevron.left.circle.fill")
+                    .font(.title)
+                    .foregroundStyle(.secondary)
                     .frame(width: 44, height: 44) // Apple HIG minimum
                     .contentShape(Rectangle())
             }
@@ -85,19 +80,14 @@ struct YearlyCalendarView: View {
 
             // Current year display
             Text(String(self.viewModel.selectedYear))
-                .font(.title2.bold())
+                .font(.title.bold())
                 .monospacedDigit()
-                .frame(minWidth: 80)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.primary.opacity(0.08))
-                .cornerRadius(10)
 
             // Next year button with larger tap target
             Button { self.viewModel.selectedYear += 1 } label: {
-                Image(systemName: "chevron.right")
-                    .font(.title2.bold())
-                    .foregroundColor(.primary)
+                Image(systemName: "chevron.right.circle.fill")
+                    .font(.title)
+                    .foregroundStyle(.secondary)
                     .frame(width: 44, height: 44) // Apple HIG minimum
                     .contentShape(Rectangle())
             }
