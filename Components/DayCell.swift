@@ -6,11 +6,14 @@ struct DayCell: View {
     let date: Date
     let snapshot: DailySmileySnapshot?
 
-    /// The size of the cell. Defaults to 16pt for backwards compatibility.
-    var cellSize: CGFloat = 16
+    /// The size of the cell. Defaults to 32pt for thumb-friendly tapping.
+    var cellSize: CGFloat = 32
 
-    /// The corner radius of the cell. Defaults to 3pt for backwards compatibility.
-    var cornerRadius: CGFloat = 3
+    /// The corner radius of the cell. Defaults to 4pt.
+    var cornerRadius: CGFloat = 4
+
+    /// Whether the cell is currently being pressed (for animation)
+    @State private var isPressed = false
 
     var body: some View {
         RoundedRectangle(cornerRadius: self.cornerRadius)
@@ -19,9 +22,23 @@ struct DayCell: View {
             .overlay(
                 RoundedRectangle(cornerRadius: self.cornerRadius)
                     .stroke(
-                        self.isToday ? Color.primary : Color.primary.opacity(0.1),
-                        lineWidth: self.isToday ? 1.5 : 0.5
+                        self.borderColor,
+                        lineWidth: self.borderWidth
                     )
+            )
+            .scaleEffect(self.isPressed ? 0.9 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: self.isPressed)
+            .contentShape(Rectangle()) // Ensure entire area is tappable
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        if !self.isPressed {
+                            self.isPressed = true
+                        }
+                    }
+                    .onEnded { _ in
+                        self.isPressed = false
+                    }
             )
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier(self.isToday ? "heatmap-cell-today" : "heatmap-cell")
@@ -30,17 +47,38 @@ struct DayCell: View {
             .help(self.accessibilityLabelText)
     }
 
+    // MARK: - Visual Styling
+
+    private var borderColor: Color {
+        if self.isToday {
+            Color.primary
+        } else if self.hasData {
+            Color.primary.opacity(0.2)
+        } else {
+            Color.primary.opacity(0.08)
+        }
+    }
+
+    private var borderWidth: CGFloat {
+        self.isToday ? 2.0 : 0.5
+    }
+
+    private var hasData: Bool {
+        guard let snapshot else { return false }
+        return !snapshot.isEmpty
+    }
+
     private var isToday: Bool {
         Calendar.current.isDateInToday(self.date)
     }
 
     private var backgroundColor: Color {
         guard let snapshot else {
-            return Color.primary.opacity(0.05) // Empty day
+            return Color.primary.opacity(0.03) // Empty day - more subtle
         }
 
         if snapshot.isEmpty {
-            return Color.primary.opacity(0.05)
+            return Color.primary.opacity(0.03)
         }
 
         // Intensity based on health score (0.0 to 1.0)
@@ -48,14 +86,18 @@ struct DayCell: View {
         let rawScore = snapshot.averageHealthScore
         let score = rawScore.isFinite ? min(1.0, max(0.0, rawScore)) : 0.5
 
-        // Mood-based coloring
+        // Mood-based coloring with improved contrast
+        // Base opacity 0.25, max opacity 0.85 for better visibility
+        let baseOpacity = 0.25
+        let opacityRange = 0.6
+
         switch snapshot.smileyState.mood {
         case .serene:
-            return Color.green.opacity(0.2 + (score * 0.6))
+            return Color.green.opacity(baseOpacity + (score * opacityRange))
         case .neutral:
-            return Color.blue.opacity(0.2 + (score * 0.6))
+            return Color.blue.opacity(baseOpacity + (score * opacityRange))
         case .overwhelmed:
-            return Color.orange.opacity(0.2 + (score * 0.6))
+            return Color.orange.opacity(baseOpacity + (score * opacityRange))
         }
     }
 
@@ -72,15 +114,12 @@ struct DayCell: View {
     }
 }
 
-#Preview {
-    HStack(spacing: 8) {
-        // Small cell (legacy size)
-        DayCell(date: Date(), snapshot: nil, cellSize: 16, cornerRadius: 3)
+#Preview("Cell Sizes") {
+    HStack(spacing: 12) {
+        // Empty cell
+        DayCell(date: Date(), snapshot: nil)
 
-        // Medium cell (new default)
-        DayCell(date: Date(), snapshot: nil, cellSize: 32, cornerRadius: 4)
-
-        // Large cell with data
+        // Cell with serene mood
         DayCell(
             date: Date(),
             snapshot: DailySmileySnapshot(
@@ -90,9 +129,53 @@ struct DayCell: View {
                 meals: [Meal(id: UUID(), timestamp: Date(), mealType: .lunch, items: ["Salad"], healthScore: 0.9)],
                 mealCount: 1,
                 averageHealthScore: 0.9
+            )
+        )
+
+        // Cell with neutral mood
+        DayCell(
+            date: Date(),
+            snapshot: DailySmileySnapshot(
+                id: UUID(),
+                date: Date(),
+                smileyState: SmileyState(scale: 0.5, mood: .neutral),
+                meals: [Meal(id: UUID(), timestamp: Date(), mealType: .dinner, items: ["Pizza"], healthScore: 0.5)],
+                mealCount: 1,
+                averageHealthScore: 0.5
+            )
+        )
+
+        // Cell with overwhelmed mood
+        DayCell(
+            date: Date(),
+            snapshot: DailySmileySnapshot(
+                id: UUID(),
+                date: Date(),
+                smileyState: SmileyState(scale: 0.2, mood: .overwhelmed),
+                meals: [Meal(id: UUID(), timestamp: Date(), mealType: .snacks, items: ["Chips"], healthScore: 0.3)],
+                mealCount: 1,
+                averageHealthScore: 0.3
+            )
+        )
+    }
+    .padding()
+}
+
+#Preview("Large Cells") {
+    HStack(spacing: 12) {
+        DayCell(date: Date(), snapshot: nil, cellSize: 44, cornerRadius: 6)
+        DayCell(
+            date: Date(),
+            snapshot: DailySmileySnapshot(
+                id: UUID(),
+                date: Date(),
+                smileyState: SmileyState(scale: 1.0, mood: .serene),
+                meals: [],
+                mealCount: 3,
+                averageHealthScore: 0.85
             ),
-            cellSize: 40,
-            cornerRadius: 5
+            cellSize: 44,
+            cornerRadius: 6
         )
     }
     .padding()
