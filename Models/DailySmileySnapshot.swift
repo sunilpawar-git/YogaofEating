@@ -39,11 +39,15 @@ struct DailySmileySnapshot: Codable, Identifiable {
 
     /// Returns the smiley state to display in the UI.
     /// For empty days, returns a neutral state for dimmed display.
+    /// Always returns a valid state with guaranteed finite, positive scale.
     var displayState: SmileyState {
         if self.isEmpty {
-            SmileyState(scale: 1.0, mood: .neutral)
-        } else {
-            self.smileyState
+            return SmileyState(scale: 1.0, mood: .neutral)
         }
+        // Ensure the scale is valid before returning
+        let validScale = self.smileyState.scale.isFinite && self.smileyState.scale > 0
+            ? min(max(self.smileyState.scale, 0.1), 10.0)
+            : 1.0
+        return SmileyState(scale: validScale, mood: self.smileyState.mood)
     }
 }

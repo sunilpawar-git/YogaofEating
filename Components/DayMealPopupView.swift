@@ -53,11 +53,10 @@ struct DayMealPopupView: View {
                 }
                 .frame(maxHeight: 200)
             }
-
-            Spacer()
         }
         .padding()
         .frame(width: 300)
+        .frame(minHeight: 100)
         .background(Color(uiColor: .systemBackground))
         .cornerRadius(12)
         .shadow(radius: 10)

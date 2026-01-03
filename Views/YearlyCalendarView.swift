@@ -13,7 +13,7 @@ struct YearlyCalendarView: View {
             ScrollView([.horizontal, .vertical]) {
                 VStack(alignment: .leading, spacing: 20) {
                     // Year Selector
-                    HStack {
+                    HStack(spacing: 12) {
                         Button { self.viewModel.selectedYear -= 1 } label: {
                             Image(systemName: "chevron.left")
                                 .font(.title3.bold())
@@ -32,8 +32,6 @@ struct YearlyCalendarView: View {
                                 .font(.title3.bold())
                                 .foregroundColor(.primary)
                         }
-
-                        Spacer()
                     }
                     .padding(.horizontal)
 
@@ -47,7 +45,8 @@ struct YearlyCalendarView: View {
                     self.legend
                         .padding(.horizontal)
 
-                    Spacer()
+                    // Bottom padding
+                    Color.clear.frame(height: 20)
                 }
                 .padding(.top)
             }
@@ -68,11 +67,11 @@ struct YearlyCalendarView: View {
         HStack(alignment: .top, spacing: 8) {
             // Day of week labels
             VStack(alignment: .leading, spacing: 4) {
-                Spacer().frame(height: 12) // Alignment with grid
+                Color.clear.frame(height: 12) // Alignment with grid
                 Text("Mon").font(.caption2).foregroundColor(.secondary)
-                Spacer().frame(height: 12)
+                Color.clear.frame(height: 12)
                 Text("Wed").font(.caption2).foregroundColor(.secondary)
-                Spacer().frame(height: 12)
+                Color.clear.frame(height: 12)
                 Text("Fri").font(.caption2).foregroundColor(.secondary)
             }
 
@@ -80,12 +79,20 @@ struct YearlyCalendarView: View {
             VStack(alignment: .leading, spacing: 4) {
                 // Month labels
                 HStack(spacing: 0) {
-                    ForEach(self.viewModel.monthLabels) { label in
+                    ForEach(Array(self.viewModel.monthLabels.enumerated()), id: \.element.id) { index, label in
+                        // Calculate width based on weeks until next month (or end of year)
+                        let nextOffset: Int = if index < self.viewModel.monthLabels.count - 1 {
+                            self.viewModel.monthLabels[index + 1].weekOffset
+                        } else {
+                            53 // End of year
+                        }
+                        let weekSpan = max(1, nextOffset - label.weekOffset)
+                        let frameWidth = CGFloat(weekSpan) * (self.cellSize + self.spacing)
                         Text(label.name)
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .frame(
-                                width: CGFloat(label.weekOffset) * (self.cellSize + self.spacing),
+                                width: frameWidth,
                                 alignment: .leading
                             )
                     }

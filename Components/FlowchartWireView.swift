@@ -17,21 +17,26 @@ struct FlowchartWire: Shape {
         var path = Path()
         path.move(to: self.startPoint)
 
+        let diffX = self.endPoint.x - self.startPoint.x
+        let diffY = self.endPoint.y - self.startPoint.y
+        let length = sqrt(diffX * diffX + diffY * diffY)
+
+        // Guard against zero length (points are the same) to avoid division by zero / NaN
+        guard length > 0 else {
+            return path
+        }
+
+        let unitX = -diffY / length
+        let unitY = diffX / length
+
         let steps = 50
         for stepIndex in 0...steps {
             let progress = CGFloat(stepIndex) / CGFloat(steps)
-            let basePointX = self.startPoint.x + (self.endPoint.x - self.startPoint.x) * progress
-            let basePointY = self.startPoint.y + (self.endPoint.y - self.startPoint.y) * progress
+            let basePointX = self.startPoint.x + diffX * progress
+            let basePointY = self.startPoint.y + diffY * progress
 
             // Add squiggly offsets based on sine wave
             let sineOffset = sin(progress * .pi * 2 * self.frequency + self.phase) * self.amplitude
-
-            // Perpendicular offset for organic feel
-            let diffX = self.endPoint.x - self.startPoint.x
-            let diffY = self.endPoint.y - self.startPoint.y
-            let length = sqrt(diffX * diffX + diffY * diffY)
-            let unitX = -diffY / length
-            let unitY = diffX / length
 
             let finalX = basePointX + unitX * sineOffset
             let finalY = basePointY + unitY * sineOffset

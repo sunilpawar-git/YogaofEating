@@ -6,7 +6,8 @@ import SwiftUI
 @main
 struct YogaOfEatingApp: App {
     // Connect App Delegate
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self)
+    var delegate
 
     // Shared state across the app
     @StateObject private var viewModel = MainViewModel()
@@ -84,23 +85,27 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _: UIApplication,
         didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // Initialize Firebase
-        FirebaseApp.configure()
-        print("🔥 Firebase initialized (AppDelegate)")
-
-        // Initialize AuthService early
-        _ = AuthService.shared
-        print("👤 AuthService initialized (AppDelegate)")
+        // Skip Firebase initialization in test/CI environments
+        let isTestEnvironment = NSClassFromString("XCTestCase") != nil
+        let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
+        
+        if !isTestEnvironment && !isCIEnvironment {
+            // Initialize Firebase only in non-test environments
+            if FirebaseApp.app() == nil {
+                FirebaseApp.configure()
+                print("🔥 Firebase initialized (AppDelegate)")
+            }
+            
+            // Initialize AuthService early
+            _ = AuthService.shared
+            print("👤 AuthService initialized (AppDelegate)")
+        } else {
+            print("🧪 Skipping Firebase initialization in test/CI environment")
+        }
 
         return true
     }
 
-    // Handle URL callbacks for Google Sign-In (iOS 9+)
-    func application(
-        _: UIApplication,
-        open url: URL,
-        options _: [UIApplication.OpenURLOptionsKey: Any] = [:]
-    ) -> Bool {
-        GIDSignIn.sharedInstance.handle(url)
-    }
+    // Note: URL handling for Google Sign-In is done via SwiftUI's onOpenURL modifier
+    // in WindowGroup, which uses the modern UIScene lifecycle approach.
 }

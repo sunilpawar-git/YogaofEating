@@ -38,7 +38,9 @@ struct DayCell: View {
         }
 
         // Intensity based on health score (0.0 to 1.0)
-        let score = snapshot.averageHealthScore
+        // Clamp score to valid range to prevent invalid opacity values
+        let rawScore = snapshot.averageHealthScore
+        let score = rawScore.isFinite ? min(1.0, max(0.0, rawScore)) : 0.5
 
         // Mood-based coloring
         switch snapshot.smileyState.mood {
