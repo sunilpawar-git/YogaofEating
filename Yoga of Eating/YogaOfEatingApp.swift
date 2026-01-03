@@ -88,14 +88,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Skip Firebase initialization in test/CI environments
         let isTestEnvironment = NSClassFromString("XCTestCase") != nil
         let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
-        
-        if !isTestEnvironment && !isCIEnvironment {
+
+        if !isTestEnvironment, !isCIEnvironment {
             // Initialize Firebase only in non-test environments
             if FirebaseApp.app() == nil {
                 FirebaseApp.configure()
                 print("🔥 Firebase initialized (AppDelegate)")
             }
-            
+
             // Initialize AuthService early
             _ = AuthService.shared
             print("👤 AuthService initialized (AppDelegate)")

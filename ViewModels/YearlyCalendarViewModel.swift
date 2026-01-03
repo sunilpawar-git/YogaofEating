@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import SwiftUI
 
 /// ViewModel for the Yearly Smiley Heatmap Calendar.
 /// Manages the state and logic for fetching and displaying daily eating history.
@@ -25,6 +26,12 @@ class YearlyCalendarViewModel: ObservableObject {
 
     @Published private(set) var monthLabels: [MonthLabel] = []
 
+    // MARK: - Layout Configuration
+
+    /// Current layout configuration based on screen dimensions and orientation.
+    /// Updated when screen size changes.
+    @Published private(set) var layoutConfig: HeatmapLayoutConfiguration
+
     private let historicalService: any HistoricalDataServiceProtocol
     private var cancellables = Set<AnyCancellable>()
 
@@ -33,8 +40,36 @@ class YearlyCalendarViewModel: ObservableObject {
     init(historicalService: (any HistoricalDataServiceProtocol)? = nil) {
         self.historicalService = historicalService ?? HistoricalDataService()
         self.selectedYear = Calendar.current.component(.year, from: Date())
+        // Initialize with default screen size (iPhone portrait)
+        self.layoutConfig = HeatmapLayoutConfiguration(
+            screenWidth: 375,
+            screenHeight: 667,
+            isPortrait: true
+        )
         self.fetchSnapshots()
         self.generateYearData()
+    }
+
+    // MARK: - Layout Updates
+
+    /// Updates the layout configuration based on current screen dimensions and orientation.
+    /// Call this when the view's geometry changes.
+    /// - Parameters:
+    ///   - screenWidth: The current screen/container width.
+    ///   - screenHeight: The current screen/container height.
+    ///   - isPortrait: Whether the device is in portrait orientation.
+    func updateLayout(screenWidth: CGFloat, screenHeight: CGFloat, isPortrait: Bool) {
+        let newConfig = HeatmapLayoutConfiguration(
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            isPortrait: isPortrait
+        )
+        // Only update if there's a meaningful change to avoid unnecessary redraws
+        if newConfig.cellSize != self.layoutConfig.cellSize ||
+            newConfig.gridDirection != self.layoutConfig.gridDirection
+        {
+            self.layoutConfig = newConfig
+        }
     }
 
     // MARK: - Data Fetching

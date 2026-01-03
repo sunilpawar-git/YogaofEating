@@ -114,5 +114,55 @@
             XCTAssertEqual(months[1].name, "Feb")
             XCTAssertGreaterThan(months[1].weekOffset, 0)
         }
+
+        // MARK: - Layout Configuration Tests
+
+        func test_initialLayout_hasDefaultConfiguration() {
+            // Then: Should have a valid initial layout
+            XCTAssertGreaterThanOrEqual(self.sut.layoutConfig.cellSize, 32)
+            XCTAssertEqual(self.sut.layoutConfig.spacing, 4)
+        }
+
+        func test_updateLayout_forPortrait_setsVerticalDirection() {
+            // When
+            self.sut.updateLayout(screenWidth: 375, screenHeight: 667, isPortrait: true)
+
+            // Then
+            XCTAssertEqual(self.sut.layoutConfig.gridDirection, .vertical)
+        }
+
+        func test_updateLayout_forLandscape_setsHorizontalDirection() {
+            // When
+            self.sut.updateLayout(screenWidth: 667, screenHeight: 375, isPortrait: false)
+
+            // Then
+            XCTAssertEqual(self.sut.layoutConfig.gridDirection, .horizontal)
+        }
+
+        func test_updateLayout_calculatesAppropiateCellSize() {
+            // When: iPhone SE portrait
+            self.sut.updateLayout(screenWidth: 375, screenHeight: 667, isPortrait: true)
+
+            // Then: Cell size should be at least minimum tap target
+            XCTAssertGreaterThanOrEqual(self.sut.layoutConfig.cellSize, 32)
+
+            // When: iPad portrait
+            self.sut.updateLayout(screenWidth: 768, screenHeight: 1024, isPortrait: true)
+
+            // Then: Larger device should have larger cells (up to max)
+            XCTAssertLessThanOrEqual(self.sut.layoutConfig.cellSize, 50)
+        }
+
+        func test_updateLayout_onlyUpdatesWhenMeaningfulChange() {
+            // Given: Initial layout
+            self.sut.updateLayout(screenWidth: 375, screenHeight: 667, isPortrait: true)
+            let initialCellSize = self.sut.layoutConfig.cellSize
+
+            // When: Same dimensions
+            self.sut.updateLayout(screenWidth: 375, screenHeight: 667, isPortrait: true)
+
+            // Then: Cell size should remain the same
+            XCTAssertEqual(self.sut.layoutConfig.cellSize, initialCellSize)
+        }
     }
 #endif
