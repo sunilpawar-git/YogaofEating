@@ -3,8 +3,6 @@ import SwiftUI
 struct YearlyCalendarView: View {
     @StateObject var viewModel: YearlyCalendarViewModel
     @Environment(\.dismiss) var dismiss
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
-    @Environment(\.verticalSizeClass) var verticalSizeClass
 
     /// Convenience computed property to access current layout config
     private var layoutConfig: HeatmapLayoutConfiguration {
@@ -16,26 +14,31 @@ struct YearlyCalendarView: View {
             GeometryReader { geometry in
                 let isPortrait = geometry.size.height > geometry.size.width
 
-                ScrollView(self.layoutConfig.gridDirection == .vertical ? .vertical : [.horizontal, .vertical]) {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Year Selector
-                        self.yearSelector
-                            .padding(.horizontal)
+                VStack(spacing: 0) {
+                    // Sticky Year Selector at top
+                    self.yearSelector
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                        .background(.ultraThinMaterial)
 
-                        // The Heatmap Grid
-                        self.heatmapGrid
-                            .padding()
-                            .background(Color.primary.opacity(0.02))
-                            .cornerRadius(12)
+                    // Scrollable content
+                    ScrollView(self.layoutConfig.gridDirection == .vertical ? .vertical : [.horizontal, .vertical]) {
+                        VStack(alignment: .leading, spacing: 20) {
+                            // The Heatmap Grid
+                            self.heatmapGrid
+                                .padding()
+                                .background(Color.primary.opacity(0.02))
+                                .cornerRadius(12)
 
-                        // Legend
-                        self.legend
-                            .padding(.horizontal)
+                            // Legend at bottom
+                            self.legend
+                                .padding(.horizontal)
 
-                        // Bottom padding
-                        Color.clear.frame(height: 20)
+                            // Bottom padding for safe area
+                            Color.clear.frame(height: 20)
+                        }
+                        .padding(.top, 8)
                     }
-                    .padding(.top)
                 }
                 .onChange(of: geometry.size) { _, newSize in
                     self.viewModel.updateLayout(
@@ -52,10 +55,11 @@ struct YearlyCalendarView: View {
                     )
                 }
             }
-            .navigationTitle("Yearly Smiley Heatmap")
+            .navigationTitle("Yearly Heatmap")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { self.dismiss() }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { self.dismiss() }
                 }
             }
             .popover(item: self.$viewModel.selectedSnapshot) { snapshot in
@@ -68,25 +72,36 @@ struct YearlyCalendarView: View {
     // MARK: - Year Selector
 
     private var yearSelector: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
+            // Previous year button with larger tap target
             Button { self.viewModel.selectedYear -= 1 } label: {
                 Image(systemName: "chevron.left")
-                    .font(.title3.bold())
+                    .font(.title2.bold())
                     .foregroundColor(.primary)
+                    .frame(width: 44, height: 44) // Apple HIG minimum
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Previous year")
 
-            Text("\(String(self.viewModel.selectedYear))")
-                .font(.title3.bold())
-                .frame(width: 80)
-                .padding(.vertical, 4)
-                .background(Color.primary.opacity(0.05))
-                .cornerRadius(8)
+            // Current year display
+            Text(String(self.viewModel.selectedYear))
+                .font(.title2.bold())
+                .monospacedDigit()
+                .frame(minWidth: 80)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.primary.opacity(0.08))
+                .cornerRadius(10)
 
+            // Next year button with larger tap target
             Button { self.viewModel.selectedYear += 1 } label: {
                 Image(systemName: "chevron.right")
-                    .font(.title3.bold())
+                    .font(.title2.bold())
                     .foregroundColor(.primary)
+                    .frame(width: 44, height: 44) // Apple HIG minimum
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Next year")
         }
     }
 
@@ -242,36 +257,63 @@ struct YearlyCalendarView: View {
 }
 
 struct HeatMapLegend: View {
-    private let cellSize: CGFloat = 12
+    private let cellSize: CGFloat = 14
+    private let cornerRadius: CGFloat = 3
+
+    /// Base opacity matching DayCell
+    private let baseOpacity: Double = 0.25
+    private let opacityRange: Double = 0.6
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Legend")
-                .font(.caption.bold())
-                .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Mood Legend")
+                .font(.subheadline.bold())
+                .foregroundColor(.primary)
 
-            HStack(spacing: 16) {
+            HStack(spacing: 20) {
                 self.legendItem(title: "Serene", color: .green, identifier: "legend-serene")
-                    .accessibilityLabel("Serene mood heatmap scale")
+                    .accessibilityLabel("Serene mood: green colors indicate calm, balanced eating")
                 self.legendItem(title: "Neutral", color: .blue, identifier: "legend-neutral")
-                    .accessibilityLabel("Neutral mood heatmap scale")
+                    .accessibilityLabel("Neutral mood: blue colors indicate typical eating")
                 self.legendItem(title: "Overwhelmed", color: .orange, identifier: "legend-overwhelmed")
-                    .accessibilityLabel("Overwhelmed mood heatmap scale")
+                    .accessibilityLabel("Overwhelmed mood: orange colors indicate stress eating")
+            }
+
+            // Empty cell indicator
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: self.cornerRadius)
+                    .fill(Color.primary.opacity(0.03))
+                    .frame(width: self.cellSize, height: self.cellSize)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: self.cornerRadius)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
+                    )
+                Text("No data")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
+        .padding(.vertical, 8)
     }
 
     private func legendItem(title: String, color: Color, identifier: String) -> some View {
-        HStack(spacing: 4) {
-            HStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 3) {
+                // Show 4 intensity levels matching actual cell opacity calculation
                 ForEach(0..<4) { i in
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(color.opacity(0.1 + Double(i) * 0.25))
+                    let score = Double(i) / 3.0 // 0, 0.33, 0.66, 1.0
+                    let opacity = self.baseOpacity + (score * self.opacityRange)
+                    RoundedRectangle(cornerRadius: self.cornerRadius)
+                        .fill(color.opacity(opacity))
                         .frame(width: self.cellSize, height: self.cellSize)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: self.cornerRadius)
+                                .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
+                        )
                 }
             }
             Text(title)
-                .font(.caption2)
+                .font(.caption)
                 .foregroundColor(.secondary)
                 .accessibilityIdentifier(identifier)
         }

@@ -21,7 +21,7 @@
             heatmapRow.tap()
 
             // Verify we are on the calendar screen
-            let calendarHeader = self.app.staticTexts["Yearly Smiley Heatmap"]
+            let calendarHeader = self.app.staticTexts["Yearly Heatmap"]
             XCTAssertTrue(calendarHeader.exists, "Yearly Heatmap header should be visible")
         }
 
