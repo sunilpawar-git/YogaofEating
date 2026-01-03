@@ -17,6 +17,8 @@ struct SettingsView: View {
     @AppStorage("haptics_enabled") private var areHapticsEnabled: Bool = true
     @AppStorage("sound_enabled") private var isSoundEnabled: Bool = true
     @AppStorage("health_sync_enabled") private var isHealthSyncEnabled: Bool = false
+    @AppStorage("personalized_feedback_enabled") private var isPersonalizedFeedbackEnabled: Bool = true
+    @AppStorage("show_health_insights") private var showHealthInsights: Bool = false
 
     @ObservedObject private var authService = AuthService.shared
     @State private var showingClearConfirmation = false
@@ -29,6 +31,11 @@ struct SettingsView: View {
                 self.appearanceSection
                 self.notificationsSection
                 self.sensorySection
+                self.personalizationSection
+                if self.showHealthInsights {
+                    self.healthInsightsSection
+                }
+                self.privacySection
                 self.integrationsSection
                 self.aiSection
                 self.dataManagementSection
@@ -219,6 +226,51 @@ struct SettingsView: View {
                 .accessibilityIdentifier("haptics-toggle")
             Toggle("Sound Effects", isOn: self.$isSoundEnabled)
                 .accessibilityIdentifier("sounds-toggle")
+        }
+    }
+
+    private var personalizationSection: some View {
+        Section {
+            Toggle("Personalized Feedback", isOn: self.$isPersonalizedFeedbackEnabled)
+                .tint(.blue)
+                .accessibilityIdentifier("personalized-feedback-toggle")
+        } header: {
+            Text("Personalization")
+        } footer: {
+            Text(
+                "Get meal feedback tailored to your health profile. More sensitive warnings for users with higher BMI or health risks."
+            )
+            .font(.caption)
+        }
+    }
+
+    private var healthInsightsSection: some View {
+        Section("Health Insights") {
+            if let profile = self.viewModel.healthProfileService.getUserHealthProfile() {
+                LabeledContent("BMI", value: String(format: "%.1f", profile.bmi))
+                LabeledContent("Category", value: profile.bmiCategory.rawValue)
+                LabeledContent("Daily Energy", value: "\(Int(profile.tdee)) cal")
+                LabeledContent("Risk Level", value: profile.riskLevel.rawValue)
+            } else {
+                Text("Complete your personal details to see health insights")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var privacySection: some View {
+        Section {
+            Toggle("Show Health Insights", isOn: self.$showHealthInsights)
+                .tint(.blue)
+                .accessibilityIdentifier("show-health-insights-toggle")
+        } header: {
+            Text("Privacy")
+        } footer: {
+            Text(
+                "All health calculations are done on your device. Data never leaves your phone except for encrypted cloud sync."
+            )
+            .font(.caption)
         }
     }
 

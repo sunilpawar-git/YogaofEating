@@ -144,5 +144,33 @@
             let soundName = scale > 1.0 ? "thump" : "tink"
             self.playSound(named: soundName)
         }
+
+        func playMealFeedbackHaptic(
+            for healthScore: Double,
+            riskLevel: HealthRiskLevel,
+            userDefaults _: UserDefaults?
+        ) {
+            // For testing: just record the nudge
+            let style = self.getFeedbackStyle(for: healthScore, riskLevel: riskLevel)
+            self.playNudge(style: style)
+        }
+
+        func getFeedbackStyle(for healthScore: Double, riskLevel: HealthRiskLevel) -> SensoryService.FeedbackStyle {
+            // Replicate the logic from SensoryService
+            if healthScore > 0.65 {
+                return .soft
+            }
+            if healthScore >= 0.35 {
+                return .light
+            }
+            switch riskLevel {
+            case .low:
+                return .light
+            case .medium:
+                return .medium
+            case .high:
+                return .heavy
+            }
+        }
     }
 #endif

@@ -42,6 +42,7 @@ struct JournalBlockView: View {
             .background { self.cardBackground }
             .scaleEffect(self.safeScaleEffect)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: self.isPressed)
+            .animation(.easeInOut(duration: 0.5), value: self.meal.healthScore)
             .onLongPressGesture(minimumDuration: 0.5) {
                 SensoryService.shared.playNudge(style: .heavy)
                 self.showDeleteAlert = true
@@ -166,10 +167,15 @@ struct JournalBlockView: View {
                 RoundedRectangle(cornerRadius: 20)
                     .fill(Color.white.opacity(0.4))
             }
+            .overlay {
+                // Subtle tint overlay for visual feedback
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(self.feedback.tintColor.opacity(self.feedback.tintOpacity))
+            }
             .shadow(color: .black.opacity(0.03), radius: 8, y: 4)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(self.mealTypeColor.opacity(0.2), lineWidth: 1)
+                    .stroke(self.feedback.borderColor, lineWidth: self.feedback.borderWidth)
             )
     }
 
@@ -227,6 +233,11 @@ struct JournalBlockView: View {
         case .snacks: .pink
         case .drinks: .blue
         }
+    }
+
+    /// Visual feedback helper based on meal's health score
+    private var feedback: MealCardFeedback {
+        MealCardFeedback(score: self.meal.healthScore, mealTypeColor: self.mealTypeColor)
     }
 
     private func iconName(for type: MealType) -> String {

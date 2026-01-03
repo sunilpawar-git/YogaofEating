@@ -20,12 +20,16 @@ class MainViewModel: ObservableObject {
     let logicService: MealLogicProvider
     let persistenceService: PersistenceServiceProtocol
     let historicalService: any HistoricalDataServiceProtocol
+    let healthProfileService: HealthProfileServiceProtocol
 
     init(
+        healthProfileService: HealthProfileServiceProtocol? = nil,
         logicService: MealLogicProvider? = nil,
         persistenceService: PersistenceServiceProtocol? = nil,
         historicalService: (any HistoricalDataServiceProtocol)? = nil
     ) {
+        let healthService = healthProfileService ?? HealthProfileService()
+        self.healthProfileService = healthService
         self.logicService = logicService ?? AILogicService()
         self.persistenceService = persistenceService ?? PersistenceService.shared
         self.historicalService = historicalService ?? HistoricalDataService()
@@ -111,6 +115,15 @@ class MainViewModel: ObservableObject {
         self.saveData()
         print("📝 Local healthScore set to: \(healthScore)")
 
+        // Play personalized haptic feedback based on health score and user risk level
+        if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
+            SensoryService.shared.playMealFeedbackHaptic(
+                for: healthScore,
+                riskLevel: profile.riskLevel,
+                userDefaults: nil
+            )
+        }
+
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
@@ -130,6 +143,16 @@ class MainViewModel: ObservableObject {
         self.meals[index].items = items
         self.meals[index].healthScore = healthScore
         self.saveData()
+
+        // Play personalized haptic feedback based on health score and user risk level
+        if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
+            SensoryService.shared.playMealFeedbackHaptic(
+                for: healthScore,
+                riskLevel: profile.riskLevel,
+                userDefaults: nil
+            )
+        }
+
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
