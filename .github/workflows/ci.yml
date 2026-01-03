@@ -46,21 +46,24 @@ jobs:
         run: |
           echo "🔍 Detecting available iOS simulator..."
           
-          # Default to iPhone 15 (most commonly available on GitHub Actions)
-          DEFAULT_SIMULATOR="iPhone 15"
+          # Use iPhone 17 Pro with iOS 26.2 (project requirement)
+          PREFERRED_SIMULATOR="iPhone 17 Pro"
+          PREFERRED_OS="26.2"
           
-          # Check if default simulator exists
-          if xcrun simctl list devices available | grep -qi "$DEFAULT_SIMULATOR"; then
-            FOUND_SIMULATOR="$DEFAULT_SIMULATOR"
-            echo "✅ Using default simulator: $FOUND_SIMULATOR"
+          # Check if preferred simulator exists
+          if xcrun simctl list devices available | grep -qi "$PREFERRED_SIMULATOR"; then
+            FOUND_SIMULATOR="$PREFERRED_SIMULATOR"
+            FOUND_OS="$PREFERRED_OS"
+            echo "✅ Using preferred simulator: $FOUND_SIMULATOR with iOS $FOUND_OS"
           else
-            echo "⚠️  Default simulator not found, searching alternatives..."
-            # Try other common simulators
-            ALTERNATIVES=("iPhone 14" "iPhone 13" "iPhone 12" "iPhone SE (3rd generation)")
+            echo "⚠️  iPhone 17 Pro not found, searching alternatives..."
+            # Try other common simulators as fallback
+            ALTERNATIVES=("iPhone 17" "iPhone 16 Pro" "iPhone 15" "iPhone 14")
             
             for sim in "${ALTERNATIVES[@]}"; do
               if xcrun simctl list devices available | grep -qi "$sim"; then
                 FOUND_SIMULATOR="$sim"
+                FOUND_OS="latest"
                 echo "✅ Found alternative simulator: $FOUND_SIMULATOR"
                 break
               fi
@@ -71,6 +74,7 @@ jobs:
               echo "⚠️  Searching for any available iPhone..."
               # Extract device name: "    iPhone 15 Pro (UUID) (Available)" -> "iPhone 15 Pro"
               FOUND_SIMULATOR=$(xcrun simctl list devices available | grep -i "iphone" | head -1 | awk -F'(' '{print $1}' | xargs)
+              FOUND_OS="latest"
             fi
           fi
           
@@ -82,7 +86,8 @@ jobs:
           fi
           
           echo "simulator_name=$FOUND_SIMULATOR" >> $GITHUB_OUTPUT
-          echo "✅ Selected simulator: $FOUND_SIMULATOR"
+          echo "simulator_os=$FOUND_OS" >> $GITHUB_OUTPUT
+          echo "✅ Selected simulator: $FOUND_SIMULATOR with iOS $FOUND_OS"
           
       - name: Boot Simulator
         run: |
@@ -96,8 +101,15 @@ jobs:
       - name: Build and Test iOS App
         run: |
           SIMULATOR_NAME="${{ steps.simulator.outputs.simulator_name }}"
-          # Use device name without OS specification (xcodebuild will use default/available OS)
-          DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
+          SIMULATOR_OS="${{ steps.simulator.outputs.simulator_os }}"
+          
+          # Use iPhone 17 Pro with iOS 26.2 if available, otherwise use detected simulator
+          if [ "$SIMULATOR_OS" = "26.2" ]; then
+            DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME,OS=$SIMULATOR_OS"
+          else
+            DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
+          fi
+          
           echo "Building with destination: $DESTINATION"
           
           xcodebuild clean test \
@@ -115,7 +127,15 @@ jobs:
         continue-on-error: true
         run: |
           SIMULATOR_NAME="${{ steps.simulator.outputs.simulator_name }}"
-          DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
+          SIMULATOR_OS="${{ steps.simulator.outputs.simulator_os }}"
+          
+          # Use iPhone 17 Pro with iOS 26.2 if available, otherwise use detected simulator
+          if [ "$SIMULATOR_OS" = "26.2" ]; then
+            DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME,OS=$SIMULATOR_OS"
+          else
+            DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
+          fi
+          
           echo "Running UI tests with destination: $DESTINATION"
           
           xcodebuild test \
