@@ -122,13 +122,17 @@ struct HeatmapLayoutConfiguration {
     ///   - screenWidth: The available screen width in points.
     ///   - screenHeight: The available screen height in points.
     ///   - isPortrait: Whether the device is in portrait orientation.
-    ///   - horizontalPadding: Total horizontal padding (left + right). Defaults to 32pt.
+    ///   - horizontalPadding: Total horizontal padding (left + right). Defaults to 80pt to account for:
+    ///     - Grid padding (32pt = 16pt each side)
+    ///     - Month labels column (30pt)
+    ///     - Spacing between labels and grid (8pt)
+    ///     - Safe area margin (10pt)
     ///   - verticalPadding: Vertical space reserved for UI elements. Defaults to 150pt.
     init(
         screenWidth: CGFloat,
         screenHeight: CGFloat,
         isPortrait: Bool,
-        horizontalPadding: CGFloat = 32,
+        horizontalPadding: CGFloat = 80,
         verticalPadding: CGFloat = 150
     ) {
         self.screenWidth = screenWidth

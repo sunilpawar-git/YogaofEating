@@ -6,6 +6,9 @@ struct JournalBlockView: View {
     let onUpdate: (MealType, [String]) -> Void
     let onDelete: () -> Void
 
+    // Maximum character limit per callout box (silent limit, not shown to user)
+    private let maxCharacterLimit: Int = 1000
+
     // Use meal.id as the key to persist state across view updates
     @State private var rawText: String = ""
     @State private var selectedMealType: MealType = .lunch
@@ -31,8 +34,10 @@ struct JournalBlockView: View {
         self.cardContent
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
-            // Use explicit minimum dimensions to prevent invalid frame warnings
-            .frame(minWidth: 200, idealWidth: 300, maxWidth: 350, minHeight: 80, idealHeight: 100)
+            // Use explicit minimum dimensions with reasonable maxWidth to prevent overflow
+            // Max width accounts for padding (40pt total) and leaves margin on most devices
+            .frame(minWidth: 200, idealWidth: 300, maxWidth: 380, minHeight: 80, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("meal-block-\(self.meal.id)")
             .background { self.cardBackground }
             .scaleEffect(self.safeScaleEffect)
@@ -105,15 +110,17 @@ struct JournalBlockView: View {
             self.mealTextField
             self.itemCountFooter
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var mealTextField: some View {
-        TextField("What are you eating?", text: self.$rawText, axis: .vertical)
+        TextField("What are you eating?", text: self.limitedTextBinding, axis: .vertical)
             .font(.system(size: 17, weight: .regular, design: .serif))
             .foregroundColor(.primary)
             .tint(.blue)
             .textFieldStyle(.plain)
-            .lineLimit(10)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
             .focused(self.$isFocused)
             .accessibilityIdentifier("meal-text-field-\(self.meal.id)")
             .onChange(of: self.rawText) { _, newValue in
@@ -125,6 +132,21 @@ struct JournalBlockView: View {
             .onSubmit {
                 self.handleSubmit()
             }
+    }
+
+    /// Custom binding that enforces the character limit silently
+    private var limitedTextBinding: Binding<String> {
+        Binding(
+            get: { self.rawText },
+            set: { newValue in
+                // Enforce character limit silently (prevent abuse)
+                if newValue.count > self.maxCharacterLimit {
+                    self.rawText = String(newValue.prefix(self.maxCharacterLimit))
+                } else {
+                    self.rawText = newValue
+                }
+            }
+        )
     }
 
     @ViewBuilder
