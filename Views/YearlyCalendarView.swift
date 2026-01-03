@@ -150,21 +150,27 @@ struct YearlyCalendarView: View {
                     ),
                     spacing: self.layoutConfig.spacing
                 ) {
-                    ForEach(self.viewModel.allDates, id: \.self) { date in
-                        let snapshot = self.viewModel.snapshots.first {
-                            Calendar.current.isDate($0.date, inSameDayAs: date)
-                        }
+                    ForEach(self.viewModel.allCells) { cell in
+                        if let date = cell.date {
+                            let snapshot = self.viewModel.snapshots.first {
+                                Calendar.current.isDate($0.date, inSameDayAs: date)
+                            }
 
-                        DayCell(
-                            date: date,
-                            snapshot: snapshot,
-                            cellSize: self.layoutConfig.cellSize,
-                            cornerRadius: self.layoutConfig.cornerRadius
-                        )
-                        .onTapGesture {
-                            // Show popup for any day - create empty snapshot if needed
-                            let snapshotToShow = snapshot ?? self.createEmptySnapshot(for: date)
-                            self.viewModel.selectSnapshot(snapshotToShow)
+                            DayCell(
+                                date: date,
+                                snapshot: snapshot,
+                                cellSize: self.layoutConfig.cellSize,
+                                cornerRadius: self.layoutConfig.cornerRadius
+                            )
+                            .onTapGesture {
+                                // Show popup for any day - create empty snapshot if needed
+                                let snapshotToShow = snapshot ?? self.createEmptySnapshot(for: date)
+                                self.viewModel.selectSnapshot(snapshotToShow)
+                            }
+                        } else {
+                            // Placeholder cell for grid alignment
+                            Color.clear
+                                .frame(width: self.layoutConfig.cellSize, height: self.layoutConfig.cellSize)
                         }
                     }
                 }
@@ -214,21 +220,27 @@ struct YearlyCalendarView: View {
                     ),
                     spacing: self.layoutConfig.spacing
                 ) {
-                    ForEach(self.viewModel.allDates, id: \.self) { date in
-                        let snapshot = self.viewModel.snapshots.first {
-                            Calendar.current.isDate($0.date, inSameDayAs: date)
-                        }
+                    ForEach(self.viewModel.allCells) { cell in
+                        if let date = cell.date {
+                            let snapshot = self.viewModel.snapshots.first {
+                                Calendar.current.isDate($0.date, inSameDayAs: date)
+                            }
 
-                        DayCell(
-                            date: date,
-                            snapshot: snapshot,
-                            cellSize: self.layoutConfig.cellSize,
-                            cornerRadius: self.layoutConfig.cornerRadius
-                        )
-                        .onTapGesture {
-                            // Show popup for any day - create empty snapshot if needed
-                            let snapshotToShow = snapshot ?? self.createEmptySnapshot(for: date)
-                            self.viewModel.selectSnapshot(snapshotToShow)
+                            DayCell(
+                                date: date,
+                                snapshot: snapshot,
+                                cellSize: self.layoutConfig.cellSize,
+                                cornerRadius: self.layoutConfig.cornerRadius
+                            )
+                            .onTapGesture {
+                                // Show popup for any day - create empty snapshot if needed
+                                let snapshotToShow = snapshot ?? self.createEmptySnapshot(for: date)
+                                self.viewModel.selectSnapshot(snapshotToShow)
+                            }
+                        } else {
+                            // Placeholder cell for grid alignment
+                            Color.clear
+                                .frame(width: self.layoutConfig.cellSize, height: self.layoutConfig.cellSize)
                         }
                     }
                 }

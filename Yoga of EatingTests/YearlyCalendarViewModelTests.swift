@@ -164,5 +164,129 @@
             // Then: Cell size should remain the same
             XCTAssertEqual(self.sut.layoutConfig.cellSize, initialCellSize)
         }
+
+        // MARK: - Weekday Alignment Tests
+
+        func test_allCells_includesPlaceholdersForWeekdayAlignment() {
+            // Given: 2026 where Jan 1 is a Thursday
+            // Monday=0, Tuesday=1, Wednesday=2, Thursday=3
+            // So we need 3 placeholder cells before Jan 1
+            self.sut.selectedYear = 2026
+
+            // When
+            let cells = self.sut.allCells
+
+            // Then: First 3 cells should be placeholders
+            XCTAssertTrue(cells[0].isPlaceholder, "First cell should be a placeholder (Monday)")
+            XCTAssertTrue(cells[1].isPlaceholder, "Second cell should be a placeholder (Tuesday)")
+            XCTAssertTrue(cells[2].isPlaceholder, "Third cell should be a placeholder (Wednesday)")
+            XCTAssertFalse(cells[3].isPlaceholder, "Fourth cell should be Jan 1 (Thursday)")
+        }
+
+        func test_allCells_jan1AppearsInCorrectWeekdayColumn_2026() {
+            // Given: 2026 where Jan 1 is a Thursday (column index 3, 0-based)
+            self.sut.selectedYear = 2026
+
+            // When
+            let cells = self.sut.allCells
+            let jan1Cell = cells.first { !$0.isPlaceholder }
+
+            // Then: Jan 1 should be at index 3 (Thursday column in 7-column grid)
+            let jan1Index = cells.firstIndex { $0.id == jan1Cell?.id }
+            XCTAssertEqual(jan1Index, 3, "Jan 1, 2026 (Thursday) should be at index 3")
+        }
+
+        func test_allCells_jan1AppearsInCorrectWeekdayColumn_2024() {
+            // Given: 2024 where Jan 1 is a Monday (column index 0)
+            self.sut.selectedYear = 2024
+
+            // When
+            let cells = self.sut.allCells
+
+            // Then: First cell should be Jan 1 (no placeholders needed)
+            XCTAssertFalse(cells[0].isPlaceholder, "Jan 1, 2024 (Monday) should be first, no placeholders")
+
+            // Verify it's actually Jan 1
+            let calendar = Calendar.current
+            if let date = cells[0].date {
+                XCTAssertEqual(calendar.component(.month, from: date), 1)
+                XCTAssertEqual(calendar.component(.day, from: date), 1)
+            } else {
+                XCTFail("First cell should have a date")
+            }
+        }
+
+        func test_allCells_jan1AppearsInCorrectWeekdayColumn_2023() {
+            // Given: 2023 where Jan 1 is a Sunday (column index 6)
+            // We need 6 placeholder cells (Mon-Sat)
+            self.sut.selectedYear = 2023
+
+            // When
+            let cells = self.sut.allCells
+
+            // Then: First 6 cells should be placeholders
+            for i in 0..<6 {
+                XCTAssertTrue(cells[i].isPlaceholder, "Cell \(i) should be a placeholder")
+            }
+            XCTAssertFalse(cells[6].isPlaceholder, "Cell 6 should be Jan 1 (Sunday)")
+        }
+
+        func test_allCells_totalCountIncludesPlaceholders() {
+            // Given: 2026 with 365 days + 3 placeholders = 368 cells
+            self.sut.selectedYear = 2026
+
+            // When
+            let cells = self.sut.allCells
+            let placeholderCount = cells.count(where: { $0.isPlaceholder })
+            let actualDateCount = cells.count(where: { !$0.isPlaceholder })
+
+            // Then
+            XCTAssertEqual(placeholderCount, 3, "Should have 3 placeholder cells for 2026")
+            XCTAssertEqual(actualDateCount, 365, "Should have 365 actual dates in 2026")
+            XCTAssertEqual(cells.count, 368, "Total cells should be 368")
+        }
+
+        func test_allDates_excludesPlaceholders() {
+            // Given: 2026 with 365 days
+            self.sut.selectedYear = 2026
+
+            // When
+            let dates = self.sut.allDates
+
+            // Then: allDates should only contain actual dates, no placeholders
+            XCTAssertEqual(dates.count, 365, "allDates should have exactly 365 dates for 2026")
+        }
+
+        func test_currentDay_appearsInCorrectColumn() {
+            // Given: Current year and today's date
+            let today = Date()
+            let calendar = Calendar.current
+            let currentYear = calendar.component(.year, from: today)
+            self.sut.selectedYear = currentYear
+
+            // When
+            let cells = self.sut.allCells
+
+            // Find today's cell
+            let todayCell = cells.first { cell in
+                guard let date = cell.date else { return false }
+                return calendar.isDateInToday(date)
+            }
+
+            // Calculate expected weekday offset
+            let todayWeekday = calendar.component(.weekday, from: today)
+            let expectedMondayBasedIndex = (todayWeekday + 5) % 7 // 0=Monday, 6=Sunday
+
+            // Then: Today's cell index mod 7 should equal expected weekday column
+            if let todayCell, let index = cells.firstIndex(of: todayCell) {
+                let column = index % 7
+                XCTAssertEqual(
+                    column, expectedMondayBasedIndex,
+                    "Today should be in column \(expectedMondayBasedIndex), but was in column \(column)"
+                )
+            } else {
+                XCTFail("Could not find today's cell")
+            }
+        }
     }
 #endif

@@ -2,6 +2,25 @@ import Combine
 import Foundation
 import SwiftUI
 
+/// Represents a cell in the heatmap grid - either an actual date or a placeholder.
+struct HeatmapCell: Identifiable, Hashable {
+    let id: String
+    let date: Date?
+
+    /// Returns true if this is a placeholder cell (no actual date).
+    var isPlaceholder: Bool { self.date == nil }
+
+    /// Creates a cell with an actual date.
+    static func day(_ date: Date) -> HeatmapCell {
+        HeatmapCell(id: "day-\(date.timeIntervalSince1970)", date: date)
+    }
+
+    /// Creates a placeholder cell for grid alignment.
+    static func placeholder(index: Int) -> HeatmapCell {
+        HeatmapCell(id: "placeholder-\(index)", date: nil)
+    }
+}
+
 /// ViewModel for the Yearly Smiley Heatmap Calendar.
 /// Manages the state and logic for fetching and displaying daily eating history.
 @MainActor
@@ -16,7 +35,14 @@ class YearlyCalendarViewModel: ObservableObject {
 
     @Published private(set) var snapshots: [DailySmileySnapshot] = []
     @Published var selectedSnapshot: DailySmileySnapshot?
-    @Published private(set) var allDates: [Date] = []
+
+    /// All cells in the heatmap grid, including placeholder cells for alignment.
+    @Published private(set) var allCells: [HeatmapCell] = []
+
+    /// Convenience property for backward compatibility - returns only actual dates.
+    var allDates: [Date] {
+        self.allCells.compactMap(\.date)
+    }
 
     struct MonthLabel: Identifiable {
         let id = UUID()
@@ -88,14 +114,28 @@ class YearlyCalendarViewModel: ObservableObject {
             return
         }
 
-        var dates: [Date] = []
+        var cells: [HeatmapCell] = []
+
+        // Calculate the weekday of Jan 1st and add placeholder cells for alignment.
+        // Swift's Calendar uses 1=Sunday, 2=Monday, ..., 7=Saturday by default.
+        // We want Monday-based: 0=Monday, 1=Tuesday, ..., 6=Sunday
+        let firstWeekday = calendar.component(.weekday, from: startOfYear)
+        // Convert to Monday-based offset: Sunday(1)->6, Monday(2)->0, Tuesday(3)->1, etc.
+        let mondayBasedOffset = (firstWeekday + 5) % 7
+
+        // Add placeholder cells before Jan 1st to align the grid
+        for i in 0..<mondayBasedOffset {
+            cells.append(.placeholder(index: i))
+        }
+
+        // Add all actual dates for the year
         var currentDate = startOfYear
         while currentDate <= endOfYear {
-            dates.append(currentDate)
+            cells.append(.day(currentDate))
             guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
             currentDate = nextDate
         }
-        self.allDates = dates
+        self.allCells = cells
 
         // Calculate month labels and their week offsets
         var labels: [MonthLabel] = []
