@@ -108,7 +108,7 @@ struct SettingsView: View {
         NavigationLink {
             YearlyCalendarView(viewModel: YearlyCalendarViewModel(historicalService: self.viewModel.historicalService))
         } label: {
-            Label("Yearly Smiley Heatmap", systemImage: "calendar.badge.clock")
+            Label("Yearly Heatmap", systemImage: "calendar.badge.clock")
         }
         .accessibilityIdentifier("yearly-heatmap-link")
     }

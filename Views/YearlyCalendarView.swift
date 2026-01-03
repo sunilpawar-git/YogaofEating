@@ -172,9 +172,9 @@ struct YearlyCalendarView: View {
                             cornerRadius: self.layoutConfig.cornerRadius
                         )
                         .onTapGesture {
-                            if let snapshot {
-                                self.viewModel.selectSnapshot(snapshot)
-                            }
+                            // Show popup for any day - create empty snapshot if needed
+                            let snapshotToShow = snapshot ?? self.createEmptySnapshot(for: date)
+                            self.viewModel.selectSnapshot(snapshotToShow)
                         }
                     }
                 }
@@ -236,9 +236,9 @@ struct YearlyCalendarView: View {
                             cornerRadius: self.layoutConfig.cornerRadius
                         )
                         .onTapGesture {
-                            if let snapshot {
-                                self.viewModel.selectSnapshot(snapshot)
-                            }
+                            // Show popup for any day - create empty snapshot if needed
+                            let snapshotToShow = snapshot ?? self.createEmptySnapshot(for: date)
+                            self.viewModel.selectSnapshot(snapshotToShow)
                         }
                     }
                 }
@@ -253,6 +253,20 @@ struct YearlyCalendarView: View {
 
     private var legend: some View {
         HeatMapLegend()
+    }
+
+    // MARK: - Helpers
+
+    /// Creates an empty snapshot for days without data so popup can still show.
+    private func createEmptySnapshot(for date: Date) -> DailySmileySnapshot {
+        DailySmileySnapshot(
+            id: UUID(),
+            date: date,
+            smileyState: SmileyState(scale: 0.5, mood: .neutral),
+            meals: [],
+            mealCount: 0,
+            averageHealthScore: 0
+        )
     }
 }
 
