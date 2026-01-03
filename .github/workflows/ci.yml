@@ -46,35 +46,62 @@ jobs:
         run: |
           echo "🔍 Detecting available iOS simulator..."
           
-          # Use iPhone 17 Pro with iOS 26.2 (project requirement)
+          # Preferred: iPhone 17 Pro with iOS 26.2 (project requirement)
           PREFERRED_SIMULATOR="iPhone 17 Pro"
           PREFERRED_OS="26.2"
           
-          # Check if preferred simulator exists
-          if xcrun simctl list devices available | grep -qi "$PREFERRED_SIMULATOR"; then
+          # Check if iPhone 17 Pro with iOS 26.2 exists
+          if xcrun simctl list devices available | grep -qiE "$PREFERRED_SIMULATOR.*26\.2|26\.2.*$PREFERRED_SIMULATOR"; then
             FOUND_SIMULATOR="$PREFERRED_SIMULATOR"
             FOUND_OS="$PREFERRED_OS"
-            echo "✅ Using preferred simulator: $FOUND_SIMULATOR with iOS $FOUND_OS"
+            echo "✅ Found preferred: $FOUND_SIMULATOR with iOS $FOUND_OS"
           else
-            echo "⚠️  iPhone 17 Pro not found, searching alternatives..."
-            # Try other common simulators as fallback
-            ALTERNATIVES=("iPhone 17" "iPhone 16 Pro" "iPhone 15" "iPhone 14")
+            echo "⚠️  iPhone 17 Pro with iOS 26.2 not found, checking alternatives..."
             
-            for sim in "${ALTERNATIVES[@]}"; do
-              if xcrun simctl list devices available | grep -qi "$sim"; then
-                FOUND_SIMULATOR="$sim"
-                FOUND_OS="latest"
-                echo "✅ Found alternative simulator: $FOUND_SIMULATOR"
-                break
+            # Check if iPhone 17 Pro exists with any OS version
+            IPHONE_17_PRO_LINE=$(xcrun simctl list devices available | grep -i "iPhone 17 Pro" | head -1)
+            if [ -n "$IPHONE_17_PRO_LINE" ]; then
+              # Extract OS version from the line (format: "iPhone 17 Pro (UUID) (iOS 18.2)")
+              EXTRACTED_OS=$(echo "$IPHONE_17_PRO_LINE" | grep -oE "iOS [0-9]+\.[0-9]+" | head -1 | sed 's/iOS //')
+              if [ -n "$EXTRACTED_OS" ]; then
+                FOUND_SIMULATOR="$PREFERRED_SIMULATOR"
+                FOUND_OS="$EXTRACTED_OS"
+                echo "✅ Found iPhone 17 Pro with iOS $FOUND_OS (fallback)"
               fi
-            done
+            fi
             
-            # Last resort: get first available iPhone
+            # If still not found, try other simulators
+            if [ -z "$FOUND_SIMULATOR" ]; then
+              echo "⚠️  iPhone 17 Pro not available, searching for other iPhones..."
+              ALTERNATIVES=("iPhone 17" "iPhone 16 Pro" "iPhone 16" "iPhone 15 Pro" "iPhone 15" "iPhone 14")
+              
+              for sim in "${ALTERNATIVES[@]}"; do
+                SIM_LINE=$(xcrun simctl list devices available | grep -i "$sim" | head -1)
+                if [ -n "$SIM_LINE" ]; then
+                  # Extract device name and OS version
+                  FOUND_SIMULATOR=$(echo "$SIM_LINE" | awk -F'(' '{print $1}' | xargs)
+                  EXTRACTED_OS=$(echo "$SIM_LINE" | grep -oE "iOS [0-9]+\.[0-9]+" | head -1 | sed 's/iOS //')
+                  if [ -n "$EXTRACTED_OS" ]; then
+                    FOUND_OS="$EXTRACTED_OS"
+                  else
+                    FOUND_OS=""  # Let xcodebuild use default
+                  fi
+                  echo "✅ Found alternative: $FOUND_SIMULATOR with iOS ${FOUND_OS:-default}"
+                  break
+                fi
+              done
+            fi
+            
+            # Last resort: get first available iPhone without OS specification
             if [ -z "$FOUND_SIMULATOR" ]; then
               echo "⚠️  Searching for any available iPhone..."
-              # Extract device name: "    iPhone 15 Pro (UUID) (Available)" -> "iPhone 15 Pro"
-              FOUND_SIMULATOR=$(xcrun simctl list devices available | grep -i "iphone" | head -1 | awk -F'(' '{print $1}' | xargs)
-              FOUND_OS="latest"
+              FIRST_IPHONE_LINE=$(xcrun simctl list devices available | grep -i "iphone" | head -1)
+              if [ -n "$FIRST_IPHONE_LINE" ]; then
+                FOUND_SIMULATOR=$(echo "$FIRST_IPHONE_LINE" | awk -F'(' '{print $1}' | xargs)
+                EXTRACTED_OS=$(echo "$FIRST_IPHONE_LINE" | grep -oE "iOS [0-9]+\.[0-9]+" | head -1 | sed 's/iOS //')
+                FOUND_OS="${EXTRACTED_OS:-}"
+                echo "✅ Found: $FOUND_SIMULATOR with iOS ${FOUND_OS:-default}"
+              fi
             fi
           fi
           
@@ -86,8 +113,12 @@ jobs:
           fi
           
           echo "simulator_name=$FOUND_SIMULATOR" >> $GITHUB_OUTPUT
-          echo "simulator_os=$FOUND_OS" >> $GITHUB_OUTPUT
-          echo "✅ Selected simulator: $FOUND_SIMULATOR with iOS $FOUND_OS"
+          if [ -n "$FOUND_OS" ]; then
+            echo "simulator_os=$FOUND_OS" >> $GITHUB_OUTPUT
+          else
+            echo "simulator_os=" >> $GITHUB_OUTPUT
+          fi
+          echo "✅ Selected: $FOUND_SIMULATOR${FOUND_OS:+ with iOS $FOUND_OS}"
           
       - name: Boot Simulator
         run: |
@@ -103,8 +134,8 @@ jobs:
           SIMULATOR_NAME="${{ steps.simulator.outputs.simulator_name }}"
           SIMULATOR_OS="${{ steps.simulator.outputs.simulator_os }}"
           
-          # Use iPhone 17 Pro with iOS 26.2 if available, otherwise use detected simulator
-          if [ "$SIMULATOR_OS" = "26.2" ]; then
+          # Build destination string - include OS only if specified
+          if [ -n "$SIMULATOR_OS" ] && [ "$SIMULATOR_OS" != "" ]; then
             DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME,OS=$SIMULATOR_OS"
           else
             DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
@@ -129,8 +160,8 @@ jobs:
           SIMULATOR_NAME="${{ steps.simulator.outputs.simulator_name }}"
           SIMULATOR_OS="${{ steps.simulator.outputs.simulator_os }}"
           
-          # Use iPhone 17 Pro with iOS 26.2 if available, otherwise use detected simulator
-          if [ "$SIMULATOR_OS" = "26.2" ]; then
+          # Build destination string - include OS only if specified
+          if [ -n "$SIMULATOR_OS" ] && [ "$SIMULATOR_OS" != "" ]; then
             DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME,OS=$SIMULATOR_OS"
           else
             DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
