@@ -20,15 +20,10 @@
             super.tearDown()
         }
 
-        // MARK: - AppStorage Default Values
+        // MARK: - Design Assertion: Personalized Feedback is Always On
 
-        func test_personalizedFeedbackEnabled_defaultsToTrue() {
-            // When: No explicit value set
-            let isEnabled = self.mockUserDefaults?.object(forKey: "personalized_feedback_enabled") as? Bool
-
-            // Then: Should default to true (or nil, which means enabled)
-            XCTAssertNil(isEnabled, "Default should be nil, which is treated as enabled")
-        }
+        // Note: Personalized feedback is now always enabled by design.
+        // Users cannot disable it - the feature is core to the app experience.
 
         func test_showHealthInsights_defaultsToFalse() {
             // When: No explicit value set
@@ -39,15 +34,6 @@
         }
 
         // MARK: - AppStorage Toggle Persistence
-
-        func test_personalizedFeedbackToggle_persistsValue() {
-            // When: User disables personalized feedback
-            self.mockUserDefaults?.set(false, forKey: "personalized_feedback_enabled")
-
-            // Then: Value should persist
-            let isEnabled = self.mockUserDefaults?.bool(forKey: "personalized_feedback_enabled")
-            XCTAssertFalse(isEnabled ?? true)
-        }
 
         func test_showHealthInsightsToggle_persistsValue() {
             // When: User enables health insights
@@ -195,18 +181,7 @@
             XCTAssertNil(profile)
         }
 
-        // MARK: - Integration Tests
-
-        func test_personalizedFeedback_respectsToggle() {
-            // Given: Personalized feedback disabled
-            self.mockUserDefaults?.set(false, forKey: "personalized_feedback_enabled")
-
-            // When: Checking if enabled
-            let isEnabled = self.mockUserDefaults?.object(forKey: "personalized_feedback_enabled") as? Bool ?? true
-
-            // Then: Should respect disabled state
-            XCTAssertFalse(isEnabled)
-        }
+        // Note: test_personalizedFeedback_respectsToggle removed - feature is always on
 
         func test_healthInsightsSection_showsOnlyWhenEnabled() {
             // Given: Health insights disabled

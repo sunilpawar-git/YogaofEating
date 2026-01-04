@@ -77,9 +77,7 @@ class SettingsViewModel: ObservableObject {
         }
     }
 
-    @Published var isPersonalizedFeedbackEnabled: Bool {
-        didSet { self.userDefaults.set(self.isPersonalizedFeedbackEnabled, forKey: Keys.personalizedFeedback) }
-    }
+    // Note: isPersonalizedFeedbackEnabled removed - feature is always on
 
     @Published var showHealthInsights: Bool {
         didSet { self.userDefaults.set(self.showHealthInsights, forKey: Keys.healthInsights) }
@@ -112,7 +110,7 @@ class SettingsViewModel: ObservableObject {
         static let haptics = "haptics_enabled"
         static let sound = "sound_enabled"
         static let healthSync = "health_sync_enabled"
-        static let personalizedFeedback = "personalized_feedback_enabled"
+        // Note: personalizedFeedback key removed - feature is always on
         static let healthInsights = "show_health_insights"
     }
 
@@ -152,7 +150,7 @@ class SettingsViewModel: ObservableObject {
         self.areHapticsEnabled = userDefaults.object(forKey: Keys.haptics) as? Bool ?? true
         self.isSoundEnabled = userDefaults.object(forKey: Keys.sound) as? Bool ?? true
         self.isHealthSyncEnabled = userDefaults.bool(forKey: Keys.healthSync)
-        self.isPersonalizedFeedbackEnabled = userDefaults.object(forKey: Keys.personalizedFeedback) as? Bool ?? true
+        // Note: isPersonalizedFeedbackEnabled initialization removed - feature is always on
         self.showHealthInsights = userDefaults.bool(forKey: Keys.healthInsights)
 
         #if canImport(Network)

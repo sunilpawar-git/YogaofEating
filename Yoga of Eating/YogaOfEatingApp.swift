@@ -51,6 +51,7 @@ struct YogaOfEatingApp: App {
         // Note: Firebase is now initialized in AppDelegate
         NotificationManager.shared.requestPermissions()
         NotificationManager.shared.scheduleMorningNudge()
+        NotificationManager.shared.scheduleDefaultMealReminders()
         print("🔔 Notifications configured")
     }
 

@@ -22,16 +22,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 self.userDataSection
-                self.personalDetailsSection
-                self.appearanceSection
-                self.notificationsSection
-                self.sensorySection
-                self.personalizationSection
-                if self.viewModel.showHealthInsights {
-                    self.healthInsightsSection
-                }
-                self.privacySection
-                self.integrationsSection
+                self.navigationSection
                 self.dataManagementSection
                 self.supportSection
             }
@@ -46,6 +37,27 @@ struct SettingsView: View {
                 } message: {
                     Text("This will delete all your logged meals and reset the Smiley. Cannot be undone.")
                 }
+        }
+    }
+
+    // MARK: - Navigation Section
+
+    private var navigationSection: some View {
+        Section {
+            NavigationLink {
+                UserProfileSettingsView(viewModel: self.viewModel)
+                    .environmentObject(self.mainViewModel)
+            } label: {
+                Label("Profile & Health", systemImage: "person.crop.circle")
+            }
+            .accessibilityIdentifier("profile-settings-link")
+
+            NavigationLink {
+                PreferencesSettingsView(viewModel: self.viewModel)
+            } label: {
+                Label("Preferences", systemImage: "gearshape")
+            }
+            .accessibilityIdentifier("preferences-settings-link")
         }
     }
 
@@ -153,163 +165,10 @@ struct SettingsView: View {
         .accessibilityIdentifier("yearly-heatmap-link")
     }
 
-    private var personalDetailsSection: some View {
-        Section("Personal Details") {
-            self.nameRow
-            self.genderPicker
-            self.ageRow
-            self.unitPicker
-            self.heightRow
-            self.weightRow
-        }
-    }
+    // MARK: - Sections moved to sub-views
 
-    private var nameRow: some View {
-        HStack {
-            Text("Name")
-            Spacer()
-            TextField("Name", text: self.$viewModel.name)
-                .multilineTextAlignment(.trailing)
-                .foregroundColor(.secondary)
-        }
-    }
-
-    private var genderPicker: some View {
-        Picker("Gender", selection: self.$viewModel.gender) {
-            Text("Unspecified").tag(0)
-            Text("Male").tag(1)
-            Text("Female").tag(2)
-            Text("Other").tag(3)
-        }
-    }
-
-    private var ageRow: some View {
-        HStack {
-            Text("Age")
-            Spacer()
-            TextField("Age", text: self.$viewModel.age)
-            #if canImport(UIKit)
-                .keyboardType(.numberPad)
-            #endif
-                .multilineTextAlignment(.trailing)
-                .foregroundColor(.secondary)
-        }
-    }
-
-    private var unitPicker: some View {
-        Picker("Unit System", selection: self.$viewModel.unitSystem) {
-            Text("Metric").tag(0)
-            Text("Imperial").tag(1)
-        }
-    }
-
-    private var heightRow: some View {
-        HStack {
-            Text(self.viewModel.unitSystem == 0 ? "Height (cm)" : "Height (ft/in)")
-            Spacer()
-            TextField("Height", text: self.$viewModel.height)
-            #if canImport(UIKit)
-                .keyboardType(.numbersAndPunctuation)
-            #endif
-                .multilineTextAlignment(.trailing)
-                .foregroundColor(.secondary)
-        }
-    }
-
-    private var weightRow: some View {
-        HStack {
-            Text(self.viewModel.unitSystem == 0 ? "Weight (kg)" : "Weight (lbs)")
-            Spacer()
-            TextField("Weight", text: self.$viewModel.weight)
-            #if canImport(UIKit)
-                .keyboardType(.decimalPad)
-            #endif
-                .multilineTextAlignment(.trailing)
-                .foregroundColor(.secondary)
-        }
-    }
-
-    private var appearanceSection: some View {
-        Section("Appearance") {
-            Picker("Theme", selection: self.$viewModel.theme) {
-                Text("System").tag(0)
-                Text("Light").tag(1)
-                Text("Dark").tag(2)
-            }
-            .accessibilityIdentifier("theme-picker")
-            .accessibilityLabel("Theme")
-        }
-    }
-
-    private var notificationsSection: some View {
-        Section("Notifications") {
-            Toggle("Morning Nudge", isOn: self.$viewModel.isMorningNudgeEnabled)
-                .accessibilityIdentifier("morning-nudge-toggle")
-            Toggle("Meal Reminders", isOn: self.$viewModel.areMealRemindersEnabled)
-                .accessibilityIdentifier("meal-reminders-toggle")
-        }
-    }
-
-    private var sensorySection: some View {
-        Section("Sensory Feedback") {
-            Toggle("Haptic Nudges", isOn: self.$viewModel.areHapticsEnabled)
-                .accessibilityIdentifier("haptics-toggle")
-            Toggle("Sound Effects", isOn: self.$viewModel.isSoundEnabled)
-                .accessibilityIdentifier("sounds-toggle")
-        }
-    }
-
-    private var personalizationSection: some View {
-        Section {
-            Toggle("Personalized Feedback", isOn: self.$viewModel.isPersonalizedFeedbackEnabled)
-                .tint(.green)
-                .accessibilityIdentifier("personalized-feedback-toggle")
-        } header: {
-            Text("Personalization")
-        } footer: {
-            Text(
-                "Get meal feedback tailored to your health profile. More sensitive warnings for users with higher BMI or health risks."
-            )
-            .font(.caption)
-        }
-    }
-
-    private var healthInsightsSection: some View {
-        Section("Health Insights") {
-            if let profile = self.mainViewModel.healthProfileService.getUserHealthProfile() {
-                LabeledContent("BMI", value: String(format: "%.1f", profile.bmi))
-                LabeledContent("Category", value: profile.bmiCategory.rawValue)
-                LabeledContent("Daily Energy", value: "\(Int(profile.tdee)) cal")
-                LabeledContent("Risk Level", value: profile.riskLevel.rawValue)
-            } else {
-                Text("Complete your personal details to see health insights")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var privacySection: some View {
-        Section {
-            Toggle("Show Health Insights", isOn: self.$viewModel.showHealthInsights)
-                .tint(.green)
-                .accessibilityIdentifier("show-health-insights-toggle")
-        } header: {
-            Text("Privacy")
-        } footer: {
-            Text(
-                "All health calculations are done on your device. Data never leaves your phone except for encrypted cloud sync."
-            )
-            .font(.caption)
-        }
-    }
-
-    private var integrationsSection: some View {
-        Section("Integrations") {
-            Toggle("Sync Body Metrics (Apple Health)", isOn: self.$viewModel.isHealthSyncEnabled)
-                .accessibilityIdentifier("health-sync-toggle")
-        }
-    }
+    // personalDetailsSection, healthInsightsSection, privacySection -> UserProfileSettingsView
+    // appearanceSection, notificationsSection, sensorySection, integrationsSection -> PreferencesSettingsView
 
     private var dataManagementSection: some View {
         Section("Data Management") {
@@ -323,7 +182,11 @@ struct SettingsView: View {
 
     private var supportSection: some View {
         Section {
-            NavigationLink("FAQ & Help") { FAQView() }
+            NavigationLink {
+                FAQView()
+            } label: {
+                Label("FAQ & Help", systemImage: "questionmark.circle")
+            }
             Link(destination: self.privacyURL) {
                 Label("Privacy Policy", systemImage: "lock.shield")
             }

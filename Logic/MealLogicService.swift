@@ -46,23 +46,17 @@ class MealLogicService: MealLogicProvider {
 
     /// Calculates a health score (0.0 - 1.0) based on string description.
     /// Uses keyword heuristic with personalized adjustments based on user's health profile.
+    /// Note: Personalized feedback is always enabled by design.
     func calculateHealthScore(for description: String) -> Double {
         // 1. Calculate base score using keyword heuristic
         let baseScore = self.keywordBasedScore(for: description)
 
-        // 2. Check if personalized feedback is enabled
-        let isPersonalizedEnabled = UserDefaults.standard
-            .object(forKey: "personalized_feedback_enabled") as? Bool ?? true
-        guard isPersonalizedEnabled else {
-            return baseScore // Skip personalization if disabled
-        }
-
-        // 3. Get user health profile
+        // 2. Get user health profile (personalization is always on)
         guard let profile = healthProfileService.getUserHealthProfile() else {
             return baseScore // No personalization if profile unavailable
         }
 
-        // 4. Apply sensitivity multiplier
+        // 3. Apply sensitivity multiplier
         let adjustedScore = self.applySensitivityMultiplier(to: baseScore, multiplier: profile.sensitivityMultiplier)
 
         // 5. Apply contextual adjustments
