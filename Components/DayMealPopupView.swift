@@ -3,6 +3,7 @@ import SwiftUI
 /// A popup view showing details for a specific day's eating history.
 struct DayMealPopupView: View {
     let snapshot: DailySmileySnapshot
+    @Binding var selectedDetent: PresentationDetent
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -51,15 +52,20 @@ struct DayMealPopupView: View {
                         }
                     }
                 }
-                .frame(maxHeight: 200)
+                // Adaptive height based on detent: 200pt at medium, unlimited at large
+                .frame(maxHeight: self.selectedDetent == .medium ? 200 : nil)
             }
         }
         .padding()
-        .frame(width: 300)
+        .frame(maxWidth: .infinity) // Responsive width instead of fixed 300pt
         .frame(minHeight: 100)
-        .background(Color(uiColor: .systemBackground))
-        .cornerRadius(12)
-        .shadow(radius: 10)
+        #if canImport(UIKit)
+            .background(Color(uiColor: .systemBackground))
+        #elseif canImport(AppKit)
+            .background(Color(nsColor: .controlBackgroundColor))
+        #endif
+            .cornerRadius(12)
+            .shadow(radius: 10)
     }
 
     private var formattedDate: String {
@@ -76,17 +82,26 @@ struct DayMealPopupView: View {
 }
 
 #Preview {
-    DayMealPopupView(
-        snapshot: DailySmileySnapshot(
-            id: UUID(),
-            date: Date(),
-            smileyState: SmileyState(scale: 1.0, mood: .serene),
-            meals: [
-                Meal(id: UUID(), timestamp: Date(), mealType: .breakfast, items: ["Oatmeal"], healthScore: 0.9),
-                Meal(id: UUID(), timestamp: Date(), mealType: .lunch, items: ["Pizza"], healthScore: 0.4)
-            ],
-            mealCount: 2,
-            averageHealthScore: 0.65
-        )
-    )
+    struct PreviewWrapper: View {
+        @State private var detent: PresentationDetent = .medium
+
+        var body: some View {
+            DayMealPopupView(
+                snapshot: DailySmileySnapshot(
+                    id: UUID(),
+                    date: Date(),
+                    smileyState: SmileyState(scale: 1.0, mood: .serene),
+                    meals: [
+                        Meal(id: UUID(), timestamp: Date(), mealType: .breakfast, items: ["Oatmeal"], healthScore: 0.9),
+                        Meal(id: UUID(), timestamp: Date(), mealType: .lunch, items: ["Pizza"], healthScore: 0.4)
+                    ],
+                    mealCount: 2,
+                    averageHealthScore: 0.65
+                ),
+                selectedDetent: $detent
+            )
+        }
+    }
+
+    return PreviewWrapper()
 }

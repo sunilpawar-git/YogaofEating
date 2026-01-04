@@ -19,7 +19,7 @@ struct MainScreenView: View {
             }
             .toolbar { self.toolbarContent }
             .sheet(isPresented: self.$showingSettings) {
-                SettingsView()
+                SettingsView(mainViewModel: self.viewModel)
             }
         }
     }

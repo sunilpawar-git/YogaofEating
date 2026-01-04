@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcodebuild:*)",
+      "Bash(pkill:*)",
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git tag -a v1.5.0-personalized-feedback -m \"$\\(cat <<''EOF''\nRelease v1.5.0: Personalized Meal Feedback System\n\nMajor Features:\n✅ Health profile calculation \\(BMI, BMR, TDEE, risk levels\\)\n✅ Personalized meal scoring based on user health data\n✅ Visual feedback with colored borders and tints\n✅ Risk-based haptic feedback intensity\n✅ Settings UI with health insights display\n✅ Privacy-first design \\(all calculations on-device\\)\n✅ User toggles for personalization control\n\nTechnical Details:\n- 100 new comprehensive tests \\(234 total passing\\)\n- 7 new files added \\(2 services, 5 test suites\\)\n- 6 existing files enhanced\n- Zero regressions, zero warnings\n- Full backward compatibility\n\nTest Coverage:\n- HealthProfileServiceTests: 33 tests\n- PersonalizedMealScoringTests: 16 tests\n- MealCardVisualFeedbackTests: 19 tests\n- PersonalizedHapticFeedbackTests: 16 tests\n- SettingsHealthInsightsTests: 16 tests\n\nUser Benefits:\n- More meaningful feedback for at-risk users\n- Celebrates healthy choices\n- Gentle warnings for unhealthy choices\n- Optional health insights display\n- Complete user control via settings\n\nCommit: 8840f23\nBranch: feature/heatmap-ux-improvements\nDate: 2026-01-03\nEOF\n\\)\")",
+      "Bash(git log:*)",
+      "Bash(cat:*)",
+      "Bash(xcrun simctl:*)",
+      "Bash(tee:*)"
+    ]
+  }
+}

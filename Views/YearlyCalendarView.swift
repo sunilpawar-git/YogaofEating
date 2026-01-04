@@ -3,6 +3,10 @@ import SwiftUI
 struct YearlyCalendarView: View {
     @StateObject var viewModel: YearlyCalendarViewModel
     @Environment(\.dismiss) var dismiss
+    @State private var sheetDetent: PresentationDetent = .medium
+
+    // Constant for auto-expansion threshold
+    private let SHEET_AUTO_EXPAND_THRESHOLD = 3
 
     /// Convenience computed property to access current layout config
     private var layoutConfig: HeatmapLayoutConfiguration {
@@ -51,16 +55,22 @@ struct YearlyCalendarView: View {
                 }
             }
             .navigationTitle("Yearly Heatmap")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { self.dismiss() }
+            #if canImport(UIKit)
+                .navigationBarTitleDisplayMode(.inline)
+            #endif
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { self.dismiss() }
+                    }
                 }
-            }
-            .sheet(item: self.$viewModel.selectedSnapshot) { snapshot in
-                DayMealPopupView(snapshot: snapshot)
-                    .presentationDetents([.medium, .large])
-            }
+                .sheet(item: self.$viewModel.selectedSnapshot) { snapshot in
+                    DayMealPopupView(snapshot: snapshot, selectedDetent: self.$sheetDetent)
+                        .presentationDetents([.medium, .large], selection: self.$sheetDetent)
+                        .onAppear {
+                            // Auto-expand for days with 3+ meals
+                            self.sheetDetent = snapshot.mealCount >= self.SHEET_AUTO_EXPAND_THRESHOLD ? .large : .medium
+                        }
+                }
         }
     }
 

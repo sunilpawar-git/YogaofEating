@@ -1,27 +1,22 @@
+import HealthKit
 import SwiftUI
+#if canImport(UIKit)
+    import UIKit
+#endif
 
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var viewModel: MainViewModel
-
-    @AppStorage("user_name") private var name: String = "Sunil"
-    @AppStorage("user_height") private var height: String = "175"
-    @AppStorage("user_weight") private var weight: String = "75"
-    @AppStorage("user_gender") private var gender: Int = 0
-    @AppStorage("user_age") private var age: String = "30"
-    @AppStorage("app_theme") private var theme: Int = 0
-    @AppStorage("unit_system") private var unitSystem: Int = 0
-    @AppStorage("smart_smiley_enabled") private var isSmartSmileyEnabled: Bool = true
-    @AppStorage("morning_nudge_enabled") private var isMorningNudgeEnabled: Bool = true
-    @AppStorage("meal_reminders_enabled") private var areMealRemindersEnabled: Bool = true
-    @AppStorage("haptics_enabled") private var areHapticsEnabled: Bool = true
-    @AppStorage("sound_enabled") private var isSoundEnabled: Bool = true
-    @AppStorage("health_sync_enabled") private var isHealthSyncEnabled: Bool = false
-    @AppStorage("personalized_feedback_enabled") private var isPersonalizedFeedbackEnabled: Bool = true
-    @AppStorage("show_health_insights") private var showHealthInsights: Bool = false
-
+    @EnvironmentObject var mainViewModel: MainViewModel
+    @StateObject private var viewModel: SettingsViewModel
     @ObservedObject private var authService = AuthService.shared
     @State private var showingClearConfirmation = false
+
+    init(mainViewModel: MainViewModel) {
+        self._mainViewModel = EnvironmentObject()
+        self._viewModel = StateObject(
+            wrappedValue: SettingsViewModel(historicalService: mainViewModel.historicalService)
+        )
+    }
 
     var body: some View {
         NavigationStack {
@@ -32,12 +27,11 @@ struct SettingsView: View {
                 self.notificationsSection
                 self.sensorySection
                 self.personalizationSection
-                if self.showHealthInsights {
+                if self.viewModel.showHealthInsights {
                     self.healthInsightsSection
                 }
                 self.privacySection
                 self.integrationsSection
-                self.aiSection
                 self.dataManagementSection
                 self.supportSection
             }
@@ -48,7 +42,7 @@ struct SettingsView: View {
                 .toolbar { self.toolbarContent }
                 .alert("Clear All Data?", isPresented: self.$showingClearConfirmation) {
                     Button("Cancel", role: .cancel) {}
-                    Button("Clear", role: .destructive) { self.viewModel.resetDay() }
+                    Button("Clear", role: .destructive) { self.mainViewModel.resetDay() }
                 } message: {
                     Text("This will delete all your logged meals and reset the Smiley. Cannot be undone.")
                 }
@@ -87,17 +81,54 @@ struct SettingsView: View {
     }
 
     private var syncButton: some View {
-        Button(action: { self.performSync() }) {
-            HStack {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                Text("Sync with Cloud")
+        VStack(spacing: 0) {
+            Button(action: { self.viewModel.performCloudSync() }) {
+                HStack {
+                    switch self.viewModel.syncStatus {
+                    case .idle:
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundColor(.blue)
+                    case .syncing:
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.8)
+                    case .success:
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                    case .error:
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                    }
+
+                    Text(self.viewModel.syncStatusText)
+                        .foregroundColor(.primary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(self.syncBackgroundColor)
+                .cornerRadius(8)
+                .animation(.easeInOut(duration: 0.3), value: self.viewModel.syncStatus)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(Color.blue.opacity(0.1))
-            .cornerRadius(8)
+            .buttonStyle(.borderless)
+            .disabled(self.viewModel.syncStatus == .syncing)
+            .accessibilityLabel(self.viewModel.syncAccessibilityLabel)
+            .accessibilityHint(self.viewModel.syncAccessibilityHint)
+            .padding(.horizontal, 16)
+
+            Divider()
+                .background(Color.secondary.opacity(0.3))
+                .padding(.top, 8)
         }
-        .buttonStyle(.borderless)
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 0))
+    }
+
+    private var syncBackgroundColor: Color {
+        switch self.viewModel.syncStatus {
+        case .idle: Color.blue.opacity(0.1)
+        case .syncing: Color.blue.opacity(0.2)
+        case .success: Color.green.opacity(0.15)
+        case .error: Color.red.opacity(0.1)
+        }
     }
 
     private var signInButton: some View {
@@ -113,7 +144,9 @@ struct SettingsView: View {
 
     private var heatmapLink: some View {
         NavigationLink {
-            YearlyCalendarView(viewModel: YearlyCalendarViewModel(historicalService: self.viewModel.historicalService))
+            YearlyCalendarView(
+                viewModel: YearlyCalendarViewModel(historicalService: self.mainViewModel.historicalService)
+            )
         } label: {
             Label("Yearly Heatmap", systemImage: "calendar.badge.clock")
         }
@@ -135,14 +168,14 @@ struct SettingsView: View {
         HStack {
             Text("Name")
             Spacer()
-            TextField("Name", text: self.$name)
+            TextField("Name", text: self.$viewModel.name)
                 .multilineTextAlignment(.trailing)
                 .foregroundColor(.secondary)
         }
     }
 
     private var genderPicker: some View {
-        Picker("Gender", selection: self.$gender) {
+        Picker("Gender", selection: self.$viewModel.gender) {
             Text("Unspecified").tag(0)
             Text("Male").tag(1)
             Text("Female").tag(2)
@@ -154,7 +187,7 @@ struct SettingsView: View {
         HStack {
             Text("Age")
             Spacer()
-            TextField("Age", text: self.$age)
+            TextField("Age", text: self.$viewModel.age)
             #if canImport(UIKit)
                 .keyboardType(.numberPad)
             #endif
@@ -164,7 +197,7 @@ struct SettingsView: View {
     }
 
     private var unitPicker: some View {
-        Picker("Unit System", selection: self.$unitSystem) {
+        Picker("Unit System", selection: self.$viewModel.unitSystem) {
             Text("Metric").tag(0)
             Text("Imperial").tag(1)
         }
@@ -172,9 +205,9 @@ struct SettingsView: View {
 
     private var heightRow: some View {
         HStack {
-            Text(self.unitSystem == 0 ? "Height (cm)" : "Height (ft/in)")
+            Text(self.viewModel.unitSystem == 0 ? "Height (cm)" : "Height (ft/in)")
             Spacer()
-            TextField("Height", text: self.$height)
+            TextField("Height", text: self.$viewModel.height)
             #if canImport(UIKit)
                 .keyboardType(.numbersAndPunctuation)
             #endif
@@ -185,9 +218,9 @@ struct SettingsView: View {
 
     private var weightRow: some View {
         HStack {
-            Text(self.unitSystem == 0 ? "Weight (kg)" : "Weight (lbs)")
+            Text(self.viewModel.unitSystem == 0 ? "Weight (kg)" : "Weight (lbs)")
             Spacer()
-            TextField("Weight", text: self.$weight)
+            TextField("Weight", text: self.$viewModel.weight)
             #if canImport(UIKit)
                 .keyboardType(.decimalPad)
             #endif
@@ -198,7 +231,7 @@ struct SettingsView: View {
 
     private var appearanceSection: some View {
         Section("Appearance") {
-            Picker("Theme", selection: self.$theme) {
+            Picker("Theme", selection: self.$viewModel.theme) {
                 Text("System").tag(0)
                 Text("Light").tag(1)
                 Text("Dark").tag(2)
@@ -210,29 +243,26 @@ struct SettingsView: View {
 
     private var notificationsSection: some View {
         Section("Notifications") {
-            Toggle("Morning Nudge", isOn: self.$isMorningNudgeEnabled)
+            Toggle("Morning Nudge", isOn: self.$viewModel.isMorningNudgeEnabled)
                 .accessibilityIdentifier("morning-nudge-toggle")
-                .onChange(of: self.isMorningNudgeEnabled) { _, enabled in
-                    self.handleMorningNudgeChange(enabled)
-                }
-            Toggle("Meal Reminders", isOn: self.$areMealRemindersEnabled)
+            Toggle("Meal Reminders", isOn: self.$viewModel.areMealRemindersEnabled)
                 .accessibilityIdentifier("meal-reminders-toggle")
         }
     }
 
     private var sensorySection: some View {
         Section("Sensory Feedback") {
-            Toggle("Haptic Nudges", isOn: self.$areHapticsEnabled)
+            Toggle("Haptic Nudges", isOn: self.$viewModel.areHapticsEnabled)
                 .accessibilityIdentifier("haptics-toggle")
-            Toggle("Sound Effects", isOn: self.$isSoundEnabled)
+            Toggle("Sound Effects", isOn: self.$viewModel.isSoundEnabled)
                 .accessibilityIdentifier("sounds-toggle")
         }
     }
 
     private var personalizationSection: some View {
         Section {
-            Toggle("Personalized Feedback", isOn: self.$isPersonalizedFeedbackEnabled)
-                .tint(.blue)
+            Toggle("Personalized Feedback", isOn: self.$viewModel.isPersonalizedFeedbackEnabled)
+                .tint(.green)
                 .accessibilityIdentifier("personalized-feedback-toggle")
         } header: {
             Text("Personalization")
@@ -246,7 +276,7 @@ struct SettingsView: View {
 
     private var healthInsightsSection: some View {
         Section("Health Insights") {
-            if let profile = self.viewModel.healthProfileService.getUserHealthProfile() {
+            if let profile = self.mainViewModel.healthProfileService.getUserHealthProfile() {
                 LabeledContent("BMI", value: String(format: "%.1f", profile.bmi))
                 LabeledContent("Category", value: profile.bmiCategory.rawValue)
                 LabeledContent("Daily Energy", value: "\(Int(profile.tdee)) cal")
@@ -261,8 +291,8 @@ struct SettingsView: View {
 
     private var privacySection: some View {
         Section {
-            Toggle("Show Health Insights", isOn: self.$showHealthInsights)
-                .tint(.blue)
+            Toggle("Show Health Insights", isOn: self.$viewModel.showHealthInsights)
+                .tint(.green)
                 .accessibilityIdentifier("show-health-insights-toggle")
         } header: {
             Text("Privacy")
@@ -276,13 +306,8 @@ struct SettingsView: View {
 
     private var integrationsSection: some View {
         Section("Integrations") {
-            Toggle("Apple Health (HealthKit)", isOn: self.$isHealthSyncEnabled)
-        }
-    }
-
-    private var aiSection: some View {
-        Section("AI & Logic") {
-            Toggle("Smart Smiley (AI Influence)", isOn: self.$isSmartSmileyEnabled)
+            Toggle("Sync Body Metrics (Apple Health)", isOn: self.$viewModel.isHealthSyncEnabled)
+                .accessibilityIdentifier("health-sync-toggle")
         }
     }
 
@@ -332,26 +357,6 @@ struct SettingsView: View {
                 Button("Done") { self.dismiss() }
             }
         #endif
-    }
-
-    // MARK: - Actions
-
-    private func performSync() {
-        Task {
-            do {
-                try await self.viewModel.historicalService.syncToFirebase()
-            } catch {
-                print("❌ Cloud sync failed: \(error)")
-            }
-        }
-    }
-
-    private func handleMorningNudgeChange(_ enabled: Bool) {
-        if enabled {
-            NotificationManager.shared.scheduleMorningNudge()
-        } else {
-            NotificationManager.shared.cancelAllNotifications()
-        }
     }
 
     // MARK: - Helpers
