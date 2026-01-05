@@ -8,7 +8,7 @@
         // MARK: - Properties
 
         var sut: HistoricalDataService!
-        var mockPersistence: MockHistoricalPersistenceService!
+        var mockPersistence: MockPersistenceService!
         var mockAuth: MockAuthService!
         var mockSync: MockCloudSyncService!
 
@@ -16,7 +16,7 @@
 
         override func setUp() {
             super.setUp()
-            self.mockPersistence = MockHistoricalPersistenceService()
+            self.mockPersistence = MockPersistenceService()
             self.mockAuth = MockAuthService()
             self.mockSync = MockCloudSyncService()
             self.sut = HistoricalDataService(
@@ -344,34 +344,6 @@
                 // Expected to throw - Firebase sync not yet implemented in Phase 1
                 XCTAssertTrue(true, "Firebase sync not implemented yet - will be added in Phase 5")
             }
-        }
-    }
-
-    // MARK: - Mock Persistence Service for Historical Data
-
-    @MainActor
-    class MockHistoricalPersistenceService: PersistenceServiceProtocol {
-        var savedData: PersistenceService.AppData?
-        var saveCalled = false
-        var deleteAllCalled = false
-
-        func load() -> PersistenceService.AppData? {
-            self.savedData
-        }
-
-        func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {
-            self.saveCalled = true
-            self.savedData = PersistenceService.AppData(
-                meals: meals,
-                smileyState: smileyState,
-                lastResetDate: lastResetDate,
-                historicalData: historicalData
-            )
-        }
-
-        func deleteAll() {
-            self.deleteAllCalled = true
-            self.savedData = nil
         }
     }
 #endif

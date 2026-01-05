@@ -14,63 +14,63 @@ class SettingsViewModel: ObservableObject {
     // MARK: - User Profile Published Properties
 
     @Published var name: String {
-        didSet { self.userDefaults.set(self.name, forKey: Keys.name) }
+        didSet { self.userDefaults.set(self.name, forKey: StorageKeys.userName) }
     }
 
     @Published var height: String {
-        didSet { self.userDefaults.set(self.height, forKey: Keys.height) }
+        didSet { self.userDefaults.set(self.height, forKey: StorageKeys.userHeight) }
     }
 
     @Published var weight: String {
-        didSet { self.userDefaults.set(self.weight, forKey: Keys.weight) }
+        didSet { self.userDefaults.set(self.weight, forKey: StorageKeys.userWeight) }
     }
 
     @Published var gender: Int {
-        didSet { self.userDefaults.set(self.gender, forKey: Keys.gender) }
+        didSet { self.userDefaults.set(self.gender, forKey: StorageKeys.userGender) }
     }
 
     @Published var age: String {
-        didSet { self.userDefaults.set(self.age, forKey: Keys.age) }
+        didSet { self.userDefaults.set(self.age, forKey: StorageKeys.userAge) }
     }
 
     // MARK: - Appearance Published Properties
 
     @Published var theme: Int {
-        didSet { self.userDefaults.set(self.theme, forKey: Keys.theme) }
+        didSet { self.userDefaults.set(self.theme, forKey: StorageKeys.appTheme) }
     }
 
     @Published var unitSystem: Int {
-        didSet { self.userDefaults.set(self.unitSystem, forKey: Keys.unitSystem) }
+        didSet { self.userDefaults.set(self.unitSystem, forKey: StorageKeys.unitSystem) }
     }
 
     // MARK: - Notifications Published Properties
 
     @Published var isMorningNudgeEnabled: Bool {
         didSet {
-            self.userDefaults.set(self.isMorningNudgeEnabled, forKey: Keys.morningNudge)
+            self.userDefaults.set(self.isMorningNudgeEnabled, forKey: StorageKeys.morningNudgeEnabled)
             self.handleMorningNudgeChange(self.isMorningNudgeEnabled)
         }
     }
 
     @Published var areMealRemindersEnabled: Bool {
-        didSet { self.userDefaults.set(self.areMealRemindersEnabled, forKey: Keys.mealReminders) }
+        didSet { self.userDefaults.set(self.areMealRemindersEnabled, forKey: StorageKeys.mealRemindersEnabled) }
     }
 
     // MARK: - Sensory Published Properties
 
     @Published var areHapticsEnabled: Bool {
-        didSet { self.userDefaults.set(self.areHapticsEnabled, forKey: Keys.haptics) }
+        didSet { self.userDefaults.set(self.areHapticsEnabled, forKey: StorageKeys.hapticsEnabled) }
     }
 
     @Published var isSoundEnabled: Bool {
-        didSet { self.userDefaults.set(self.isSoundEnabled, forKey: Keys.sound) }
+        didSet { self.userDefaults.set(self.isSoundEnabled, forKey: StorageKeys.soundEnabled) }
     }
 
     // MARK: - Integrations & Privacy Published Properties
 
     @Published var isHealthSyncEnabled: Bool {
         didSet {
-            self.userDefaults.set(self.isHealthSyncEnabled, forKey: Keys.healthSync)
+            self.userDefaults.set(self.isHealthSyncEnabled, forKey: StorageKeys.healthSyncEnabled)
             if self.isHealthSyncEnabled {
                 self.syncWithHealthKit()
             }
@@ -80,7 +80,7 @@ class SettingsViewModel: ObservableObject {
     // Note: isPersonalizedFeedbackEnabled removed - feature is always on
 
     @Published var showHealthInsights: Bool {
-        didSet { self.userDefaults.set(self.showHealthInsights, forKey: Keys.healthInsights) }
+        didSet { self.userDefaults.set(self.showHealthInsights, forKey: StorageKeys.showHealthInsights) }
     }
 
     // MARK: - Cloud Sync Published Properties
@@ -97,22 +97,7 @@ class SettingsViewModel: ObservableObject {
 
     // MARK: - Constants
 
-    private enum Keys {
-        static let name = "user_name"
-        static let height = "user_height"
-        static let weight = "user_weight"
-        static let gender = "user_gender"
-        static let age = "user_age"
-        static let theme = "app_theme"
-        static let unitSystem = "unit_system"
-        static let morningNudge = "morning_nudge_enabled"
-        static let mealReminders = "meal_reminders_enabled"
-        static let haptics = "haptics_enabled"
-        static let sound = "sound_enabled"
-        static let healthSync = "health_sync_enabled"
-        // Note: personalizedFeedback key removed - feature is always on
-        static let healthInsights = "show_health_insights"
-    }
+    // Keys moved to StorageKeys.swift for centralization
 
     private let SYNC_SUCCESS_DISPLAY_DURATION: UInt64 = 2_000_000_000 // 2 seconds
     private let SYNC_ERROR_DISPLAY_DURATION: UInt64 = 3_000_000_000 // 3 seconds
@@ -138,20 +123,20 @@ class SettingsViewModel: ObservableObject {
         self.historicalService = historicalService
 
         // Load initial values from UserDefaults
-        self.name = userDefaults.string(forKey: Keys.name) ?? "User"
-        self.height = userDefaults.string(forKey: Keys.height) ?? "175"
-        self.weight = userDefaults.string(forKey: Keys.weight) ?? "75"
-        self.gender = userDefaults.integer(forKey: Keys.gender)
-        self.age = userDefaults.string(forKey: Keys.age) ?? "30"
-        self.theme = userDefaults.integer(forKey: Keys.theme)
-        self.unitSystem = userDefaults.integer(forKey: Keys.unitSystem)
-        self.isMorningNudgeEnabled = userDefaults.object(forKey: Keys.morningNudge) as? Bool ?? true
-        self.areMealRemindersEnabled = userDefaults.object(forKey: Keys.mealReminders) as? Bool ?? true
-        self.areHapticsEnabled = userDefaults.object(forKey: Keys.haptics) as? Bool ?? true
-        self.isSoundEnabled = userDefaults.object(forKey: Keys.sound) as? Bool ?? true
-        self.isHealthSyncEnabled = userDefaults.bool(forKey: Keys.healthSync)
+        self.name = userDefaults.string(forKey: StorageKeys.userName) ?? "User"
+        self.height = userDefaults.string(forKey: StorageKeys.userHeight) ?? "175"
+        self.weight = userDefaults.string(forKey: StorageKeys.userWeight) ?? "75"
+        self.gender = userDefaults.integer(forKey: StorageKeys.userGender)
+        self.age = userDefaults.string(forKey: StorageKeys.userAge) ?? "30"
+        self.theme = userDefaults.integer(forKey: StorageKeys.appTheme)
+        self.unitSystem = userDefaults.integer(forKey: StorageKeys.unitSystem)
+        self.isMorningNudgeEnabled = userDefaults.object(forKey: StorageKeys.morningNudgeEnabled) as? Bool ?? true
+        self.areMealRemindersEnabled = userDefaults.object(forKey: StorageKeys.mealRemindersEnabled) as? Bool ?? true
+        self.areHapticsEnabled = userDefaults.object(forKey: StorageKeys.hapticsEnabled) as? Bool ?? true
+        self.isSoundEnabled = userDefaults.object(forKey: StorageKeys.soundEnabled) as? Bool ?? true
+        self.isHealthSyncEnabled = userDefaults.bool(forKey: StorageKeys.healthSyncEnabled)
         // Note: isPersonalizedFeedbackEnabled initialization removed - feature is always on
-        self.showHealthInsights = userDefaults.bool(forKey: Keys.healthInsights)
+        self.showHealthInsights = userDefaults.bool(forKey: StorageKeys.showHealthInsights)
 
         #if canImport(Network)
             self.networkMonitor = NWPathMonitor()

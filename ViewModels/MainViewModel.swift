@@ -256,23 +256,8 @@ class MainViewModel: ObservableObject {
         // 3. Delete persistence file
         self.persistenceService.deleteAll()
 
-        // 4. Clear UserDefaults keys
-        let userDefaultsKeys = [
-            "user_name",
-            "user_height",
-            "user_weight",
-            "user_gender",
-            "user_age",
-            "app_theme",
-            "unit_system",
-            "morning_nudge_enabled",
-            "meal_reminders_enabled",
-            "haptics_enabled",
-            "sound_enabled",
-            "health_sync_enabled",
-            "show_health_insights"
-        ]
-        for key in userDefaultsKeys {
+        // 4. Clear UserDefaults keys (using centralized StorageKeys)
+        for key in StorageKeys.allKeys {
             UserDefaults.standard.removeObject(forKey: key)
         }
 

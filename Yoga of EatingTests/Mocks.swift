@@ -142,6 +142,7 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
 @MainActor
 class MockPersistenceService: PersistenceServiceProtocol {
     var savedData: PersistenceService.AppData?
+    var saveCalled = false
     var deleteAllCalled = false
 
     func load() -> PersistenceService.AppData? {
@@ -149,6 +150,7 @@ class MockPersistenceService: PersistenceServiceProtocol {
     }
 
     func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {
+        self.saveCalled = true
         self.savedData = PersistenceService.AppData(
             meals: meals,
             smileyState: smileyState,

@@ -2,6 +2,7 @@
     import XCTest
     @testable import Yoga_of_Eating
 
+    @MainActor
     final class PersonalizedHapticFeedbackTests: XCTestCase {
         var sut: SensoryService!
         var mockUserDefaults: UserDefaults!
