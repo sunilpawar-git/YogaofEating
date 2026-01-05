@@ -10,6 +10,7 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     func getYearSnapshots(year: Int) -> [DailySmileySnapshot]
     func saveHistoricalData()
     func syncToFirebase() async throws
+    func clearAllData()
 }
 
 /// Service for managing historical meal data and daily snapshots.
@@ -154,5 +155,13 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         for snapshot in snapshotsToSync {
             try await self.syncService.upload(snapshot: snapshot, userId: userId)
         }
+    }
+
+    /// Clears all historical data. Used for factory reset.
+    func clearAllData() {
+        self.historicalData = HistoricalData()
+        self.lastKnownMeals = []
+        self.lastKnownState = .neutral
+        self.lastKnownResetDate = Date()
     }
 }

@@ -33,9 +33,11 @@ struct SettingsView: View {
                 .toolbar { self.toolbarContent }
                 .alert("Clear All Data?", isPresented: self.$showingClearConfirmation) {
                     Button("Cancel", role: .cancel) {}
-                    Button("Clear", role: .destructive) { self.mainViewModel.resetDay() }
+                    Button("Clear", role: .destructive) { self.mainViewModel.deleteAllData() }
                 } message: {
-                    Text("This will delete all your logged meals and reset the Smiley. Cannot be undone.")
+                    Text(
+                        "This will permanently delete all logged meals, history, and user settings. This action cannot be undone."
+                    )
                 }
         }
     }
@@ -187,10 +189,14 @@ struct SettingsView: View {
             } label: {
                 Label("FAQ & Help", systemImage: "questionmark.circle")
             }
-            Link(destination: self.privacyURL) {
+            NavigationLink {
+                LegalDocumentView(title: "Privacy Policy", textContent: self.privacyPolicyText)
+            } label: {
                 Label("Privacy Policy", systemImage: "lock.shield")
             }
-            Link(destination: self.termsURL) {
+            NavigationLink {
+                LegalDocumentView(title: "Terms of Service", textContent: self.termsOfServiceText)
+            } label: {
                 Label("Terms of Service", systemImage: "doc.text")
             }
             Button { /* Rate app */ } label: {
@@ -232,11 +238,56 @@ struct SettingsView: View {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
     }
 
-    private var privacyURL: URL {
-        URL(string: "https://example.com/privacy") ?? URL(fileURLWithPath: "")
+    private var privacyPolicyText: String {
+        """
+        Privacy Policy
+
+        Last Updated: January 2026
+
+        1. Overview
+        Yoga of Eating respects your privacy. We prioritize local data storage and transparency.
+
+        2. Data Collection
+        - Personal Data: We collect your name and email only if you choose to sign in.
+        - Health Data: We sync with HealthKit only with your explicit permission.
+        - Usage Data: Basic app usage metrics may be collected anonymously.
+
+        3. AI & Analysis
+        - Your meal entries are processed effectively by Google Gemini AI to provide nutritional insights.
+        - We do not use your personal data to train public AI models.
+
+        4. Cloud Sync
+        - If you enable Cloud Sync, your data is encrypted and stored on Google Firebase.
+        - You can delete your account and data at any time.
+
+        5. Contact
+        For any questions, please check the FAQ or contact support.
+        """
     }
 
-    private var termsURL: URL {
-        URL(string: "https://example.com/terms") ?? URL(fileURLWithPath: "")
+    private var termsOfServiceText: String {
+        """
+        Terms of Service
+
+        Last Updated: January 2026
+
+        1. Acceptance
+        By using Yoga of Eating, you agree to these terms.
+
+        2. Usage
+        - You agree to use the app for personal, non-commercial purposes.
+        - You will not use the app for any illegal activities.
+
+        3. Medical Disclaimer
+        - This app is NOT a medical device.
+        - The AI insights are for informational purposes only.
+        - Consult a healthcare professional for medical advice.
+
+        4. Termination
+        We reserve the right to terminate accounts that violate these terms.
+
+        5. Changes
+        We may update these terms from time to time. Continued use implies acceptance.
+        """
     }
 }

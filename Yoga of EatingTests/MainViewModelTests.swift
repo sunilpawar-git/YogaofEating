@@ -94,6 +94,28 @@
             XCTAssertEqual(self.mockHistorical.archivedMeals?.count, initialMeals.count)
             XCTAssertEqual(self.mockHistorical.archivedDate, initialDate)
         }
+
+        func test_deleteAllData_clearsAllState() {
+            // Given: Create some meals to have data
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+            XCTAssertFalse(self.sut.meals.isEmpty)
+
+            // When: Delete all data
+            self.sut.deleteAllData()
+
+            // Then: All state should be cleared
+            XCTAssertTrue(self.sut.meals.isEmpty, "Meals should be empty after deleteAllData")
+            XCTAssertEqual(self.sut.smileyState.mood, .neutral, "Smiley should be neutral after deleteAllData")
+            XCTAssertTrue(
+                self.mockHistorical.clearAllDataCalled,
+                "Historical service should have clearAllData called"
+            )
+            XCTAssertTrue(
+                self.mockPersistence.deleteAllCalled,
+                "Persistence service should have deleteAll called"
+            )
+        }
     }
 
 #endif

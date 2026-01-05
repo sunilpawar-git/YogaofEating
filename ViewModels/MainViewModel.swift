@@ -7,6 +7,7 @@ import SwiftUI
 protocol PersistenceServiceProtocol {
     func load() -> PersistenceService.AppData?
     func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData)
+    func deleteAll()
 }
 
 /// Central state manager for the Yoga of Eating app.
@@ -237,5 +238,45 @@ class MainViewModel: ObservableObject {
 
         // 3. Save both current and historical data
         self.saveData()
+    }
+
+    /// Completely deletes all app data including meals, history, and resets to factory state.
+    /// This is a destructive operation and cannot be undone.
+    func deleteAllData() {
+        // 1. Clear in-memory state
+        withAnimation(.easeOut) {
+            self.smileyState = .neutral
+            self.meals = []
+            self.lastResetDate = Date()
+        }
+
+        // 2. Clear historical data
+        self.historicalService.clearAllData()
+
+        // 3. Delete persistence file
+        self.persistenceService.deleteAll()
+
+        // 4. Clear UserDefaults keys
+        let userDefaultsKeys = [
+            "user_name",
+            "user_height",
+            "user_weight",
+            "user_gender",
+            "user_age",
+            "app_theme",
+            "unit_system",
+            "morning_nudge_enabled",
+            "meal_reminders_enabled",
+            "haptics_enabled",
+            "sound_enabled",
+            "health_sync_enabled",
+            "show_health_insights"
+        ]
+        for key in userDefaultsKeys {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+
+        // 5. Cancel any scheduled notifications
+        NotificationManager.shared.cancelAllNotifications()
     }
 }

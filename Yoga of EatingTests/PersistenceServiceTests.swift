@@ -31,5 +31,31 @@
             // Comparison of dates can be tricky due to precision, but close enough
             XCTAssertLessThan(abs(decodedData.lastResetDate.timeIntervalSince(originalData.lastResetDate)), 1.0)
         }
+
+        func test_deleteAll_removesFile() throws {
+            // Given: Create a temporary file to simulate persistence
+            let tempDir = FileManager.default.temporaryDirectory
+            let testFileName = "test_yoga_of_eating_data.json"
+            let testFileURL = tempDir.appendingPathComponent(testFileName)
+
+            // Create test data and write to file
+            let testData = PersistenceService.AppData(
+                meals: [Meal(mealType: .lunch, items: ["Test"])],
+                smileyState: .neutral,
+                lastResetDate: Date(),
+                historicalData: HistoricalData()
+            )
+            let encoded = try JSONEncoder().encode(testData)
+            try encoded.write(to: testFileURL)
+
+            // Verify file exists
+            XCTAssertTrue(FileManager.default.fileExists(atPath: testFileURL.path))
+
+            // When: Delete the file
+            try FileManager.default.removeItem(at: testFileURL)
+
+            // Then: File should no longer exist
+            XCTAssertFalse(FileManager.default.fileExists(atPath: testFileURL.path))
+        }
     }
 #endif

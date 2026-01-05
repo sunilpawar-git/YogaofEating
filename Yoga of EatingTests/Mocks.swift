@@ -110,6 +110,7 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     var archivedMeals: [Meal]?
     var archivedState: SmileyState?
     var archivedDate: Date?
+    var clearAllDataCalled = false
 
     func archiveCurrentDay(meals: [Meal], state: SmileyState, date: Date) {
         self.archivedMeals = meals
@@ -131,11 +132,17 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     func saveHistoricalData() {}
 
     func syncToFirebase() async throws {}
+
+    func clearAllData() {
+        self.clearAllDataCalled = true
+        self.historicalData = HistoricalData()
+    }
 }
 
 @MainActor
 class MockPersistenceService: PersistenceServiceProtocol {
     var savedData: PersistenceService.AppData?
+    var deleteAllCalled = false
 
     func load() -> PersistenceService.AppData? {
         nil
@@ -148,6 +155,11 @@ class MockPersistenceService: PersistenceServiceProtocol {
             lastResetDate: lastResetDate,
             historicalData: historicalData
         )
+    }
+
+    func deleteAll() {
+        self.deleteAllCalled = true
+        self.savedData = nil
     }
 }
 

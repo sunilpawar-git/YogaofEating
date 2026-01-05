@@ -353,6 +353,7 @@
     class MockHistoricalPersistenceService: PersistenceServiceProtocol {
         var savedData: PersistenceService.AppData?
         var saveCalled = false
+        var deleteAllCalled = false
 
         func load() -> PersistenceService.AppData? {
             self.savedData
@@ -366,6 +367,11 @@
                 lastResetDate: lastResetDate,
                 historicalData: historicalData
             )
+        }
+
+        func deleteAll() {
+            self.deleteAllCalled = true
+            self.savedData = nil
         }
     }
 #endif
