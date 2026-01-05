@@ -15,33 +15,49 @@ struct MainScreenView: View {
                 self.backgroundGradient
                     .ignoresSafeArea()
 
-                self.mainScrollContent
+                self.mainContent
             }
             .toolbar { self.toolbarContent }
             .sheet(isPresented: self.$showingSettings) {
                 SettingsView(mainViewModel: self.viewModel)
+            }
+            .sheet(isPresented: self.$viewModel.showReflectionSheet) {
+                EndOfDayReflectionView(
+                    isPresented: self.$viewModel.showReflectionSheet,
+                    onSave: { reflection in
+                        self.viewModel.saveReflection(reflection)
+                    },
+                    onSkip: {
+                        self.viewModel.skipReflection()
+                    }
+                )
+                .presentationDetents([.medium, .large])
             }
         }
     }
 
     // MARK: - Main Content
 
-    private var mainScrollContent: some View {
-        ScrollView(showsIndicators: false) {
-            ScrollViewReader { proxy in
-                VStack(spacing: 0) {
-                    self.dateHeader
-                    self.timelineContent
-                    // Use explicit dimensions for the spacer to prevent layout issues
-                    Color.clear.frame(width: 1, height: 100)
-                }
-                .onChange(of: self.viewModel.meals.count) { _, _ in
-                    // Use a gentler animation to avoid layout race conditions
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        proxy.scrollTo("bottom", anchor: .bottom)
-                    }
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            // Date header with navigation
+            self.dateHeaderWithNavigation
+                .padding(.top, 60)
+                .padding(.bottom, 20)
+
+            // TabView for day paging
+            TabView(selection: Binding(
+                get: { self.viewModel.selectedDayIndex },
+                set: { self.viewModel.navigateToIndex($0) }
+            )) {
+                // Today (index 0) and past days (1...maxDaysBack)
+                ForEach(0...MainViewModel.maxDaysBack, id: \.self) { dayIndex in
+                    self.dayPage(for: dayIndex)
+                        .tag(dayIndex)
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.easeInOut(duration: 0.3), value: self.viewModel.selectedDayIndex)
         }
         .contentShape(Rectangle())
         #if canImport(UIKit)
@@ -49,143 +65,141 @@ struct MainScreenView: View {
         #endif
     }
 
-    private var dateHeader: some View {
-        Text(self.formattedDate)
-            .font(.system(.title, design: .rounded))
-            .fontWeight(.bold)
-            .padding(.top, 60)
-            .padding(.bottom, 40)
-    }
+    // MARK: - Date Header with Navigation
 
-    private var timelineContent: some View {
-        VStack(spacing: 0) {
-            // Use cached sorted meals and fasting periods from ViewModel
-            let sortedMeals = self.viewModel.sortedMeals
-            let fastingPeriods = self.viewModel.fastingPeriods
+    private var dateHeaderWithNavigation: some View {
+        HStack(spacing: 16) {
+            // Previous day button
+            Button {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    self.viewModel.navigateToPreviousDay()
+                }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(self.viewModel.canNavigateToPreviousDay ? .primary : .secondary.opacity(0.3))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .disabled(!self.viewModel.canNavigateToPreviousDay)
+            .accessibilityIdentifier("previous-day-button")
+            .accessibilityLabel("Previous day")
 
-            ForEach(Array(sortedMeals.enumerated()), id: \.element.id) { index, meal in
-                self.mealBlockView(for: meal)
-                    .id(meal.id)
+            // Date display (tappable to return to today)
+            VStack(spacing: 4) {
+                Text(self.viewModel.formattedSelectedDate)
+                    .font(.system(.title2, design: .rounded))
+                    .fontWeight(.bold)
+                    .accessibilityIdentifier("date-header")
 
-                // Show fasting connector after each meal (except the last one)
-                if index < sortedMeals.count - 1,
-                   let period = fastingPeriods.first(where: { $0.startMealId == meal.id })
-                {
-                    self.fastingConnector(for: period)
-                } else if index < sortedMeals.count - 1 {
-                    // Fallback spacing if no period found
-                    Spacer().frame(height: 30)
+                if !self.viewModel.isViewingToday {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            self.viewModel.navigateToToday()
+                        }
+                    } label: {
+                        Text("Back to Today")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                    }
+                    .accessibilityIdentifier("today-button")
                 }
             }
+            .frame(maxWidth: .infinity)
 
-            self.smileyAddButton
-                .padding(.top, sortedMeals.isEmpty ? 20 : 30)
-                .id("bottom")
+            // Next day button
+            Button {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    self.viewModel.navigateToNextDay()
+                }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(self.viewModel.canNavigateToNextDay ? .primary : .secondary.opacity(0.3))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .disabled(!self.viewModel.canNavigateToNextDay)
+            .accessibilityIdentifier("next-day-button")
+            .accessibilityLabel("Next day")
         }
-        .frame(maxWidth: .infinity)
-        .background(alignment: .center) { self.timelineLine }
+        .padding(.horizontal, 16)
     }
 
-    /// Fasting connector with proportional spacing and optional badge
-    private func fastingConnector(for period: FastingPeriod) -> some View {
-        let spacing = FastingLogicService.calculateSpacing(for: period)
-        let showBadge = FastingLogicService.shouldShowBadge(for: period)
+    // MARK: - Day Page Content
 
-        return ZStack {
-            // Vertical connector line
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: period.isSignificant
-                            ? [.green.opacity(0.2), .green.opacity(0.1)]
-                            : [.primary.opacity(0.08), .primary.opacity(0.04)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: period.isSignificant ? 3 : 2, height: spacing)
-                .shadow(
-                    color: period.isSignificant ? .green.opacity(0.3 * period.glowIntensity) : .clear,
-                    radius: 4,
-                    x: 0,
-                    y: 0
-                )
+    @ViewBuilder
+    private func dayPage(for dayIndex: Int) -> some View {
+        ScrollView(showsIndicators: false) {
+            ScrollViewReader { proxy in
+                VStack(spacing: 0) {
+                    if dayIndex == 0 {
+                        // Today: editable timeline
+                        self.todayTimelineContent
+                            .onChange(of: self.viewModel.meals.count) { _, _ in
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    proxy.scrollTo("bottom", anchor: .bottom)
+                                }
+                            }
+                    } else {
+                        // Historical day: read-only view
+                        self.historicalDayContent(daysAgo: dayIndex)
+                    }
 
-            // Fasting badge centered on connector
-            if showBadge {
-                FastingBadgeView(fastingPeriod: period)
+                    // Bottom spacer
+                    Color.clear.frame(width: 1, height: 100)
+                        .id("bottom")
+                }
             }
         }
-        .frame(height: spacing)
     }
 
-    private func mealBlockView(for meal: Meal) -> some View {
-        JournalBlockView(
-            meal: meal,
-            isBreathing: self.breathingMeals.contains(meal.id),
-            onUpdate: { mealType, newItems in
-                self.viewModel.updateMeal(meal.id, mealType: mealType, items: newItems)
+    // MARK: - Today Timeline (Editable)
+
+    private var todayTimelineContent: some View {
+        DayTimelineView(
+            meals: self.viewModel.meals,
+            fastingPeriods: self.viewModel.fastingPeriods,
+            isToday: true,
+            smileyState: self.viewModel.smileyState,
+            snapshot: nil,
+            onAddMeal: {
+                self.viewModel.createNewMeal()
             },
-            onTimestampUpdate: { newTimestamp in
-                self.viewModel.updateMealTimestamp(meal.id, timestamp: newTimestamp)
+            onUpdateMeal: { mealId, mealType, items in
+                self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
             },
-            onDelete: {
+            onUpdateTimestamp: { mealId, timestamp in
+                self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
+            },
+            onDeleteMeal: { mealId in
                 withAnimation(.spring()) {
-                    self.viewModel.deleteMeal(meal.id)
+                    self.viewModel.deleteMeal(mealId)
                 }
             }
         )
     }
 
-    private var timelineLine: some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [.primary.opacity(0.1), .primary.opacity(0.05)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .frame(width: 2)
-            .padding(.top, 20)
-    }
+    // MARK: - Historical Day Content (Read-Only)
 
-    // MARK: - Smiley Button
+    @ViewBuilder
+    private func historicalDayContent(daysAgo: Int) -> some View {
+        let calendar = Calendar.current
+        let date = calendar.date(byAdding: .day, value: -daysAgo, to: calendar.startOfDay(for: Date()))!
+        let snapshot = self.viewModel.historicalService.getSnapshot(for: date)
+        let meals = snapshot?.meals ?? []
+        let fastingPeriods = FastingLogicService.calculateFastingPeriods(
+            from: meals.sorted { $0.timestamp < $1.timestamp }
+        )
 
-    private var smileyAddButton: some View {
-        Button(action: {
-            self.viewModel.createNewMeal()
-            SensoryService.shared.playNudge(style: .medium)
-        }) {
-            VStack(spacing: 16) {
-                SmileyView(state: self.viewModel.smileyState)
-                    .frame(width: 120, height: 120)
-
-                Text("TAP TO LOG")
-                    .font(.system(.caption, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundColor(.secondary)
-                    .kerning(2)
-                    .fixedSize()
-
-                self.dailyQuote
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("add-meal-button")
-        .accessibilityLabel("Add Meal")
-    }
-
-    /// Daily mindful eating quote displayed below smiley
-    private var dailyQuote: some View {
-        Text(QuoteService.getDailyQuote().text)
-            .font(.system(size: 11, design: .serif))
-            .italic()
-            .foregroundColor(.secondary.opacity(0.6))
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: 280)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityLabel("Daily mindful eating quote")
+        DayTimelineView(
+            meals: meals,
+            fastingPeriods: fastingPeriods,
+            isToday: false,
+            smileyState: snapshot?.smileyState ?? .neutral,
+            snapshot: snapshot
+        )
     }
 
     // MARK: - Toolbar
@@ -263,14 +277,6 @@ struct MainScreenView: View {
                 .blur(radius: 100)
                 .offset(x: -150, y: -200)
         }
-    }
-
-    // MARK: - Helpers
-
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, d MMM yyyy"
-        return formatter.string(from: Date())
     }
 }
 

@@ -55,6 +55,14 @@ struct DayMealPopupView: View {
                 // Adaptive height based on detent: 200pt at medium, unlimited at large
                 .frame(maxHeight: self.selectedDetent == .medium ? 200 : nil)
             }
+
+            // Reflection section (if available)
+            if let reflection = self.snapshot.reflection {
+                Divider()
+                    .padding(.top, 8)
+
+                self.reflectionSection(reflection)
+            }
         }
         .padding()
         .frame(maxWidth: .infinity) // Responsive width instead of fixed 300pt
@@ -78,6 +86,45 @@ struct DayMealPopupView: View {
         if score >= 0.8 { return .green }
         if score >= 0.5 { return .blue }
         return .orange
+    }
+
+    @ViewBuilder
+    private func reflectionSection(_ reflection: DailyReflection) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("End-of-Day Reflection")
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 12) {
+                Text(reflection.feeling.emoji)
+                    .font(.title2)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Felt \(reflection.feeling.displayName.lowercased())")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+
+                    if let sleep = reflection.sleepQuality {
+                        HStack(spacing: 4) {
+                            Text(sleep.emoji)
+                                .font(.caption)
+                            Text("Sleep: \(sleep.displayName)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+
+            if let note = reflection.note, !note.isEmpty {
+                Text("\"\(note)\"")
+                    .font(.caption)
+                    .italic()
+                    .foregroundColor(.secondary)
+                    .padding(.top, 4)
+            }
+        }
     }
 }
 

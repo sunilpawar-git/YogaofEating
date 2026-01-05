@@ -11,6 +11,11 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     func saveHistoricalData()
     func syncToFirebase() async throws
     func clearAllData()
+
+    /// Updates or adds a reflection for a specific date.
+    /// If a snapshot exists for the date, adds/updates the reflection.
+    /// If no snapshot exists, creates a new one with empty meals and the reflection.
+    func updateReflection(for date: Date, reflection: DailyReflection)
 }
 
 /// Service for managing historical meal data and daily snapshots.
@@ -55,7 +60,7 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
     // MARK: - Archival Methods
 
     /// Archives the current day's meals and smiley state as a snapshot.
-    /// If a snapshot already exists for the same day, it will be updated.
+    /// If a snapshot already exists for the same day, it will be updated while preserving any existing reflection.
     func archiveCurrentDay(meals: [Meal], state: SmileyState, date: Date) {
         let calendar = Calendar.current
         let normalizedDate = calendar.startOfDay(for: date)
@@ -73,18 +78,60 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             averageScore = totalScore / Double(meals.count)
         }
 
-        // Create snapshot
+        // Preserve existing reflection if snapshot already exists for this day
+        let existingReflection = self.historicalData.snapshot(for: normalizedDate)?.reflection
+
+        // Create snapshot with preserved reflection
         let snapshot = DailySmileySnapshot(
             id: UUID(),
             date: normalizedDate,
             smileyState: state,
             meals: meals,
             mealCount: meals.count,
-            averageHealthScore: averageScore
+            averageHealthScore: averageScore,
+            reflection: existingReflection
         )
 
         // Add or update in historical data
         self.historicalData.addOrUpdate(snapshot: snapshot)
+
+        // Persist to disk
+        self.saveHistoricalData()
+    }
+
+    /// Updates or adds a reflection for a specific date.
+    /// If a snapshot exists for the date, adds/updates the reflection while preserving meals.
+    /// If no snapshot exists, creates a new one with empty meals and the reflection.
+    func updateReflection(for date: Date, reflection: DailyReflection) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        // Check if snapshot already exists
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            // Update existing snapshot with new reflection
+            let updatedSnapshot = DailySmileySnapshot(
+                id: existingSnapshot.id,
+                date: existingSnapshot.date,
+                smileyState: existingSnapshot.smileyState,
+                meals: existingSnapshot.meals,
+                mealCount: existingSnapshot.mealCount,
+                averageHealthScore: existingSnapshot.averageHealthScore,
+                reflection: reflection
+            )
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            // Create new snapshot with reflection but empty meals
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                reflection: reflection
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
 
         // Persist to disk
         self.saveHistoricalData()
