@@ -15,8 +15,23 @@ protocol PersistenceServiceProtocol {
 @MainActor
 class MainViewModel: ObservableObject {
     @Published var smileyState: SmileyState = .neutral
-    @Published var meals: [Meal] = []
+    @Published var meals: [Meal] = [] {
+        didSet { self.updateDerivedState() }
+    }
+
     @Published var lastResetDate: Date = .init()
+
+    /// Meals sorted by timestamp (computed once per change, not per render)
+    @Published private(set) var sortedMeals: [Meal] = []
+
+    /// Cached fasting periods between consecutive meals
+    @Published private(set) var fastingPeriods: [FastingPeriod] = []
+
+    /// Updates derived state (sorted meals and fasting periods) when meals change
+    private func updateDerivedState() {
+        self.sortedMeals = self.meals.sorted { $0.timestamp < $1.timestamp }
+        self.fastingPeriods = FastingLogicService.calculateFastingPeriods(from: self.sortedMeals)
+    }
 
     let logicService: MealLogicProvider
     let persistenceService: PersistenceServiceProtocol
@@ -161,6 +176,15 @@ class MainViewModel: ObservableObject {
         Task {
             await self.performDeepAnalysis(for: mealId, items: items)
         }
+    }
+
+    /// Updates a meal's timestamp (for user-edited time).
+    /// Does not trigger AI re-analysis since content hasn't changed.
+    func updateMealTimestamp(_ mealId: UUID, timestamp: Date) {
+        guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
+
+        self.meals[index].timestamp = timestamp
+        self.saveData()
     }
 
     /// Deletes a meal entry and recalculates smiley state.

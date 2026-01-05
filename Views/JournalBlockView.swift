@@ -4,16 +4,27 @@ struct JournalBlockView: View {
     let meal: Meal
     let isBreathing: Bool
     let onUpdate: (MealType, [String]) -> Void
+    let onTimestampUpdate: (Date) -> Void
     let onDelete: () -> Void
 
     // Maximum character limit per callout box (silent limit, not shown to user)
     private let maxCharacterLimit: Int = 1000
+
+    // Shared time formatter to avoid repeated allocations
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        return formatter
+    }()
 
     // Use meal.id as the key to persist state across view updates
     @State private var rawText: String = ""
     @State private var selectedMealType: MealType = .lunch
     @State private var isPressed: Bool = false
     @State private var showDeleteAlert: Bool = false
+    @State private var showTimePicker: Bool = false
+    @State private var editedTimestamp: Date = .init()
     @FocusState private var isFocused: Bool
     @State private var debounceTask: Task<Void, Never>?
     @State private var hasInitialized: Bool = false
@@ -22,11 +33,13 @@ struct JournalBlockView: View {
         meal: Meal,
         isBreathing: Bool,
         onUpdate: @escaping (MealType, [String]) -> Void,
+        onTimestampUpdate: @escaping (Date) -> Void = { _ in },
         onDelete: @escaping () -> Void
     ) {
         self.meal = meal
         self.isBreathing = isBreathing
         self.onUpdate = onUpdate
+        self.onTimestampUpdate = onTimestampUpdate
         self.onDelete = onDelete
     }
 
@@ -76,10 +89,31 @@ struct JournalBlockView: View {
             if self.isBreathing {
                 self.breathingContent
             } else {
-                self.mealTypeMenu
+                self.cardHeader
                 self.textInputSection
             }
         }
+    }
+
+    /// Header row with meal type tag (left) and AI sparkle indicator (right)
+    private var cardHeader: some View {
+        HStack {
+            self.mealTypeMenu
+            Spacer()
+            if self.meal.isAIAnalyzed {
+                self.aiSparkleIndicator
+            }
+        }
+    }
+
+    /// Sparkle indicator shown after AI analysis completes
+    private var aiSparkleIndicator: some View {
+        Text("✨")
+            .font(.system(size: 14))
+            .transition(.opacity.combined(with: .scale))
+            .animation(.easeIn(duration: 0.3), value: self.meal.isAIAnalyzed)
+            .accessibilityLabel("AI analyzed")
+            .accessibilityHint("This meal has been analyzed by AI")
     }
 
     private var breathingContent: some View {
@@ -152,12 +186,69 @@ struct JournalBlockView: View {
 
     @ViewBuilder
     private var itemCountFooter: some View {
-        if !self.parsedItems.isEmpty {
-            Text("\(self.parsedItems.count) item\(self.parsedItems.count == 1 ? "" : "s")")
-                .font(.system(size: 11, design: .rounded))
-                .foregroundColor(.secondary.opacity(0.8))
-                .padding(.top, 4)
+        HStack {
+            if !self.parsedItems.isEmpty {
+                Text("\(self.parsedItems.count) item\(self.parsedItems.count == 1 ? "" : "s")")
+                    .font(.system(size: 11, design: .rounded))
+                    .foregroundColor(.secondary.opacity(0.8))
+            }
+            Spacer()
+            self.timestampButton
         }
+        .padding(.top, 4)
+    }
+
+    /// Minimalist time display in bottom-right, tap to edit
+    private var timestampButton: some View {
+        Button {
+            self.editedTimestamp = self.meal.timestamp
+            self.showTimePicker = true
+        } label: {
+            Text(Self.timeFormatter.string(from: self.meal.timestamp))
+                .font(.system(size: 11, design: .rounded))
+                .foregroundColor(.secondary.opacity(0.6))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("meal-time-button-\(self.meal.id)")
+        .accessibilityLabel("Meal time: \(Self.timeFormatter.string(from: self.meal.timestamp)). Tap to edit.")
+        .sheet(isPresented: self.$showTimePicker) {
+            self.timePickerSheet
+        }
+    }
+
+    /// iOS-style time picker sheet
+    private var timePickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                DatePicker(
+                    "Meal Time",
+                    selection: self.$editedTimestamp,
+                    displayedComponents: .hourAndMinute
+                )
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+
+                Spacer()
+            }
+            .padding(.top, 20)
+            .navigationTitle("Edit Time")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        self.showTimePicker = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        self.onTimestampUpdate(self.editedTimestamp)
+                        self.showTimePicker = false
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 
     private var cardBackground: some View {

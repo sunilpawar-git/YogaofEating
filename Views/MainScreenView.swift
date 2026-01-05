@@ -58,18 +58,65 @@ struct MainScreenView: View {
     }
 
     private var timelineContent: some View {
-        VStack(spacing: 30) {
-            ForEach(self.viewModel.meals) { meal in
+        VStack(spacing: 0) {
+            // Use cached sorted meals and fasting periods from ViewModel
+            let sortedMeals = self.viewModel.sortedMeals
+            let fastingPeriods = self.viewModel.fastingPeriods
+
+            ForEach(Array(sortedMeals.enumerated()), id: \.element.id) { index, meal in
                 self.mealBlockView(for: meal)
                     .id(meal.id)
+
+                // Show fasting connector after each meal (except the last one)
+                if index < sortedMeals.count - 1,
+                   let period = fastingPeriods.first(where: { $0.startMealId == meal.id })
+                {
+                    self.fastingConnector(for: period)
+                } else if index < sortedMeals.count - 1 {
+                    // Fallback spacing if no period found
+                    Spacer().frame(height: 30)
+                }
             }
 
             self.smileyAddButton
-                .padding(.top, 20)
+                .padding(.top, sortedMeals.isEmpty ? 20 : 30)
                 .id("bottom")
         }
         .frame(maxWidth: .infinity)
         .background(alignment: .center) { self.timelineLine }
+    }
+
+    /// Fasting connector with proportional spacing and optional badge
+    private func fastingConnector(for period: FastingPeriod) -> some View {
+        let spacing = FastingLogicService.calculateSpacing(for: period)
+        let showBadge = FastingLogicService.shouldShowBadge(for: period)
+
+        return ZStack {
+            // Vertical connector line
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: period.isSignificant
+                            ? [.green.opacity(0.2), .green.opacity(0.1)]
+                            : [.primary.opacity(0.08), .primary.opacity(0.04)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: period.isSignificant ? 3 : 2, height: spacing)
+                .shadow(
+                    color: period.isSignificant ? .green.opacity(0.3 * period.glowIntensity) : .clear,
+                    radius: 4,
+                    x: 0,
+                    y: 0
+                )
+
+            // Fasting badge centered on connector
+            if showBadge {
+                FastingBadgeView(fastingPeriod: period)
+            }
+        }
+        .frame(height: spacing)
     }
 
     private func mealBlockView(for meal: Meal) -> some View {
@@ -78,6 +125,9 @@ struct MainScreenView: View {
             isBreathing: self.breathingMeals.contains(meal.id),
             onUpdate: { mealType, newItems in
                 self.viewModel.updateMeal(meal.id, mealType: mealType, items: newItems)
+            },
+            onTimestampUpdate: { newTimestamp in
+                self.viewModel.updateMealTimestamp(meal.id, timestamp: newTimestamp)
             },
             onDelete: {
                 withAnimation(.spring()) {
@@ -117,11 +167,25 @@ struct MainScreenView: View {
                     .foregroundColor(.secondary)
                     .kerning(2)
                     .fixedSize()
+
+                self.dailyQuote
             }
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("add-meal-button")
         .accessibilityLabel("Add Meal")
+    }
+
+    /// Daily mindful eating quote displayed below smiley
+    private var dailyQuote: some View {
+        Text(QuoteService.getDailyQuote().text)
+            .font(.system(size: 11, design: .serif))
+            .italic()
+            .foregroundColor(.secondary.opacity(0.6))
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: 280)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel("Daily mindful eating quote")
     }
 
     // MARK: - Toolbar

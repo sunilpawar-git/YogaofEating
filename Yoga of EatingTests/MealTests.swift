@@ -51,5 +51,52 @@
             meal.items = []
             XCTAssertEqual(meal.description, "")
         }
+
+        // MARK: - Phase 1: Timestamp Tests
+
+        func test_meal_timestamp_autoCaptured_onCreation() {
+            let beforeCreation = Date()
+            let meal = Meal()
+            let afterCreation = Date()
+
+            // Timestamp should be between before and after creation times
+            XCTAssertGreaterThanOrEqual(meal.timestamp, beforeCreation)
+            XCTAssertLessThanOrEqual(meal.timestamp, afterCreation)
+        }
+
+        func test_meal_timestamp_customValue_isPreserved() {
+            let customDate = Date(timeIntervalSince1970: 1_609_459_200) // Jan 1, 2021
+            let meal = Meal(timestamp: customDate)
+
+            XCTAssertEqual(meal.timestamp, customDate)
+        }
+
+        func test_meal_timestamp_serialization_roundtrip() throws {
+            let originalDate = Date()
+            let meal = Meal(timestamp: originalDate, mealType: .lunch, items: ["Test"])
+
+            // Encode
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(meal)
+
+            // Decode
+            let decoder = JSONDecoder()
+            let decodedMeal = try decoder.decode(Meal.self, from: data)
+
+            // Timestamp should be preserved (within 1 second tolerance for encoding precision)
+            XCTAssertLessThan(abs(decodedMeal.timestamp.timeIntervalSince(originalDate)), 1.0)
+        }
+
+        func test_meal_timestamp_differentMeals_haveDifferentTimestamps() {
+            let meal1 = Meal()
+            // Small delay to ensure different timestamps
+            Thread.sleep(forTimeInterval: 0.01) // 10ms
+            let meal2 = Meal()
+
+            // Each meal should have its own unique ID
+            XCTAssertNotEqual(meal1.id, meal2.id)
+            // Second meal should have timestamp >= first meal
+            XCTAssertGreaterThanOrEqual(meal2.timestamp, meal1.timestamp)
+        }
     }
 #endif

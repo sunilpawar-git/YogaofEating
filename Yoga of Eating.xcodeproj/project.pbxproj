@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		104615A32F08154E001B6807 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 104615A22F08154E001B6807 /* GoogleService-Info.plist */; };
+		10461E3D2F0BD9D6001B6807 /* mindful_quotes.json in Resources */ = {isa = PBXBuildFile; fileRef = 10461E3C2F0BD9D6001B6807 /* mindful_quotes.json */; };
 		109B2C5C2F013C0800CFD6AA /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5B2F013C0800CFD6AA /* FirebaseAI */; };
 		109B2C5E2F013C0800CFD6AA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5D2F013C0800CFD6AA /* FirebaseAuth */; };
 		109B2C602F013C0800CFD6AA /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5F2F013C0800CFD6AA /* FirebaseCore */; };
@@ -40,6 +41,7 @@
 		10436EBA2EFD1ADB00B368D9 /* Yoga of EatingUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Yoga of EatingUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		104615A22F08154E001B6807 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		104615A42F08154E001B6808 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		10461E3C2F0BD9D6001B6807 /* mindful_quotes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = mindful_quotes.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -120,6 +122,7 @@
 		10436E9A2EFD1ADA00B368D9 = {
 			isa = PBXGroup;
 			children = (
+				10461E3C2F0BD9D6001B6807 /* mindful_quotes.json */,
 				10436EA42EFD1ADA00B368D9 /* Products */,
 				104614C92F0813CC001B6807 /* Yoga of Eating */,
 				104614D32F0813FC001B6807 /* Components */,
@@ -274,6 +277,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				10461E3D2F0BD9D6001B6807 /* mindful_quotes.json in Resources */,
 				104615A32F08154E001B6807 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
