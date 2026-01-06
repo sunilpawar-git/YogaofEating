@@ -293,5 +293,79 @@
             XCTAssertNil(self.mockHistorical.lastUpdatedReflection?.sleepQuality)
             XCTAssertNil(self.mockHistorical.lastUpdatedReflection?.note)
         }
+
+        // MARK: - Tests: Trigger Reflection Prompt
+
+        func test_triggerReflectionPromptIfNeeded_setsShowReflectionSheet_whenConditionsMet() {
+            // Arrange - Evening time with meals
+            let calendar = Calendar.current
+            let eveningTime = calendar.date(
+                bySettingHour: 21,
+                minute: 0,
+                second: 0,
+                of: Date()
+            )!
+            self.sut.createNewMeal()
+
+            // When
+            self.sut.triggerReflectionPromptIfNeeded(at: eveningTime)
+
+            // Then
+            XCTAssertTrue(self.sut.showReflectionSheet, "Sheet should be shown when conditions are met")
+        }
+
+        func test_triggerReflectionPromptIfNeeded_doesNotSetShowReflectionSheet_beforeEveningHour() {
+            // Arrange - Afternoon time with meals
+            let calendar = Calendar.current
+            let afternoonTime = calendar.date(
+                bySettingHour: 14,
+                minute: 0,
+                second: 0,
+                of: Date()
+            )!
+            self.sut.createNewMeal()
+
+            // When
+            self.sut.triggerReflectionPromptIfNeeded(at: afternoonTime)
+
+            // Then
+            XCTAssertFalse(self.sut.showReflectionSheet, "Sheet should not be shown before evening")
+        }
+
+        func test_triggerReflectionPromptIfNeeded_doesNotSetShowReflectionSheet_withNoMeals() {
+            // Arrange - Evening time but no meals
+            let calendar = Calendar.current
+            let eveningTime = calendar.date(
+                bySettingHour: 21,
+                minute: 0,
+                second: 0,
+                of: Date()
+            )!
+
+            // When
+            self.sut.triggerReflectionPromptIfNeeded(at: eveningTime)
+
+            // Then
+            XCTAssertFalse(self.sut.showReflectionSheet, "Sheet should not be shown with no meals")
+        }
+
+        func test_triggerReflectionPromptIfNeeded_doesNotSetShowReflectionSheet_ifReflectionExists() {
+            // Arrange - Evening time with meals but reflection already saved
+            let calendar = Calendar.current
+            let eveningTime = calendar.date(
+                bySettingHour: 21,
+                minute: 0,
+                second: 0,
+                of: Date()
+            )!
+            self.sut.createNewMeal()
+            self.sut.saveReflection(DailyReflection(feeling: .calm))
+
+            // When
+            self.sut.triggerReflectionPromptIfNeeded(at: eveningTime)
+
+            // Then
+            XCTAssertFalse(self.sut.showReflectionSheet, "Sheet should not be shown if reflection exists")
+        }
     }
 #endif

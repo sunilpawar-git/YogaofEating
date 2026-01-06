@@ -182,11 +182,9 @@ struct DayTimelineView: View {
             if let snapshot = self.snapshot {
                 SmileyView(state: snapshot.displayState)
                     .frame(width: 80, height: 80)
-                    .opacity(snapshot.isEmpty ? 0.4 : 1.0)
             } else {
                 SmileyView(state: .neutral)
                     .frame(width: 80, height: 80)
-                    .opacity(0.4)
             }
 
             // Summary text
@@ -306,8 +304,14 @@ struct ReadOnlyMealCardView: View {
         }
         .padding()
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(self.cardBackground)
+            ZStack {
+                // Opaque base layer to completely cover the timeline line - pleasant light green
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(red: 0.95, green: 0.98, blue: 0.95))
+                // Tinted layer on top
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(self.cardBackground)
+            }
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)

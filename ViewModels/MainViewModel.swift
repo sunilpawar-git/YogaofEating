@@ -340,6 +340,15 @@ class MainViewModel: ObservableObject {
         self.showReflectionSheet = false
     }
 
+    /// Triggers the reflection prompt if conditions are met.
+    /// Call this when the view appears to check if reflection should be shown.
+    /// - Parameter date: The current date/time to check against (defaults to now)
+    func triggerReflectionPromptIfNeeded(at date: Date = Date()) {
+        if self.shouldPromptReflection(at: date) {
+            self.showReflectionSheet = true
+        }
+    }
+
     /// Returns today's reflection if one has been saved.
     var todaysReflection: DailyReflection? {
         let today = Date()

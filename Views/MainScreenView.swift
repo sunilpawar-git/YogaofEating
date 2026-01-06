@@ -33,6 +33,10 @@ struct MainScreenView: View {
                 )
                 .presentationDetents([.medium, .large])
             }
+            .onAppear {
+                // Trigger reflection prompt if conditions are met (evening + meals + no existing reflection)
+                self.viewModel.triggerReflectionPromptIfNeeded()
+            }
         }
     }
 
@@ -98,12 +102,25 @@ struct MainScreenView: View {
                             self.viewModel.navigateToToday()
                         }
                     } label: {
-                        Text("Back to Today")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.blue)
+                        HStack(spacing: 4) {
+                            Text("Back to Today")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.blue.opacity(0.12))
+                        )
                     }
+                    .buttonStyle(.plain)
                     .accessibilityIdentifier("today-button")
+                    .accessibilityLabel("Back to Today")
+                    .accessibilityHint("Return to today's view")
                 }
             }
             .frame(maxWidth: .infinity)
