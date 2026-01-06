@@ -35,6 +35,17 @@ class MainViewModel: ObservableObject {
     /// The hour (24h format) after which reflection prompt should appear. Default: 8 PM (20:00)
     static let reflectionPromptHour: Int = 20
 
+    // MARK: - User-Initiated Reflections (Phase 4 - Redesign)
+
+    /// Controls visibility of the sleep quality input sheet (morning context)
+    @Published var showSleepQualitySheet: Bool = false
+
+    /// Controls visibility of the overall feeling input sheet (evening context)
+    @Published var showOverallFeelingSheet: Bool = false
+
+    /// Pending action to execute after reflection input is complete
+    private var pendingMealCreation: Bool = false
+
     // MARK: - Day Navigation (Phase 4)
 
     /// The currently selected date for viewing. Defaults to today.
@@ -305,12 +316,14 @@ class MainViewModel: ObservableObject {
         NotificationManager.shared.cancelAllNotifications()
     }
 
-    // MARK: - End-of-Day Reflection Methods (Phase 3)
+    // MARK: - End-of-Day Reflection Methods (Legacy - Deprecated)
 
     /// Determines if the user should be prompted for an end-of-day reflection.
     /// Returns true if: it's after the prompt hour, user has logged meals, and no reflection exists for today.
     /// - Parameter date: The current date/time to check against (defaults to now)
     /// - Returns: Whether to show the reflection prompt
+    /// - Note: Deprecated - Use `isMorningSleepContext()` and `isEveningFeelingContext()` instead
+    @available(*, deprecated, message: "Use isMorningSleepContext() and isEveningFeelingContext() instead")
     func shouldPromptReflection(at date: Date = Date()) -> Bool {
         let calendar = Calendar.current
         let hour = calendar.component(.hour, from: date)
@@ -343,6 +356,8 @@ class MainViewModel: ObservableObject {
     /// Triggers the reflection prompt if conditions are met.
     /// Call this when the view appears to check if reflection should be shown.
     /// - Parameter date: The current date/time to check against (defaults to now)
+    /// - Note: Deprecated - Use `handleSmileyTap()` for user-initiated reflections instead
+    @available(*, deprecated, message: "Use handleSmileyTap() for user-initiated reflections instead")
     func triggerReflectionPromptIfNeeded(at date: Date = Date()) {
         if self.shouldPromptReflection(at: date) {
             self.showReflectionSheet = true
@@ -353,6 +368,151 @@ class MainViewModel: ObservableObject {
     var todaysReflection: DailyReflection? {
         let today = Date()
         return self.historicalService.getSnapshot(for: today)?.reflection
+    }
+
+    /// Returns today's sleep quality if logged.
+    var todaysSleepQuality: SleepQuality? {
+        self.todaysReflection?.sleepQuality
+    }
+
+    /// Returns today's overall feeling if logged.
+    var todaysFeeling: ReflectionFeeling? {
+        self.todaysReflection?.feeling
+    }
+
+    // MARK: - Context Detection (Phase 2 - User-Initiated Reflections)
+
+    /// The hour before which sleep context is valid (noon = 12)
+    static let morningCutoffHour: Int = 12
+
+    /// Determines if the current smiley tap should show the sleep quality prompt.
+    /// Returns true if: it's before noon, no meals logged yet (first tap), and no sleep logged today.
+    /// - Parameter date: The current date/time to check against (defaults to now)
+    /// - Returns: Whether to show the sleep quality prompt
+    func isMorningSleepContext(at date: Date = Date()) -> Bool {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+
+        // Must be before noon
+        guard hour < Self.morningCutoffHour else { return false }
+
+        // Must be first tap of the day (no meals yet)
+        guard self.meals.isEmpty else { return false }
+
+        // Must not have sleep quality logged today
+        guard self.todaysSleepQuality == nil else { return false }
+
+        return true
+    }
+
+    /// Determines if the current smiley tap should show the overall feeling prompt.
+    /// Returns true if: user has logged at least one meal and no feeling logged today.
+    /// - Returns: Whether to show the overall feeling prompt
+    func isEveningFeelingContext() -> Bool {
+        // Must have at least one meal logged
+        guard !self.meals.isEmpty else { return false }
+
+        // Must not have feeling logged today
+        guard self.todaysFeeling == nil else { return false }
+
+        return true
+    }
+
+    /// Saves sleep quality for today, merging with existing reflection if present.
+    /// - Parameters:
+    ///   - quality: The sleep quality to save
+    ///   - date: When it was logged (defaults to now)
+    func saveSleepQuality(_ quality: SleepQuality, at date: Date = Date()) {
+        let newReflection = DailyReflection.withSleepQuality(quality, at: date)
+
+        // Merge with existing reflection if present
+        if let existing = self.todaysReflection {
+            let merged = newReflection.merging(with: existing)
+            self.historicalService.updateReflection(for: date, reflection: merged)
+        } else {
+            self.historicalService.updateReflection(for: date, reflection: newReflection)
+        }
+    }
+
+    /// Saves overall feeling for today, merging with existing reflection if present.
+    /// - Parameters:
+    ///   - feeling: The overall feeling to save
+    ///   - date: When it was logged (defaults to now)
+    func saveOverallFeeling(_ feeling: ReflectionFeeling, at date: Date = Date()) {
+        let newReflection = DailyReflection.withFeeling(feeling, at: date)
+
+        // Merge with existing reflection if present
+        if let existing = self.todaysReflection {
+            let merged = newReflection.merging(with: existing)
+            self.historicalService.updateReflection(for: date, reflection: merged)
+        } else {
+            self.historicalService.updateReflection(for: date, reflection: newReflection)
+        }
+    }
+
+    // MARK: - Smiley Tap Flow (Phase 4 - User-Initiated Reflections)
+
+    /// Handles the smiley tap action, checking for context and showing appropriate sheets.
+    /// Flow:
+    /// 1. If morning sleep context → Show sleep quality sheet → Then create meal
+    /// 2. If evening feeling context → Show feeling sheet → Then create meal
+    /// 3. Otherwise → Create meal directly
+    func handleSmileyTap() {
+        if self.isMorningSleepContext() {
+            self.pendingMealCreation = true
+            self.showSleepQualitySheet = true
+        } else if self.isEveningFeelingContext() {
+            self.pendingMealCreation = true
+            self.showOverallFeelingSheet = true
+        } else {
+            self.createNewMeal()
+        }
+    }
+
+    /// Completes the sleep quality input and proceeds with meal creation if pending.
+    /// - Parameter quality: The selected sleep quality
+    func completeSleepQualityInput(_ quality: SleepQuality) {
+        self.saveSleepQuality(quality)
+        self.showSleepQualitySheet = false
+
+        if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
+    }
+
+    /// Dismisses the sleep quality sheet without saving.
+    func dismissSleepQualityInput() {
+        self.showSleepQualitySheet = false
+
+        // Still create the meal even if user skips
+        if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
+    }
+
+    /// Completes the overall feeling input and proceeds with meal creation if pending.
+    /// - Parameter feeling: The selected feeling
+    func completeOverallFeelingInput(_ feeling: ReflectionFeeling) {
+        self.saveOverallFeeling(feeling)
+        self.showOverallFeelingSheet = false
+
+        if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
+    }
+
+    /// Dismisses the overall feeling sheet without saving.
+    func dismissOverallFeelingInput() {
+        self.showOverallFeelingSheet = false
+
+        // Still create the meal even if user skips
+        if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
     }
 
     // MARK: - Day Navigation Methods (Phase 4)

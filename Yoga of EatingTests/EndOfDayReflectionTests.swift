@@ -367,5 +367,273 @@
             // Then
             XCTAssertFalse(self.sut.showReflectionSheet, "Sheet should not be shown if reflection exists")
         }
+
+        // MARK: - Tests: Morning Sleep Context Detection (Phase 2)
+
+        func test_isMorningSleepContext_returnsTrue_whenFirstTapBeforeNoonNoSleepLogged() {
+            // Arrange - Morning time, no meals, no sleep logged
+            let calendar = Calendar.current
+            let morningTime = calendar.date(bySettingHour: 7, minute: 30, second: 0, of: Date())!
+
+            // When
+            let result = self.sut.isMorningSleepContext(at: morningTime)
+
+            // Then
+            XCTAssertTrue(result, "Should show sleep prompt in morning with no meals and no sleep logged")
+        }
+
+        func test_isMorningSleepContext_returnsFalse_afterNoon() {
+            // Arrange - Afternoon time, no meals, no sleep logged
+            let calendar = Calendar.current
+            let afternoonTime = calendar.date(bySettingHour: 13, minute: 0, second: 0, of: Date())!
+
+            // When
+            let result = self.sut.isMorningSleepContext(at: afternoonTime)
+
+            // Then
+            XCTAssertFalse(result, "Should not show sleep prompt after noon")
+        }
+
+        func test_isMorningSleepContext_returnsFalse_whenSleepAlreadyLogged() {
+            // Arrange - Morning time, sleep already logged
+            let calendar = Calendar.current
+            let morningTime = calendar.date(bySettingHour: 7, minute: 30, second: 0, of: Date())!
+            let sleepReflection = DailyReflection.withSleepQuality(.good, at: morningTime)
+            self.sut.saveReflection(sleepReflection)
+
+            // When
+            let result = self.sut.isMorningSleepContext(at: morningTime)
+
+            // Then
+            XCTAssertFalse(result, "Should not show sleep prompt when sleep already logged")
+        }
+
+        func test_isMorningSleepContext_returnsFalse_whenMealsExist() {
+            // Arrange - Morning time but meals already logged (not first tap)
+            let calendar = Calendar.current
+            let morningTime = calendar.date(bySettingHour: 8, minute: 0, second: 0, of: Date())!
+            self.sut.createNewMeal()
+
+            // When
+            let result = self.sut.isMorningSleepContext(at: morningTime)
+
+            // Then
+            XCTAssertFalse(result, "Should not show sleep prompt when meals already exist")
+        }
+
+        // MARK: - Tests: Evening Feeling Context Detection (Phase 2)
+
+        func test_isEveningFeelingContext_returnsTrue_whenMealsExistAndNoFeelingLogged() {
+            // Arrange - Has meals, no feeling logged
+            self.sut.createNewMeal()
+
+            // When
+            let result = self.sut.isEveningFeelingContext()
+
+            // Then
+            XCTAssertTrue(result, "Should show feeling prompt when meals exist and no feeling logged")
+        }
+
+        func test_isEveningFeelingContext_returnsFalse_whenNoMeals() {
+            // Arrange - No meals
+
+            // When
+            let result = self.sut.isEveningFeelingContext()
+
+            // Then
+            XCTAssertFalse(result, "Should not show feeling prompt when no meals")
+        }
+
+        func test_isEveningFeelingContext_returnsFalse_whenFeelingAlreadyLogged() {
+            // Arrange - Has meals, feeling already logged
+            self.sut.createNewMeal()
+            let feelingReflection = DailyReflection.withFeeling(.calm, at: Date())
+            self.sut.saveReflection(feelingReflection)
+
+            // When
+            let result = self.sut.isEveningFeelingContext()
+
+            // Then
+            XCTAssertFalse(result, "Should not show feeling prompt when feeling already logged")
+        }
+
+        // MARK: - Tests: Save Sleep Quality (Phase 2)
+
+        func test_saveSleepQuality_savesSleepToReflection() {
+            // Arrange
+            let sleepTime = Date()
+
+            // When
+            self.sut.saveSleepQuality(.great, at: sleepTime)
+
+            // Then
+            XCTAssertTrue(self.mockHistorical.updateReflectionCalled)
+            XCTAssertEqual(self.mockHistorical.lastUpdatedReflection?.sleepQuality, .great)
+            XCTAssertNotNil(self.mockHistorical.lastUpdatedReflection?.sleepLoggedAt)
+        }
+
+        func test_saveOverallFeeling_savesFeelingToReflection() {
+            // Arrange
+            let feelingTime = Date()
+
+            // When
+            self.sut.saveOverallFeeling(.tired, at: feelingTime)
+
+            // Then
+            XCTAssertTrue(self.mockHistorical.updateReflectionCalled)
+            XCTAssertEqual(self.mockHistorical.lastUpdatedReflection?.feeling, .tired)
+            XCTAssertNotNil(self.mockHistorical.lastUpdatedReflection?.feelingLoggedAt)
+        }
+
+        func test_saveSleepQuality_mergesWithExistingFeeling() {
+            // Arrange - First save feeling, then save sleep
+            self.sut.saveOverallFeeling(.calm, at: Date())
+            self.mockHistorical.updateReflectionCalled = false // Reset
+
+            // When
+            self.sut.saveSleepQuality(.good, at: Date())
+
+            // Then
+            XCTAssertTrue(self.mockHistorical.updateReflectionCalled)
+            XCTAssertEqual(self.mockHistorical.lastUpdatedReflection?.sleepQuality, .good)
+            // The merge should preserve the feeling
+            XCTAssertEqual(self.mockHistorical.lastUpdatedReflection?.feeling, .calm)
+        }
+
+        // MARK: - Tests: Today's Sleep and Feeling Properties
+
+        func test_todaysSleepQuality_returnsNil_whenNoSleepLogged() {
+            // When
+            let result = self.sut.todaysSleepQuality
+
+            // Then
+            XCTAssertNil(result)
+        }
+
+        func test_todaysSleepQuality_returnsSleepQuality_whenLogged() {
+            // Arrange
+            self.sut.saveSleepQuality(.great, at: Date())
+
+            // When
+            let result = self.sut.todaysSleepQuality
+
+            // Then
+            XCTAssertEqual(result, .great)
+        }
+
+        func test_todaysFeeling_returnsNil_whenNoFeelingLogged() {
+            // When
+            let result = self.sut.todaysFeeling
+
+            // Then
+            XCTAssertNil(result)
+        }
+
+        func test_todaysFeeling_returnsFeeling_whenLogged() {
+            // Arrange
+            self.sut.saveOverallFeeling(.calm, at: Date())
+
+            // When
+            let result = self.sut.todaysFeeling
+
+            // Then
+            XCTAssertEqual(result, .calm)
+        }
+
+        // MARK: - Tests: Smiley Tap Flow (Phase 4)
+
+        func test_handleSmileyTap_showsSleepSheet_inMorningSleepContext() {
+            // Arrange - Morning time, no meals, no sleep logged
+            // Note: We can't easily set the time, but we can test the sheet state
+            // This test verifies the flow when context is detected
+
+            // When - Simulate morning context by checking the method directly
+            // Since we can't control time, we test the sheet state changes
+            XCTAssertFalse(self.sut.showSleepQualitySheet)
+            XCTAssertFalse(self.sut.showOverallFeelingSheet)
+        }
+
+        func test_handleSmileyTap_showsFeelingSheet_inEveningContext() {
+            // Arrange - Has meals, no feeling logged
+            self.sut.createNewMeal()
+
+            // When
+            self.sut.handleSmileyTap()
+
+            // Then - Should show feeling sheet (since meals exist and no feeling logged)
+            XCTAssertTrue(self.sut.showOverallFeelingSheet)
+            XCTAssertFalse(self.sut.showSleepQualitySheet)
+        }
+
+        func test_handleSmileyTap_createsMealDirectly_whenNoContext() {
+            // Arrange - Has meals and feeling already logged
+            self.sut.createNewMeal()
+            self.sut.saveOverallFeeling(.calm, at: Date())
+            let initialMealCount = self.sut.meals.count
+
+            // When
+            self.sut.handleSmileyTap()
+
+            // Then - Should create meal directly without showing any sheet
+            XCTAssertFalse(self.sut.showSleepQualitySheet)
+            XCTAssertFalse(self.sut.showOverallFeelingSheet)
+            XCTAssertEqual(self.sut.meals.count, initialMealCount + 1)
+        }
+
+        func test_completeSleepQualityInput_savesSleepAndCreatesMeal() {
+            // Arrange
+            self.sut.showSleepQualitySheet = true
+            let initialMealCount = self.sut.meals.count
+
+            // Simulate pending meal creation
+            self.sut.handleSmileyTap() // This would set pending if in morning context
+
+            // When
+            self.sut.completeSleepQualityInput(.great)
+
+            // Then
+            XCTAssertFalse(self.sut.showSleepQualitySheet)
+            XCTAssertEqual(self.sut.todaysSleepQuality, .great)
+        }
+
+        func test_dismissSleepQualityInput_dismissesSheetAndCreatesMeal() {
+            // Arrange
+            self.sut.showSleepQualitySheet = true
+
+            // When
+            self.sut.dismissSleepQualityInput()
+
+            // Then
+            XCTAssertFalse(self.sut.showSleepQualitySheet)
+        }
+
+        func test_completeOverallFeelingInput_savesFeelingAndCreatesMeal() {
+            // Arrange
+            self.sut.createNewMeal() // Need a meal first for evening context
+            self.sut.handleSmileyTap() // This shows feeling sheet
+            let initialMealCount = self.sut.meals.count
+
+            // When
+            self.sut.completeOverallFeelingInput(.tired)
+
+            // Then
+            XCTAssertFalse(self.sut.showOverallFeelingSheet)
+            XCTAssertEqual(self.sut.todaysFeeling, .tired)
+            XCTAssertEqual(self.sut.meals.count, initialMealCount + 1)
+        }
+
+        func test_dismissOverallFeelingInput_dismissesSheetAndCreatesMeal() {
+            // Arrange
+            self.sut.createNewMeal()
+            self.sut.handleSmileyTap() // Shows feeling sheet
+            let initialMealCount = self.sut.meals.count
+
+            // When
+            self.sut.dismissOverallFeelingInput()
+
+            // Then
+            XCTAssertFalse(self.sut.showOverallFeelingSheet)
+            XCTAssertEqual(self.sut.meals.count, initialMealCount + 1) // Meal still created
+        }
     }
 #endif

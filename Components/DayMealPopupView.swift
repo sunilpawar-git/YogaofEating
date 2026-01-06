@@ -91,29 +91,38 @@ struct DayMealPopupView: View {
     @ViewBuilder
     private func reflectionSection(_ reflection: DailyReflection) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("End-of-Day Reflection")
+            Text("Daily Reflection")
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundColor(.secondary)
 
             HStack(spacing: 12) {
-                Text(reflection.feeling.emoji)
-                    .font(.title2)
+                if let feeling = reflection.feeling {
+                    Text(feeling.emoji)
+                        .font(.title2)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Felt \(reflection.feeling.displayName.lowercased())")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Felt \(feeling.displayName.lowercased())")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
 
-                    if let sleep = reflection.sleepQuality {
-                        HStack(spacing: 4) {
-                            Text(sleep.emoji)
-                                .font(.caption)
-                            Text("Sleep: \(sleep.displayName)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                        if let sleep = reflection.sleepQuality {
+                            HStack(spacing: 4) {
+                                Text(sleep.emoji)
+                                    .font(.caption)
+                                Text("Sleep: \(sleep.displayName)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
+                } else if let sleep = reflection.sleepQuality {
+                    Text(sleep.emoji)
+                        .font(.title2)
+
+                    Text("Sleep: \(sleep.displayName)")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                 }
             }
 

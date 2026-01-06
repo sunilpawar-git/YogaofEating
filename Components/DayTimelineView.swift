@@ -18,8 +18,21 @@ struct DayTimelineView: View {
     /// Optional snapshot for historical days (contains reflection, etc.)
     let snapshot: DailySmileySnapshot?
 
-    /// Callback when user taps to add a new meal (only for today)
-    var onAddMeal: (() -> Void)?
+    /// Callback when user taps the smiley (only for today)
+    /// This should trigger context-aware reflection prompts before meal creation
+    var onSmileyTap: (() -> Void)?
+
+    /// Callback when user taps to edit sleep quality badge (only for today)
+    var onEditSleep: (() -> Void)?
+
+    /// Callback when user taps to edit overall feeling badge (only for today)
+    var onEditFeeling: (() -> Void)?
+
+    /// Today's logged sleep quality (for displaying badge)
+    var todaysSleepQuality: SleepQuality?
+
+    /// Today's logged overall feeling (for displaying badge)
+    var todaysFeeling: ReflectionFeeling?
 
     /// Callback when a meal is updated
     var onUpdateMeal: ((UUID, MealType, [String]) -> Void)?
@@ -38,6 +51,12 @@ struct DayTimelineView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Sleep badge at TOP of timeline (for today only)
+            if self.isToday, let sleepQuality = self.todaysSleepQuality {
+                self.sleepBadge(sleepQuality)
+                    .padding(.bottom, 16)
+            }
+
             let sortedMeals = self.meals.sorted { $0.timestamp < $1.timestamp }
 
             ForEach(Array(sortedMeals.enumerated()), id: \.element.id) { index, meal in
@@ -55,10 +74,16 @@ struct DayTimelineView: View {
                 }
             }
 
+            // Feeling badge above smiley (for today only, when logged)
+            if self.isToday, let feeling = self.todaysFeeling {
+                self.feelingBadge(feeling)
+                    .padding(.top, 16)
+            }
+
             // Show appropriate bottom content based on whether it's today or historical
             if self.isToday {
                 self.smileyAddButton
-                    .padding(.top, sortedMeals.isEmpty ? 20 : 30)
+                    .padding(.top, self.todaysFeeling != nil ? 12 : (sortedMeals.isEmpty ? 20 : 30))
             } else {
                 self.historicalDaySummary
                     .padding(.top, sortedMeals.isEmpty ? 20 : 30)
@@ -141,11 +166,33 @@ struct DayTimelineView: View {
             .padding(.top, 20)
     }
 
+    // MARK: - Reflection Badges (Today Only)
+
+    private func sleepBadge(_ quality: SleepQuality) -> some View {
+        ReflectionBadgeView(
+            type: .sleep(quality),
+            isTappable: true,
+            onTap: {
+                self.onEditSleep?()
+            }
+        )
+    }
+
+    private func feelingBadge(_ feeling: ReflectionFeeling) -> some View {
+        ReflectionBadgeView(
+            type: .feeling(feeling),
+            isTappable: true,
+            onTap: {
+                self.onEditFeeling?()
+            }
+        )
+    }
+
     // MARK: - Smiley Add Button (Today Only)
 
     private var smileyAddButton: some View {
         Button(action: {
-            self.onAddMeal?()
+            self.onSmileyTap?()
             SensoryService.shared.playNudge(style: .medium)
         }) {
             VStack(spacing: 16) {
@@ -220,19 +267,28 @@ struct DayTimelineView: View {
                 .padding(.horizontal, 40)
 
             HStack(spacing: 12) {
-                Text(reflection.feeling.emoji)
-                    .font(.title2)
+                if let feeling = reflection.feeling {
+                    Text(feeling.emoji)
+                        .font(.title2)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Felt \(reflection.feeling.displayName.lowercased())")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Felt \(feeling.displayName.lowercased())")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+
+                        if let sleep = reflection.sleepQuality {
+                            Text("Sleep: \(sleep.displayName)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } else if let sleep = reflection.sleepQuality {
+                    Text(sleep.emoji)
+                        .font(.title2)
+
+                    Text("Sleep: \(sleep.displayName)")
                         .font(.subheadline)
                         .fontWeight(.medium)
-
-                    if let sleep = reflection.sleepQuality {
-                        Text("Sleep: \(sleep.displayName)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
                 }
             }
 
@@ -366,7 +422,9 @@ struct ReadOnlyMealCardView: View {
             isToday: true,
             smileyState: .neutral,
             snapshot: nil,
-            onAddMeal: { print("Add meal") }
+            onSmileyTap: { print("Smiley tapped") },
+            todaysSleepQuality: .good,
+            todaysFeeling: .calm
         )
     }
 }

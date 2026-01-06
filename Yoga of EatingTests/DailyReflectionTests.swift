@@ -47,8 +47,8 @@
         }
 
         func test_reflectionFeeling_emoji_returnsCorrectEmoji() {
-            XCTAssertEqual(ReflectionFeeling.great.emoji, "😴")
-            XCTAssertEqual(ReflectionFeeling.calm.emoji, "😊")
+            XCTAssertEqual(ReflectionFeeling.great.emoji, "😊")
+            XCTAssertEqual(ReflectionFeeling.calm.emoji, "😌")
             XCTAssertEqual(ReflectionFeeling.ok.emoji, "😐")
             XCTAssertEqual(ReflectionFeeling.tired.emoji, "🥱")
             XCTAssertEqual(ReflectionFeeling.heavy.emoji, "😣")
@@ -149,6 +149,8 @@
             XCTAssertEqual(self.sut.feeling, .ok)
             XCTAssertNil(self.sut.sleepQuality, "Sleep quality should be nil by default")
             XCTAssertNil(self.sut.note, "Note should be nil by default")
+            XCTAssertNil(self.sut.sleepLoggedAt, "sleepLoggedAt should be nil by default")
+            XCTAssertNil(self.sut.feelingLoggedAt, "feelingLoggedAt should be nil by default")
             XCTAssertNotNil(self.sut.timestamp, "Timestamp should have a default value")
         }
 
@@ -421,6 +423,207 @@
 
                 XCTAssertEqual(decoded.sleepQuality, quality, "Failed for quality: \(quality)")
             }
+        }
+
+        // MARK: - Tests: Separate Timestamps (Phase 1 - New Model)
+
+        func test_init_withSeparateTimestamps_setsPropertiesCorrectly() {
+            // Arrange
+            let sleepTime = Calendar.current.date(bySettingHour: 7, minute: 30, second: 0, of: self.testDate)!
+            let feelingTime = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: self.testDate)!
+
+            // Act
+            self.sut = DailyReflection(
+                feeling: .calm,
+                sleepQuality: .good,
+                sleepLoggedAt: sleepTime,
+                feelingLoggedAt: feelingTime,
+                timestamp: self.testDate
+            )
+
+            // Assert
+            XCTAssertEqual(self.sut.sleepLoggedAt, sleepTime)
+            XCTAssertEqual(self.sut.feelingLoggedAt, feelingTime)
+        }
+
+        func test_init_withOnlySleepQuality_setsSleepLoggedAt() {
+            // Arrange
+            let sleepTime = Calendar.current.date(bySettingHour: 7, minute: 30, second: 0, of: self.testDate)!
+
+            // Act
+            self.sut = DailyReflection(
+                sleepQuality: .good,
+                sleepLoggedAt: sleepTime,
+                timestamp: self.testDate
+            )
+
+            // Assert
+            XCTAssertEqual(self.sut.sleepQuality, .good)
+            XCTAssertEqual(self.sut.sleepLoggedAt, sleepTime)
+            XCTAssertNil(self.sut.feeling)
+            XCTAssertNil(self.sut.feelingLoggedAt)
+        }
+
+        func test_init_withOnlyFeeling_setsFeelingLoggedAt() {
+            // Arrange
+            let feelingTime = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: self.testDate)!
+
+            // Act
+            self.sut = DailyReflection(
+                feeling: .tired,
+                feelingLoggedAt: feelingTime,
+                timestamp: self.testDate
+            )
+
+            // Assert
+            XCTAssertEqual(self.sut.feeling, .tired)
+            XCTAssertEqual(self.sut.feelingLoggedAt, feelingTime)
+            XCTAssertNil(self.sut.sleepQuality)
+            XCTAssertNil(self.sut.sleepLoggedAt)
+        }
+
+        func test_codable_encodesAndDecodes_withSeparateTimestamps() throws {
+            // Arrange
+            let sleepTime = Calendar.current.date(bySettingHour: 7, minute: 30, second: 0, of: self.testDate)!
+            let feelingTime = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: self.testDate)!
+            self.sut = DailyReflection(
+                feeling: .calm,
+                sleepQuality: .good,
+                sleepLoggedAt: sleepTime,
+                feelingLoggedAt: feelingTime,
+                timestamp: self.testDate
+            )
+
+            // Act
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(self.sut)
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailyReflection.self, from: data)
+
+            // Assert
+            XCTAssertNotNil(decoded.sleepLoggedAt)
+            XCTAssertEqual(
+                decoded.sleepLoggedAt!.timeIntervalSince1970,
+                sleepTime.timeIntervalSince1970,
+                accuracy: 0.001
+            )
+            XCTAssertNotNil(decoded.feelingLoggedAt)
+            XCTAssertEqual(
+                decoded.feelingLoggedAt!.timeIntervalSince1970,
+                feelingTime.timeIntervalSince1970,
+                accuracy: 0.001
+            )
+        }
+
+        func test_codable_backwardCompatibility_withoutNewTimestampFields() throws {
+            // Arrange - Legacy JSON without new timestamp fields
+            let legacyJSON = """
+            {
+                "feeling": "calm",
+                "sleepQuality": "good",
+                "timestamp": \(self.testDate.timeIntervalSince1970)
+            }
+            """.data(using: .utf8)!
+
+            // Act
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailyReflection.self, from: legacyJSON)
+
+            // Assert
+            XCTAssertEqual(decoded.feeling, .calm)
+            XCTAssertEqual(decoded.sleepQuality, .good)
+            XCTAssertNil(decoded.sleepLoggedAt, "Legacy data should have nil sleepLoggedAt")
+            XCTAssertNil(decoded.feelingLoggedAt, "Legacy data should have nil feelingLoggedAt")
+        }
+
+        func test_hasSleepLogged_returnsTrueWhenSleepQualityExists() {
+            // Arrange
+            self.sut = DailyReflection(
+                sleepQuality: .good,
+                sleepLoggedAt: self.testDate,
+                timestamp: self.testDate
+            )
+
+            // Assert
+            XCTAssertTrue(self.sut.hasSleepLogged)
+        }
+
+        func test_hasSleepLogged_returnsFalseWhenNoSleepQuality() {
+            // Arrange
+            self.sut = DailyReflection(
+                feeling: .calm,
+                timestamp: self.testDate
+            )
+
+            // Assert
+            XCTAssertFalse(self.sut.hasSleepLogged)
+        }
+
+        func test_hasFeelingLogged_returnsTrueWhenFeelingExists() {
+            // Arrange
+            self.sut = DailyReflection(
+                feeling: .calm,
+                feelingLoggedAt: self.testDate,
+                timestamp: self.testDate
+            )
+
+            // Assert
+            XCTAssertTrue(self.sut.hasFeelingLogged)
+        }
+
+        func test_hasFeelingLogged_returnsFalseWhenNoFeeling() {
+            // Arrange
+            self.sut = DailyReflection(
+                sleepQuality: .good,
+                timestamp: self.testDate
+            )
+
+            // Assert
+            XCTAssertFalse(self.sut.hasFeelingLogged)
+        }
+
+        func test_updateSleepQuality_createsNewReflectionWithSleep() {
+            // Arrange
+            let sleepTime = self.testDate!
+
+            // Act
+            let reflection = DailyReflection.withSleepQuality(.great, at: sleepTime)
+
+            // Assert
+            XCTAssertEqual(reflection.sleepQuality, .great)
+            XCTAssertEqual(reflection.sleepLoggedAt, sleepTime)
+            XCTAssertNil(reflection.feeling)
+        }
+
+        func test_updateFeeling_createsNewReflectionWithFeeling() {
+            // Arrange
+            let feelingTime = self.testDate!
+
+            // Act
+            let reflection = DailyReflection.withFeeling(.tired, at: feelingTime)
+
+            // Assert
+            XCTAssertEqual(reflection.feeling, .tired)
+            XCTAssertEqual(reflection.feelingLoggedAt, feelingTime)
+            XCTAssertNil(reflection.sleepQuality)
+        }
+
+        func test_mergeReflections_combinesSleepAndFeeling() {
+            // Arrange
+            let sleepTime = Calendar.current.date(bySettingHour: 7, minute: 0, second: 0, of: self.testDate)!
+            let feelingTime = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: self.testDate)!
+
+            let sleepReflection = DailyReflection.withSleepQuality(.good, at: sleepTime)
+            let feelingReflection = DailyReflection.withFeeling(.calm, at: feelingTime)
+
+            // Act
+            let merged = sleepReflection.merging(with: feelingReflection)
+
+            // Assert
+            XCTAssertEqual(merged.sleepQuality, .good)
+            XCTAssertEqual(merged.sleepLoggedAt, sleepTime)
+            XCTAssertEqual(merged.feeling, .calm)
+            XCTAssertEqual(merged.feelingLoggedAt, feelingTime)
         }
     }
 #endif

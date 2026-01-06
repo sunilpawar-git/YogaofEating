@@ -21,22 +21,32 @@ struct MainScreenView: View {
             .sheet(isPresented: self.$showingSettings) {
                 SettingsView(mainViewModel: self.viewModel)
             }
-            .sheet(isPresented: self.$viewModel.showReflectionSheet) {
-                EndOfDayReflectionView(
-                    isPresented: self.$viewModel.showReflectionSheet,
-                    onSave: { reflection in
-                        self.viewModel.saveReflection(reflection)
+            // Note: Legacy showReflectionSheet removed - now using user-initiated SleepQuality/OverallFeeling sheets
+            .sheet(isPresented: self.$viewModel.showSleepQualitySheet) {
+                SleepQualityInputView(
+                    onSelect: { quality in
+                        self.viewModel.completeSleepQualityInput(quality)
                     },
-                    onSkip: {
-                        self.viewModel.skipReflection()
+                    onDismiss: {
+                        self.viewModel.dismissSleepQualityInput()
                     }
                 )
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
             }
-            .onAppear {
-                // Trigger reflection prompt if conditions are met (evening + meals + no existing reflection)
-                self.viewModel.triggerReflectionPromptIfNeeded()
+            .sheet(isPresented: self.$viewModel.showOverallFeelingSheet) {
+                OverallFeelingInputView(
+                    onSelect: { feeling in
+                        self.viewModel.completeOverallFeelingInput(feeling)
+                    },
+                    onDismiss: {
+                        self.viewModel.dismissOverallFeelingInput()
+                    }
+                )
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
             }
+            // Note: Auto-prompt removed - now using user-initiated reflections via smiley tap
         }
     }
 
@@ -181,9 +191,20 @@ struct MainScreenView: View {
             isToday: true,
             smileyState: self.viewModel.smileyState,
             snapshot: nil,
-            onAddMeal: {
-                self.viewModel.createNewMeal()
+            onSmileyTap: {
+                // Use context-aware smiley tap handling
+                self.viewModel.handleSmileyTap()
             },
+            onEditSleep: {
+                // Show sleep quality sheet for editing
+                self.viewModel.showSleepQualitySheet = true
+            },
+            onEditFeeling: {
+                // Show overall feeling sheet for editing
+                self.viewModel.showOverallFeelingSheet = true
+            },
+            todaysSleepQuality: self.viewModel.todaysSleepQuality,
+            todaysFeeling: self.viewModel.todaysFeeling,
             onUpdateMeal: { mealId, mealType, items in
                 self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
             },
