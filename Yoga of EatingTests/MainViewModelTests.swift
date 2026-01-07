@@ -300,6 +300,125 @@
             XCTAssertEqual(self.sut.meals.first?.items, originalItems)
             XCTAssertEqual(self.sut.meals.first?.healthScore, originalHealthScore)
         }
+
+        // MARK: - Recent Meals & Copy Meal Tests (Phase: Repeat Meal Feature)
+
+        func test_getRecentUniqueMeals_returnsLast3DaysMeals() {
+            // Given: Historical data with meals from past 3 days
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+
+            // Create snapshots for past 3 days with meals
+            for daysAgo in 1...3 {
+                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                let meal = Meal(
+                    timestamp: date,
+                    mealType: .breakfast,
+                    items: ["Oatmeal Day \(daysAgo)"],
+                    healthScore: 0.8
+                )
+                let snapshot = DailySmileySnapshot(
+                    id: UUID(),
+                    date: date,
+                    smileyState: .neutral,
+                    meals: [meal],
+                    mealCount: 1,
+                    averageHealthScore: 0.8
+                )
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+            }
+
+            // When: Get recent unique meals
+            let recentMeals = self.sut.getRecentUniqueMeals()
+
+            // Then: Should return meals from last 3 days
+            XCTAssertEqual(recentMeals.count, 3)
+        }
+
+        func test_getRecentUniqueMeals_deduplicatesByItems() {
+            // Given: Historical data with duplicate meals (same items on different days)
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+
+            // Create snapshots with same meal on 2 different days
+            for daysAgo in 1...2 {
+                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                let meal = Meal(
+                    timestamp: date,
+                    mealType: .breakfast,
+                    items: ["Oatmeal", "Banana"], // Same items
+                    healthScore: 0.8
+                )
+                let snapshot = DailySmileySnapshot(
+                    id: UUID(),
+                    date: date,
+                    smileyState: .neutral,
+                    meals: [meal],
+                    mealCount: 1,
+                    averageHealthScore: 0.8
+                )
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+            }
+
+            // When: Get recent unique meals
+            let recentMeals = self.sut.getRecentUniqueMeals()
+
+            // Then: Should deduplicate and return only 1 unique meal
+            XCTAssertEqual(recentMeals.count, 1)
+            XCTAssertEqual(recentMeals.first?.items, ["Oatmeal", "Banana"])
+        }
+
+        func test_getRecentUniqueMeals_returnsEmptyWhenNoHistory() {
+            // Given: No historical data (mockHistorical starts empty)
+
+            // When: Get recent unique meals
+            let recentMeals = self.sut.getRecentUniqueMeals()
+
+            // Then: Should return empty array
+            XCTAssertTrue(recentMeals.isEmpty)
+        }
+
+        func test_copyMealToToday_createsNewMealWithTodayTimestamp() throws {
+            // Given: A historical meal
+            let historicalDate = Date(timeIntervalSince1970: 1_704_067_200) // Jan 1, 2024
+            let historicalMeal = Meal(
+                timestamp: historicalDate,
+                mealType: .lunch,
+                items: ["Salad", "Chicken"],
+                healthScore: 0.85
+            )
+
+            // When: Copy meal to today
+            let beforeCopy = Date()
+            self.sut.copyMealToToday(historicalMeal)
+            let afterCopy = Date()
+
+            // Then: New meal should have today's timestamp
+            let copiedMeal = try XCTUnwrap(self.sut.meals.first)
+            XCTAssertGreaterThanOrEqual(copiedMeal.timestamp, beforeCopy)
+            XCTAssertLessThanOrEqual(copiedMeal.timestamp, afterCopy)
+            XCTAssertNotEqual(copiedMeal.timestamp, historicalDate)
+        }
+
+        func test_copyMealToToday_preservesItemsAndMealType() throws {
+            // Given: A historical meal with specific items and type
+            let historicalMeal = Meal(
+                timestamp: Date(timeIntervalSince1970: 1_704_067_200),
+                mealType: .dinner,
+                items: ["Pizza", "Salad", "Soda"],
+                healthScore: 0.4
+            )
+
+            // When: Copy meal to today
+            self.sut.copyMealToToday(historicalMeal)
+
+            // Then: Items and meal type should be preserved
+            let copiedMeal = try XCTUnwrap(self.sut.meals.first)
+            XCTAssertEqual(copiedMeal.items, ["Pizza", "Salad", "Soda"])
+            XCTAssertEqual(copiedMeal.mealType, .dinner)
+            // ID should be different (new meal)
+            XCTAssertNotEqual(copiedMeal.id, historicalMeal.id)
+        }
     }
 
 #endif

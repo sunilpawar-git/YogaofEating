@@ -135,21 +135,9 @@ struct MainScreenView: View {
             }
             .frame(maxWidth: .infinity)
 
-            // Next day button
-            Button {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    self.viewModel.navigateToNextDay()
-                }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(self.viewModel.canNavigateToNextDay ? .primary : .secondary.opacity(0.3))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .disabled(!self.viewModel.canNavigateToNextDay)
-            .accessibilityIdentifier("next-day-button")
-            .accessibilityLabel("Next day")
+            // Spacer to balance the left arrow (right arrow removed - users navigate backward only)
+            Color.clear
+                .frame(width: 44, height: 44)
         }
         .padding(.horizontal, 16)
     }
@@ -220,7 +208,8 @@ struct MainScreenView: View {
                 withAnimation(.spring()) {
                     self.viewModel.deleteMeal(mealId)
                 }
-            }
+            },
+            recentMeals: self.viewModel.getRecentUniqueMeals()
         )
     }
 
@@ -241,7 +230,14 @@ struct MainScreenView: View {
             fastingPeriods: fastingPeriods,
             isToday: false,
             smileyState: snapshot?.smileyState ?? .neutral,
-            snapshot: snapshot
+            snapshot: snapshot,
+            onCopyMeal: { meal in
+                // Copy meal to today and navigate to today
+                self.viewModel.copyMealToToday(meal)
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    self.viewModel.navigateToToday()
+                }
+            }
         )
     }
 

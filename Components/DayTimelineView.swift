@@ -49,6 +49,12 @@ struct DayTimelineView: View {
     /// Callback when a meal is deleted
     var onDeleteMeal: ((UUID) -> Void)?
 
+    /// Callback when a historical meal is copied to today
+    var onCopyMeal: ((Meal) -> Void)?
+
+    /// Recent meals from past 3 days for quick-add feature (only for today)
+    var recentMeals: [Meal] = []
+
     // MARK: - State
 
     @State private var breathingMeals: Set<UUID> = []
@@ -126,11 +132,12 @@ struct DayTimelineView: View {
                     withAnimation(.spring()) {
                         self.onDeleteMeal?(meal.id)
                     }
-                }
+                },
+                recentMeals: self.recentMeals
             )
         } else {
             // Read-only view for historical days
-            ReadOnlyMealCardView(meal: meal)
+            ReadOnlyMealCardView(meal: meal, onCopyMeal: self.onCopyMeal)
         }
     }
 
@@ -367,6 +374,9 @@ struct DayTimelineView: View {
 struct ReadOnlyMealCardView: View {
     let meal: Meal
 
+    /// Callback when user taps the copy button to duplicate meal to today
+    var onCopyMeal: ((Meal) -> Void)?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -396,6 +406,22 @@ struct ReadOnlyMealCardView: View {
                     .foregroundColor(.secondary)
 
                 Spacer()
+
+                // Copy to today button (only if meal has items)
+                if !self.meal.items.isEmpty, self.onCopyMeal != nil {
+                    Button {
+                        SensoryService.shared.playNudge(style: .medium)
+                        self.onCopyMeal?(self.meal)
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("copy-meal-button-\(self.meal.id)")
+                    .accessibilityLabel("Copy meal to today")
+                    .accessibilityHint("Duplicates this meal to today's log")
+                }
 
                 // Health score indicator
                 Circle()

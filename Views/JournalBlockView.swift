@@ -7,6 +7,9 @@ struct JournalBlockView: View {
     let onTimestampUpdate: (Date) -> Void
     let onDelete: () -> Void
 
+    /// Recent meals from past 3 days for quick-add feature
+    var recentMeals: [Meal] = []
+
     // Maximum character limit per callout box (silent limit, not shown to user)
     private let maxCharacterLimit: Int = 1000
 
@@ -24,6 +27,7 @@ struct JournalBlockView: View {
     @State private var isPressed: Bool = false
     @State private var showDeleteAlert: Bool = false
     @State private var showTimePicker: Bool = false
+    @State private var showRecentMealsSheet: Bool = false
     @State private var editedTimestamp: Date = .init()
     @FocusState private var isFocused: Bool
     @State private var debounceTask: Task<Void, Never>?
@@ -34,13 +38,15 @@ struct JournalBlockView: View {
         isBreathing: Bool,
         onUpdate: @escaping (MealType, [String]) -> Void,
         onTimestampUpdate: @escaping (Date) -> Void = { _ in },
-        onDelete: @escaping () -> Void
+        onDelete: @escaping () -> Void,
+        recentMeals: [Meal] = []
     ) {
         self.meal = meal
         self.isBreathing = isBreathing
         self.onUpdate = onUpdate
         self.onTimestampUpdate = onTimestampUpdate
         self.onDelete = onDelete
+        self.recentMeals = recentMeals
     }
 
     var body: some View {
@@ -187,6 +193,11 @@ struct JournalBlockView: View {
     @ViewBuilder
     private var itemCountFooter: some View {
         HStack {
+            // "+" button for recent meals (only show if recent meals available)
+            if !self.recentMeals.isEmpty {
+                self.recentMealsButton
+            }
+
             if !self.parsedItems.isEmpty {
                 Text("\(self.parsedItems.count) item\(self.parsedItems.count == 1 ? "" : "s")")
                     .font(.system(size: 11, design: .rounded))
@@ -196,6 +207,106 @@ struct JournalBlockView: View {
             self.timestampButton
         }
         .padding(.top, 4)
+    }
+
+    /// Small "+" button to show recent meals sheet
+    private var recentMealsButton: some View {
+        Button {
+            SensoryService.shared.playNudge(style: .light)
+            self.showRecentMealsSheet = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.7))
+                .frame(width: 22, height: 22)
+                .background(
+                    Circle()
+                        .fill(Color.secondary.opacity(0.1))
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("recent-meals-button-\(self.meal.id)")
+        .accessibilityLabel("Add from recent meals")
+        .accessibilityHint("Shows meals from the past 3 days")
+        .sheet(isPresented: self.$showRecentMealsSheet) {
+            self.recentMealsSheet
+        }
+    }
+
+    /// Sheet displaying recent meals for quick selection
+    private var recentMealsSheet: some View {
+        NavigationStack {
+            List {
+                if self.recentMeals.isEmpty {
+                    Text("No recent meals")
+                        .foregroundColor(.secondary)
+                        .italic()
+                } else {
+                    ForEach(self.recentMeals) { recentMeal in
+                        Button {
+                            self.selectRecentMeal(recentMeal)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(recentMeal.items.joined(separator: ", "))
+                                    .font(.body)
+                                    .foregroundColor(.primary)
+                                    .lineLimit(2)
+
+                                HStack {
+                                    Text(recentMeal.mealType.displayName)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+
+                                    Spacer()
+
+                                    Text(Self.relativeDateString(from: recentMeal.timestamp))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .navigationTitle("Recent Meals")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        self.showRecentMealsSheet = false
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+
+    /// Selects a recent meal and populates the text field
+    private func selectRecentMeal(_ meal: Meal) {
+        self.rawText = meal.items.joined(separator: "\n")
+        self.selectedMealType = meal.mealType
+        self.onUpdate(meal.mealType, meal.items)
+        self.showRecentMealsSheet = false
+        SensoryService.shared.playNudge(style: .medium)
+    }
+
+    /// Returns a relative date string like "Yesterday" or "2 days ago"
+    private static func relativeDateString(from date: Date) -> String {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let mealDay = calendar.startOfDay(for: date)
+
+        let daysDiff = calendar.dateComponents([.day], from: mealDay, to: today).day ?? 0
+
+        switch daysDiff {
+        case 0: return "Today"
+        case 1: return "Yesterday"
+        default: return "\(daysDiff) days ago"
+        }
     }
 
     /// Minimalist time display in bottom-right, tap to edit
