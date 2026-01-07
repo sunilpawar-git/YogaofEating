@@ -192,7 +192,7 @@ struct MainScreenView: View {
             smileyState: self.viewModel.smileyState,
             snapshot: nil,
             onSmileyTap: {
-                // Use context-aware smiley tap handling
+                // Use context-aware smiley tap handling (morning sleep only)
                 self.viewModel.handleSmileyTap()
             },
             onEditSleep: {
@@ -203,8 +203,13 @@ struct MainScreenView: View {
                 // Show overall feeling sheet for editing
                 self.viewModel.showOverallFeelingSheet = true
             },
+            onEndOfDayTap: {
+                // Handle End-of-Day pill tap
+                self.viewModel.handleEndOfDayPillTap()
+            },
             todaysSleepQuality: self.viewModel.todaysSleepQuality,
             todaysFeeling: self.viewModel.todaysFeeling,
+            showEndOfDayPill: self.viewModel.showEndOfDayPill,
             onUpdateMeal: { mealId, mealType, items in
                 self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
             },

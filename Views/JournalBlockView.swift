@@ -45,11 +45,11 @@ struct JournalBlockView: View {
 
     var body: some View {
         self.cardContent
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             // Use explicit minimum dimensions with reasonable maxWidth to prevent overflow
-            // Max width accounts for padding (40pt total) and leaves margin on most devices
-            .frame(minWidth: 200, idealWidth: 300, maxWidth: 380, minHeight: 80, alignment: .leading)
+            // Max width accounts for padding and leaves margin on most devices
+            .frame(minWidth: 200, idealWidth: 300, maxWidth: 340, minHeight: 70, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("meal-block-\(self.meal.id)")
             .background { self.cardBackground }
@@ -252,20 +252,20 @@ struct JournalBlockView: View {
     }
 
     private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 20)
+        RoundedRectangle(cornerRadius: 16)
             .fill(.ultraThinMaterial)
             .overlay {
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: 16)
                     .fill(Color.white.opacity(0.4))
             }
             .overlay {
                 // Subtle tint overlay for visual feedback
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: 16)
                     .fill(self.feedback.tintColor.opacity(self.feedback.tintOpacity))
             }
             .shadow(color: .black.opacity(0.03), radius: 8, y: 4)
             .overlay(
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: 16)
                     .stroke(self.feedback.borderColor, lineWidth: self.feedback.borderWidth)
             )
     }

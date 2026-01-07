@@ -553,19 +553,21 @@
             XCTAssertFalse(self.sut.showOverallFeelingSheet)
         }
 
-        func test_handleSmileyTap_showsFeelingSheet_inEveningContext() {
-            // Arrange - Has meals, no feeling logged
+        func test_handleSmileyTap_createsMealDirectly_whenMealsExist() {
+            // Arrange - Has meals (no longer shows feeling sheet via smiley tap)
             self.sut.createNewMeal()
+            let initialMealCount = self.sut.meals.count
 
             // When
             self.sut.handleSmileyTap()
 
-            // Then - Should show feeling sheet (since meals exist and no feeling logged)
-            XCTAssertTrue(self.sut.showOverallFeelingSheet)
+            // Then - Should create meal directly (feeling is now via End-of-Day pill)
             XCTAssertFalse(self.sut.showSleepQualitySheet)
+            XCTAssertFalse(self.sut.showOverallFeelingSheet)
+            XCTAssertEqual(self.sut.meals.count, initialMealCount + 1)
         }
 
-        func test_handleSmileyTap_createsMealDirectly_whenNoContext() {
+        func test_handleSmileyTap_createsMealDirectly_whenFeelingAlreadyLogged() {
             // Arrange - Has meals and feeling already logged
             self.sut.createNewMeal()
             self.sut.saveOverallFeeling(.calm, at: Date())
@@ -607,11 +609,10 @@
             XCTAssertFalse(self.sut.showSleepQualitySheet)
         }
 
-        func test_completeOverallFeelingInput_savesFeelingAndCreatesMeal() {
+        func test_completeOverallFeelingInput_savesFeeling() {
             // Arrange
-            self.sut.createNewMeal() // Need a meal first for evening context
-            self.sut.handleSmileyTap() // This shows feeling sheet
-            let initialMealCount = self.sut.meals.count
+            self.sut.createNewMeal()
+            self.sut.showOverallFeelingSheet = true
 
             // When
             self.sut.completeOverallFeelingInput(.tired)
@@ -619,21 +620,74 @@
             // Then
             XCTAssertFalse(self.sut.showOverallFeelingSheet)
             XCTAssertEqual(self.sut.todaysFeeling, .tired)
-            XCTAssertEqual(self.sut.meals.count, initialMealCount + 1)
         }
 
-        func test_dismissOverallFeelingInput_dismissesSheetAndCreatesMeal() {
+        func test_dismissOverallFeelingInput_dismissesSheet() {
             // Arrange
-            self.sut.createNewMeal()
-            self.sut.handleSmileyTap() // Shows feeling sheet
-            let initialMealCount = self.sut.meals.count
+            self.sut.showOverallFeelingSheet = true
 
             // When
             self.sut.dismissOverallFeelingInput()
 
             // Then
             XCTAssertFalse(self.sut.showOverallFeelingSheet)
-            XCTAssertEqual(self.sut.meals.count, initialMealCount + 1) // Meal still created
+        }
+
+        // MARK: - Tests: End-of-Day Pill (Phase 3 - Decoupled from Smiley Tap)
+
+        func test_showEndOfDayPill_returnsFalse_whenNoMeals() {
+            // When
+            let result = self.sut.showEndOfDayPill
+
+            // Then
+            XCTAssertFalse(result, "Should not show pill when no meals logged")
+        }
+
+        func test_showEndOfDayPill_returnsTrue_whenMealsExistAndNoFeelingLogged() {
+            // Arrange
+            self.sut.createNewMeal()
+
+            // When
+            let result = self.sut.showEndOfDayPill
+
+            // Then
+            XCTAssertTrue(result, "Should show pill when meals exist and no feeling logged")
+        }
+
+        func test_showEndOfDayPill_returnsFalse_whenFeelingAlreadyLogged() {
+            // Arrange
+            self.sut.createNewMeal()
+            self.sut.saveOverallFeeling(.calm, at: Date())
+
+            // When
+            let result = self.sut.showEndOfDayPill
+
+            // Then
+            XCTAssertFalse(result, "Should not show pill when feeling already logged")
+        }
+
+        func test_handleEndOfDayPillTap_showsFeelingSheet() {
+            // Arrange
+            self.sut.createNewMeal()
+
+            // When
+            self.sut.handleEndOfDayPillTap()
+
+            // Then
+            XCTAssertTrue(self.sut.showOverallFeelingSheet, "Should show feeling sheet on pill tap")
+        }
+
+        func test_handleEndOfDayPillTap_doesNotCreateMeal() {
+            // Arrange
+            self.sut.createNewMeal()
+            let initialMealCount = self.sut.meals.count
+
+            // When
+            self.sut.handleEndOfDayPillTap()
+            self.sut.completeOverallFeelingInput(.great)
+
+            // Then - Should NOT create a new meal (pill is for reflection only)
+            XCTAssertEqual(self.sut.meals.count, initialMealCount, "Pill tap should not create a meal")
         }
     }
 #endif

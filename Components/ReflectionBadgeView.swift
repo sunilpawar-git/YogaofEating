@@ -16,14 +16,24 @@ struct ReflectionBadgeView: View {
         case sleep(SleepQuality)
         case feeling(ReflectionFeeling)
 
-        var emoji: String {
+        /// Fixed icon for the badge type (not value-dependent)
+        var fixedIcon: String {
             switch self {
-            case let .sleep(quality): quality.emoji
-            case let .feeling(feeling): feeling.emoji
+            case .sleep: "😴" // Always sleepy face for sleep
+            case .feeling: "🤔" // Always thinking face for feeling
             }
         }
 
-        var displayText: String {
+        /// Label prefix for the badge
+        var label: String {
+            switch self {
+            case .sleep: "Sleep"
+            case .feeling: "Feeling"
+            }
+        }
+
+        /// The value text (e.g., "Good", "Great")
+        var valueText: String {
             switch self {
             case let .sleep(quality): quality.displayName
             case let .feeling(feeling): feeling.displayName
@@ -58,13 +68,24 @@ struct ReflectionBadgeView: View {
 
     private var badgeContent: some View {
         HStack(spacing: 4) {
-            Text(self.type.emoji)
-                .font(.system(size: 14))
-
-            Text(self.type.displayText)
+            // Format: "Label (fixed-icon) : Value"
+            // e.g., "Sleep 😴 : Good" or "Feeling 🤔 : Great"
+            Text(self.type.label)
                 .font(.caption2)
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
+
+            Text(self.type.fixedIcon)
+                .font(.system(size: 12))
+
+            Text(":")
+                .font(.caption2)
+                .foregroundColor(.secondary.opacity(0.6))
+
+            Text(self.type.valueText)
+                .font(.caption2)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary.opacity(0.8))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

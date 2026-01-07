@@ -28,11 +28,17 @@ struct DayTimelineView: View {
     /// Callback when user taps to edit overall feeling badge (only for today)
     var onEditFeeling: (() -> Void)?
 
+    /// Callback when user taps the End-of-Day pill (only for today)
+    var onEndOfDayTap: (() -> Void)?
+
     /// Today's logged sleep quality (for displaying badge)
     var todaysSleepQuality: SleepQuality?
 
     /// Today's logged overall feeling (for displaying badge)
     var todaysFeeling: ReflectionFeeling?
+
+    /// Whether to show the End-of-Day pill (only for today when feeling not logged)
+    var showEndOfDayPill: Bool = false
 
     /// Callback when a meal is updated
     var onUpdateMeal: ((UUID, MealType, [String]) -> Void)?
@@ -75,15 +81,24 @@ struct DayTimelineView: View {
             }
 
             // Feeling badge above smiley (for today only, when logged)
-            if self.isToday, let feeling = self.todaysFeeling {
-                self.feelingBadge(feeling)
-                    .padding(.top, 16)
+            // OR End-of-Day pill when feeling not yet logged
+            if self.isToday {
+                if let feeling = self.todaysFeeling {
+                    self.feelingBadge(feeling)
+                        .padding(.top, 16)
+                } else if self.showEndOfDayPill {
+                    self.endOfDayPill
+                        .padding(.top, 16)
+                }
             }
 
             // Show appropriate bottom content based on whether it's today or historical
             if self.isToday {
                 self.smileyAddButton
-                    .padding(.top, self.todaysFeeling != nil ? 12 : (sortedMeals.isEmpty ? 20 : 30))
+                    .padding(
+                        .top,
+                        (self.todaysFeeling != nil || self.showEndOfDayPill) ? 12 : (sortedMeals.isEmpty ? 20 : 30)
+                    )
             } else {
                 self.historicalDaySummary
                     .padding(.top, sortedMeals.isEmpty ? 20 : 30)
@@ -186,6 +201,40 @@ struct DayTimelineView: View {
                 self.onEditFeeling?()
             }
         )
+    }
+
+    // MARK: - End-of-Day Pill (Today Only, When Feeling Not Logged)
+
+    private var endOfDayPill: some View {
+        Button(action: {
+            self.onEndOfDayTap?()
+            SensoryService.shared.playNudge(style: .light)
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: "moon.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.purple.opacity(0.8))
+
+                Text("End of Day")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule()
+                    .fill(Color.purple.opacity(0.1))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Color.purple.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("end-of-day-pill")
+        .accessibilityLabel("End of Day")
+        .accessibilityHint("Tap to log how you felt today")
     }
 
     // MARK: - Smiley Add Button (Today Only)
@@ -358,22 +407,27 @@ struct ReadOnlyMealCardView: View {
                     .foregroundColor(self.scoreColor)
             }
         }
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(
-            ZStack {
-                // Opaque base layer to completely cover the timeline line - pleasant light green
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(red: 0.95, green: 0.98, blue: 0.95))
-                // Tinted layer on top
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(self.cardBackground)
-            }
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+        )
+        .background(
+            // White overlay for consistency with today's cards (works in both light/dark mode)
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.4))
+        )
+        .background(
+            // Subtle tint overlay based on health score
+            RoundedRectangle(cornerRadius: 16)
+                .fill(self.cardBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(self.borderColor, lineWidth: 2)
         )
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
     }
 
     private var formattedTime: String {

@@ -408,6 +408,8 @@ class MainViewModel: ObservableObject {
     /// Determines if the current smiley tap should show the overall feeling prompt.
     /// Returns true if: user has logged at least one meal and no feeling logged today.
     /// - Returns: Whether to show the overall feeling prompt
+    /// - Note: Deprecated - End-of-Day feeling is now captured via permanent pill, use `showEndOfDayPill` instead
+    @available(*, deprecated, message: "Use showEndOfDayPill computed property instead")
     func isEveningFeelingContext() -> Bool {
         // Must have at least one meal logged
         guard !self.meals.isEmpty else { return false }
@@ -452,21 +454,30 @@ class MainViewModel: ObservableObject {
 
     // MARK: - Smiley Tap Flow (Phase 4 - User-Initiated Reflections)
 
-    /// Handles the smiley tap action, checking for context and showing appropriate sheets.
+    /// Handles the smiley tap action, checking for morning sleep context only.
     /// Flow:
     /// 1. If morning sleep context → Show sleep quality sheet → Then create meal
-    /// 2. If evening feeling context → Show feeling sheet → Then create meal
-    /// 3. Otherwise → Create meal directly
+    /// 2. Otherwise → Create meal directly
+    /// Note: End-of-Day feeling is now captured via a permanent pill on the timeline, not via smiley tap
     func handleSmileyTap() {
         if self.isMorningSleepContext() {
             self.pendingMealCreation = true
             self.showSleepQualitySheet = true
-        } else if self.isEveningFeelingContext() {
-            self.pendingMealCreation = true
-            self.showOverallFeelingSheet = true
         } else {
             self.createNewMeal()
         }
+    }
+
+    /// Returns true if the End-of-Day pill should be shown on the timeline.
+    /// Shows when: user has logged at least one meal AND has not logged overall feeling yet.
+    var showEndOfDayPill: Bool {
+        !self.meals.isEmpty && self.todaysFeeling == nil
+    }
+
+    /// Handles tap on the End-of-Day pill to show the feeling input sheet.
+    func handleEndOfDayPillTap() {
+        self.pendingMealCreation = false // No meal creation after this
+        self.showOverallFeelingSheet = true
     }
 
     /// Completes the sleep quality input and proceeds with meal creation if pending.
