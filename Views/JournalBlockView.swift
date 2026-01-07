@@ -285,11 +285,20 @@ struct JournalBlockView: View {
         .presentationDragIndicator(.visible)
     }
 
-    /// Selects a recent meal and populates the text field
+    /// Selects a recent meal and appends to existing items (or sets if empty)
     private func selectRecentMeal(_ meal: Meal) {
-        self.rawText = meal.items.joined(separator: "\n")
-        self.selectedMealType = meal.mealType
-        self.onUpdate(meal.mealType, meal.items)
+        let existingItems = self.parsedItems
+
+        // Use MealItemsMerger for consistent merge logic
+        let mergedItems = MealItemsMerger.merge(existing: existingItems, new: meal.items)
+
+        // Only update meal type if callout box was empty
+        if existingItems.isEmpty {
+            self.selectedMealType = meal.mealType
+        }
+
+        self.rawText = mergedItems.joined(separator: "\n")
+        self.onUpdate(self.selectedMealType, mergedItems)
         self.showRecentMealsSheet = false
         SensoryService.shared.playNudge(style: .medium)
     }

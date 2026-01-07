@@ -98,5 +98,52 @@
             // Second meal should have timestamp >= first meal
             XCTAssertGreaterThanOrEqual(meal2.timestamp, meal1.timestamp)
         }
+
+        // MARK: - Merge Items Tests (Recent Meal Append Feature)
+
+        func test_mergeItems_emptyExisting_returnsNewItems() {
+            let existingItems: [String] = []
+            let newItems = ["Oatmeal", "Banana"]
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Oatmeal", "Banana"])
+        }
+
+        func test_mergeItems_existingItems_appendsNewItems() {
+            let existingItems = ["Coffee", "Toast"]
+            let newItems = ["Eggs", "Bacon"]
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Coffee", "Toast", "Eggs", "Bacon"])
+        }
+
+        func test_mergeItems_duplicateItems_areNotAdded() {
+            let existingItems = ["Coffee", "Toast"]
+            let newItems = ["Coffee", "Eggs"] // Coffee is duplicate
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Coffee", "Toast", "Eggs"])
+        }
+
+        func test_mergeItems_caseInsensitiveDuplicates_areNotAdded() {
+            let existingItems = ["Coffee", "Toast"]
+            let newItems = ["COFFEE", "eggs"] // COFFEE is case-insensitive duplicate
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Coffee", "Toast", "eggs"])
+        }
+
+        func test_mergeItems_whitespaceVariants_areNotAdded() {
+            let existingItems = ["Coffee", "Toast"]
+            let newItems = ["  Coffee  ", "Eggs"] // Coffee with whitespace is duplicate
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Coffee", "Toast", "Eggs"])
+        }
     }
 #endif
