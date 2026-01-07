@@ -59,19 +59,29 @@ struct MainScreenView: View {
                 .padding(.top, 60)
                 .padding(.bottom, 20)
 
-            // TabView for day paging
-            TabView(selection: Binding(
-                get: { self.viewModel.selectedDayIndex },
-                set: { self.viewModel.navigateToIndex($0) }
-            )) {
-                // Today (index 0) and past days (1...maxDaysBack)
-                ForEach(0...MainViewModel.maxDaysBack, id: \.self) { dayIndex in
-                    self.dayPage(for: dayIndex)
-                        .tag(dayIndex)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut(duration: 0.3), value: self.viewModel.selectedDayIndex)
+            // Day page content with gesture-based navigation
+            // Note: Using plain view with drag gesture instead of TabView to control
+            // navigation direction - only allow swiping to previous days, not forward
+            self.dayPage(for: self.viewModel.selectedDayIndex)
+                .gesture(
+                    DragGesture(minimumDistance: 50, coordinateSpace: .local)
+                        .onEnded { value in
+                            let horizontalDrag = value.translation.width
+                            let isSwipeLeft = horizontalDrag < -50
+                            let isSwipeRight = horizontalDrag > 50
+
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                if isSwipeLeft, self.viewModel.canNavigateToPreviousDay {
+                                    // Swipe left = go to previous day (higher index)
+                                    self.viewModel.navigateToPreviousDay()
+                                } else if isSwipeRight, self.viewModel.canNavigateToNextDay {
+                                    // Swipe right = go towards today (lower index)
+                                    self.viewModel.navigateToNextDay()
+                                }
+                            }
+                        }
+                )
+                .animation(.easeInOut(duration: 0.3), value: self.viewModel.selectedDayIndex)
         }
         .contentShape(Rectangle())
         #if canImport(UIKit)
@@ -82,64 +92,13 @@ struct MainScreenView: View {
     // MARK: - Date Header with Navigation
 
     private var dateHeaderWithNavigation: some View {
-        HStack(spacing: 16) {
-            // Previous day button
-            Button {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    self.viewModel.navigateToPreviousDay()
-                }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(self.viewModel.canNavigateToPreviousDay ? .primary : .secondary.opacity(0.3))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .disabled(!self.viewModel.canNavigateToPreviousDay)
-            .accessibilityIdentifier("previous-day-button")
-            .accessibilityLabel("Previous day")
-
-            // Date display (tappable to return to today)
-            VStack(spacing: 4) {
-                Text(self.viewModel.formattedSelectedDate)
-                    .font(.system(.title2, design: .rounded))
-                    .fontWeight(.bold)
-                    .accessibilityIdentifier("date-header")
-
-                if !self.viewModel.isViewingToday {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            self.viewModel.navigateToToday()
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text("Back to Today")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .foregroundColor(.blue)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule()
-                                .fill(Color.blue.opacity(0.12))
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("today-button")
-                    .accessibilityLabel("Back to Today")
-                    .accessibilityHint("Return to today's view")
-                }
-            }
-            .frame(maxWidth: .infinity)
-
-            // Spacer to balance the left arrow (right arrow removed - users navigate backward only)
-            Color.clear
-                .frame(width: 44, height: 44)
-        }
-        .padding(.horizontal, 16)
+        DateHeaderNavigationView(
+            formattedDate: self.viewModel.formattedSelectedDate,
+            isViewingToday: self.viewModel.isViewingToday,
+            canNavigateToPreviousDay: self.viewModel.canNavigateToPreviousDay,
+            onPreviousDay: { self.viewModel.navigateToPreviousDay() },
+            onNavigateToToday: { self.viewModel.navigateToToday() }
+        )
     }
 
     // MARK: - Day Page Content
