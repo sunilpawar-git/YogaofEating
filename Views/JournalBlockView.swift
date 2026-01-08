@@ -170,6 +170,16 @@ struct JournalBlockView: View {
             .onChange(of: self.isFocused) { _, focused in
                 self.handleFocusChange(focused)
             }
+            .onChange(of: self.meal.items) { _, newItems in
+                // Sync rawText with external meal.items updates
+                // Only sync when NOT focused to avoid overwriting user's active typing
+                if !self.isFocused {
+                    let externalText = newItems.joined(separator: "\n")
+                    if self.rawText != externalText {
+                        self.rawText = externalText
+                    }
+                }
+            }
             .onSubmit {
                 self.handleSubmit()
             }
