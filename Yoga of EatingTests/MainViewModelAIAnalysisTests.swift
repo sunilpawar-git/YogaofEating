@@ -146,6 +146,66 @@
             XCTAssertEqual(self.sut.smileyState.scale, 1.0)
             XCTAssertEqual(self.sut.smileyState.mood, .neutral)
         }
+
+        // MARK: - Phase 4: AI Analyzed Flag Tests
+
+        func test_newMeal_isAIAnalyzed_defaultsFalse() {
+            // When: Create a new meal
+            self.sut.createNewMeal()
+
+            // Then: isAIAnalyzed should be false by default
+            XCTAssertFalse(self.sut.meals.first?.isAIAnalyzed ?? true)
+        }
+
+        func test_performDeepAnalysis_setsIsAIAnalyzed_onSuccess() async {
+            // Given: Create a meal
+            self.sut.createNewMeal()
+            guard let meal = self.sut.meals.first else {
+                XCTFail("Meal not created")
+                return
+            }
+            XCTAssertFalse(meal.isAIAnalyzed)
+
+            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime")
+
+            // When: Perform AI analysis
+            await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple", "Salad"])
+
+            // Then: isAIAnalyzed should be true
+            XCTAssertTrue(self.sut.meals.first?.isAIAnalyzed ?? false)
+        }
+
+        func test_performDeepAnalysis_doesNotSetIsAIAnalyzed_onError() async {
+            // Given: Create a meal
+            self.sut.createNewMeal()
+            guard let meal = self.sut.meals.first else {
+                XCTFail("Meal not created")
+                return
+            }
+
+            self.mockAILogic.shouldThrowError = true
+
+            // When: Perform AI analysis (will fail)
+            await self.sut.performDeepAnalysis(for: meal.id, items: ["Food"])
+
+            // Then: isAIAnalyzed should remain false
+            XCTAssertFalse(self.sut.meals.first?.isAIAnalyzed ?? true)
+        }
+
+        func test_isAIAnalyzed_persistsAfterSave() async {
+            // Given: Create a meal and run AI analysis
+            self.sut.createNewMeal()
+            guard let meal = self.sut.meals.first else {
+                XCTFail("Meal not created")
+                return
+            }
+
+            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime")
+            await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple"])
+
+            // Then: Saved data should have isAIAnalyzed = true
+            XCTAssertTrue(self.mockPersistence.savedData?.meals.first?.isAIAnalyzed ?? false)
+        }
     }
 
     // MARK: - Mocks

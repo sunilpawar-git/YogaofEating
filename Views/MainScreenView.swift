@@ -15,33 +15,73 @@ struct MainScreenView: View {
                 self.backgroundGradient
                     .ignoresSafeArea()
 
-                self.mainScrollContent
+                self.mainContent
             }
             .toolbar { self.toolbarContent }
             .sheet(isPresented: self.$showingSettings) {
-                SettingsView()
+                SettingsView(mainViewModel: self.viewModel)
             }
+            // Note: Legacy showReflectionSheet removed - now using user-initiated SleepQuality/OverallFeeling sheets
+            .sheet(isPresented: self.$viewModel.showSleepQualitySheet) {
+                SleepQualityInputView(
+                    onSelect: { quality in
+                        self.viewModel.completeSleepQualityInput(quality)
+                    },
+                    onDismiss: {
+                        self.viewModel.dismissSleepQualityInput()
+                    }
+                )
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: self.$viewModel.showOverallFeelingSheet) {
+                OverallFeelingInputView(
+                    onSelect: { feeling in
+                        self.viewModel.completeOverallFeelingInput(feeling)
+                    },
+                    onDismiss: {
+                        self.viewModel.dismissOverallFeelingInput()
+                    }
+                )
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
+            }
+            // Note: Auto-prompt removed - now using user-initiated reflections via smiley tap
         }
     }
 
     // MARK: - Main Content
 
-    private var mainScrollContent: some View {
-        ScrollView(showsIndicators: false) {
-            ScrollViewReader { proxy in
-                VStack(spacing: 0) {
-                    self.dateHeader
-                    self.timelineContent
-                    // Use explicit dimensions for the spacer to prevent layout issues
-                    Color.clear.frame(width: 1, height: 100)
-                }
-                .onChange(of: self.viewModel.meals.count) { _, _ in
-                    // Use a gentler animation to avoid layout race conditions
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        proxy.scrollTo("bottom", anchor: .bottom)
-                    }
-                }
-            }
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            // Date header with navigation
+            self.dateHeaderWithNavigation
+                .padding(.top, 60)
+                .padding(.bottom, 20)
+
+            // Day page content with gesture-based navigation
+            // Note: Using plain view with drag gesture instead of TabView to control
+            // navigation direction - only allow swiping to previous days, not forward
+            self.dayPage(for: self.viewModel.selectedDayIndex)
+                .gesture(
+                    DragGesture(minimumDistance: 50, coordinateSpace: .local)
+                        .onEnded { value in
+                            let horizontalDrag = value.translation.width
+                            let isSwipeLeft = horizontalDrag < -50
+                            let isSwipeRight = horizontalDrag > 50
+
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                if isSwipeLeft, self.viewModel.canNavigateToPreviousDay {
+                                    // Swipe left = go to previous day (higher index)
+                                    self.viewModel.navigateToPreviousDay()
+                                } else if isSwipeRight, self.viewModel.canNavigateToNextDay {
+                                    // Swipe right = go towards today (lower index)
+                                    self.viewModel.navigateToNextDay()
+                                }
+                            }
+                        }
+                )
+                .animation(.easeInOut(duration: 0.3), value: self.viewModel.selectedDayIndex)
         }
         .contentShape(Rectangle())
         #if canImport(UIKit)
@@ -49,79 +89,115 @@ struct MainScreenView: View {
         #endif
     }
 
-    private var dateHeader: some View {
-        Text(self.formattedDate)
-            .font(.system(.title, design: .rounded))
-            .fontWeight(.bold)
-            .padding(.top, 60)
-            .padding(.bottom, 40)
-    }
+    // MARK: - Date Header with Navigation
 
-    private var timelineContent: some View {
-        VStack(spacing: 30) {
-            ForEach(self.viewModel.meals) { meal in
-                self.mealBlockView(for: meal)
-                    .id(meal.id)
-            }
-
-            self.smileyAddButton
-                .padding(.top, 20)
-                .id("bottom")
-        }
-        .frame(maxWidth: .infinity)
-        .background(alignment: .center) { self.timelineLine }
-    }
-
-    private func mealBlockView(for meal: Meal) -> some View {
-        JournalBlockView(
-            meal: meal,
-            isBreathing: self.breathingMeals.contains(meal.id),
-            onUpdate: { mealType, newItems in
-                self.viewModel.updateMeal(meal.id, mealType: mealType, items: newItems)
-            },
-            onDelete: {
-                withAnimation(.spring()) {
-                    self.viewModel.deleteMeal(meal.id)
-                }
-            }
+    private var dateHeaderWithNavigation: some View {
+        DateHeaderNavigationView(
+            formattedDate: self.viewModel.formattedSelectedDate,
+            isViewingToday: self.viewModel.isViewingToday,
+            canNavigateToPreviousDay: self.viewModel.canNavigateToPreviousDay,
+            onPreviousDay: { self.viewModel.navigateToPreviousDay() },
+            onNavigateToToday: { self.viewModel.navigateToToday() }
         )
     }
 
-    private var timelineLine: some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [.primary.opacity(0.1), .primary.opacity(0.05)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .frame(width: 2)
-            .padding(.top, 20)
-    }
+    // MARK: - Day Page Content
 
-    // MARK: - Smiley Button
+    @ViewBuilder
+    private func dayPage(for dayIndex: Int) -> some View {
+        ScrollView(showsIndicators: false) {
+            ScrollViewReader { proxy in
+                VStack(spacing: 0) {
+                    if dayIndex == 0 {
+                        // Today: editable timeline
+                        self.todayTimelineContent
+                            .onChange(of: self.viewModel.meals.count) { _, _ in
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    proxy.scrollTo("bottom", anchor: .bottom)
+                                }
+                            }
+                    } else {
+                        // Historical day: read-only view
+                        self.historicalDayContent(daysAgo: dayIndex)
+                    }
 
-    private var smileyAddButton: some View {
-        Button(action: {
-            self.viewModel.createNewMeal()
-            SensoryService.shared.playNudge(style: .medium)
-        }) {
-            VStack(spacing: 16) {
-                SmileyView(state: self.viewModel.smileyState)
-                    .frame(width: 120, height: 120)
-
-                Text("TAP TO LOG")
-                    .font(.system(.caption, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundColor(.secondary)
-                    .kerning(2)
-                    .fixedSize()
+                    // Bottom spacer
+                    Color.clear.frame(width: 1, height: 100)
+                        .id("bottom")
+                }
             }
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("add-meal-button")
-        .accessibilityLabel("Add Meal")
+    }
+
+    // MARK: - Today Timeline (Editable)
+
+    private var todayTimelineContent: some View {
+        DayTimelineView(
+            meals: self.viewModel.meals,
+            fastingPeriods: self.viewModel.fastingPeriods,
+            isToday: true,
+            smileyState: self.viewModel.smileyState,
+            snapshot: nil,
+            onSmileyTap: {
+                // Use context-aware smiley tap handling (morning sleep only)
+                self.viewModel.handleSmileyTap()
+            },
+            onEditSleep: {
+                // Show sleep quality sheet for editing
+                self.viewModel.showSleepQualitySheet = true
+            },
+            onEditFeeling: {
+                // Show overall feeling sheet for editing
+                self.viewModel.showOverallFeelingSheet = true
+            },
+            onEndOfDayTap: {
+                // Handle End-of-Day pill tap
+                self.viewModel.handleEndOfDayPillTap()
+            },
+            todaysSleepQuality: self.viewModel.todaysSleepQuality,
+            todaysFeeling: self.viewModel.todaysFeeling,
+            showEndOfDayPill: self.viewModel.showEndOfDayPill,
+            onUpdateMeal: { mealId, mealType, items in
+                self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
+            },
+            onUpdateTimestamp: { mealId, timestamp in
+                self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
+            },
+            onDeleteMeal: { mealId in
+                withAnimation(.spring()) {
+                    self.viewModel.deleteMeal(mealId)
+                }
+            },
+            recentMeals: self.viewModel.getRecentUniqueMeals()
+        )
+    }
+
+    // MARK: - Historical Day Content (Read-Only)
+
+    @ViewBuilder
+    private func historicalDayContent(daysAgo: Int) -> some View {
+        let calendar = Calendar.current
+        let date = calendar.date(byAdding: .day, value: -daysAgo, to: calendar.startOfDay(for: Date()))!
+        let snapshot = self.viewModel.historicalService.getSnapshot(for: date)
+        let meals = snapshot?.meals ?? []
+        let fastingPeriods = FastingLogicService.calculateFastingPeriods(
+            from: meals.sorted { $0.timestamp < $1.timestamp }
+        )
+
+        DayTimelineView(
+            meals: meals,
+            fastingPeriods: fastingPeriods,
+            isToday: false,
+            smileyState: snapshot?.smileyState ?? .neutral,
+            snapshot: snapshot,
+            onCopyMeal: { meal in
+                // Copy meal to today and navigate to today
+                self.viewModel.copyMealToToday(meal)
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    self.viewModel.navigateToToday()
+                }
+            }
+        )
     }
 
     // MARK: - Toolbar
@@ -199,14 +275,6 @@ struct MainScreenView: View {
                 .blur(radius: 100)
                 .offset(x: -150, y: -200)
         }
-    }
-
-    // MARK: - Helpers
-
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, d MMM yyyy"
-        return formatter.string(from: Date())
     }
 }
 

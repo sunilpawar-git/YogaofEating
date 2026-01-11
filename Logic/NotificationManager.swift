@@ -34,7 +34,7 @@ class NotificationManager {
 
     /// The "Morning Nudge" to plan the day's meals.
     func scheduleMorningNudge() {
-        guard UserDefaults.standard.bool(forKey: "morning_nudge_enabled") else {
+        guard UserDefaults.standard.object(forKey: "morning_nudge_enabled") as? Bool ?? true else {
             return
         }
 
@@ -54,7 +54,7 @@ class NotificationManager {
 
     /// Individual meal reminders.
     func scheduleMealReminder(label: String, hour: Int, minute: Int) {
-        guard UserDefaults.standard.bool(forKey: "meal_reminders_enabled") else {
+        guard UserDefaults.standard.object(forKey: "meal_reminders_enabled") as? Bool ?? true else {
             return
         }
 
@@ -71,6 +71,14 @@ class NotificationManager {
         let request = UNNotificationRequest(identifier: "meal_reminder_\(label)", content: content, trigger: trigger)
 
         self.center.add(request, withCompletionHandler: nil)
+    }
+
+    /// Schedules default meal reminders (Breakfast, Lunch, Dinner).
+    /// Called on app startup.
+    func scheduleDefaultMealReminders() {
+        self.scheduleMealReminder(label: "Breakfast", hour: 8, minute: 0)
+        self.scheduleMealReminder(label: "Lunch", hour: 13, minute: 0)
+        self.scheduleMealReminder(label: "Dinner", hour: 20, minute: 0)
     }
 
     /// Clears all pending notifications.

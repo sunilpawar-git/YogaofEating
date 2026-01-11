@@ -7,6 +7,7 @@ import SwiftUI
 protocol PersistenceServiceProtocol {
     func load() -> PersistenceService.AppData?
     func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData)
+    func deleteAll()
 }
 
 /// Central state manager for the Yoga of Eating app.
@@ -14,18 +15,64 @@ protocol PersistenceServiceProtocol {
 @MainActor
 class MainViewModel: ObservableObject {
     @Published var smileyState: SmileyState = .neutral
-    @Published var meals: [Meal] = []
+    @Published var meals: [Meal] = [] {
+        didSet { self.updateDerivedState() }
+    }
+
     @Published var lastResetDate: Date = .init()
+
+    /// Meals sorted by timestamp (computed once per change, not per render)
+    @Published private(set) var sortedMeals: [Meal] = []
+
+    /// Cached fasting periods between consecutive meals
+    @Published private(set) var fastingPeriods: [FastingPeriod] = []
+
+    // MARK: - End-of-Day Reflection (Phase 3)
+
+    /// Controls visibility of the end-of-day reflection sheet
+    @Published var showReflectionSheet: Bool = false
+
+    /// The hour (24h format) after which reflection prompt should appear. Default: 8 PM (20:00)
+    static let reflectionPromptHour: Int = 20
+
+    // MARK: - User-Initiated Reflections (Phase 4 - Redesign)
+
+    /// Controls visibility of the sleep quality input sheet (morning context)
+    @Published var showSleepQualitySheet: Bool = false
+
+    /// Controls visibility of the overall feeling input sheet (evening context)
+    @Published var showOverallFeelingSheet: Bool = false
+
+    /// Pending action to execute after reflection input is complete
+    private var pendingMealCreation: Bool = false
+
+    // MARK: - Day Navigation (Phase 4)
+
+    /// The currently selected date for viewing. Defaults to today.
+    @Published var selectedDate: Date = .init()
+
+    /// Maximum number of days the user can navigate back. Default: 30 days.
+    static let maxDaysBack: Int = 30
+
+    /// Updates derived state (sorted meals and fasting periods) when meals change
+    private func updateDerivedState() {
+        self.sortedMeals = self.meals.sorted { $0.timestamp < $1.timestamp }
+        self.fastingPeriods = FastingLogicService.calculateFastingPeriods(from: self.sortedMeals)
+    }
 
     let logicService: MealLogicProvider
     let persistenceService: PersistenceServiceProtocol
     let historicalService: any HistoricalDataServiceProtocol
+    let healthProfileService: HealthProfileServiceProtocol
 
     init(
+        healthProfileService: HealthProfileServiceProtocol? = nil,
         logicService: MealLogicProvider? = nil,
         persistenceService: PersistenceServiceProtocol? = nil,
         historicalService: (any HistoricalDataServiceProtocol)? = nil
     ) {
+        let healthService = healthProfileService ?? HealthProfileService()
+        self.healthProfileService = healthService
         self.logicService = logicService ?? AILogicService()
         self.persistenceService = persistenceService ?? PersistenceService.shared
         self.historicalService = historicalService ?? HistoricalDataService()
@@ -111,6 +158,15 @@ class MainViewModel: ObservableObject {
         self.saveData()
         print("📝 Local healthScore set to: \(healthScore)")
 
+        // Play personalized haptic feedback based on health score and user risk level
+        if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
+            SensoryService.shared.playMealFeedbackHaptic(
+                for: healthScore,
+                riskLevel: profile.riskLevel,
+                userDefaults: nil
+            )
+        }
+
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
@@ -130,6 +186,16 @@ class MainViewModel: ObservableObject {
         self.meals[index].items = items
         self.meals[index].healthScore = healthScore
         self.saveData()
+
+        // Play personalized haptic feedback based on health score and user risk level
+        if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
+            SensoryService.shared.playMealFeedbackHaptic(
+                for: healthScore,
+                riskLevel: profile.riskLevel,
+                userDefaults: nil
+            )
+        }
+
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
@@ -137,6 +203,15 @@ class MainViewModel: ObservableObject {
         Task {
             await self.performDeepAnalysis(for: mealId, items: items)
         }
+    }
+
+    /// Updates a meal's timestamp (for user-edited time).
+    /// Does not trigger AI re-analysis since content hasn't changed.
+    func updateMealTimestamp(_ mealId: UUID, timestamp: Date) {
+        guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
+
+        self.meals[index].timestamp = timestamp
+        self.saveData()
     }
 
     /// Deletes a meal entry and recalculates smiley state.
@@ -214,5 +289,413 @@ class MainViewModel: ObservableObject {
 
         // 3. Save both current and historical data
         self.saveData()
+    }
+
+    /// Completely deletes all app data including meals, history, and resets to factory state.
+    /// This is a destructive operation and cannot be undone.
+    func deleteAllData() {
+        // 1. Clear in-memory state
+        withAnimation(.easeOut) {
+            self.smileyState = .neutral
+            self.meals = []
+            self.lastResetDate = Date()
+        }
+
+        // 2. Clear historical data
+        self.historicalService.clearAllData()
+
+        // 3. Delete persistence file
+        self.persistenceService.deleteAll()
+
+        // 4. Clear UserDefaults keys (using centralized StorageKeys)
+        for key in StorageKeys.allKeys {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+
+        // 5. Cancel any scheduled notifications
+        NotificationManager.shared.cancelAllNotifications()
+    }
+
+    // MARK: - End-of-Day Reflection Methods (Legacy - Deprecated)
+
+    /// Determines if the user should be prompted for an end-of-day reflection.
+    /// Returns true if: it's after the prompt hour, user has logged meals, and no reflection exists for today.
+    /// - Parameter date: The current date/time to check against (defaults to now)
+    /// - Returns: Whether to show the reflection prompt
+    /// - Note: Deprecated - Use `isMorningSleepContext()` and `isEveningFeelingContext()` instead
+    @available(*, deprecated, message: "Use isMorningSleepContext() and isEveningFeelingContext() instead")
+    func shouldPromptReflection(at date: Date = Date()) -> Bool {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+
+        // Must be after the configured prompt hour (default 8 PM)
+        guard hour >= Self.reflectionPromptHour else { return false }
+
+        // Must have at least one meal logged today
+        guard !self.meals.isEmpty else { return false }
+
+        // Must not already have a reflection for today
+        guard self.todaysReflection == nil else { return false }
+
+        return true
+    }
+
+    /// Saves the user's end-of-day reflection and dismisses the sheet.
+    /// - Parameter reflection: The reflection to save
+    func saveReflection(_ reflection: DailyReflection) {
+        let today = Date()
+        self.historicalService.updateReflection(for: today, reflection: reflection)
+        self.showReflectionSheet = false
+    }
+
+    /// Dismisses the reflection sheet without saving.
+    func skipReflection() {
+        self.showReflectionSheet = false
+    }
+
+    /// Triggers the reflection prompt if conditions are met.
+    /// Call this when the view appears to check if reflection should be shown.
+    /// - Parameter date: The current date/time to check against (defaults to now)
+    /// - Note: Deprecated - Use `handleSmileyTap()` for user-initiated reflections instead
+    @available(*, deprecated, message: "Use handleSmileyTap() for user-initiated reflections instead")
+    func triggerReflectionPromptIfNeeded(at date: Date = Date()) {
+        if self.shouldPromptReflection(at: date) {
+            self.showReflectionSheet = true
+        }
+    }
+
+    /// Returns today's reflection if one has been saved.
+    var todaysReflection: DailyReflection? {
+        let today = Date()
+        return self.historicalService.getSnapshot(for: today)?.reflection
+    }
+
+    /// Returns today's sleep quality if logged.
+    var todaysSleepQuality: SleepQuality? {
+        self.todaysReflection?.sleepQuality
+    }
+
+    /// Returns today's overall feeling if logged.
+    var todaysFeeling: ReflectionFeeling? {
+        self.todaysReflection?.feeling
+    }
+
+    // MARK: - Context Detection (Phase 2 - User-Initiated Reflections)
+
+    /// The hour before which sleep context is valid (noon = 12)
+    static let morningCutoffHour: Int = 12
+
+    /// Determines if the current smiley tap should show the sleep quality prompt.
+    /// Returns true if: it's before noon, no meals logged yet (first tap), and no sleep logged today.
+    /// - Parameter date: The current date/time to check against (defaults to now)
+    /// - Returns: Whether to show the sleep quality prompt
+    func isMorningSleepContext(at date: Date = Date()) -> Bool {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+
+        // Must be before noon
+        guard hour < Self.morningCutoffHour else { return false }
+
+        // Must be first tap of the day (no meals yet)
+        guard self.meals.isEmpty else { return false }
+
+        // Must not have sleep quality logged today
+        guard self.todaysSleepQuality == nil else { return false }
+
+        return true
+    }
+
+    /// Determines if the current smiley tap should show the overall feeling prompt.
+    /// Returns true if: user has logged at least one meal and no feeling logged today.
+    /// - Returns: Whether to show the overall feeling prompt
+    /// - Note: Deprecated - End-of-Day feeling is now captured via permanent pill, use `showEndOfDayPill` instead
+    @available(*, deprecated, message: "Use showEndOfDayPill computed property instead")
+    func isEveningFeelingContext() -> Bool {
+        // Must have at least one meal logged
+        guard !self.meals.isEmpty else { return false }
+
+        // Must not have feeling logged today
+        guard self.todaysFeeling == nil else { return false }
+
+        return true
+    }
+
+    /// Saves sleep quality for today, merging with existing reflection if present.
+    /// - Parameters:
+    ///   - quality: The sleep quality to save
+    ///   - date: When it was logged (defaults to now)
+    func saveSleepQuality(_ quality: SleepQuality, at date: Date = Date()) {
+        let newReflection = DailyReflection.withSleepQuality(quality, at: date)
+
+        // Merge with existing reflection if present
+        if let existing = self.todaysReflection {
+            let merged = newReflection.merging(with: existing)
+            self.historicalService.updateReflection(for: date, reflection: merged)
+        } else {
+            self.historicalService.updateReflection(for: date, reflection: newReflection)
+        }
+    }
+
+    /// Saves overall feeling for today, merging with existing reflection if present.
+    /// - Parameters:
+    ///   - feeling: The overall feeling to save
+    ///   - date: When it was logged (defaults to now)
+    func saveOverallFeeling(_ feeling: ReflectionFeeling, at date: Date = Date()) {
+        let newReflection = DailyReflection.withFeeling(feeling, at: date)
+
+        // Merge with existing reflection if present
+        if let existing = self.todaysReflection {
+            let merged = newReflection.merging(with: existing)
+            self.historicalService.updateReflection(for: date, reflection: merged)
+        } else {
+            self.historicalService.updateReflection(for: date, reflection: newReflection)
+        }
+    }
+
+    // MARK: - Smiley Tap Flow (Phase 4 - User-Initiated Reflections)
+
+    /// Handles the smiley tap action, checking for morning sleep context only.
+    /// Flow:
+    /// 1. If morning sleep context → Show sleep quality sheet → Then create meal
+    /// 2. Otherwise → Create meal directly
+    /// Note: End-of-Day feeling is now captured via a permanent pill on the timeline, not via smiley tap
+    func handleSmileyTap() {
+        if self.isMorningSleepContext() {
+            self.pendingMealCreation = true
+            self.showSleepQualitySheet = true
+        } else {
+            self.createNewMeal()
+        }
+    }
+
+    /// Returns true if the End-of-Day pill should be shown on the timeline.
+    /// Shows when: user has logged at least one meal AND has not logged overall feeling yet.
+    var showEndOfDayPill: Bool {
+        !self.meals.isEmpty && self.todaysFeeling == nil
+    }
+
+    /// Handles tap on the End-of-Day pill to show the feeling input sheet.
+    func handleEndOfDayPillTap() {
+        self.pendingMealCreation = false // No meal creation after this
+        self.showOverallFeelingSheet = true
+    }
+
+    /// Completes the sleep quality input and proceeds with meal creation if pending.
+    /// - Parameter quality: The selected sleep quality
+    func completeSleepQualityInput(_ quality: SleepQuality) {
+        self.saveSleepQuality(quality)
+        self.showSleepQualitySheet = false
+
+        if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
+    }
+
+    /// Dismisses the sleep quality sheet without saving.
+    func dismissSleepQualityInput() {
+        self.showSleepQualitySheet = false
+
+        // Still create the meal even if user skips
+        if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
+    }
+
+    /// Completes the overall feeling input and proceeds with meal creation if pending.
+    /// - Parameter feeling: The selected feeling
+    func completeOverallFeelingInput(_ feeling: ReflectionFeeling) {
+        self.saveOverallFeeling(feeling)
+        self.showOverallFeelingSheet = false
+
+        if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
+    }
+
+    /// Dismisses the overall feeling sheet without saving.
+    func dismissOverallFeelingInput() {
+        self.showOverallFeelingSheet = false
+
+        // Still create the meal even if user skips
+        if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
+    }
+
+    // MARK: - Day Navigation Methods (Phase 4)
+
+    /// Returns true if the selected date is today.
+    var isViewingToday: Bool {
+        Calendar.current.isDateInToday(self.selectedDate)
+    }
+
+    /// Returns true if the user can navigate to the previous day (within maxDaysBack limit).
+    var canNavigateToPreviousDay: Bool {
+        self.selectedDayIndex < Self.maxDaysBack
+    }
+
+    /// Returns true if the user can navigate to the next day (not beyond today).
+    var canNavigateToNextDay: Bool {
+        !self.isViewingToday
+    }
+
+    /// Returns the number of days between the selected date and today (0 = today).
+    var selectedDayIndex: Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let selected = calendar.startOfDay(for: self.selectedDate)
+        let components = calendar.dateComponents([.day], from: selected, to: today)
+        return max(0, components.day ?? 0)
+    }
+
+    /// Formatted string for the selected date (e.g., "Monday, 5 Jan 2026").
+    var formattedSelectedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, d MMM yyyy"
+        return formatter.string(from: self.selectedDate)
+    }
+
+    /// Navigates to a specific date. Future dates are clamped to today.
+    /// - Parameter date: The date to navigate to
+    func navigateToDate(_ date: Date) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let targetDay = calendar.startOfDay(for: date)
+
+        // Clamp to today if trying to navigate to future
+        if targetDay > today {
+            self.selectedDate = today
+        } else {
+            self.selectedDate = targetDay
+        }
+    }
+
+    /// Navigates to the previous day.
+    func navigateToPreviousDay() {
+        guard self.canNavigateToPreviousDay else { return }
+        let calendar = Calendar.current
+        if let previousDay = calendar.date(byAdding: .day, value: -1, to: self.selectedDate) {
+            self.navigateToDate(previousDay)
+        }
+    }
+
+    /// Navigates to the next day (towards today).
+    func navigateToNextDay() {
+        guard self.canNavigateToNextDay else { return }
+        let calendar = Calendar.current
+        if let nextDay = calendar.date(byAdding: .day, value: 1, to: self.selectedDate) {
+            self.navigateToDate(nextDay)
+        }
+    }
+
+    /// Navigates back to today.
+    func navigateToToday() {
+        self.selectedDate = Calendar.current.startOfDay(for: Date())
+    }
+
+    /// Navigates to a day by index (0 = today, 1 = yesterday, etc.).
+    /// - Parameter index: The number of days back from today
+    func navigateToIndex(_ index: Int) {
+        let calendar = Calendar.current
+        let clampedIndex = max(0, min(index, Self.maxDaysBack))
+        let today = calendar.startOfDay(for: Date())
+        if let targetDate = calendar.date(byAdding: .day, value: -clampedIndex, to: today) {
+            self.selectedDate = targetDate
+        }
+    }
+
+    /// Returns the meals for the currently selected date.
+    /// For today, returns current meals. For past days, returns historical meals.
+    func mealsForSelectedDate() -> [Meal] {
+        if self.isViewingToday {
+            self.meals
+        } else {
+            self.snapshotForSelectedDate()?.meals ?? []
+        }
+    }
+
+    /// Returns the snapshot for the currently selected date, if available.
+    func snapshotForSelectedDate() -> DailySmileySnapshot? {
+        self.historicalService.getSnapshot(for: self.selectedDate)
+    }
+
+    // MARK: - Recent Meals & Copy Meal (Repeat Meal Feature)
+
+    /// Returns unique meals from the past 3 days for quick-add suggestions.
+    /// Deduplicates by normalized items content (lowercased, sorted).
+    /// Returns max 8 meals, most recent first.
+    func getRecentUniqueMeals() -> [Meal] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        var allMeals: [Meal] = []
+
+        // Collect meals from past 3 days
+        for daysAgo in 1...3 {
+            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: today) else { continue }
+            if let snapshot = self.historicalService.getSnapshot(for: date) {
+                allMeals.append(contentsOf: snapshot.meals)
+            }
+        }
+
+        // Deduplicate by normalized items (lowercased, sorted, joined)
+        var seenKeys = Set<String>()
+        var uniqueMeals: [Meal] = []
+
+        // Sort by timestamp descending (most recent first)
+        let sortedMeals = allMeals.sorted { $0.timestamp > $1.timestamp }
+
+        for meal in sortedMeals {
+            // Skip empty meals
+            guard !meal.items.isEmpty else { continue }
+
+            // Create normalized key for deduplication
+            let normalizedKey = meal.items
+                .map { $0.lowercased().trimmingCharacters(in: .whitespaces) }
+                .sorted()
+                .joined(separator: "|")
+
+            if !seenKeys.contains(normalizedKey) {
+                seenKeys.insert(normalizedKey)
+                uniqueMeals.append(meal)
+            }
+
+            // Limit to 8 meals
+            if uniqueMeals.count >= 8 {
+                break
+            }
+        }
+
+        return uniqueMeals
+    }
+
+    /// Copies a historical meal to today with a fresh ID and current timestamp.
+    /// Preserves meal type and items from the original meal.
+    /// - Parameter meal: The historical meal to copy
+    func copyMealToToday(_ meal: Meal) {
+        self.checkAndResetIfNewDay()
+
+        let newMeal = Meal(
+            id: UUID(),
+            timestamp: Date(),
+            mealType: meal.mealType,
+            items: meal.items,
+            healthScore: meal.healthScore,
+            isAIAnalyzed: false // Will be re-analyzed
+        )
+
+        withAnimation(.spring()) {
+            self.meals.append(newMeal)
+        }
+        self.saveData()
+
+        // Trigger AI analysis for the copied meal
+        Task {
+            await self.performDeepAnalysis(for: newMeal.id, items: newMeal.items)
+        }
     }
 }

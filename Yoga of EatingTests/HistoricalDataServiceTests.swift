@@ -8,7 +8,7 @@
         // MARK: - Properties
 
         var sut: HistoricalDataService!
-        var mockPersistence: MockHistoricalPersistenceService!
+        var mockPersistence: MockPersistenceService!
         var mockAuth: MockAuthService!
         var mockSync: MockCloudSyncService!
 
@@ -16,7 +16,7 @@
 
         override func setUp() {
             super.setUp()
-            self.mockPersistence = MockHistoricalPersistenceService()
+            self.mockPersistence = MockPersistenceService()
             self.mockAuth = MockAuthService()
             self.mockSync = MockCloudSyncService()
             self.sut = HistoricalDataService(
@@ -345,27 +345,168 @@
                 XCTAssertTrue(true, "Firebase sync not implemented yet - will be added in Phase 5")
             }
         }
-    }
 
-    // MARK: - Mock Persistence Service for Historical Data
+        // MARK: - Tests: Reflection Updates (Phase 2)
 
-    @MainActor
-    class MockHistoricalPersistenceService: PersistenceServiceProtocol {
-        var savedData: PersistenceService.AppData?
-        var saveCalled = false
+        func test_updateReflection_addsReflection_toExistingSnapshot() {
+            // Arrange
+            let date = Date()
+            let meals = self.createTestMeals()
+            self.sut.archiveCurrentDay(meals: meals, state: .neutral, date: date)
 
-        func load() -> PersistenceService.AppData? {
-            self.savedData
+            let reflection = DailyReflection(
+                feeling: .calm,
+                sleepQuality: .good,
+                note: "Felt balanced today"
+            )
+
+            // Act
+            self.sut.updateReflection(for: date, reflection: reflection)
+
+            // Assert
+            let snapshot = self.sut.getSnapshot(for: date)
+            XCTAssertNotNil(snapshot?.reflection)
+            XCTAssertEqual(snapshot?.reflection?.feeling, .calm)
+            XCTAssertEqual(snapshot?.reflection?.sleepQuality, .good)
+            XCTAssertEqual(snapshot?.reflection?.note, "Felt balanced today")
         }
 
-        func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {
-            self.saveCalled = true
-            self.savedData = PersistenceService.AppData(
-                meals: meals,
-                smileyState: smileyState,
-                lastResetDate: lastResetDate,
-                historicalData: historicalData
+        func test_updateReflection_createsSnapshot_ifNotExists() {
+            // Arrange
+            let date = Date()
+            let reflection = DailyReflection(
+                feeling: .great,
+                sleepQuality: .great,
+                note: "Perfect day!"
             )
+
+            // Act
+            self.sut.updateReflection(for: date, reflection: reflection)
+
+            // Assert
+            let snapshot = self.sut.getSnapshot(for: date)
+            XCTAssertNotNil(snapshot)
+            XCTAssertNotNil(snapshot?.reflection)
+            XCTAssertEqual(snapshot?.reflection?.feeling, .great)
+            XCTAssertTrue(snapshot?.meals.isEmpty ?? false, "New snapshot should have empty meals")
+        }
+
+        func test_updateReflection_replacesExisting_reflection() {
+            // Arrange
+            let date = Date()
+            let meals = self.createTestMeals()
+            self.sut.archiveCurrentDay(meals: meals, state: .neutral, date: date)
+
+            let reflection1 = DailyReflection(feeling: .ok)
+            let reflection2 = DailyReflection(feeling: .heavy, sleepQuality: .poor)
+
+            // Act
+            self.sut.updateReflection(for: date, reflection: reflection1)
+            self.sut.updateReflection(for: date, reflection: reflection2)
+
+            // Assert
+            let snapshot = self.sut.getSnapshot(for: date)
+            XCTAssertEqual(snapshot?.reflection?.feeling, .heavy)
+            XCTAssertEqual(snapshot?.reflection?.sleepQuality, .poor)
+        }
+
+        func test_updateReflection_callsPersistence_save() {
+            // Arrange
+            let date = Date()
+            self.mockPersistence.saveCalled = false // Reset
+            let reflection = DailyReflection(feeling: .calm)
+
+            // Act
+            self.sut.updateReflection(for: date, reflection: reflection)
+
+            // Assert
+            XCTAssertTrue(self.mockPersistence.saveCalled, "Should save after updating reflection")
+        }
+
+        func test_updateReflection_preservesExistingMeals() {
+            // Arrange
+            let date = Date()
+            let meals = self.createTestMeals(count: 3)
+            self.sut.archiveCurrentDay(meals: meals, state: .neutral, date: date)
+
+            let reflection = DailyReflection(feeling: .tired)
+
+            // Act
+            self.sut.updateReflection(for: date, reflection: reflection)
+
+            // Assert
+            let snapshot = self.sut.getSnapshot(for: date)
+            XCTAssertEqual(snapshot?.meals.count, 3, "Should preserve existing meals")
+            XCTAssertNotNil(snapshot?.reflection)
+        }
+
+        func test_archiveCurrentDay_preservesExistingReflection() {
+            // Arrange
+            let date = Date()
+            let meals1 = self.createTestMeals(count: 1)
+            let reflection = DailyReflection(feeling: .calm, sleepQuality: .good)
+
+            // First archive with meals, then add reflection
+            self.sut.archiveCurrentDay(meals: meals1, state: .neutral, date: date)
+            self.sut.updateReflection(for: date, reflection: reflection)
+
+            // Now archive again with updated meals
+            let meals2 = self.createTestMeals(count: 3)
+
+            // Act
+            self.sut.archiveCurrentDay(meals: meals2, state: SmileyState(scale: 1.2, mood: .serene), date: date)
+
+            // Assert
+            let snapshot = self.sut.getSnapshot(for: date)
+            XCTAssertEqual(snapshot?.meals.count, 3, "Should have updated meals")
+            XCTAssertNotNil(snapshot?.reflection, "Should preserve existing reflection")
+            XCTAssertEqual(snapshot?.reflection?.feeling, .calm)
+        }
+
+        func test_snapshot_withReflection_persistsCorrectly() throws {
+            // Arrange
+            let date = Date()
+            let meals = self.createTestMeals()
+            self.sut.archiveCurrentDay(meals: meals, state: .neutral, date: date)
+
+            let reflection = DailyReflection(
+                feeling: .great,
+                sleepQuality: .great,
+                note: "Best day ever!"
+            )
+            self.sut.updateReflection(for: date, reflection: reflection)
+
+            // Act - Verify saved data has reflection
+            guard let savedData = self.mockPersistence.savedData else {
+                XCTFail("Data should be saved")
+                return
+            }
+
+            // Assert
+            let savedSnapshot = savedData.historicalData.snapshot(for: date)
+            XCTAssertNotNil(savedSnapshot?.reflection)
+            XCTAssertEqual(savedSnapshot?.reflection?.feeling, .great)
+            XCTAssertEqual(savedSnapshot?.reflection?.note, "Best day ever!")
+        }
+
+        func test_legacySnapshot_loadsWithNilReflection() {
+            // Arrange - Simulate loading legacy data without reflection
+            let legacySnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: Date(),
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5
+                // No reflection parameter - uses default nil
+            )
+
+            // Act
+            self.sut.historicalData.addOrUpdate(snapshot: legacySnapshot)
+
+            // Assert
+            let loaded = self.sut.getSnapshot(for: legacySnapshot.date)
+            XCTAssertNil(loaded?.reflection, "Legacy snapshot should have nil reflection")
         }
     }
 #endif

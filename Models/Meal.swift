@@ -33,10 +33,11 @@ enum MealType: String, Codable, CaseIterable {
 /// Represents a single meal entry in the "Yoga of Eating".
 struct Meal: Identifiable, Codable, Equatable {
     let id: UUID
-    let timestamp: Date
+    var timestamp: Date
     var mealType: MealType
     var items: [String]
     var healthScore: Double // 0.0 (unhealthy) to 1.0 (very healthy)
+    var isAIAnalyzed: Bool // True after AI (Gemini) has analyzed the meal
 
     /// Backward compatibility: computed property that joins items
     var description: String {
@@ -54,13 +55,15 @@ struct Meal: Identifiable, Codable, Equatable {
         timestamp: Date = Date(),
         mealType: MealType? = nil,
         items: [String] = [],
-        healthScore: Double = 0.5
+        healthScore: Double = 0.5,
+        isAIAnalyzed: Bool = false
     ) {
         self.id = id
         self.timestamp = timestamp
         self.mealType = mealType ?? MealType.suggestedMealType()
         self.items = items
         self.healthScore = healthScore
+        self.isAIAnalyzed = isAIAnalyzed
     }
 
     /// Legacy initializer for backward compatibility
@@ -70,5 +73,6 @@ struct Meal: Identifiable, Codable, Equatable {
         self.mealType = MealType.suggestedMealType()
         self.items = description.isEmpty ? [] : [description]
         self.healthScore = healthScore
+        self.isAIAnalyzed = false
     }
 }
