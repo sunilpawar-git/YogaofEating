@@ -51,5 +51,99 @@
             meal.items = []
             XCTAssertEqual(meal.description, "")
         }
+
+        // MARK: - Phase 1: Timestamp Tests
+
+        func test_meal_timestamp_autoCaptured_onCreation() {
+            let beforeCreation = Date()
+            let meal = Meal()
+            let afterCreation = Date()
+
+            // Timestamp should be between before and after creation times
+            XCTAssertGreaterThanOrEqual(meal.timestamp, beforeCreation)
+            XCTAssertLessThanOrEqual(meal.timestamp, afterCreation)
+        }
+
+        func test_meal_timestamp_customValue_isPreserved() {
+            let customDate = Date(timeIntervalSince1970: 1_609_459_200) // Jan 1, 2021
+            let meal = Meal(timestamp: customDate)
+
+            XCTAssertEqual(meal.timestamp, customDate)
+        }
+
+        func test_meal_timestamp_serialization_roundtrip() throws {
+            let originalDate = Date()
+            let meal = Meal(timestamp: originalDate, mealType: .lunch, items: ["Test"])
+
+            // Encode
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(meal)
+
+            // Decode
+            let decoder = JSONDecoder()
+            let decodedMeal = try decoder.decode(Meal.self, from: data)
+
+            // Timestamp should be preserved (within 1 second tolerance for encoding precision)
+            XCTAssertLessThan(abs(decodedMeal.timestamp.timeIntervalSince(originalDate)), 1.0)
+        }
+
+        func test_meal_timestamp_differentMeals_haveDifferentTimestamps() {
+            let meal1 = Meal()
+            // Small delay to ensure different timestamps
+            Thread.sleep(forTimeInterval: 0.01) // 10ms
+            let meal2 = Meal()
+
+            // Each meal should have its own unique ID
+            XCTAssertNotEqual(meal1.id, meal2.id)
+            // Second meal should have timestamp >= first meal
+            XCTAssertGreaterThanOrEqual(meal2.timestamp, meal1.timestamp)
+        }
+
+        // MARK: - Merge Items Tests (Recent Meal Append Feature)
+
+        func test_mergeItems_emptyExisting_returnsNewItems() {
+            let existingItems: [String] = []
+            let newItems = ["Oatmeal", "Banana"]
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Oatmeal", "Banana"])
+        }
+
+        func test_mergeItems_existingItems_appendsNewItems() {
+            let existingItems = ["Coffee", "Toast"]
+            let newItems = ["Eggs", "Bacon"]
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Coffee", "Toast", "Eggs", "Bacon"])
+        }
+
+        func test_mergeItems_duplicateItems_areNotAdded() {
+            let existingItems = ["Coffee", "Toast"]
+            let newItems = ["Coffee", "Eggs"] // Coffee is duplicate
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Coffee", "Toast", "Eggs"])
+        }
+
+        func test_mergeItems_caseInsensitiveDuplicates_areNotAdded() {
+            let existingItems = ["Coffee", "Toast"]
+            let newItems = ["COFFEE", "eggs"] // COFFEE is case-insensitive duplicate
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Coffee", "Toast", "eggs"])
+        }
+
+        func test_mergeItems_whitespaceVariants_areNotAdded() {
+            let existingItems = ["Coffee", "Toast"]
+            let newItems = ["  Coffee  ", "Eggs"] // Coffee with whitespace is duplicate
+
+            let merged = MealItemsMerger.merge(existing: existingItems, new: newItems)
+
+            XCTAssertEqual(merged, ["Coffee", "Toast", "Eggs"])
+        }
     }
 #endif

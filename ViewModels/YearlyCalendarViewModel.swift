@@ -1,5 +1,25 @@
 import Combine
 import Foundation
+import SwiftUI
+
+/// Represents a cell in the heatmap grid - either an actual date or a placeholder.
+struct HeatmapCell: Identifiable, Hashable {
+    let id: String
+    let date: Date?
+
+    /// Returns true if this is a placeholder cell (no actual date).
+    var isPlaceholder: Bool { self.date == nil }
+
+    /// Creates a cell with an actual date.
+    static func day(_ date: Date) -> HeatmapCell {
+        HeatmapCell(id: "day-\(date.timeIntervalSince1970)", date: date)
+    }
+
+    /// Creates a placeholder cell for grid alignment.
+    static func placeholder(index: Int) -> HeatmapCell {
+        HeatmapCell(id: "placeholder-\(index)", date: nil)
+    }
+}
 
 /// ViewModel for the Yearly Smiley Heatmap Calendar.
 /// Manages the state and logic for fetching and displaying daily eating history.
@@ -15,7 +35,14 @@ class YearlyCalendarViewModel: ObservableObject {
 
     @Published private(set) var snapshots: [DailySmileySnapshot] = []
     @Published var selectedSnapshot: DailySmileySnapshot?
-    @Published private(set) var allDates: [Date] = []
+
+    /// All cells in the heatmap grid, including placeholder cells for alignment.
+    @Published private(set) var allCells: [HeatmapCell] = []
+
+    /// Convenience property for backward compatibility - returns only actual dates.
+    var allDates: [Date] {
+        self.allCells.compactMap(\.date)
+    }
 
     struct MonthLabel: Identifiable {
         let id = UUID()
@@ -25,6 +52,12 @@ class YearlyCalendarViewModel: ObservableObject {
 
     @Published private(set) var monthLabels: [MonthLabel] = []
 
+    // MARK: - Layout Configuration
+
+    /// Current layout configuration based on screen dimensions and orientation.
+    /// Updated when screen size changes.
+    @Published private(set) var layoutConfig: HeatmapLayoutConfiguration
+
     private let historicalService: any HistoricalDataServiceProtocol
     private var cancellables = Set<AnyCancellable>()
 
@@ -33,8 +66,36 @@ class YearlyCalendarViewModel: ObservableObject {
     init(historicalService: (any HistoricalDataServiceProtocol)? = nil) {
         self.historicalService = historicalService ?? HistoricalDataService()
         self.selectedYear = Calendar.current.component(.year, from: Date())
+        // Initialize with default screen size (iPhone portrait)
+        self.layoutConfig = HeatmapLayoutConfiguration(
+            screenWidth: 375,
+            screenHeight: 667,
+            isPortrait: true
+        )
         self.fetchSnapshots()
         self.generateYearData()
+    }
+
+    // MARK: - Layout Updates
+
+    /// Updates the layout configuration based on current screen dimensions and orientation.
+    /// Call this when the view's geometry changes.
+    /// - Parameters:
+    ///   - screenWidth: The current screen/container width.
+    ///   - screenHeight: The current screen/container height.
+    ///   - isPortrait: Whether the device is in portrait orientation.
+    func updateLayout(screenWidth: CGFloat, screenHeight: CGFloat, isPortrait: Bool) {
+        let newConfig = HeatmapLayoutConfiguration(
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            isPortrait: isPortrait
+        )
+        // Only update if there's a meaningful change to avoid unnecessary redraws
+        if newConfig.cellSize != self.layoutConfig.cellSize ||
+            newConfig.gridDirection != self.layoutConfig.gridDirection
+        {
+            self.layoutConfig = newConfig
+        }
     }
 
     // MARK: - Data Fetching
@@ -53,14 +114,28 @@ class YearlyCalendarViewModel: ObservableObject {
             return
         }
 
-        var dates: [Date] = []
+        var cells: [HeatmapCell] = []
+
+        // Calculate the weekday of Jan 1st and add placeholder cells for alignment.
+        // Swift's Calendar uses 1=Sunday, 2=Monday, ..., 7=Saturday by default.
+        // We want Monday-based: 0=Monday, 1=Tuesday, ..., 6=Sunday
+        let firstWeekday = calendar.component(.weekday, from: startOfYear)
+        // Convert to Monday-based offset: Sunday(1)->6, Monday(2)->0, Tuesday(3)->1, etc.
+        let mondayBasedOffset = (firstWeekday + 5) % 7
+
+        // Add placeholder cells before Jan 1st to align the grid
+        for i in 0..<mondayBasedOffset {
+            cells.append(.placeholder(index: i))
+        }
+
+        // Add all actual dates for the year
         var currentDate = startOfYear
         while currentDate <= endOfYear {
-            dates.append(currentDate)
+            cells.append(.day(currentDate))
             guard let nextDate = calendar.date(byAdding: .day, value: 1, to: currentDate) else { break }
             currentDate = nextDate
         }
-        self.allDates = dates
+        self.allCells = cells
 
         // Calculate month labels and their week offsets
         var labels: [MonthLabel] = []

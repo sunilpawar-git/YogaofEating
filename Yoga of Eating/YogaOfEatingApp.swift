@@ -1,13 +1,18 @@
 import FirebaseCore
 import GoogleSignIn
 import SwiftUI
+#if canImport(UIKit)
+    import UIKit
+#endif
 
 @MainActor
 @main
 struct YogaOfEatingApp: App {
-    // Connect App Delegate
-    @UIApplicationDelegateAdaptor(AppDelegate.self)
-    var delegate
+    #if canImport(UIKit)
+        // Connect App Delegate
+        @UIApplicationDelegateAdaptor(AppDelegate.self)
+        var delegate: AppDelegate
+    #endif
 
     // Shared state across the app
     @StateObject private var viewModel = MainViewModel()
@@ -46,6 +51,7 @@ struct YogaOfEatingApp: App {
         // Note: Firebase is now initialized in AppDelegate
         NotificationManager.shared.requestPermissions()
         NotificationManager.shared.scheduleMorningNudge()
+        NotificationManager.shared.scheduleDefaultMealReminders()
         print("🔔 Notifications configured")
     }
 
@@ -77,35 +83,37 @@ struct YogaOfEatingApp: App {
     }
 }
 
-/// Main App Delegate to handle lifecycle events and library initialization.
-/// Fixes "App Delegate does not conform to UIApplicationDelegate" warnings and ensures
-/// proper GIDSignIn swizzling and callback handling.
-class AppDelegate: NSObject, UIApplicationDelegate {
-    func application(
-        _: UIApplication,
-        didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil
-    ) -> Bool {
-        // Skip Firebase initialization in test/CI environments
-        let isTestEnvironment = NSClassFromString("XCTestCase") != nil
-        let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
-        
-        if !isTestEnvironment && !isCIEnvironment {
-            // Initialize Firebase only in non-test environments
-            if FirebaseApp.app() == nil {
-                FirebaseApp.configure()
-                print("🔥 Firebase initialized (AppDelegate)")
+#if canImport(UIKit)
+    /// Main App Delegate to handle lifecycle events and library initialization.
+    /// Fixes "App Delegate does not conform to UIApplicationDelegate" warnings and ensures
+    /// proper GIDSignIn swizzling and callback handling.
+    class AppDelegate: NSObject, UIApplicationDelegate {
+        func application(
+            _: UIApplication,
+            didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil
+        ) -> Bool {
+            // Skip Firebase initialization in test/CI environments
+            let isTestEnvironment = NSClassFromString("XCTestCase") != nil
+            let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
+
+            if !isTestEnvironment, !isCIEnvironment {
+                // Initialize Firebase only in non-test environments
+                if FirebaseApp.app() == nil {
+                    FirebaseApp.configure()
+                    print("🔥 Firebase initialized (AppDelegate)")
+                }
+
+                // Initialize AuthService early
+                _ = AuthService.shared
+                print("👤 AuthService initialized (AppDelegate)")
+            } else {
+                print("🧪 Skipping Firebase initialization in test/CI environment")
             }
-            
-            // Initialize AuthService early
-            _ = AuthService.shared
-            print("👤 AuthService initialized (AppDelegate)")
-        } else {
-            print("🧪 Skipping Firebase initialization in test/CI environment")
+
+            return true
         }
 
-        return true
+        // Note: URL handling for Google Sign-In is done via SwiftUI's onOpenURL modifier
+        // in WindowGroup, which uses the modern UIScene lifecycle approach.
     }
-
-    // Note: URL handling for Google Sign-In is done via SwiftUI's onOpenURL modifier
-    // in WindowGroup, which uses the modern UIScene lifecycle approach.
-}
+#endif

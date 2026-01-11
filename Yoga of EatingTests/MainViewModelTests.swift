@@ -94,6 +94,331 @@
             XCTAssertEqual(self.mockHistorical.archivedMeals?.count, initialMeals.count)
             XCTAssertEqual(self.mockHistorical.archivedDate, initialDate)
         }
+
+        func test_deleteAllData_clearsAllState() {
+            // Given: Create some meals to have data
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+            XCTAssertFalse(self.sut.meals.isEmpty)
+
+            // When: Delete all data
+            self.sut.deleteAllData()
+
+            // Then: All state should be cleared
+            XCTAssertTrue(self.sut.meals.isEmpty, "Meals should be empty after deleteAllData")
+            XCTAssertEqual(self.sut.smileyState.mood, .neutral, "Smiley should be neutral after deleteAllData")
+            XCTAssertTrue(
+                self.mockHistorical.clearAllDataCalled,
+                "Historical service should have clearAllData called"
+            )
+            XCTAssertTrue(
+                self.mockPersistence.deleteAllCalled,
+                "Persistence service should have deleteAll called"
+            )
+        }
+
+        // MARK: - Phase 1: Timestamp Tests
+
+        func test_createNewMeal_capturesCurrentTimestamp() {
+            // Given: Note the time before creation
+            let beforeCreation = Date()
+
+            // When: Create a new meal
+            self.sut.createNewMeal()
+            let afterCreation = Date()
+
+            // Then: Meal should have timestamp between before and after
+            guard let meal = self.sut.meals.first else {
+                XCTFail("No meal created")
+                return
+            }
+            XCTAssertGreaterThanOrEqual(meal.timestamp, beforeCreation)
+            XCTAssertLessThanOrEqual(meal.timestamp, afterCreation)
+        }
+
+        func test_createNewMeal_timestampIsSavedToPersistence() {
+            // When: Create a new meal
+            self.sut.createNewMeal()
+
+            // Then: Persistence should be called with meal containing valid timestamp
+            XCTAssertTrue(self.mockPersistence.saveCalled)
+            guard let savedMeal = self.mockPersistence.savedData?.meals.first else {
+                XCTFail("No meal saved to persistence")
+                return
+            }
+
+            // Timestamp should be recent (within last 5 seconds)
+            let timeDiff = abs(savedMeal.timestamp.timeIntervalSinceNow)
+            XCTAssertLessThan(timeDiff, 5.0, "Saved meal timestamp should be recent")
+        }
+
+        func test_updateMeal_doesNotChangeTimestamp() throws {
+            // Given: Create a meal and note its timestamp
+            self.sut.createNewMeal()
+            let mealId = try XCTUnwrap(self.sut.meals.first?.id)
+            let originalTimestamp = try XCTUnwrap(self.sut.meals.first?.timestamp)
+
+            // When: Update the meal
+            self.sut.updateMeal(mealId, mealType: .dinner, items: ["Updated"])
+
+            // Then: Timestamp should remain unchanged
+            let updatedTimestamp = try XCTUnwrap(self.sut.meals.first?.timestamp)
+            XCTAssertEqual(originalTimestamp, updatedTimestamp)
+        }
+
+        func test_multipleMeals_haveDistinctTimestamps() throws {
+            // When: Create multiple meals
+            self.sut.createNewMeal()
+            let meal1Timestamp = try XCTUnwrap(self.sut.meals.first?.timestamp)
+
+            // Small delay to ensure different timestamps
+            Thread.sleep(forTimeInterval: 0.01) // 10ms
+
+            self.sut.createNewMeal()
+            let meal2Timestamp = try XCTUnwrap(self.sut.meals.last?.timestamp)
+
+            // Then: Second meal should have later or equal timestamp
+            XCTAssertGreaterThanOrEqual(meal2Timestamp, meal1Timestamp)
+        }
+
+        // MARK: - Tech Debt: Sorted Meals & Fasting Period Caching Tests
+
+        func test_sortedMeals_isSortedByTimestamp() {
+            // Given: Create meals with specific timestamps (out of order)
+            let date1 = Date(timeIntervalSince1970: 1_704_110_400) // Later
+            let date2 = Date(timeIntervalSince1970: 1_704_067_200) // Earlier
+
+            self.sut.meals = [
+                Meal(timestamp: date1, mealType: .dinner, items: ["Dinner"]),
+                Meal(timestamp: date2, mealType: .breakfast, items: ["Breakfast"])
+            ]
+
+            // Then: sortedMeals should be in chronological order
+            XCTAssertEqual(self.sut.sortedMeals.count, 2)
+            XCTAssertEqual(self.sut.sortedMeals.first?.mealType, .breakfast)
+            XCTAssertEqual(self.sut.sortedMeals.last?.mealType, .dinner)
+        }
+
+        func test_fastingPeriods_isCachedCorrectly() {
+            // Given: Create two meals with known timestamps
+            let date1 = Date(timeIntervalSince1970: 1_704_067_200) // 8 AM
+            let date2 = Date(timeIntervalSince1970: 1_704_110_400) // 8 PM (12h later)
+
+            self.sut.meals = [
+                Meal(timestamp: date1, mealType: .breakfast, items: ["Coffee"]),
+                Meal(timestamp: date2, mealType: .dinner, items: ["Salad"])
+            ]
+
+            // Then: fastingPeriods should have one period
+            XCTAssertEqual(self.sut.fastingPeriods.count, 1)
+            XCTAssertEqual(self.sut.fastingPeriods.first?.durationInHours ?? 0, 12.0, accuracy: 0.1)
+        }
+
+        func test_sortedMeals_updatesWhenMealsChange() {
+            // Given: Empty meals
+            XCTAssertTrue(self.sut.sortedMeals.isEmpty)
+
+            // When: Add a meal
+            self.sut.createNewMeal()
+
+            // Then: sortedMeals should update
+            XCTAssertEqual(self.sut.sortedMeals.count, 1)
+        }
+
+        func test_fastingPeriods_emptyForSingleMeal() {
+            // When: Create single meal
+            self.sut.createNewMeal()
+
+            // Then: No fasting periods (need at least 2 meals)
+            XCTAssertTrue(self.sut.fastingPeriods.isEmpty)
+        }
+
+        // MARK: - Phase 2: Timestamp Editing Tests
+
+        func test_updateMealTimestamp_changesTimestamp() throws {
+            // Given: Create a meal
+            self.sut.createNewMeal()
+            let mealId = try XCTUnwrap(self.sut.meals.first?.id)
+            let originalTimestamp = try XCTUnwrap(self.sut.meals.first?.timestamp)
+
+            // When: Update the timestamp to a different time
+            let newTimestamp = Date(timeIntervalSince1970: 1_704_067_200) // Jan 1, 2024
+            self.sut.updateMealTimestamp(mealId, timestamp: newTimestamp)
+
+            // Then: Timestamp should be updated
+            let updatedTimestamp = try XCTUnwrap(self.sut.meals.first?.timestamp)
+            XCTAssertNotEqual(updatedTimestamp, originalTimestamp)
+            XCTAssertEqual(updatedTimestamp, newTimestamp)
+        }
+
+        func test_updateMealTimestamp_savesPersistence() throws {
+            // Given: Create a meal
+            self.sut.createNewMeal()
+            let mealId = try XCTUnwrap(self.sut.meals.first?.id)
+            self.mockPersistence.saveCalled = false // Reset after meal creation
+
+            // When: Update the timestamp
+            let newTimestamp = Date(timeIntervalSince1970: 1_704_067_200)
+            self.sut.updateMealTimestamp(mealId, timestamp: newTimestamp)
+
+            // Then: Persistence should be called
+            XCTAssertTrue(self.mockPersistence.saveCalled)
+            let savedTimestamp = self.mockPersistence.savedData?.meals.first?.timestamp
+            XCTAssertEqual(savedTimestamp, newTimestamp)
+        }
+
+        func test_updateMealTimestamp_invalidId_doesNothing() {
+            // Given: Create a meal
+            self.sut.createNewMeal()
+            let invalidId = UUID() // Random ID that doesn't exist
+
+            // When: Try to update with invalid ID
+            let newTimestamp = Date(timeIntervalSince1970: 1_704_067_200)
+            self.mockPersistence.saveCalled = false
+            self.sut.updateMealTimestamp(invalidId, timestamp: newTimestamp)
+
+            // Then: Nothing should change, no save called
+            XCTAssertFalse(self.mockPersistence.saveCalled)
+        }
+
+        func test_updateMealTimestamp_preservesOtherMealProperties() throws {
+            // Given: Create and configure a meal
+            self.sut.createNewMeal()
+            let mealId = try XCTUnwrap(self.sut.meals.first?.id)
+            self.sut.updateMeal(mealId, mealType: .dinner, items: ["Pizza", "Salad"])
+
+            let originalMealType = self.sut.meals.first?.mealType
+            let originalItems = self.sut.meals.first?.items
+            let originalHealthScore = self.sut.meals.first?.healthScore
+
+            // When: Update only the timestamp
+            let newTimestamp = Date(timeIntervalSince1970: 1_704_067_200)
+            self.sut.updateMealTimestamp(mealId, timestamp: newTimestamp)
+
+            // Then: Other properties should be unchanged
+            XCTAssertEqual(self.sut.meals.first?.mealType, originalMealType)
+            XCTAssertEqual(self.sut.meals.first?.items, originalItems)
+            XCTAssertEqual(self.sut.meals.first?.healthScore, originalHealthScore)
+        }
+
+        // MARK: - Recent Meals & Copy Meal Tests (Phase: Repeat Meal Feature)
+
+        func test_getRecentUniqueMeals_returnsLast3DaysMeals() {
+            // Given: Historical data with meals from past 3 days
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+
+            // Create snapshots for past 3 days with meals
+            for daysAgo in 1...3 {
+                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                let meal = Meal(
+                    timestamp: date,
+                    mealType: .breakfast,
+                    items: ["Oatmeal Day \(daysAgo)"],
+                    healthScore: 0.8
+                )
+                let snapshot = DailySmileySnapshot(
+                    id: UUID(),
+                    date: date,
+                    smileyState: .neutral,
+                    meals: [meal],
+                    mealCount: 1,
+                    averageHealthScore: 0.8
+                )
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+            }
+
+            // When: Get recent unique meals
+            let recentMeals = self.sut.getRecentUniqueMeals()
+
+            // Then: Should return meals from last 3 days
+            XCTAssertEqual(recentMeals.count, 3)
+        }
+
+        func test_getRecentUniqueMeals_deduplicatesByItems() {
+            // Given: Historical data with duplicate meals (same items on different days)
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+
+            // Create snapshots with same meal on 2 different days
+            for daysAgo in 1...2 {
+                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                let meal = Meal(
+                    timestamp: date,
+                    mealType: .breakfast,
+                    items: ["Oatmeal", "Banana"], // Same items
+                    healthScore: 0.8
+                )
+                let snapshot = DailySmileySnapshot(
+                    id: UUID(),
+                    date: date,
+                    smileyState: .neutral,
+                    meals: [meal],
+                    mealCount: 1,
+                    averageHealthScore: 0.8
+                )
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+            }
+
+            // When: Get recent unique meals
+            let recentMeals = self.sut.getRecentUniqueMeals()
+
+            // Then: Should deduplicate and return only 1 unique meal
+            XCTAssertEqual(recentMeals.count, 1)
+            XCTAssertEqual(recentMeals.first?.items, ["Oatmeal", "Banana"])
+        }
+
+        func test_getRecentUniqueMeals_returnsEmptyWhenNoHistory() {
+            // Given: No historical data (mockHistorical starts empty)
+
+            // When: Get recent unique meals
+            let recentMeals = self.sut.getRecentUniqueMeals()
+
+            // Then: Should return empty array
+            XCTAssertTrue(recentMeals.isEmpty)
+        }
+
+        func test_copyMealToToday_createsNewMealWithTodayTimestamp() throws {
+            // Given: A historical meal
+            let historicalDate = Date(timeIntervalSince1970: 1_704_067_200) // Jan 1, 2024
+            let historicalMeal = Meal(
+                timestamp: historicalDate,
+                mealType: .lunch,
+                items: ["Salad", "Chicken"],
+                healthScore: 0.85
+            )
+
+            // When: Copy meal to today
+            let beforeCopy = Date()
+            self.sut.copyMealToToday(historicalMeal)
+            let afterCopy = Date()
+
+            // Then: New meal should have today's timestamp
+            let copiedMeal = try XCTUnwrap(self.sut.meals.first)
+            XCTAssertGreaterThanOrEqual(copiedMeal.timestamp, beforeCopy)
+            XCTAssertLessThanOrEqual(copiedMeal.timestamp, afterCopy)
+            XCTAssertNotEqual(copiedMeal.timestamp, historicalDate)
+        }
+
+        func test_copyMealToToday_preservesItemsAndMealType() throws {
+            // Given: A historical meal with specific items and type
+            let historicalMeal = Meal(
+                timestamp: Date(timeIntervalSince1970: 1_704_067_200),
+                mealType: .dinner,
+                items: ["Pizza", "Salad", "Soda"],
+                healthScore: 0.4
+            )
+
+            // When: Copy meal to today
+            self.sut.copyMealToToday(historicalMeal)
+
+            // Then: Items and meal type should be preserved
+            let copiedMeal = try XCTUnwrap(self.sut.meals.first)
+            XCTAssertEqual(copiedMeal.items, ["Pizza", "Salad", "Soda"])
+            XCTAssertEqual(copiedMeal.mealType, .dinner)
+            // ID should be different (new meal)
+            XCTAssertNotEqual(copiedMeal.id, historicalMeal.id)
+        }
     }
 
 #endif

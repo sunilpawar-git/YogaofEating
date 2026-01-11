@@ -5,28 +5,36 @@ import SwiftUI
 struct FAQView: View {
     var body: some View {
         List {
-            Section("Mindful Eating FAQs") {
+            Section("General") {
                 FAQItem(
                     question: "What is 'Yoga of Eating'?",
-                    answer: "It's a mindful approach to nutrition focusing on how food affects your energy."
+                    answer: "It's a mindful approach to nutrition focusing on how food affects your energy and well-being, rather than just counting calories."
                 )
                 FAQItem(
                     question: "How does the Smiley work?",
-                    answer: "The Smiley reflects the cumulative health of your meals. Eat mindfully to keep it happy."
-                )
-                FAQItem(
-                    question: "What is 'Smart Smiley'?",
-                    answer: "AI heuristics that interpret your meal descriptions to adjust the Smiley state."
-                )
-                FAQItem(
-                    question: "How do I track my progress?",
-                    answer: "Your daily timeline shows every meal logged, focusing on consistency over perfection."
+                    answer: "The Smiley reflects the cumulative 'health' of your recent meals. Eat mindfully and healthily to keep it happy!"
                 )
             }
-            Section("Privacy & Data") {
+
+            Section("AI & Analysis") {
                 FAQItem(
-                    question: "Are my details private?",
-                    answer: "Yes. Your details are stored locally. Cloud sync is optional and encrypted."
+                    question: "How is my food analyzed?",
+                    answer: "We use advanced AI (powered by Google Gemini) to interpret your meal descriptions. It estimates nutritional value and 'sattvic' quality based on your input."
+                )
+                FAQItem(
+                    question: "Is the AI advice medical advice?",
+                    answer: "No. The AI provides general wellness insights based on common nutritional knowledge. Always consult a doctor for medical issues."
+                )
+            }
+
+            Section("Data & Privacy") {
+                FAQItem(
+                    question: "Where is my data stored?",
+                    answer: "By default, all your data is stored securely on your device. It never leaves your phone unless you choose to Sync."
+                )
+                FAQItem(
+                    question: "How does Sync work?",
+                    answer: "If you sign in, you can sync your data to the cloud. This allows you to restore your data if you lose your device. Passwords and sensitive data are encrypted."
                 )
             }
         }
@@ -45,14 +53,19 @@ struct FAQItem: View {
                 withAnimation(.spring()) { self.isExpanded.toggle() }
             } label: {
                 HStack {
-                    Text(self.question).font(.headline).foregroundColor(.primary)
+                    Text(self.question)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
                     Spacer()
                     Image(systemName: "chevron.right")
                         .rotationEffect(.degrees(self.isExpanded ? 90 : 0))
                         .foregroundColor(.secondary)
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+
             if self.isExpanded {
                 Text(self.answer)
                     .font(.body)

@@ -25,11 +25,12 @@ extension MainViewModel {
                     + "Mood: \(result.mood.rawValue), Sound: \(result.sound)"
             )
 
-            // Update the specific meal's health score with AI result
+            // Update the specific meal's health score and AI analyzed flag
             if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
                 meals[verifyIndex].healthScore = result.score
+                meals[verifyIndex].isAIAnalyzed = true
                 saveData()
-                print("📊 Updated meal healthScore to: \(result.score)")
+                print("📊 Updated meal healthScore to: \(result.score), isAIAnalyzed: true")
             }
 
             // Update overall Smiley state based on new CUMULATIVE health

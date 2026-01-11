@@ -16,6 +16,12 @@ protocol SensoryServiceProtocol {
 
     /// Legacy method for scale-based sounds
     func playSound(for scale: Double)
+
+    /// Plays personalized haptic feedback based on meal health score and user risk level
+    func playMealFeedbackHaptic(for healthScore: Double, riskLevel: HealthRiskLevel, userDefaults: UserDefaults?)
+
+    /// Determines appropriate feedback style based on health score and risk level
+    func getFeedbackStyle(for healthScore: Double, riskLevel: HealthRiskLevel) -> SensoryService.FeedbackStyle
 }
 
 /// Handles high-fidelity sensory feedback for a "Yoga" feel.
@@ -125,5 +131,57 @@ class SensoryService: SensoryServiceProtocol {
 
         let soundName = scale > 1.0 ? "thump" : "tink"
         self.playSound(named: soundName)
+    }
+
+    // MARK: - Personalized Haptic Feedback
+
+    /// Plays personalized haptic feedback based on meal health score and user's health risk level
+    /// - Parameters:
+    ///   - healthScore: Health score of the meal (0.0 - 1.0)
+    ///   - riskLevel: User's health risk level (low/medium/high)
+    ///   - userDefaults: Optional UserDefaults instance (for testing). Uses .standard if nil
+    func playMealFeedbackHaptic(
+        for healthScore: Double,
+        riskLevel: HealthRiskLevel,
+        userDefaults: UserDefaults? = nil
+    ) {
+        let defaults = userDefaults ?? UserDefaults.standard
+
+        // Check if haptics are enabled in user settings
+        let areHapticsEnabled = defaults.object(forKey: "haptics_enabled") as? Bool ?? true
+        guard areHapticsEnabled else { return }
+
+        // Determine appropriate feedback style
+        let style = self.getFeedbackStyle(for: healthScore, riskLevel: riskLevel)
+
+        // Play the haptic
+        self.playNudge(style: style)
+    }
+
+    /// Determines the appropriate haptic feedback style based on health score and risk level
+    /// - Parameters:
+    ///   - healthScore: Health score of the meal (0.0 - 1.0)
+    ///   - riskLevel: User's health risk level
+    /// - Returns: Feedback style (soft/light/medium/heavy)
+    func getFeedbackStyle(for healthScore: Double, riskLevel: HealthRiskLevel) -> FeedbackStyle {
+        // Healthy meals (score > 0.65): Celebrate with soft haptic
+        if healthScore > 0.65 {
+            return .soft
+        }
+
+        // Neutral meals (0.35 - 0.65): Light feedback
+        if healthScore >= 0.35 {
+            return .light
+        }
+
+        // Unhealthy meals (score < 0.35): Escalate intensity based on risk level
+        switch riskLevel {
+        case .low:
+            return .light // Gentle nudge for low-risk users
+        case .medium:
+            return .medium // Firmer nudge for medium-risk users
+        case .high:
+            return .heavy // Strong warning for high-risk users
+        }
     }
 }

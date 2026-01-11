@@ -72,4 +72,11 @@ class PersistenceService: PersistenceServiceProtocol {
         let smileyState: SmileyState
         let lastResetDate: Date
     }
+
+    /// Deletes all persisted data by removing the storage file.
+    /// This is a destructive operation and cannot be undone.
+    func deleteAll() {
+        guard let url = fileURL else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
 }

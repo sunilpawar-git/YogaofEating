@@ -46,6 +46,60 @@
             XCTAssertEqual(request?.content.title, "Meal Time")
             XCTAssertTrue(request?.content.body.contains("lunch") ?? false)
         }
+
+        // MARK: - TDD Tests for Default-ON Behavior
+
+        func test_scheduleMorningNudge_defaultsToEnabled_whenKeyMissing() {
+            // Given: Key is NOT set in UserDefaults (simulating fresh install)
+            UserDefaults.standard.removeObject(forKey: "morning_nudge_enabled")
+
+            // When
+            self.sut.scheduleMorningNudge()
+
+            // Then: Should still schedule (default ON)
+            XCTAssertEqual(self.mockCenter.requests.count, 1, "Morning nudge should be scheduled when key is missing")
+        }
+
+        func test_scheduleMealReminder_defaultsToEnabled_whenKeyMissing() {
+            // Given: Key is NOT set in UserDefaults (simulating fresh install)
+            UserDefaults.standard.removeObject(forKey: "meal_reminders_enabled")
+
+            // When
+            self.sut.scheduleMealReminder(label: "Breakfast", hour: 8, minute: 0)
+
+            // Then: Should still schedule (default ON)
+            XCTAssertEqual(self.mockCenter.requests.count, 1, "Meal reminder should be scheduled when key is missing")
+        }
+
+        func test_scheduleMorningNudge_doesNotSchedule_whenExplicitlyDisabled() {
+            // Given: Key is explicitly set to false
+            UserDefaults.standard.set(false, forKey: "morning_nudge_enabled")
+
+            // When
+            self.sut.scheduleMorningNudge()
+
+            // Then: Should NOT schedule
+            XCTAssertEqual(
+                self.mockCenter.requests.count,
+                0,
+                "Morning nudge should NOT be scheduled when explicitly disabled"
+            )
+        }
+
+        func test_scheduleMealReminder_doesNotSchedule_whenExplicitlyDisabled() {
+            // Given: Key is explicitly set to false
+            UserDefaults.standard.set(false, forKey: "meal_reminders_enabled")
+
+            // When
+            self.sut.scheduleMealReminder(label: "Dinner", hour: 19, minute: 0)
+
+            // Then: Should NOT schedule
+            XCTAssertEqual(
+                self.mockCenter.requests.count,
+                0,
+                "Meal reminder should NOT be scheduled when explicitly disabled"
+            )
+        }
     }
 
     // Mock for UNUserNotificationCenter
