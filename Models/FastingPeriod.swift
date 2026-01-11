@@ -61,3 +61,4 @@ struct FastingPeriod: Identifiable, Equatable {
         self.endTime = endTime
     }
 }
+

@@ -90,3 +90,4 @@ struct FastingBadgeView: View {
     .padding()
     .background(Color.black)
 }
+

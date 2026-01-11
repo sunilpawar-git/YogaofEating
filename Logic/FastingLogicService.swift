@@ -59,3 +59,4 @@ enum FastingLogicService {
         period.durationInHours >= self.minimumBadgeHours
     }
 }
+
