@@ -2,11 +2,15 @@ import SwiftUI
 
 /// A sheet view for entering mind check entries.
 /// Allows user to add entries with category tag + text for each.
+/// Supports both creating new entries and editing existing ones.
 struct MindCheckInputView: View {
     // MARK: - Properties
 
     /// The context (morning or evening) this input is for
     let context: MindCheckContext
+
+    /// Existing entries to edit (nil for new entry mode)
+    let existingEntries: [MindCheckEntry]?
 
     /// Callback when user saves their entries
     let onSave: ([MindCheckEntry]) -> Void
@@ -14,13 +18,32 @@ struct MindCheckInputView: View {
     /// Callback when user dismisses without saving
     let onDismiss: () -> Void
 
+    // MARK: - Initialization
+
+    init(
+        context: MindCheckContext,
+        existingEntries: [MindCheckEntry]? = nil,
+        onSave: @escaping ([MindCheckEntry]) -> Void,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.context = context
+        self.existingEntries = existingEntries
+        self.onSave = onSave
+        self.onDismiss = onDismiss
+    }
+
     // MARK: - State
 
     @State private var entries: [MindCheckEntryDraft] = []
     @State private var showCategoryPicker = false
+    @State private var isInitialized = false
     @FocusState private var focusedEntryId: UUID?
 
     // MARK: - Private
+
+    private var isEditMode: Bool {
+        self.existingEntries != nil && !(self.existingEntries?.isEmpty ?? true)
+    }
 
     private var availableCategories: [MindCheckCategory] {
         MindCheckCategory.categories(for: self.context)
@@ -29,18 +52,18 @@ struct MindCheckInputView: View {
     private var title: String {
         switch self.context {
         case .morning:
-            "Morning Mind Check"
+            Strings.MindCheck.morningTitle
         case .evening:
-            "Evening Reflection"
+            Strings.MindCheck.eveningTitle
         }
     }
 
     private var subtitle: String {
         switch self.context {
         case .morning:
-            "What's on your mind today?"
+            Strings.MindCheck.morningSubtitle
         case .evening:
-            "Reflect on your day"
+            Strings.MindCheck.eveningSubtitle
         }
     }
 
@@ -48,32 +71,48 @@ struct MindCheckInputView: View {
         self.entries.contains { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
 
+    private var entryCountText: String {
+        Strings.MindCheck.entryCount(self.entries.count)
+    }
+
+    private var canAddMore: Bool {
+        self.entries.count < 3
+    }
+
     // MARK: - Body
 
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header
+                // Header with subtitle
                 VStack(spacing: 4) {
                     Text(self.subtitle)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 .padding(.top, 8)
-                .padding(.bottom, 16)
+                .padding(.bottom, 12)
 
                 // Category pills for adding entries
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(self.availableCategories, id: \.self) { category in
-                            CategoryAddButton(category: category) {
+                            CategoryAddButton(category: category, isDisabled: !self.canAddMore) {
                                 self.addEntry(for: category)
                             }
                         }
                     }
                     .padding(.horizontal)
                 }
-                .padding(.bottom, 16)
+                .padding(.bottom, 8)
+
+                // Entry count indicator
+                if !self.entries.isEmpty {
+                    Text(self.entryCountText)
+                        .font(.caption)
+                        .foregroundColor(.secondary.opacity(0.7))
+                        .padding(.bottom, 8)
+                }
 
                 Divider()
 
@@ -81,11 +120,11 @@ struct MindCheckInputView: View {
                 if self.entries.isEmpty {
                     Spacer()
                     VStack(spacing: 12) {
-                        Text("Tap a category above to add")
+                        Text(Strings.MindCheck.tapCategoryHint)
                             .font(.callout)
                             .foregroundColor(.secondary)
 
-                        Text("Add up to 3 thoughts")
+                        Text(Strings.MindCheck.entryLimitHint)
                             .font(.caption)
                             .foregroundColor(.secondary.opacity(0.7))
                     }
@@ -109,13 +148,13 @@ struct MindCheckInputView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(Strings.MindCheck.cancelButton) {
                         self.onDismiss()
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(Strings.MindCheck.saveButton) {
                         self.saveEntries()
                     }
                     .disabled(!self.hasValidEntries)
@@ -124,8 +163,14 @@ struct MindCheckInputView: View {
             }
         }
         .onAppear {
-            // Start with first category selected if empty
-            if self.entries.isEmpty {
+            guard !self.isInitialized else { return }
+            self.isInitialized = true
+
+            // Prefill with existing entries if in edit mode
+            if let existing = self.existingEntries, !existing.isEmpty {
+                self.entries = existing.map { MindCheckEntryDraft(from: $0) }
+            } else {
+                // Start with first category selected if empty
                 self.addEntry(for: self.availableCategories.first ?? .todo)
             }
         }
@@ -170,6 +215,7 @@ struct MindCheckInputView: View {
 /// Button for adding a new entry of a specific category
 private struct CategoryAddButton: View {
     let category: MindCheckCategory
+    var isDisabled: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -182,6 +228,7 @@ private struct CategoryAddButton: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            .opacity(self.isDisabled ? 0.5 : 1.0)
             .background(
                 Capsule()
                     .fill(Color.accentColor.opacity(0.1))
@@ -192,6 +239,7 @@ private struct CategoryAddButton: View {
             )
         }
         .buttonStyle(.plain)
+        .disabled(self.isDisabled)
     }
 }
 
@@ -237,9 +285,23 @@ private struct MindCheckEntryRow: View {
 
 /// Draft model for in-progress entry editing
 struct MindCheckEntryDraft: Identifiable {
-    let id: UUID = .init()
+    let id: UUID
     var category: MindCheckCategory
     var text: String
+
+    /// Creates a new draft with a fresh UUID
+    init(category: MindCheckCategory, text: String) {
+        self.id = UUID()
+        self.category = category
+        self.text = text
+    }
+
+    /// Creates a draft from an existing MindCheckEntry for editing
+    init(from entry: MindCheckEntry) {
+        self.id = entry.id
+        self.category = entry.category
+        self.text = entry.text
+    }
 }
 
 // MARK: - Preview

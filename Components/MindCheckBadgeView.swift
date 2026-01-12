@@ -29,11 +29,11 @@ struct MindCheckBadgeView: View {
         let count = self.entries.count
         switch count {
         case 1:
-            return self.entries.first?.text ?? "1 thought"
+            return self.entries.first?.text ?? Strings.MindCheck.thoughtsLogged(1)
         case 2, 3:
-            return "\(count) thoughts logged"
+            return Strings.MindCheck.thoughtsLogged(count)
         default:
-            return "Mind check complete"
+            return Strings.MindCheck.thoughtsLogged(count)
         }
     }
 
@@ -75,7 +75,10 @@ struct MindCheckBadgeView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Mind check complete: \(self.entries.count) entries")
+        .accessibilityLabel(
+            "\(Strings.Accessibility.mindCheckComplete): \(Strings.Accessibility.mindCheckEntries(self.entries.count))"
+        )
+        .accessibilityHint("Tap to edit")
     }
 }
 

@@ -8,6 +8,7 @@ protocol InsightGenerationServiceProtocol {
     func saveInsight(_ insight: DailyInsight, for date: Date)
     func shouldGenerateInsight(for date: Date) -> Bool
     func generateInsight(for date: Date) async throws -> DailyInsight?
+    func generateWeeklyInsight() async -> WeeklyInsight?
 }
 
 /// Service for generating AI-powered insights from user data.
@@ -17,6 +18,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     // MARK: - Properties
 
     private let historicalService: any HistoricalDataServiceProtocol
+    private let patternAnalyzer: PatternAnalyzer
 
     /// Number of days to look back for insight generation
     private let lookbackDays: Int = 7
@@ -25,6 +27,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
     init(historicalService: any HistoricalDataServiceProtocol) {
         self.historicalService = historicalService
+        self.patternAnalyzer = PatternAnalyzer()
     }
 
     // MARK: - Data Gathering
@@ -149,6 +152,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     // MARK: - Insight Generation
 
     /// Generates an insight for the given date using AI.
+    /// Uses PatternAnalyzer to detect correlations and generate rich, date-referenced insights.
     /// - Parameter date: The date to generate insight for
     /// - Returns: A generated insight, or nil if conditions aren't met
     func generateInsight(for date: Date) async throws -> DailyInsight? {
@@ -157,17 +161,22 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         }
 
         let snapshots = self.gatherDataForInsight()
-        let prompt = self.createInsightPrompt(from: snapshots)
 
-        // For now, return a placeholder insight
-        // In production, this would call the Gemini API
-        let insightText = self.generateLocalInsight(from: snapshots)
+        // Use PatternAnalyzer to detect patterns
+        let patterns = self.patternAnalyzer.analyzePatterns(from: snapshots)
+
+        // Generate insight based on detected patterns or fallback to generic
+        let (insightText, insightType, references, confidence) = self.generateRichInsight(
+            from: snapshots,
+            patterns: patterns
+        )
 
         let insight = DailyInsight(
             date: date,
             insightText: insightText,
-            insightType: determineInsightType(from: snapshots),
-            confidence: 0.7
+            insightType: insightType,
+            confidence: confidence,
+            references: references
         )
 
         self.saveInsight(insight, for: date)
@@ -176,21 +185,75 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
     // MARK: - Private Helpers
 
-    private func generateLocalInsight(from snapshots: [DailySmileySnapshot]) -> String {
-        // Simple local insight generation (fallback when AI unavailable)
-        guard let yesterday = snapshots.first else {
-            return "Keep logging your meals and sleep to discover patterns in your wellbeing."
+    private func generateRichInsight(
+        from snapshots: [DailySmileySnapshot],
+        patterns: [InsightPattern]
+    ) -> (text: String, type: InsightType, references: [InsightReference], confidence: Double) {
+        // If we have high-confidence patterns, use them
+        if let topPattern = patterns.first, topPattern.confidence >= 0.6 {
+            let text = self.formatPatternAsInsight(topPattern)
+            return (text, topPattern.type, topPattern.references, topPattern.confidence)
+        }
+
+        // Otherwise, generate a generic insight based on data
+        let (text, type) = self.generateLocalInsight(from: snapshots)
+        return (text, type, [], 0.5)
+    }
+
+    private func formatPatternAsInsight(_ pattern: InsightPattern) -> String {
+        var parts: [String] = []
+
+        // Add observational part with date references
+        if !pattern.references.isEmpty {
+            let refStrings = pattern.references.prefix(2).map { ref in
+                "On \(ref.formattedDate), \(ref.description.lowercased())"
+            }
+            parts.append(contentsOf: refStrings)
+        }
+
+        // Add the pattern description
+        parts.append(pattern.description)
+
+        // Add prescriptive advice based on pattern type
+        let advice = self.getPrescriptiveAdvice(for: pattern.type)
+        if !advice.isEmpty {
+            parts.append(advice)
+        }
+
+        return parts.joined(separator: ". ") + "."
+    }
+
+    private func getPrescriptiveAdvice(for type: InsightType) -> String {
+        switch type {
+        case .foodSleep:
+            "Consider finishing dinner earlier for better sleep"
+        case .mindsetFeeling:
+            "Keep setting intentions - it seems to help your mood"
+        case .pattern:
+            "Your consistency is paying off"
+        case .encouragement:
+            "Keep up the great work"
+        }
+    }
+
+    private func generateLocalInsight(from snapshots: [DailySmileySnapshot]) -> (String, InsightType) {
+        // Simple local insight generation (fallback when no patterns detected)
+        guard snapshots.first != nil else {
+            return ("Keep logging your meals and sleep to discover patterns in your wellbeing.", .encouragement)
         }
 
         let avgScore = snapshots.map(\.averageHealthScore).reduce(0, +) / Double(snapshots.count)
+        let insightType = self.determineInsightType(from: snapshots)
 
-        if avgScore > 0.7 {
-            return "Great job! Your healthy eating choices over the past week are likely contributing to better energy and sleep. Keep it up! 💪"
+        let text = if avgScore > 0.7 {
+            "Great job! Your healthy eating choices over the past week are likely contributing to better energy and sleep. Keep it up!"
         } else if avgScore > 0.5 {
-            return "You're on the right track. Try adding more vegetables to your evening meals - they may help improve your sleep quality."
+            "You're on the right track. Try adding more vegetables to your evening meals - they may help improve your sleep quality."
         } else {
-            return "Consider lighter, more balanced meals - heavy or processed foods late in the day can affect how you feel the next morning."
+            "Consider lighter, more balanced meals - heavy or processed foods late in the day can affect how you feel the next morning."
         }
+
+        return (text, insightType)
     }
 
     private func determineInsightType(from snapshots: [DailySmileySnapshot]) -> InsightType {
@@ -208,5 +271,92 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         } else {
             return .encouragement
         }
+    }
+
+    // MARK: - Weekly Insight Generation
+
+    /// Generates a weekly insight aggregating the past 7 days of data.
+    /// - Returns: A weekly insight summary, or nil if not enough data
+    func generateWeeklyInsight() async -> WeeklyInsight? {
+        let snapshots = self.gatherDataForInsight()
+
+        // Need at least 3 days of data for a meaningful weekly summary
+        guard snapshots.count >= 3 else {
+            return nil
+        }
+
+        let calendar = Calendar.current
+        let today = Date()
+        let weekStart = calendar.date(byAdding: .day, value: -6, to: today)!
+
+        // Analyze patterns across the week
+        let patterns = self.patternAnalyzer.analyzePatterns(from: snapshots)
+
+        // Generate summary and extract wins/improvements
+        let (summaryText, wins, improvements) = self.generateWeeklySummary(
+            from: snapshots,
+            patterns: patterns
+        )
+
+        return WeeklyInsight(
+            weekStartDate: weekStart,
+            weekEndDate: today,
+            summaryText: summaryText,
+            topPatterns: Array(patterns.prefix(3)),
+            dailyInsights: [],
+            improvementAreas: improvements,
+            wins: wins
+        )
+    }
+
+    private func generateWeeklySummary(
+        from snapshots: [DailySmileySnapshot],
+        patterns: [InsightPattern]
+    ) -> (summary: String, wins: [String], improvements: [String]) {
+        var wins: [String] = []
+        var improvements: [String] = []
+
+        // Analyze the week's data
+        let avgHealthScore = snapshots.map(\.averageHealthScore).reduce(0, +) / Double(snapshots.count)
+        let daysLogged = snapshots.count
+        let hasGoodSleep = snapshots
+            .contains { $0.reflection?.sleepQuality == .great || $0.reflection?.sleepQuality == .good }
+        let hasMindCheck = snapshots.contains { $0.hasMorningMindCheck || $0.hasEveningMindCheck }
+
+        // Determine wins
+        if daysLogged >= 5 {
+            wins.append("\(daysLogged) days of consistent logging")
+        }
+        if avgHealthScore > 0.7 {
+            wins.append("Healthy eating choices")
+        }
+        if hasGoodSleep {
+            wins.append("Quality sleep achieved")
+        }
+        if hasMindCheck {
+            wins.append("Mindful reflection practice")
+        }
+
+        // Determine improvements
+        if avgHealthScore < 0.5 {
+            improvements.append("Consider healthier meal choices")
+        }
+        if let topPattern = patterns.first, topPattern.type == .foodSleep {
+            improvements.append("Watch meal timing for better sleep")
+        }
+        if !hasMindCheck {
+            improvements.append("Try morning/evening mind checks")
+        }
+
+        // Generate summary
+        let summary = if wins.count > improvements.count {
+            "Great week! You maintained healthy habits with \(daysLogged) days of logging. Keep up the momentum!"
+        } else if wins.isEmpty {
+            "This week had room for improvement. Focus on consistency and healthier choices next week."
+        } else {
+            "A balanced week with some wins and areas to work on. Your \(wins.first ?? "effort") is paying off!"
+        }
+
+        return (summary, wins, improvements)
     }
 }
