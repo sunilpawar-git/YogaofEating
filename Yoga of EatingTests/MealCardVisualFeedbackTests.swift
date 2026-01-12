@@ -11,100 +11,71 @@
             color.description == expected.description
         }
 
-        // MARK: - Border Color Tests
+        // MARK: - Uniform Border Tests (Minimal UI)
 
-        func test_borderColor_highHealthScore_returnsGreen() {
-            // Given: High health score (0.7)
-            let feedback = MealCardFeedback(score: 0.7, mealTypeColor: .blue)
+        func test_mealCardFeedback_borderWidth_alwaysReturnsStandard() {
+            // Given: Various health scores
+            let highScore = MealCardFeedback(score: 0.9, mealTypeColor: .blue)
+            let mediumScore = MealCardFeedback(score: 0.5, mealTypeColor: .green)
+            let lowScore = MealCardFeedback(score: 0.2, mealTypeColor: .orange)
 
-            // When
-            let borderColor = feedback.borderColor
-
-            // Then: Should return green for positive feedback
-            XCTAssertTrue(self.colorMatches(borderColor, .mealFeedbackPositive))
+            // When/Then: All should return standard thin border (1.0)
+            XCTAssertEqual(highScore.borderWidth, 1.0, "High score should have thin border")
+            XCTAssertEqual(mediumScore.borderWidth, 1.0, "Medium score should have thin border")
+            XCTAssertEqual(lowScore.borderWidth, 1.0, "Low score should have thin border")
         }
 
-        func test_borderColor_lowHealthScore_returnsOrange() {
-            // Given: Low health score (0.3)
-            let feedback = MealCardFeedback(score: 0.3, mealTypeColor: .blue)
+        func test_mealCardFeedback_borderColor_usesSubtleMealTypeColor() {
+            // Given: Different meal type colors
+            let blueFeedback = MealCardFeedback(score: 0.8, mealTypeColor: .blue)
+            let greenFeedback = MealCardFeedback(score: 0.5, mealTypeColor: .green)
+            let orangeFeedback = MealCardFeedback(score: 0.2, mealTypeColor: .orange)
 
-            // When
-            let borderColor = feedback.borderColor
-
-            // Then: Should return orange for warning feedback
-            XCTAssertTrue(self.colorMatches(borderColor, .mealFeedbackWarning))
+            // When/Then: Border color should be based on meal type, not score
+            // We check that the color description contains the base color
+            XCTAssertFalse(
+                self.colorMatches(blueFeedback.borderColor, .mealFeedbackPositive),
+                "Border should not be green feedback color"
+            )
+            XCTAssertFalse(
+                self.colorMatches(greenFeedback.borderColor, .mealFeedbackWarning),
+                "Border should not be orange warning color"
+            )
+            XCTAssertFalse(
+                self.colorMatches(orangeFeedback.borderColor, .mealFeedbackWarning),
+                "Border should not be orange warning color for low score"
+            )
         }
 
-        func test_borderColor_mediumHealthScore_returnsMealTypeColor() {
-            // Given: Medium health score (0.5)
-            let mealTypeColor = Color.purple
-            let feedback = MealCardFeedback(score: 0.5, mealTypeColor: mealTypeColor)
-
-            // When
-            let borderColor = feedback.borderColor
-
-            // Then: Should return meal type color for neutral
-            XCTAssertTrue(self.colorMatches(borderColor, mealTypeColor))
-        }
-
-        func test_borderColor_boundaryHigh_returnsGreen() {
-            // Given: Score at upper boundary (0.66)
-            let feedback = MealCardFeedback(score: 0.66, mealTypeColor: .blue)
-
-            // When
-            let borderColor = feedback.borderColor
-
-            // Then: Should return green
-            XCTAssertTrue(self.colorMatches(borderColor, .mealFeedbackPositive))
-        }
-
-        func test_borderColor_boundaryLow_returnsOrange() {
-            // Given: Score at lower boundary (0.34)
-            let feedback = MealCardFeedback(score: 0.34, mealTypeColor: .blue)
-
-            // When
-            let borderColor = feedback.borderColor
-
-            // Then: Should return orange
-            XCTAssertTrue(self.colorMatches(borderColor, .mealFeedbackWarning))
-        }
-
-        // MARK: - Border Width Tests
-
-        func test_borderWidth_highScore_returnsThick() {
-            // Given: High health score
-            let feedback = MealCardFeedback(score: 0.7, mealTypeColor: .blue)
+        func test_mealCardFeedback_highScore_noBorderWidthChange() {
+            // Given: Score above healthy threshold
+            let feedback = MealCardFeedback(score: 0.95, mealTypeColor: .purple)
 
             // When
             let width = feedback.borderWidth
 
-            // Then: Should return thick border (3.0)
-            XCTAssertEqual(width, 3.0)
+            // Then: Should still return standard thin border (no thick border for high scores)
+            XCTAssertEqual(width, 1.0, "High score should NOT get thick border")
         }
 
-        func test_borderWidth_lowScore_returnsStandard() {
-            // Given: Low health score
-            let feedback = MealCardFeedback(score: 0.3, mealTypeColor: .blue)
+        func test_mealCardFeedback_borderWidth_consistentAcrossAllScores() {
+            // Given: Range of scores from 0 to 1
+            let scores: [Double] = [0.0, 0.25, 0.35, 0.5, 0.65, 0.75, 1.0]
 
-            // When
-            let width = feedback.borderWidth
+            for score in scores {
+                // When
+                let feedback = MealCardFeedback(score: score, mealTypeColor: .blue)
 
-            // Then: Should return standard border (1.0)
-            XCTAssertEqual(width, 1.0)
+                // Then: All should have same thin border
+                XCTAssertEqual(
+                    feedback.borderWidth,
+                    1.0,
+                    "Score \(score) should have thin border"
+                )
+            }
         }
 
-        func test_borderWidth_mediumScore_returnsStandard() {
-            // Given: Medium health score
-            let feedback = MealCardFeedback(score: 0.5, mealTypeColor: .blue)
-
-            // When
-            let width = feedback.borderWidth
-
-            // Then: Should return standard border (1.0)
-            XCTAssertEqual(width, 1.0)
-        }
-
-        // MARK: - Tint Opacity Tests
+        // MARK: - Tint Opacity Tests (Keep subtle tints for feedback)
 
         func test_tintOpacity_highScore_returnsGreenTint() {
             // Given: High health score
@@ -137,28 +108,6 @@
 
             // Then: Should return no tint (0.0)
             XCTAssertEqual(opacity, 0.0)
-        }
-
-        func test_tintOpacity_boundaryHigh_returnsGreenTint() {
-            // Given: Score just above threshold (0.66)
-            let feedback = MealCardFeedback(score: 0.66, mealTypeColor: .blue)
-
-            // When
-            let opacity = feedback.tintOpacity
-
-            // Then: Should return green tint
-            XCTAssertEqual(opacity, 0.1)
-        }
-
-        func test_tintOpacity_boundaryLow_returnsOrangeTint() {
-            // Given: Score just below threshold (0.34)
-            let feedback = MealCardFeedback(score: 0.34, mealTypeColor: .blue)
-
-            // When
-            let opacity = feedback.tintOpacity
-
-            // Then: Should return orange tint
-            XCTAssertEqual(opacity, 0.08)
         }
 
         // MARK: - Tint Color Tests
@@ -198,50 +147,20 @@
 
         // MARK: - Edge Cases
 
-        func test_feedback_zeroScore_treatAsLow() {
-            // Given: Zero score (very unhealthy)
+        func test_feedback_zeroScore_hasThinBorder() {
+            // Given: Zero score
             let feedback = MealCardFeedback(score: 0.0, mealTypeColor: .blue)
 
-            // When
-            let borderColor = feedback.borderColor
-            let opacity = feedback.tintOpacity
-
-            // Then: Should treat as low score
-            XCTAssertTrue(self.colorMatches(borderColor, .mealFeedbackWarning))
-            XCTAssertEqual(opacity, 0.08)
+            // When/Then: Should have thin border
+            XCTAssertEqual(feedback.borderWidth, 1.0)
         }
 
-        func test_feedback_perfectScore_treatAsHigh() {
+        func test_feedback_perfectScore_hasThinBorder() {
             // Given: Perfect score (1.0)
             let feedback = MealCardFeedback(score: 1.0, mealTypeColor: .blue)
 
-            // When
-            let borderColor = feedback.borderColor
-            let width = feedback.borderWidth
-
-            // Then: Should treat as high score
-            XCTAssertTrue(self.colorMatches(borderColor, .mealFeedbackPositive))
-            XCTAssertEqual(width, 3.0)
-        }
-
-        func test_feedback_consistency_acrossProperties() {
-            // Given: High score
-            let highFeedback = MealCardFeedback(score: 0.8, mealTypeColor: .blue)
-
-            // Then: All properties should be consistent
-            XCTAssertTrue(self.colorMatches(highFeedback.borderColor, .mealFeedbackPositive))
-            XCTAssertEqual(highFeedback.borderWidth, 3.0)
-            XCTAssertEqual(highFeedback.tintOpacity, 0.1)
-            XCTAssertTrue(self.colorMatches(highFeedback.tintColor, .mealFeedbackPositive))
-
-            // Given: Low score
-            let lowFeedback = MealCardFeedback(score: 0.2, mealTypeColor: .blue)
-
-            // Then: All properties should be consistent
-            XCTAssertTrue(self.colorMatches(lowFeedback.borderColor, .mealFeedbackWarning))
-            XCTAssertEqual(lowFeedback.borderWidth, 1.0)
-            XCTAssertEqual(lowFeedback.tintOpacity, 0.08)
-            XCTAssertTrue(self.colorMatches(lowFeedback.tintColor, .mealFeedbackWarning))
+            // When/Then: Should still have thin border (no thick border)
+            XCTAssertEqual(feedback.borderWidth, 1.0)
         }
     }
 #endif

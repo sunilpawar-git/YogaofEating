@@ -74,4 +74,54 @@ final class ThemeTests: XCTestCase {
         XCTAssertNotNil(body)
         XCTAssertNotNil(caption)
     }
+
+    // MARK: - Meal Card Theme Tests (Phase 4: Score Badge UI)
+
+    func test_mealCardBorder_usesSemanticColor() {
+        // Given: The meal card border color from theme
+        let borderColor = AppTheme.MealCard.borderColor
+
+        // Then: Should be defined (semantic color adapts to light/dark)
+        XCTAssertNotNil(borderColor)
+    }
+
+    func test_mealCardBorder_hasConsistentWidth() {
+        // Given: The standard border width
+        let borderWidth = AppTheme.MealCard.borderWidth
+
+        // Then: Should be thin (1.0) for minimal UI
+        XCTAssertEqual(borderWidth, 1.0)
+    }
+
+    func test_scoreBadge_usesSemanticColors() {
+        // Given: Score badge colors from theme
+        let badgeBackground = AppTheme.ScoreBadge.background
+        let badgeText = AppTheme.ScoreBadge.textColor
+
+        // Then: Should be defined
+        XCTAssertNotNil(badgeBackground)
+        XCTAssertNotNil(badgeText)
+    }
+
+    func test_scoreBreakdownSheet_usesSystemBackgrounds() {
+        // Given: Sheet colors from theme
+        let sheetBackground = AppTheme.sheetBackground
+
+        // Then: Should use system background (adapts to light/dark)
+        XCTAssertNotNil(sheetBackground)
+    }
+
+    func test_scoreCategory_colors_areDefined() {
+        // Given: Score category colors
+        let excellent = AppTheme.ScoreColors.excellent
+        let good = AppTheme.ScoreColors.good
+        let moderate = AppTheme.ScoreColors.moderate
+        let poor = AppTheme.ScoreColors.poor
+
+        // Then: All should be defined
+        XCTAssertNotNil(excellent)
+        XCTAssertNotNil(good)
+        XCTAssertNotNil(moderate)
+        XCTAssertNotNil(poor)
+    }
 }

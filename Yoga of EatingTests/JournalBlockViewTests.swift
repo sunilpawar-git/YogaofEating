@@ -138,6 +138,70 @@
             XCTAssertEqual(persistedItems, expectedItems, "Persisted items should match expected")
             XCTAssertEqual(inMemoryItems, persistedItems, "In-memory and persisted items should be identical")
         }
+
+        /// Tests that AI analysis updating healthScore doesn't reset meal items.
+        /// This is the specific bug: AI analysis runs async and updates healthScore,
+        /// which triggers a re-render that could reset the text field.
+        func test_aiAnalysisUpdate_doesNotResetMealItems() throws {
+            // Given: A meal with items that user typed
+            self.viewModel.createNewMeal()
+            let mealId = try XCTUnwrap(self.viewModel.meals.first?.id)
+            let typedItems = ["Orange", "Americano"]
+
+            // User updates meal with their typed items
+            self.viewModel.updateMeal(mealId, mealType: .drinks, items: typedItems)
+
+            // Verify items are set
+            var meal = try XCTUnwrap(self.viewModel.meals.first)
+            XCTAssertEqual(meal.items, typedItems)
+            let initialHealthScore = meal.healthScore
+
+            // When: AI analysis completes and updates healthScore (simulating async callback)
+            // This is what happens when AI analysis returns
+            if let index = self.viewModel.meals.firstIndex(where: { $0.id == mealId }) {
+                self.viewModel.meals[index].healthScore = 0.7
+                self.viewModel.meals[index].isAIAnalyzed = true
+            }
+
+            // Then: Meal items should NOT be reset
+            meal = try XCTUnwrap(self.viewModel.meals.first)
+            XCTAssertEqual(meal.items, typedItems, "AI analysis should not reset meal items")
+            XCTAssertEqual(meal.healthScore, 0.7, "Health score should be updated")
+            XCTAssertTrue(meal.isAIAnalyzed, "AI analyzed flag should be set")
+        }
+
+        /// Tests that multiple AI analysis updates don't corrupt meal items.
+        /// Simulates the scenario where user types, AI analyzes, user types more, AI analyzes again.
+        func test_multipleAIAnalyses_preserveMealItems() throws {
+            // Given: A meal being actively edited
+            self.viewModel.createNewMeal()
+            let mealId = try XCTUnwrap(self.viewModel.meals.first?.id)
+
+            // First typing session
+            self.viewModel.updateMeal(mealId, mealType: .drinks, items: ["Orange"])
+
+            // First AI analysis completes
+            if let index = self.viewModel.meals.firstIndex(where: { $0.id == mealId }) {
+                self.viewModel.meals[index].healthScore = 0.7
+                self.viewModel.meals[index].isAIAnalyzed = true
+            }
+
+            // User continues typing
+            self.viewModel.updateMeal(mealId, mealType: .drinks, items: ["Orange", "Americano"])
+
+            // Second AI analysis completes
+            if let index = self.viewModel.meals.firstIndex(where: { $0.id == mealId }) {
+                self.viewModel.meals[index].healthScore = 0.65
+            }
+
+            // Then: Final items should be preserved
+            let meal = try XCTUnwrap(self.viewModel.meals.first)
+            XCTAssertEqual(
+                meal.items,
+                ["Orange", "Americano"],
+                "Items should be preserved through multiple AI analyses"
+            )
+        }
     }
 
 #endif

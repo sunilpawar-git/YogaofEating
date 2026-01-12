@@ -29,6 +29,10 @@ struct JournalBlockView: View {
     @FocusState private var isFocused: Bool
     @State private var debounceTask: Task<Void, Never>?
     @State private var hasInitialized: Bool = false
+    /// Track the last items we sent to prevent external sync from overwriting during typing
+    @State private var lastSentItems: [String] = []
+    /// Controls visibility of score breakdown sheet
+    @State private var showScoreBreakdown: Bool = false
 
     init(
         meal: Meal,
@@ -73,6 +77,11 @@ struct JournalBlockView: View {
             .frame(maxWidth: .infinity, alignment: .center)
             .transition(.opacity)
             .onAppear { self.initializeState() }
+            .sheet(isPresented: self.$showScoreBreakdown) {
+                ScoreBreakdownSheet(meal: self.meal) {
+                    self.showScoreBreakdown = false
+                }
+            }
     }
 
     // MARK: - Subviews
@@ -89,12 +98,14 @@ struct JournalBlockView: View {
         }
     }
 
-    /// Header row with meal type tag (left) and AI sparkle indicator (right)
+    /// Header row with meal type tag (left) and score badge (right)
     private var cardHeader: some View {
         HStack {
             self.mealTypeMenu
             Spacer()
-            AISparkleIndicator(isAnalyzed: self.meal.isAIAnalyzed)
+            MealScoreBadge(score: self.meal.healthScore) {
+                self.showScoreBreakdown = true
+            }
         }
     }
 
@@ -103,7 +114,9 @@ struct JournalBlockView: View {
             ForEach(MealType.allCases, id: \.self) { type in
                 Button {
                     self.selectedMealType = type
-                    self.onUpdate(type, self.parsedItems)
+                    let items = self.parsedItems
+                    self.lastSentItems = items
+                    self.onUpdate(type, items)
                     SensoryService.shared.playNudge(style: .light)
                 } label: {
                     Label(type.displayName, systemImage: type.iconName)
@@ -141,11 +154,15 @@ struct JournalBlockView: View {
             }
             .onChange(of: self.meal.items) { _, newItems in
                 // Sync rawText with external meal.items updates
-                // Only sync when NOT focused to avoid overwriting user's active typing
-                if !self.isFocused {
+                // Only sync if:
+                // 1. NOT focused (user not actively typing)
+                // 2. The new items are different from what we last sent
+                //    (prevents AI analysis updates from resetting our text)
+                if !self.isFocused, newItems != self.lastSentItems {
                     let externalText = newItems.joined(separator: "\n")
                     if self.rawText != externalText {
                         self.rawText = externalText
+                        self.lastSentItems = newItems
                     }
                 }
             }
@@ -214,6 +231,7 @@ struct JournalBlockView: View {
         }
 
         self.rawText = mergedItems.joined(separator: "\n")
+        self.lastSentItems = mergedItems
         self.onUpdate(self.selectedMealType, mergedItems)
         self.showRecentMealsSheet = false
         SensoryService.shared.playNudge(style: .medium)
@@ -252,6 +270,7 @@ struct JournalBlockView: View {
         if !self.hasInitialized {
             self.rawText = self.meal.items.joined(separator: "\n")
             self.selectedMealType = self.meal.mealType
+            self.lastSentItems = self.meal.items
             self.hasInitialized = true
         }
     }
@@ -262,6 +281,7 @@ struct JournalBlockView: View {
             try? await Task.sleep(nanoseconds: 1_000_000_000)
             guard !Task.isCancelled else { return }
             let items = self.parseItems(from: newValue)
+            self.lastSentItems = items
             self.onUpdate(self.selectedMealType, items)
         }
     }
@@ -270,6 +290,7 @@ struct JournalBlockView: View {
         if !focused {
             self.debounceTask?.cancel()
             let items = self.parseItems(from: self.rawText)
+            self.lastSentItems = items
             self.onUpdate(self.selectedMealType, items)
         }
     }
@@ -277,6 +298,7 @@ struct JournalBlockView: View {
     private func handleSubmit() {
         self.debounceTask?.cancel()
         let items = self.parseItems(from: self.rawText)
+        self.lastSentItems = items
         self.onUpdate(self.selectedMealType, items)
     }
 

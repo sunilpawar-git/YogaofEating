@@ -86,18 +86,22 @@ class MainViewModel: ObservableObject {
     let persistenceService: PersistenceServiceProtocol
     let historicalService: any HistoricalDataServiceProtocol
     let healthProfileService: HealthProfileServiceProtocol
+    let insightService: InsightGenerationServiceProtocol
 
     init(
         healthProfileService: HealthProfileServiceProtocol? = nil,
         logicService: MealLogicProvider? = nil,
         persistenceService: PersistenceServiceProtocol? = nil,
-        historicalService: (any HistoricalDataServiceProtocol)? = nil
+        historicalService: (any HistoricalDataServiceProtocol)? = nil,
+        insightService: InsightGenerationServiceProtocol? = nil
     ) {
         let healthService = healthProfileService ?? HealthProfileService()
+        let historicalSvc = historicalService ?? HistoricalDataService()
         self.healthProfileService = healthService
         self.logicService = logicService ?? AILogicService()
         self.persistenceService = persistenceService ?? PersistenceService.shared
-        self.historicalService = historicalService ?? HistoricalDataService()
+        self.historicalService = historicalSvc
+        self.insightService = insightService ?? InsightGenerationService(historicalService: historicalSvc)
 
         // Skip data loading and monitoring if unit testing to avoid interference
         if NSClassFromString("XCTestCase") == nil {
@@ -309,7 +313,10 @@ class MainViewModel: ObservableObject {
             self.meals = []
         }
 
-        // 3. Save both current and historical data
+        // 3. Clear current insight (new day, new insight)
+        self.currentInsight = nil
+
+        // 4. Save both current and historical data
         self.saveData()
     }
 
@@ -443,6 +450,7 @@ class MainViewModel: ObservableObject {
     }
 
     /// Saves sleep quality for today, merging with existing reflection if present.
+    /// Also triggers insight generation if conditions are met.
     /// - Parameters:
     ///   - quality: The sleep quality to save
     ///   - date: When it was logged (defaults to now)
@@ -455,6 +463,33 @@ class MainViewModel: ObservableObject {
             self.historicalService.updateReflection(for: date, reflection: merged)
         } else {
             self.historicalService.updateReflection(for: date, reflection: newReflection)
+        }
+
+        // Trigger insight generation after sleep is logged (Phase 2-4)
+        self.triggerInsightGenerationIfNeeded(for: date)
+    }
+
+    /// Triggers insight generation if conditions are met.
+    /// Conditions: No insight exists for today AND sleep quality is logged AND historical data exists.
+    /// - Parameter date: The date to generate insight for
+    private func triggerInsightGenerationIfNeeded(for date: Date) {
+        // Phase 4: Don't regenerate if insight already exists for today
+        if let existingInsight = self.currentInsight,
+           Calendar.current.isDate(existingInsight.date, inSameDayAs: date)
+        {
+            return
+        }
+
+        // Trigger async insight generation
+        Task {
+            do {
+                if let insight = try await self.insightService.generateInsight(for: date) {
+                    // Phase 3: Assign to currentInsight
+                    self.currentInsight = insight
+                }
+            } catch {
+                print("⚠️ Insight generation failed: \(error.localizedDescription)")
+            }
         }
     }
 
