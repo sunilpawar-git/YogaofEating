@@ -177,12 +177,12 @@
         }
 
         func test_navigationArrows_existInHeader() throws {
-            // Navigation arrows should be visible
+            // Navigation arrow (previous day only) should be visible
             let previousDayButton = self.app.buttons["previous-day-button"]
-            let nextDayButton = self.app.buttons["next-day-button"]
-
             XCTAssertTrue(previousDayButton.waitForExistence(timeout: 5))
-            XCTAssertTrue(nextDayButton.exists)
+
+            // Note: Next day button was removed from UI design
+            // Users navigate backward only, with "Back to Today" button appearing on past days
         }
 
         func test_previousDayButton_navigatesToYesterday() throws {
@@ -203,12 +203,14 @@
         }
 
         func test_nextDayButton_disabledOnToday() throws {
-            // The next day button should be disabled when viewing today
-            let nextDayButton = self.app.buttons["next-day-button"]
-            XCTAssertTrue(nextDayButton.waitForExistence(timeout: 5))
+            // When viewing today, the "Back to Today" button should NOT exist
+            let todayButton = self.app.buttons["today-button"]
 
-            // On today, next day button should be disabled
-            XCTAssertFalse(nextDayButton.isEnabled, "Next day button should be disabled on today")
+            // Wait a moment for UI to stabilize
+            sleep(1)
+
+            // On today, the "Back to Today" button should not be visible
+            XCTAssertFalse(todayButton.exists, "Back to Today button should not exist when viewing today")
         }
 
         func test_nextDayButton_enabledAfterNavigatingBack() throws {
@@ -218,9 +220,9 @@
             previousDayButton.tap()
             sleep(1)
 
-            // Assert: Next day button should now be enabled
-            let nextDayButton = self.app.buttons["next-day-button"]
-            XCTAssertTrue(nextDayButton.isEnabled, "Next day button should be enabled when viewing past day")
+            // Assert: "Back to Today" button should now appear
+            let todayButton = self.app.buttons["today-button"]
+            XCTAssertTrue(todayButton.exists, "Back to Today button should appear when viewing past day")
         }
 
         func test_swipeLeftToNavigateToPreviousDay() throws {

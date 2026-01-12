@@ -40,6 +40,26 @@ struct DayTimelineView: View {
     /// Whether to show the End-of-Day pill (only for today when feeling not logged)
     var showEndOfDayPill: Bool = false
 
+    // MARK: - Mind Check Properties
+
+    /// Whether to show the morning mind check pill (after sleep quality)
+    var showMorningMindCheckPill: Bool = false
+
+    /// Whether to show the evening mind check pill (before End-of-Day)
+    var showEveningMindCheckPill: Bool = false
+
+    /// Today's morning mind check entries (for displaying badge)
+    var todaysMorningMindCheck: [MindCheckEntry]?
+
+    /// Today's evening mind check entries (for displaying badge)
+    var todaysEveningMindCheck: [MindCheckEntry]?
+
+    /// Callback when user taps the morning mind check pill
+    var onMorningMindCheckTap: (() -> Void)?
+
+    /// Callback when user taps the evening mind check pill
+    var onEveningMindCheckTap: (() -> Void)?
+
     /// Callback when a meal is updated
     var onUpdateMeal: ((UUID, MealType, [String]) -> Void)?
 
@@ -66,7 +86,20 @@ struct DayTimelineView: View {
             // Sleep badge at TOP of timeline (for today only)
             if self.isToday, let sleepQuality = self.todaysSleepQuality {
                 self.sleepBadge(sleepQuality)
+                    .padding(.bottom, 8)
+            }
+
+            // Morning mind check: pill or badge after sleep quality
+            if self.isToday {
+                if let morningEntries = self.todaysMorningMindCheck, !morningEntries.isEmpty {
+                    MindCheckBadgeView(entries: morningEntries, context: .morning)
+                        .padding(.bottom, 16)
+                } else if self.showMorningMindCheckPill {
+                    MindCheckPillView(context: .morning) {
+                        self.onMorningMindCheckTap?()
+                    }
                     .padding(.bottom, 16)
+                }
             }
 
             let sortedMeals = self.meals.sorted { $0.timestamp < $1.timestamp }
@@ -86,15 +119,28 @@ struct DayTimelineView: View {
                 }
             }
 
+            // Evening mind check: pill or badge before feeling
+            if self.isToday {
+                if let eveningEntries = self.todaysEveningMindCheck, !eveningEntries.isEmpty {
+                    MindCheckBadgeView(entries: eveningEntries, context: .evening)
+                        .padding(.top, 16)
+                } else if self.showEveningMindCheckPill {
+                    MindCheckPillView(context: .evening) {
+                        self.onEveningMindCheckTap?()
+                    }
+                    .padding(.top, 16)
+                }
+            }
+
             // Feeling badge above smiley (for today only, when logged)
             // OR End-of-Day pill when feeling not yet logged
             if self.isToday {
                 if let feeling = self.todaysFeeling {
                     self.feelingBadge(feeling)
-                        .padding(.top, 16)
+                        .padding(.top, 8)
                 } else if self.showEndOfDayPill {
                     self.endOfDayPill
-                        .padding(.top, 16)
+                        .padding(.top, 8)
                 }
             }
 

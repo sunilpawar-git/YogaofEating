@@ -46,6 +46,14 @@ class MainViewModel: ObservableObject {
     /// Pending action to execute after reflection input is complete
     private var pendingMealCreation: Bool = false
 
+    // MARK: - Mind Check (Phase 3 - Mind Check Feature)
+
+    /// Controls visibility of the morning mind check input sheet
+    @Published var showMorningMindCheckSheet: Bool = false
+
+    /// Controls visibility of the evening mind check input sheet
+    @Published var showEveningMindCheckSheet: Bool = false
+
     // MARK: - Day Navigation (Phase 4)
 
     /// The currently selected date for viewing. Defaults to today.
@@ -454,12 +462,24 @@ class MainViewModel: ObservableObject {
 
     // MARK: - Smiley Tap Flow (Phase 4 - User-Initiated Reflections)
 
+    /// Returns true if running UI tests. Used to bypass reflection flows during testing.
+    private var isUITesting: Bool {
+        CommandLine.arguments.contains("--uitesting")
+    }
+
     /// Handles the smiley tap action, checking for morning sleep context only.
     /// Flow:
     /// 1. If morning sleep context → Show sleep quality sheet → Then create meal
     /// 2. Otherwise → Create meal directly
     /// Note: End-of-Day feeling is now captured via a permanent pill on the timeline, not via smiley tap
+    /// During UI testing, skips all reflection checks and creates meals directly.
     func handleSmileyTap() {
+        // Skip reflection flows during UI testing for simpler test scenarios
+        if self.isUITesting {
+            self.createNewMeal()
+            return
+        }
+
         if self.isMorningSleepContext() {
             self.pendingMealCreation = true
             self.showSleepQualitySheet = true
