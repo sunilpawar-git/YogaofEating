@@ -25,9 +25,9 @@ struct MindCheckPillView: View {
     private var labelText: String {
         switch self.context {
         case .morning:
-            "What's on your mind?"
+            Strings.MindCheck.morningPillText
         case .evening:
-            "How was your day?"
+            Strings.MindCheck.eveningPillText
         }
     }
 

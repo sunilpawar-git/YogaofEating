@@ -64,6 +64,15 @@ struct DailyInsight: Codable, Identifiable, Equatable {
     /// Whether the user has seen/dismissed this insight
     var isViewed: Bool
 
+    /// References to specific data points that support this insight
+    let references: [InsightReference]
+
+    // MARK: - CodingKeys
+
+    enum CodingKeys: String, CodingKey {
+        case id, date, insightText, insightType, confidence, isViewed, references
+    }
+
     // MARK: - Initialization
 
     /// Creates a new daily insight with all properties.
@@ -74,13 +83,15 @@ struct DailyInsight: Codable, Identifiable, Equatable {
     ///   - insightType: The category of insight
     ///   - confidence: AI confidence level (0.0-1.0)
     ///   - isViewed: Whether user has seen it (defaults to false)
+    ///   - references: Data point references (defaults to empty)
     init(
         id: UUID = UUID(),
         date: Date,
         insightText: String,
         insightType: InsightType,
         confidence: Double,
-        isViewed: Bool = false
+        isViewed: Bool = false,
+        references: [InsightReference] = []
     ) {
         self.id = id
         self.date = date
@@ -88,6 +99,20 @@ struct DailyInsight: Codable, Identifiable, Equatable {
         self.insightType = insightType
         self.confidence = confidence
         self.isViewed = isViewed
+        self.references = references
+    }
+
+    // MARK: - Codable
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.date = try container.decode(Date.self, forKey: .date)
+        self.insightText = try container.decode(String.self, forKey: .insightText)
+        self.insightType = try container.decode(InsightType.self, forKey: .insightType)
+        self.confidence = try container.decode(Double.self, forKey: .confidence)
+        self.isViewed = try container.decode(Bool.self, forKey: .isViewed)
+        self.references = try container.decodeIfPresent([InsightReference].self, forKey: .references) ?? []
     }
 
     // MARK: - Methods
@@ -95,5 +120,10 @@ struct DailyInsight: Codable, Identifiable, Equatable {
     /// Marks this insight as viewed by the user.
     mutating func markAsViewed() {
         self.isViewed = true
+    }
+
+    /// Returns true if this insight has specific data references
+    var hasReferences: Bool {
+        !self.references.isEmpty
     }
 }

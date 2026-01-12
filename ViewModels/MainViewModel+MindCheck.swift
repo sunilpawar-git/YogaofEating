@@ -67,11 +67,13 @@ extension MainViewModel {
     func completeMorningMindCheckInput(_ entries: [MindCheckEntry]) {
         self.saveMorningMindCheck(entries)
         self.showMorningMindCheckSheet = false
+        self.editingMorningEntries = nil
     }
 
     /// Handles dismissal of morning mind check input without saving.
     func dismissMorningMindCheckInput() {
         self.showMorningMindCheckSheet = false
+        self.editingMorningEntries = nil
     }
 
     /// Handles completion of evening mind check input.
@@ -79,10 +81,43 @@ extension MainViewModel {
     func completeEveningMindCheckInput(_ entries: [MindCheckEntry]) {
         self.saveEveningMindCheck(entries)
         self.showEveningMindCheckSheet = false
+        self.editingEveningEntries = nil
+    }
+
+    /// Handles completion of evening review (with morning todo updates).
+    /// - Parameters:
+    ///   - updatedMorningEntries: Morning entries with accomplished status updated
+    ///   - eveningEntries: New evening entries (gratitude, let go)
+    func completeEveningReview(updatedMorningEntries: [MindCheckEntry], eveningEntries: [MindCheckEntry]) {
+        // Update morning entries with accomplished status
+        self.saveMorningMindCheck(updatedMorningEntries)
+
+        // Save evening entries
+        self.saveEveningMindCheck(eveningEntries)
+
+        self.showEveningMindCheckSheet = false
+        self.editingEveningEntries = nil
     }
 
     /// Handles dismissal of evening mind check input without saving.
     func dismissEveningMindCheckInput() {
         self.showEveningMindCheckSheet = false
+        self.editingEveningEntries = nil
+    }
+
+    // MARK: - Edit Methods
+
+    /// Opens the morning mind check sheet in edit mode with existing entries.
+    /// - Parameter entries: The existing entries to edit
+    func editMorningMindCheck(_ entries: [MindCheckEntry]) {
+        self.editingMorningEntries = entries
+        self.showMorningMindCheckSheet = true
+    }
+
+    /// Opens the evening mind check sheet in edit mode with existing entries.
+    /// - Parameter entries: The existing entries to edit
+    func editEveningMindCheck(_ entries: [MindCheckEntry]) {
+        self.editingEveningEntries = entries
+        self.showEveningMindCheckSheet = true
     }
 }

@@ -105,6 +105,16 @@ struct MindCheckEntry: Codable, Identifiable, Equatable {
     /// The context in which this entry was created
     let context: MindCheckContext
 
+    /// Whether this todo was accomplished (only applicable for .todo category)
+    /// nil = not yet reviewed, true = done, false = not done
+    var isAccomplished: Bool?
+
+    // MARK: - CodingKeys
+
+    enum CodingKeys: String, CodingKey {
+        case id, category, text, timestamp, context, isAccomplished
+    }
+
     // MARK: - Initialization
 
     /// Creates a new mind check entry with all properties.
@@ -114,17 +124,51 @@ struct MindCheckEntry: Codable, Identifiable, Equatable {
     ///   - text: The text content
     ///   - timestamp: When created (defaults to now)
     ///   - context: Morning or evening context
+    ///   - isAccomplished: Whether this todo was accomplished (optional)
     init(
         id: UUID = UUID(),
         category: MindCheckCategory,
         text: String,
         timestamp: Date = Date(),
-        context: MindCheckContext
+        context: MindCheckContext,
+        isAccomplished: Bool? = nil
     ) {
         self.id = id
         self.category = category
         self.text = text
         self.timestamp = timestamp
         self.context = context
+        self.isAccomplished = isAccomplished
+    }
+
+    // MARK: - Codable
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.category = try container.decode(MindCheckCategory.self, forKey: .category)
+        self.text = try container.decode(String.self, forKey: .text)
+        self.timestamp = try container.decode(Date.self, forKey: .timestamp)
+        self.context = try container.decode(MindCheckContext.self, forKey: .context)
+        self.isAccomplished = try container.decodeIfPresent(Bool.self, forKey: .isAccomplished)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        try container.encode(self.category, forKey: .category)
+        try container.encode(self.text, forKey: .text)
+        try container.encode(self.timestamp, forKey: .timestamp)
+        try container.encode(self.context, forKey: .context)
+        try container.encodeIfPresent(self.isAccomplished, forKey: .isAccomplished)
+    }
+
+    // MARK: - Helpers
+
+    /// Returns a copy of this entry with the accomplished status updated
+    func withAccomplished(_ accomplished: Bool) -> MindCheckEntry {
+        var copy = self
+        copy.isAccomplished = accomplished
+        return copy
     }
 }

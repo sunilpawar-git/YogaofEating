@@ -132,5 +132,39 @@
             // Assert
             XCTAssertEqual(entries.count, 3)
         }
+
+        // MARK: - Tests: Input View Titles (Phase 2)
+
+        func test_morningInput_showsCorrectTitle() {
+            // Morning title should be "Morning Intentions"
+            XCTAssertEqual(Strings.MindCheck.morningTitle, "Morning Intentions")
+        }
+
+        func test_morningInput_showsCorrectSubtitle() {
+            // Morning subtitle should guide user about top 3 things
+            XCTAssertEqual(Strings.MindCheck.morningSubtitle, "What are the top 3 things on your mind?")
+        }
+
+        func test_eveningInput_showsCorrectTitle() {
+            // Evening title should be "Evening Review"
+            XCTAssertEqual(Strings.MindCheck.eveningTitle, "Evening Review")
+        }
+
+        func test_eveningInput_showsCorrectSubtitle() {
+            // Evening subtitle should ask about the day
+            XCTAssertEqual(Strings.MindCheck.eveningSubtitle, "How did your day go?")
+        }
+
+        func test_entryLimitGuidance_showsCorrectText() {
+            // Entry limit hint should say "Up to 3 thoughts"
+            XCTAssertEqual(Strings.MindCheck.entryLimitHint, "Up to 3 thoughts")
+        }
+
+        func test_entryCount_formatsCorrectly() {
+            // Entry count should format as "1 of 3", "2 of 3", etc.
+            XCTAssertEqual(Strings.MindCheck.entryCount(1), "1 of 3")
+            XCTAssertEqual(Strings.MindCheck.entryCount(2), "2 of 3")
+            XCTAssertEqual(Strings.MindCheck.entryCount(3), "3 of 3")
+        }
     }
 #endif

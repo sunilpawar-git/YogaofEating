@@ -54,6 +54,20 @@ class MainViewModel: ObservableObject {
     /// Controls visibility of the evening mind check input sheet
     @Published var showEveningMindCheckSheet: Bool = false
 
+    /// Entries being edited (nil when creating new entries)
+    @Published var editingMorningEntries: [MindCheckEntry]?
+
+    /// Entries being edited for evening (nil when creating new entries)
+    @Published var editingEveningEntries: [MindCheckEntry]?
+
+    // MARK: - Insights (Phase 6 - Peekaboo Star)
+
+    /// Controls visibility of the insight bottom sheet
+    @Published var showInsightSheet: Bool = false
+
+    /// The current insight to display (generated when sleep is logged)
+    @Published var currentInsight: DailyInsight?
+
     // MARK: - Day Navigation (Phase 4)
 
     /// The currently selected date for viewing. Defaults to today.

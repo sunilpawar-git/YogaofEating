@@ -92,8 +92,11 @@ struct DayTimelineView: View {
             // Morning mind check: pill or badge after sleep quality
             if self.isToday {
                 if let morningEntries = self.todaysMorningMindCheck, !morningEntries.isEmpty {
-                    MindCheckBadgeView(entries: morningEntries, context: .morning)
-                        .padding(.bottom, 16)
+                    MindCheckBadgeView(entries: morningEntries, context: .morning) {
+                        // Tap to edit existing entries
+                        self.onMorningMindCheckTap?()
+                    }
+                    .padding(.bottom, 16)
                 } else if self.showMorningMindCheckPill {
                     MindCheckPillView(context: .morning) {
                         self.onMorningMindCheckTap?()
@@ -122,8 +125,11 @@ struct DayTimelineView: View {
             // Evening mind check: pill or badge before feeling
             if self.isToday {
                 if let eveningEntries = self.todaysEveningMindCheck, !eveningEntries.isEmpty {
-                    MindCheckBadgeView(entries: eveningEntries, context: .evening)
-                        .padding(.top, 16)
+                    MindCheckBadgeView(entries: eveningEntries, context: .evening) {
+                        // Tap to edit existing entries
+                        self.onEveningMindCheckTap?()
+                    }
+                    .padding(.top, 16)
                 } else if self.showEveningMindCheckPill {
                     MindCheckPillView(context: .evening) {
                         self.onEveningMindCheckTap?()
