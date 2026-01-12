@@ -127,6 +127,45 @@ enum AppTheme {
         static let medium = Color.black.opacity(0.1)
     }
 
+    // MARK: - Meal Card Theme (Score Badge UI)
+
+    enum MealCard {
+        /// Subtle border color for meal cards (adapts to light/dark)
+        static let borderColor = Color(.systemGray4)
+
+        /// Standard thin border width for minimal UI
+        static let borderWidth: CGFloat = 1.0
+
+        /// Card background with subtle tint
+        static let background = Color(.secondarySystemBackground)
+    }
+
+    // MARK: - Score Badge Theme
+
+    enum ScoreBadge {
+        /// Background color for the score badge
+        static let background = Color(.secondarySystemBackground)
+
+        /// Text color for the score badge
+        static let textColor = Color.secondary
+    }
+
+    // MARK: - Score Category Colors
+
+    enum ScoreColors {
+        /// Excellent score color (green)
+        static let excellent = Color.green
+
+        /// Good score color (teal)
+        static let good = Color.teal
+
+        /// Moderate score color (orange)
+        static let moderate = Color.orange
+
+        /// Poor score color (red)
+        static let poor = Color.red
+    }
+
     // MARK: - Animation
 
     enum Animation {

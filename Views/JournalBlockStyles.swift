@@ -53,9 +53,11 @@ struct MealCardBackground: View {
     }
 }
 
-// MARK: - AI Sparkle Indicator
+// MARK: - AI Sparkle Indicator (Deprecated)
 
 /// Sparkle indicator shown when AI analysis completes
+/// - Note: Replaced by `MealScoreBadge` which shows the actual score percentage
+@available(*, deprecated, message: "Use MealScoreBadge instead for displaying meal health scores")
 struct AISparkleIndicator: View {
     let isAnalyzed: Bool
 

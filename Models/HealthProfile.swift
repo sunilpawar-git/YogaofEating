@@ -96,10 +96,7 @@ struct MealCardFeedback {
     }
 
     private enum BorderWidth {
-        /// Thick border for positive feedback
-        static let thick: CGFloat = 3.0
-
-        /// Standard border for neutral/warning
+        /// Standard thin border for all meals (uniform, minimal UI)
         static let standard: CGFloat = 1.0
     }
 
@@ -121,26 +118,20 @@ struct MealCardFeedback {
 
     // MARK: - Computed Properties
 
-    /// Border color based on health score
-    /// - Returns: Green for healthy, orange for unhealthy, meal type color for neutral
+    /// Border color - uses subtle meal type color for minimal, uniform appearance
+    /// - Returns: Meal type color with reduced opacity for all scores
     var borderColor: Color {
-        if self.score > Threshold.healthy {
-            .mealFeedbackPositive
-        } else if self.score < Threshold.unhealthy {
-            .mealFeedbackWarning
-        } else {
-            self.mealTypeColor
-        }
+        self.mealTypeColor.opacity(0.3)
     }
 
-    /// Border width based on health score
-    /// - Returns: Thick border (3.0) for healthy meals, standard (1.0) otherwise
+    /// Border width - always thin for minimal, uniform appearance
+    /// - Returns: Standard thin border from theme
     var borderWidth: CGFloat {
-        self.score > Threshold.healthy ? BorderWidth.thick : BorderWidth.standard
+        AppTheme.MealCard.borderWidth
     }
 
     /// Tint opacity for background overlay
-    /// - Returns: Opacity value for subtle color tint
+    /// - Returns: Opacity value for subtle color tint based on score
     var tintOpacity: Double {
         if self.score > Threshold.healthy {
             TintOpacity.positive
