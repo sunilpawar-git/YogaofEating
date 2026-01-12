@@ -174,6 +174,48 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
             self.historicalData.addOrUpdate(snapshot: newSnapshot)
         }
     }
+
+    func updateMorningMindCheck(for date: Date, entries: [MindCheckEntry]) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withMindChecks(morningMindCheck: entries)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                morningMindCheck: entries
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+    }
+
+    func updateEveningMindCheck(for date: Date, entries: [MindCheckEntry]) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withMindChecks(eveningMindCheck: entries)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                eveningMindCheck: entries
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+    }
 }
 
 @MainActor
@@ -218,5 +260,43 @@ class MockMealLogicService: MealLogicProvider {
 
     func calculateNextState(from _: SmileyState, healthScore _: Double) -> SmileyState {
         self.nextState
+    }
+}
+
+class MockHealthProfileService: HealthProfileServiceProtocol {
+    var mockProfile: UserHealthProfile?
+
+    func calculateBMI(height _: Double, weight _: Double, unitSystem _: UnitSystem) -> Double {
+        self.mockProfile?.bmi ?? 0.0
+    }
+
+    func getBMICategory(bmi _: Double) -> BMICategory {
+        self.mockProfile?.bmiCategory ?? .normal
+    }
+
+    func calculateBMR(
+        weight _: Double,
+        height _: Double,
+        age _: Int,
+        gender _: Gender,
+        unitSystem _: UnitSystem
+    ) -> Double {
+        self.mockProfile?.bmr ?? 0.0
+    }
+
+    func calculateTDEE(bmr _: Double, activityLevel _: Double) -> Double {
+        self.mockProfile?.tdee ?? 0.0
+    }
+
+    func getSensitivityMultiplier(bmi _: Double, age _: Int) -> Double {
+        self.mockProfile?.sensitivityMultiplier ?? 1.0
+    }
+
+    func getHealthRiskLevel(bmi _: Double, age _: Int) -> HealthRiskLevel {
+        self.mockProfile?.riskLevel ?? .low
+    }
+
+    func getUserHealthProfile() -> UserHealthProfile? {
+        self.mockProfile
     }
 }

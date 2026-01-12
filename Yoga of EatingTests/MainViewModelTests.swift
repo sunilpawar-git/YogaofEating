@@ -419,6 +419,112 @@
             // ID should be different (new meal)
             XCTAssertNotEqual(copiedMeal.id, historicalMeal.id)
         }
+
+        // MARK: - Tests: Mind Check (Phase 3)
+
+        func test_showMorningMindCheckPill_trueAfterSleepLogged() {
+            // Arrange: Log sleep quality
+            self.sut.saveSleepQuality(.good)
+
+            // Assert: Morning mind check pill should show
+            XCTAssertTrue(self.sut.showMorningMindCheckPill)
+        }
+
+        func test_showMorningMindCheckPill_falseBeforeSleepLogged() {
+            // Assert: No sleep logged, pill should not show
+            XCTAssertFalse(self.sut.showMorningMindCheckPill)
+        }
+
+        func test_showMorningMindCheckPill_falseAfterMindCheckLogged() {
+            // Arrange: Log sleep and mind check
+            self.sut.saveSleepQuality(.good)
+            let entries = [
+                MindCheckEntry(category: .todo, text: "Task", timestamp: Date(), context: .morning)
+            ]
+            self.sut.saveMorningMindCheck(entries)
+
+            // Assert: Mind check already logged, pill should not show
+            XCTAssertFalse(self.sut.showMorningMindCheckPill)
+        }
+
+        func test_showEveningMindCheckPill_trueWhenMealsExistAndNoEveningMindCheck() {
+            // Arrange: Add a meal
+            self.sut.createNewMeal()
+
+            // Assert: Meals exist, no evening mind check, pill should show
+            XCTAssertTrue(self.sut.showEveningMindCheckPill)
+        }
+
+        func test_showEveningMindCheckPill_falseBeforeAnyMeals() {
+            // Assert: No meals, pill should not show
+            XCTAssertFalse(self.sut.showEveningMindCheckPill)
+        }
+
+        func test_showEveningMindCheckPill_falseAfterEveningMindCheckLogged() {
+            // Arrange: Add meal and log evening mind check
+            self.sut.createNewMeal()
+            let entries = [
+                MindCheckEntry(category: .accomplished, text: "Done", timestamp: Date(), context: .evening)
+            ]
+            self.sut.saveEveningMindCheck(entries)
+
+            // Assert: Evening mind check logged, pill should not show
+            XCTAssertFalse(self.sut.showEveningMindCheckPill)
+        }
+
+        func test_saveMorningMindCheck_updatesHistoricalData() {
+            // Arrange
+            let entries = [
+                MindCheckEntry(category: .todo, text: "Buy groceries", timestamp: Date(), context: .morning)
+            ]
+
+            // Act
+            self.sut.saveMorningMindCheck(entries)
+
+            // Assert
+            let snapshot = self.mockHistorical.getSnapshot(for: Date())
+            XCTAssertNotNil(snapshot?.morningMindCheck)
+            XCTAssertEqual(snapshot?.morningMindCheck?.count, 1)
+        }
+
+        func test_saveEveningMindCheck_updatesHistoricalData() {
+            // Arrange
+            let entries = [
+                MindCheckEntry(category: .accomplished, text: "Finished work", timestamp: Date(), context: .evening)
+            ]
+
+            // Act
+            self.sut.saveEveningMindCheck(entries)
+
+            // Assert
+            let snapshot = self.mockHistorical.getSnapshot(for: Date())
+            XCTAssertNotNil(snapshot?.eveningMindCheck)
+            XCTAssertEqual(snapshot?.eveningMindCheck?.count, 1)
+        }
+
+        func test_todaysMorningMindCheck_returnsEntriesWhenLogged() {
+            // Arrange
+            let entries = [
+                MindCheckEntry(category: .gratitude, text: "Family", timestamp: Date(), context: .morning)
+            ]
+            self.sut.saveMorningMindCheck(entries)
+
+            // Assert
+            XCTAssertNotNil(self.sut.todaysMorningMindCheck)
+            XCTAssertEqual(self.sut.todaysMorningMindCheck?.count, 1)
+        }
+
+        func test_todaysEveningMindCheck_returnsEntriesWhenLogged() {
+            // Arrange
+            let entries = [
+                MindCheckEntry(category: .letGo, text: "Stress", timestamp: Date(), context: .evening)
+            ]
+            self.sut.saveEveningMindCheck(entries)
+
+            // Assert
+            XCTAssertNotNil(self.sut.todaysEveningMindCheck)
+            XCTAssertEqual(self.sut.todaysEveningMindCheck?.count, 1)
+        }
     }
 
 #endif

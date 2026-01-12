@@ -16,6 +16,12 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// If a snapshot exists for the date, adds/updates the reflection.
     /// If no snapshot exists, creates a new one with empty meals and the reflection.
     func updateReflection(for date: Date, reflection: DailyReflection)
+
+    /// Updates or adds morning mind check entries for a specific date.
+    func updateMorningMindCheck(for date: Date, entries: [MindCheckEntry])
+
+    /// Updates or adds evening mind check entries for a specific date.
+    func updateEveningMindCheck(for date: Date, entries: [MindCheckEntry])
 }
 
 /// Service for managing historical meal data and daily snapshots.
@@ -210,5 +216,59 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         self.lastKnownMeals = []
         self.lastKnownState = .neutral
         self.lastKnownResetDate = Date()
+    }
+
+    // MARK: - Mind Check Methods
+
+    /// Updates or adds morning mind check entries for a specific date.
+    /// If a snapshot exists for the date, adds/updates the entries while preserving other data.
+    /// If no snapshot exists, creates a new one with empty meals and the entries.
+    func updateMorningMindCheck(for date: Date, entries: [MindCheckEntry]) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withMindChecks(morningMindCheck: entries)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                morningMindCheck: entries
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+
+        self.saveHistoricalData()
+    }
+
+    /// Updates or adds evening mind check entries for a specific date.
+    /// If a snapshot exists for the date, adds/updates the entries while preserving other data.
+    /// If no snapshot exists, creates a new one with empty meals and the entries.
+    func updateEveningMindCheck(for date: Date, entries: [MindCheckEntry]) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withMindChecks(eveningMindCheck: entries)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                eveningMindCheck: entries
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+
+        self.saveHistoricalData()
     }
 }

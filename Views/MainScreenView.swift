@@ -46,6 +46,32 @@ struct MainScreenView: View {
                 .presentationDetents([.height(280)])
                 .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: self.$viewModel.showMorningMindCheckSheet) {
+                MindCheckInputView(
+                    context: .morning,
+                    onSave: { entries in
+                        self.viewModel.completeMorningMindCheckInput(entries)
+                    },
+                    onDismiss: {
+                        self.viewModel.dismissMorningMindCheckInput()
+                    }
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: self.$viewModel.showEveningMindCheckSheet) {
+                MindCheckInputView(
+                    context: .evening,
+                    onSave: { entries in
+                        self.viewModel.completeEveningMindCheckInput(entries)
+                    },
+                    onDismiss: {
+                        self.viewModel.dismissEveningMindCheckInput()
+                    }
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
             // Note: Auto-prompt removed - now using user-initiated reflections via smiley tap
         }
     }
@@ -157,6 +183,16 @@ struct MainScreenView: View {
             todaysSleepQuality: self.viewModel.todaysSleepQuality,
             todaysFeeling: self.viewModel.todaysFeeling,
             showEndOfDayPill: self.viewModel.showEndOfDayPill,
+            showMorningMindCheckPill: self.viewModel.showMorningMindCheckPill,
+            showEveningMindCheckPill: self.viewModel.showEveningMindCheckPill,
+            todaysMorningMindCheck: self.viewModel.todaysMorningMindCheck,
+            todaysEveningMindCheck: self.viewModel.todaysEveningMindCheck,
+            onMorningMindCheckTap: {
+                self.viewModel.showMorningMindCheckSheet = true
+            },
+            onEveningMindCheckTap: {
+                self.viewModel.showEveningMindCheckSheet = true
+            },
             onUpdateMeal: { mealId, mealType, items in
                 self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
             },
