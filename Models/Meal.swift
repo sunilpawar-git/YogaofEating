@@ -38,6 +38,7 @@ struct Meal: Identifiable, Codable, Equatable {
     var items: [String]
     var healthScore: Double // 0.0 (unhealthy) to 1.0 (very healthy)
     var isAIAnalyzed: Bool // True after AI (Gemini) has analyzed the meal
+    var aiInsight: String? // AI-generated insight/reasoning for the health score
 
     /// Backward compatibility: computed property that joins items
     var description: String {
@@ -50,13 +51,20 @@ struct Meal: Identifiable, Codable, Equatable {
         }
     }
 
+    /// Whether the meal has a non-empty AI insight
+    var hasAIInsight: Bool {
+        guard let insight = aiInsight else { return false }
+        return !insight.isEmpty
+    }
+
     init(
         id: UUID = UUID(),
         timestamp: Date = Date(),
         mealType: MealType? = nil,
         items: [String] = [],
         healthScore: Double = 0.5,
-        isAIAnalyzed: Bool = false
+        isAIAnalyzed: Bool = false,
+        aiInsight: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -64,6 +72,7 @@ struct Meal: Identifiable, Codable, Equatable {
         self.items = items
         self.healthScore = healthScore
         self.isAIAnalyzed = isAIAnalyzed
+        self.aiInsight = aiInsight
     }
 
     /// Legacy initializer for backward compatibility
@@ -74,5 +83,6 @@ struct Meal: Identifiable, Codable, Equatable {
         self.items = description.isEmpty ? [] : [description]
         self.healthScore = healthScore
         self.isAIAnalyzed = false
+        self.aiInsight = nil
     }
 }

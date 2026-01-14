@@ -20,14 +20,14 @@ extension MainViewModel {
         return !insight.isViewed
     }
 
-    /// Whether the peekaboo star should show an unread indicator
+    /// Whether an unread insight is available (for smiley red dot indicator)
     var hasUnreadInsight: Bool {
         guard let insight = self.currentInsight else { return false }
         return !insight.isViewed
     }
 
-    /// Whether the peekaboo star should be visible
-    var shouldShowPeekabooStar: Bool {
+    /// Whether any insight is available (for enabling long-press on smiley)
+    var hasInsightAvailable: Bool {
         self.currentInsight != nil
     }
 
@@ -45,6 +45,14 @@ extension MainViewModel {
     /// Opens the insight bottom sheet
     func showInsightDetails() {
         guard self.currentInsight != nil else { return }
+        self.showInsightSheet = true
+    }
+
+    /// Handles long-press on smiley to show insight.
+    /// Only shows insight sheet if an insight is available.
+    func handleSmileyLongPress() {
+        guard self.hasInsightAvailable else { return }
+        SensoryService.shared.playNudge(style: .heavy)
         self.showInsightSheet = true
     }
 }

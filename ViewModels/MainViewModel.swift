@@ -54,6 +54,9 @@ class MainViewModel: ObservableObject {
     /// Controls visibility of the evening mind check input sheet
     @Published var showEveningMindCheckSheet: Bool = false
 
+    /// Whether evening review is being shown from End-of-Day pill (includes feeling selection)
+    @Published var isEndOfDayFlow: Bool = false
+
     /// Entries being edited (nil when creating new entries)
     @Published var editingMorningEntries: [MindCheckEntry]?
 
@@ -67,6 +70,12 @@ class MainViewModel: ObservableObject {
 
     /// The current insight to display (generated when sleep is logged)
     @Published var currentInsight: DailyInsight?
+
+    // MARK: - AI Analysis Tracking
+
+    /// Tracks meal IDs currently being analyzed to prevent concurrent duplicate requests.
+    /// This addresses the "GTMSessionFetcher was already running" warning.
+    var analysisInProgress: Set<UUID> = []
 
     // MARK: - Day Navigation (Phase 4)
 
@@ -177,10 +186,19 @@ class MainViewModel: ObservableObject {
     func updateMealItems(_ mealId: UUID, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
+        // Check if items actually changed
+        let itemsChanged = self.meals[index].items != items
+
         // Local synchronous update for immediate feedback
         let healthScore = self.logicService.calculateHealthScore(for: items)
         self.meals[index].items = items
         self.meals[index].healthScore = healthScore
+
+        // Reset AI analyzed flag if items changed (content needs re-analysis)
+        if itemsChanged {
+            self.meals[index].isAIAnalyzed = false
+        }
+
         self.saveData()
         print("📝 Local healthScore set to: \(healthScore)")
 
@@ -196,9 +214,11 @@ class MainViewModel: ObservableObject {
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
-        // Trigger async AI analysis for refined scoring
-        Task {
-            await self.performDeepAnalysis(for: mealId, items: items)
+        // Only trigger AI analysis if items changed
+        if itemsChanged {
+            Task {
+                await self.performDeepAnalysis(for: mealId, items: items)
+            }
         }
     }
 
@@ -206,11 +226,20 @@ class MainViewModel: ObservableObject {
     func updateMeal(_ mealId: UUID, mealType: MealType, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
+        // Check if items actually changed
+        let itemsChanged = self.meals[index].items != items
+
         // Local synchronous update
         let healthScore = self.logicService.calculateHealthScore(for: items)
         self.meals[index].mealType = mealType
         self.meals[index].items = items
         self.meals[index].healthScore = healthScore
+
+        // Reset AI analyzed flag if items changed (content needs re-analysis)
+        if itemsChanged {
+            self.meals[index].isAIAnalyzed = false
+        }
+
         self.saveData()
 
         // Play personalized haptic feedback based on health score and user risk level
@@ -225,9 +254,11 @@ class MainViewModel: ObservableObject {
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
-        // Trigger async AI analysis
-        Task {
-            await self.performDeepAnalysis(for: mealId, items: items)
+        // Only trigger AI analysis if items changed
+        if itemsChanged {
+            Task {
+                await self.performDeepAnalysis(for: mealId, items: items)
+            }
         }
     }
 
@@ -543,10 +574,20 @@ class MainViewModel: ObservableObject {
         !self.meals.isEmpty && self.todaysFeeling == nil
     }
 
-    /// Handles tap on the End-of-Day pill to show the feeling input sheet.
+    /// Handles tap on the End-of-Day pill to show the appropriate sheet.
+    /// Phase 3: If morning todos exist, shows EveningReviewView (holistic mindset capture).
+    /// Otherwise, shows the feeling input directly.
     func handleEndOfDayPillTap() {
         self.pendingMealCreation = false // No meal creation after this
-        self.showOverallFeelingSheet = true
+
+        // Check if morning todos exist - if so, show holistic evening review
+        if let morningEntries = self.todaysMorningMindCheck, !morningEntries.isEmpty {
+            self.isEndOfDayFlow = true // Enable feeling selection in EveningReviewView
+            self.showEveningMindCheckSheet = true
+        } else {
+            // No todos, just ask for feeling
+            self.showOverallFeelingSheet = true
+        }
     }
 
     /// Completes the sleep quality input and proceeds with meal creation if pending.

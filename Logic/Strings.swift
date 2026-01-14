@@ -52,11 +52,22 @@ enum Strings {
             static let morningTodosHeader = "Your morning intentions"
             static let gratitudeHeader = "What are you grateful for?"
             static let letGoHeader = "What do you need to let go?"
+            static let feelingHeader = "How do you feel?"
             static let noMorningTodos = "No morning todos to review"
             static let accomplished = "Done"
             static let notAccomplished = "Not done"
             static let markAsDone = "Mark as done"
             static let markAsNotDone = "Mark as not done"
+        }
+
+        // Historical Mind Check Display
+        enum Historical {
+            static let mindCheckSectionTitle = "Thoughts & Intentions"
+            static let morningHeader = "Morning"
+            static let eveningHeader = "Evening"
+            static let completed = "Completed"
+            static let notCompleted = "Not completed"
+            static let noEntries = "No entries"
         }
     }
 

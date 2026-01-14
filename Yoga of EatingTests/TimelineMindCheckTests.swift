@@ -147,5 +147,109 @@
             XCTAssertFalse(self.viewModel.showEveningMindCheckSheet)
             XCTAssertNotNil(self.viewModel.todaysEveningMindCheck)
         }
+
+        // MARK: - Tests: Historical Day Mind Check Display (Phase 1)
+
+        func test_historicalSnapshot_containsMorningMindCheck() {
+            // Given: A snapshot with morning todos
+            let testDate = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+            let morningEntries = [
+                MindCheckEntry(
+                    category: .todo,
+                    text: "Buy groceries",
+                    timestamp: testDate,
+                    context: .morning,
+                    isAccomplished: true
+                ),
+                MindCheckEntry(
+                    category: .todo,
+                    text: "Call mom",
+                    timestamp: testDate,
+                    context: .morning,
+                    isAccomplished: false
+                )
+            ]
+            let snapshot = DailySmileySnapshot.create(
+                date: testDate,
+                smileyState: .neutral,
+                meals: [],
+                morningMindCheck: morningEntries
+            )
+
+            // Then: Snapshot should contain morning mind check data
+            XCTAssertNotNil(snapshot.morningMindCheck)
+            XCTAssertEqual(snapshot.morningMindCheck?.count, 2)
+            XCTAssertTrue(snapshot.hasMorningMindCheck)
+        }
+
+        func test_historicalSnapshot_preservesTodoCompletionStatus() {
+            // Given: A snapshot with completed and incomplete todos
+            let testDate = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+            let morningEntries = [
+                MindCheckEntry(
+                    category: .todo,
+                    text: "Task 1",
+                    timestamp: testDate,
+                    context: .morning,
+                    isAccomplished: true
+                ),
+                MindCheckEntry(
+                    category: .todo,
+                    text: "Task 2",
+                    timestamp: testDate,
+                    context: .morning,
+                    isAccomplished: false
+                )
+            ]
+            let snapshot = DailySmileySnapshot.create(
+                date: testDate,
+                smileyState: .neutral,
+                meals: [],
+                morningMindCheck: morningEntries
+            )
+
+            // Then: Completion status should be preserved
+            let todos = snapshot.morningMindCheck ?? []
+            let completedTodos = todos.filter { $0.isAccomplished == true }
+            let incompleteTodos = todos.filter { $0.isAccomplished == false }
+
+            XCTAssertEqual(completedTodos.count, 1)
+            XCTAssertEqual(incompleteTodos.count, 1)
+            XCTAssertEqual(completedTodos.first?.text, "Task 1")
+            XCTAssertEqual(incompleteTodos.first?.text, "Task 2")
+        }
+
+        func test_historicalSnapshot_containsEveningMindCheck() {
+            // Given: A snapshot with evening entries
+            let testDate = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+            let eveningEntries = [
+                MindCheckEntry(
+                    category: .gratefulFor,
+                    text: "Good health",
+                    timestamp: testDate,
+                    context: .evening
+                )
+            ]
+            let snapshot = DailySmileySnapshot.create(
+                date: testDate,
+                smileyState: .neutral,
+                meals: [],
+                eveningMindCheck: eveningEntries
+            )
+
+            // Then: Snapshot should contain evening mind check data
+            XCTAssertNotNil(snapshot.eveningMindCheck)
+            XCTAssertEqual(snapshot.eveningMindCheck?.count, 1)
+            XCTAssertTrue(snapshot.hasEveningMindCheck)
+        }
+
+        func test_historicalStrings_exist() {
+            // Verify all required strings for historical display exist
+            XCTAssertFalse(Strings.MindCheck.Historical.mindCheckSectionTitle.isEmpty)
+            XCTAssertFalse(Strings.MindCheck.Historical.morningHeader.isEmpty)
+            XCTAssertFalse(Strings.MindCheck.Historical.eveningHeader.isEmpty)
+            XCTAssertFalse(Strings.MindCheck.Historical.completed.isEmpty)
+            XCTAssertFalse(Strings.MindCheck.Historical.notCompleted.isEmpty)
+        }
     }
 #endif

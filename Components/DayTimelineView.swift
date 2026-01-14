@@ -22,6 +22,13 @@ struct DayTimelineView: View {
     /// This should trigger context-aware reflection prompts before meal creation
     var onSmileyTap: (() -> Void)?
 
+    /// Callback when user long-presses the smiley (only for today)
+    /// This should show the insight bottom sheet if available
+    var onSmileyLongPress: (() -> Void)?
+
+    /// Whether an insight is available (for showing red dot indicator)
+    var hasInsightAvailable: Bool = false
+
     /// Callback when user taps to edit sleep quality badge (only for today)
     var onEditSleep: (() -> Void)?
 
@@ -299,34 +306,52 @@ struct DayTimelineView: View {
     // MARK: - Smiley Add Button (Today Only)
 
     private var smileyAddButton: some View {
-        Button(action: {
-            self.onSmileyTap?()
-            SensoryService.shared.playNudge(style: .medium)
-        }) {
-            VStack(spacing: 16) {
+        VStack(spacing: 16) {
+            // Smiley with optional red dot indicator for insights
+            ZStack(alignment: .topTrailing) {
                 SmileyView(state: self.smileyState)
                     .frame(width: 120, height: 120)
 
-                Text("TAP TO LOG")
-                    .font(.system(.caption, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundColor(.secondary)
-                    .kerning(2)
-                    .fixedSize()
-
-                Text(QuoteService.getDailyQuote().text)
-                    .font(.system(size: 11, design: .serif))
-                    .italic()
-                    .foregroundColor(.secondary.opacity(0.6))
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 280)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityLabel("Daily mindful eating quote")
+                // Red dot indicator when insight is available
+                if self.hasInsightAvailable {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 16, height: 16)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white, lineWidth: 2)
+                        )
+                        .offset(x: 8, y: -8)
+                }
             }
+            .onTapGesture {
+                self.onSmileyTap?()
+                SensoryService.shared.playNudge(style: .medium)
+            }
+            .onLongPressGesture(minimumDuration: 0.5) {
+                self.onSmileyLongPress?()
+            }
+
+            // Hint text changes when insight available
+            Text(self.hasInsightAvailable ? "TAP TO LOG · HOLD FOR INSIGHT" : "TAP TO LOG")
+                .font(.system(.caption, design: .monospaced))
+                .fontWeight(.bold)
+                .foregroundColor(.secondary)
+                .kerning(self.hasInsightAvailable ? 1 : 2)
+                .fixedSize()
+
+            Text(QuoteService.getDailyQuote().text)
+                .font(.system(size: 11, design: .serif))
+                .italic()
+                .foregroundColor(.secondary.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 280)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel("Daily mindful eating quote")
         }
-        .buttonStyle(.plain)
         .accessibilityIdentifier("add-meal-button")
-        .accessibilityLabel("Add Meal")
+        .accessibilityLabel(self.hasInsightAvailable ? "Add Meal or Hold for Insight" : "Add Meal")
+        .accessibilityHint(self.hasInsightAvailable ? "Tap to log meal, hold to view insight" : "Tap to log a new meal")
     }
 
     // MARK: - Historical Day Summary
@@ -365,8 +390,134 @@ struct DayTimelineView: View {
             if let reflection = self.snapshot?.reflection {
                 self.reflectionSummary(reflection)
             }
+
+            // Show mind check entries if available (Phase 1)
+            if let snapshot = self.snapshot,
+               snapshot.hasMorningMindCheck || snapshot.hasEveningMindCheck
+            {
+                self.historicalMindCheckSection(snapshot: snapshot)
+            }
         }
         .padding(.vertical, 20)
+    }
+
+    // MARK: - Historical Mind Check Section
+
+    @State private var isMindCheckExpanded: Bool = false
+
+    @ViewBuilder
+    private func historicalMindCheckSection(snapshot: DailySmileySnapshot) -> some View {
+        VStack(spacing: 12) {
+            Divider()
+                .padding(.horizontal, 40)
+
+            // Expandable header
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    self.isMindCheckExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    Text(Strings.MindCheck.Historical.mindCheckSectionTitle)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+
+                    Spacer()
+
+                    Image(systemName: self.isMindCheckExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 40)
+            }
+            .buttonStyle(.plain)
+
+            // Expandable content
+            if self.isMindCheckExpanded {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Morning todos
+                    if let morningEntries = snapshot.morningMindCheck, !morningEntries.isEmpty {
+                        self.historicalEntriesGroup(
+                            header: Strings.MindCheck.Historical.morningHeader,
+                            entries: morningEntries,
+                            showCompletionStatus: true
+                        )
+                    }
+
+                    // Evening entries
+                    if let eveningEntries = snapshot.eveningMindCheck, !eveningEntries.isEmpty {
+                        self.historicalEntriesGroup(
+                            header: Strings.MindCheck.Historical.eveningHeader,
+                            entries: eveningEntries,
+                            showCompletionStatus: false
+                        )
+                    }
+                }
+                .padding(.horizontal, 24)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(.top, 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Strings.MindCheck.Historical.mindCheckSectionTitle)
+    }
+
+    @ViewBuilder
+    private func historicalEntriesGroup(
+        header: String,
+        entries: [MindCheckEntry],
+        showCompletionStatus: Bool
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(header)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+
+            ForEach(entries) { entry in
+                HStack(spacing: 8) {
+                    // Category emoji
+                    Text(entry.category.emoji)
+                        .font(.system(size: 14))
+
+                    // Entry text
+                    Text(entry.text)
+                        .font(.callout)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+
+                    Spacer()
+
+                    // Completion status for todos
+                    if showCompletionStatus, entry.category == .todo {
+                        if entry.isAccomplished == true {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text(Strings.MindCheck.Historical.completed)
+                                    .font(.caption2)
+                                    .foregroundColor(.green)
+                            }
+                        } else {
+                            HStack(spacing: 4) {
+                                Image(systemName: "circle")
+                                    .foregroundColor(.secondary.opacity(0.5))
+                                Text(Strings.MindCheck.Historical.notCompleted)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.primary.opacity(0.03))
+                )
+            }
+        }
     }
 
     private func reflectionSummary(_ reflection: DailyReflection) -> some View {
@@ -578,7 +729,14 @@ struct ReadOnlyMealCardView: View {
                 meals: [],
                 mealCount: 2,
                 averageHealthScore: 0.4,
-                reflection: DailyReflection(feeling: .heavy, sleepQuality: .poor, note: "Overate")
+                reflection: DailyReflection(feeling: .heavy, sleepQuality: .poor, note: "Overate"),
+                morningMindCheck: [
+                    MindCheckEntry(category: .todo, text: "Exercise", context: .morning, isAccomplished: true),
+                    MindCheckEntry(category: .todo, text: "Read book", context: .morning, isAccomplished: false)
+                ],
+                eveningMindCheck: [
+                    MindCheckEntry(category: .gratefulFor, text: "Good health", context: .evening)
+                ]
             )
         )
     }

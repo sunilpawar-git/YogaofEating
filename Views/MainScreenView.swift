@@ -16,19 +16,7 @@ struct MainScreenView: View {
                     .ignoresSafeArea()
 
                 self.mainContent
-
-                // Peekaboo star button for insights (bottom of screen)
-                if self.viewModel.shouldShowPeekabooStar {
-                    VStack {
-                        Spacer()
-                        InsightPeekabooButton(
-                            hasUnreadInsight: self.viewModel.hasUnreadInsight
-                        ) {
-                            self.viewModel.showInsightDetails()
-                        }
-                        .padding(.bottom, 20)
-                    }
-                }
+                // Note: Peekaboo star removed - insights now accessed via smiley long-press
             }
             .toolbar { self.toolbarContent }
             .sheet(isPresented: self.$showingSettings) {
@@ -80,10 +68,12 @@ struct MainScreenView: View {
                     EveningReviewView(
                         morningEntries: morningEntries,
                         existingEveningEntries: self.viewModel.editingEveningEntries,
-                        onSave: { updatedMorning, evening in
+                        showFeelingSelection: self.viewModel.isEndOfDayFlow,
+                        onSave: { updatedMorning, evening, feeling in
                             self.viewModel.completeEveningReview(
                                 updatedMorningEntries: updatedMorning,
-                                eveningEntries: evening
+                                eveningEntries: evening,
+                                feeling: feeling
                             )
                         },
                         onDismiss: {
@@ -215,6 +205,11 @@ struct MainScreenView: View {
                 // Use context-aware smiley tap handling (morning sleep only)
                 self.viewModel.handleSmileyTap()
             },
+            onSmileyLongPress: {
+                // Show insight if available
+                self.viewModel.handleSmileyLongPress()
+            },
+            hasInsightAvailable: self.viewModel.hasInsightAvailable,
             onEditSleep: {
                 // Show sleep quality sheet for editing
                 self.viewModel.showSleepQualitySheet = true

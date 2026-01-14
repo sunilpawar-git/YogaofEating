@@ -71,17 +71,23 @@ enum MindCheckCategory: String, Codable, CaseIterable {
     /// Returns categories available for a specific context
     /// - Parameter context: The mind check context (morning or evening)
     /// - Returns: Array of categories available for that context
+    /// - Note: Phase 2 change - Morning now only offers To-Do category.
+    ///   The .gratitude and .thinking cases are kept for backward compatibility
+    ///   with existing user data, but are no longer offered for new entries.
     static func categories(for context: MindCheckContext) -> [MindCheckCategory] {
         switch context {
         case .morning:
-            [.todo, .gratitude, .thinking]
+            // Phase 2: Morning only allows To-Do entries
+            [.todo]
         case .evening:
             [.accomplished, .gratefulFor, .letGo]
         }
     }
 
-    /// Static list of morning categories
-    static let morningCategories: [MindCheckCategory] = [.todo, .gratitude, .thinking]
+    /// Static list of morning categories available for new entries
+    /// - Note: Phase 2 - Only To-Do is now available for morning.
+    ///   Legacy categories (.gratitude, .thinking) kept in enum for backward compatibility.
+    static let morningCategories: [MindCheckCategory] = [.todo]
 
     /// Static list of evening categories
     static let eveningCategories: [MindCheckCategory] = [.accomplished, .gratefulFor, .letGo]

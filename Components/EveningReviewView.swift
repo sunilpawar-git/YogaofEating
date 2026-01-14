@@ -2,6 +2,7 @@ import SwiftUI
 
 /// A sheet view for evening reflection that shows morning todos with checkboxes
 /// and allows adding gratitude and let-go entries.
+/// Phase 3: Now also supports feeling selection for holistic End-of-Day capture.
 /// This creates an accountability loop - user reviews what they set out to do.
 struct EveningReviewView: View {
     // MARK: - Properties
@@ -12,8 +13,11 @@ struct EveningReviewView: View {
     /// Existing evening entries if editing
     let existingEveningEntries: [MindCheckEntry]?
 
-    /// Callback when user saves their review
-    let onSave: ([MindCheckEntry], [MindCheckEntry]) -> Void
+    /// Whether to show feeling selection (true when called from End-of-Day pill)
+    var showFeelingSelection: Bool = false
+
+    /// Callback when user saves their review (with optional feeling for End-of-Day flow)
+    let onSave: ([MindCheckEntry], [MindCheckEntry], ReflectionFeeling?) -> Void
 
     /// Callback when user dismisses without saving
     let onDismiss: () -> Void
@@ -28,6 +32,9 @@ struct EveningReviewView: View {
 
     /// Let go text input
     @State private var letGoText: String = ""
+
+    /// Selected feeling (for End-of-Day flow)
+    @State private var selectedFeeling: ReflectionFeeling?
 
     @FocusState private var focusedField: Field?
 
@@ -45,7 +52,16 @@ struct EveningReviewView: View {
     private var hasContent: Bool {
         !self.todoStatuses.isEmpty ||
             !self.gratitudeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            !self.letGoText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            !self.letGoText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            self.selectedFeeling != nil
+    }
+
+    /// For End-of-Day flow, feeling is required to save
+    private var canSave: Bool {
+        if self.showFeelingSelection {
+            return self.selectedFeeling != nil
+        }
+        return true
     }
 
     // MARK: - Body
@@ -58,6 +74,13 @@ struct EveningReviewView: View {
                     self.morningTodosSection
 
                     Divider()
+
+                    // Feeling section (Phase 3: for End-of-Day holistic capture)
+                    if self.showFeelingSelection {
+                        self.feelingSection
+
+                        Divider()
+                    }
 
                     // Gratitude section
                     self.gratitudeSection
@@ -82,6 +105,7 @@ struct EveningReviewView: View {
                     Button(Strings.MindCheck.saveButton) {
                         self.saveReview()
                     }
+                    .disabled(!self.canSave)
                     .fontWeight(.semibold)
                 }
             }
@@ -176,6 +200,33 @@ struct EveningReviewView: View {
         }
     }
 
+    // MARK: - Feeling Section (Phase 3: End-of-Day)
+
+    private var feelingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            Text(Strings.MindCheck.EveningReview.feelingHeader)
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            // Feeling picker - horizontal row of emoji buttons
+            HStack(spacing: 12) {
+                ForEach(ReflectionFeeling.allCases, id: \.self) { feeling in
+                    FeelingButton(
+                        feeling: feeling,
+                        isSelected: self.selectedFeeling == feeling
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            self.selectedFeeling = feeling
+                        }
+                        SensoryService.shared.playNudge(style: .light)
+                    }
+                }
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
     // MARK: - Helpers
 
     private func binding(for todoId: UUID) -> Binding<Bool> {
@@ -236,7 +287,43 @@ struct EveningReviewView: View {
             )
         }
 
-        self.onSave(updatedMorningEntries, eveningEntries)
+        // Pass feeling for End-of-Day flow (Phase 3)
+        self.onSave(updatedMorningEntries, eveningEntries, self.selectedFeeling)
+    }
+}
+
+// MARK: - Feeling Button (Phase 3)
+
+/// A button for selecting feeling in the evening review
+private struct FeelingButton: View {
+    let feeling: ReflectionFeeling
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: self.action) {
+            VStack(spacing: 4) {
+                Text(self.feeling.emoji)
+                    .font(.system(size: 28))
+
+                Text(self.feeling.displayName)
+                    .font(.caption2)
+                    .foregroundColor(self.isSelected ? .primary : .secondary)
+            }
+            .frame(minWidth: 54)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(self.isSelected ? Color.accentColor.opacity(0.15) : Color.primary.opacity(0.03))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(self.isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(self.feeling.displayName), \(self.isSelected ? "selected" : "not selected")")
     }
 }
 
@@ -301,7 +388,20 @@ struct TodoCheckboxRow: View {
                 MindCheckEntry(category: .gratitude, text: "Good health", context: .morning)
             ],
             existingEveningEntries: nil,
-            onSave: { _, _ in print("Saved") },
+            onSave: { _, _, _ in print("Saved") },
+            onDismiss: { print("Dismissed") }
+        )
+    }
+
+    #Preview("End of Day Flow (with Feeling)") {
+        EveningReviewView(
+            morningEntries: [
+                MindCheckEntry(category: .todo, text: "Exercise", context: .morning),
+                MindCheckEntry(category: .todo, text: "Read book", context: .morning)
+            ],
+            existingEveningEntries: nil,
+            showFeelingSelection: true,
+            onSave: { _, _, feeling in print("Saved with feeling: \(String(describing: feeling))") },
             onDismiss: { print("Dismissed") }
         )
     }
@@ -312,7 +412,7 @@ struct TodoCheckboxRow: View {
                 MindCheckEntry(category: .gratitude, text: "Good health", context: .morning)
             ],
             existingEveningEntries: nil,
-            onSave: { _, _ in print("Saved") },
+            onSave: { _, _, _ in print("Saved") },
             onDismiss: { print("Dismissed") }
         )
     }

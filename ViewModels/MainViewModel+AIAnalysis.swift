@@ -7,6 +7,24 @@ extension MainViewModel {
     /// Performs deep AI analysis for a meal and updates smiley state accordingly.
     func performDeepAnalysis(for mealId: UUID, items: [String]) async {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
+
+        // Skip if already analyzed - prevents duplicate API calls
+        guard !meals[index].isAIAnalyzed else {
+            print("⏭️ Skipping analysis - meal already analyzed")
+            return
+        }
+
+        // Prevent concurrent duplicate requests for the same meal
+        // This addresses the "GTMSessionFetcher was already running" warning
+        guard !analysisInProgress.contains(mealId) else {
+            print("⏭️ Skipping analysis - request already in progress for this meal")
+            return
+        }
+
+        // Mark this meal as being analyzed
+        analysisInProgress.insert(mealId)
+        defer { analysisInProgress.remove(mealId) }
+
         let description = items.joined(separator: ", ")
 
         // Only proceed if we are using a service that supports AI analysis
@@ -25,12 +43,16 @@ extension MainViewModel {
                     + "Mood: \(result.mood.rawValue), Sound: \(result.sound)"
             )
 
-            // Update the specific meal's health score and AI analyzed flag
+            // Update the specific meal's health score, AI analyzed flag, and basic insight
             if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
                 meals[verifyIndex].healthScore = result.score
                 meals[verifyIndex].isAIAnalyzed = true
+                meals[verifyIndex].aiInsight = result.insight
                 saveData()
                 print("📊 Updated meal healthScore to: \(result.score), isAIAnalyzed: true")
+                if let insight = result.insight {
+                    print("💡 Basic insight: \(insight.prefix(50))...")
+                }
             }
 
             // Update overall Smiley state based on new CUMULATIVE health

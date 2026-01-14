@@ -204,11 +204,12 @@
         // MARK: - Tests: MindCheckCategory Static Methods
 
         func test_mindCheckCategory_categoriesForContext_morning() {
+            // Phase 2: Morning now only allows To-Do category
             let morningCategories = MindCheckCategory.categories(for: .morning)
-            XCTAssertEqual(morningCategories.count, 3)
+            XCTAssertEqual(morningCategories.count, 1, "Morning should only have To-Do category")
             XCTAssertTrue(morningCategories.contains(.todo))
-            XCTAssertTrue(morningCategories.contains(.gratitude))
-            XCTAssertTrue(morningCategories.contains(.thinking))
+            // Note: .gratitude and .thinking still exist in enum for backward compatibility
+            // but are no longer offered for new morning entries
         }
 
         func test_mindCheckCategory_categoriesForContext_evening() {

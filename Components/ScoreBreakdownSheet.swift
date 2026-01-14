@@ -1,10 +1,29 @@
+import Combine
 import SwiftUI
 
 // MARK: - ViewModel
 
 /// ViewModel for the score breakdown sheet
-struct ScoreBreakdownViewModel {
+@MainActor
+class ScoreBreakdownViewModel: ObservableObject {
     let meal: Meal
+
+    @Published var detailedInsight: DetailedMealInsight?
+    @Published var isLoadingDetailedInsight: Bool = false
+    @Published var detailedInsightError: String?
+
+    /// Service for fetching detailed insights
+    private var insightProvider: MealInsightProvider?
+
+    init(meal: Meal, insightProvider: MealInsightProvider? = nil) {
+        self.meal = meal
+        // Use AILogicService as default if Firebase is available
+        if let provider = insightProvider {
+            self.insightProvider = provider
+        } else {
+            self.insightProvider = AILogicService()
+        }
+    }
 
     /// Formatted score as percentage string
     var formattedScore: String {
@@ -21,14 +40,58 @@ struct ScoreBreakdownViewModel {
         ScoreReasoningGenerator.scoreCategory(for: self.meal.healthScore)
     }
 
-    /// Human-readable reasoning for the score
-    var reasoning: String {
-        ScoreReasoningGenerator.generateReasoning(for: self.meal)
+    /// The insight to display - uses AI insight if available, falls back to template
+    var displayInsight: String {
+        // Priority 1: Detailed AI insight summary
+        if let detailed = detailedInsight {
+            return detailed.summary
+        }
+        // Priority 2: Basic AI insight stored in meal
+        if let aiInsight = meal.aiInsight, !aiInsight.isEmpty {
+            return aiInsight
+        }
+        // Priority 3: Template-based reasoning
+        return ScoreReasoningGenerator.generateReasoning(for: self.meal)
     }
 
-    /// Whether there's reasoning to display
-    var hasReasoning: Bool {
-        !self.reasoning.isEmpty
+    /// Whether there's an insight to display
+    var hasInsight: Bool {
+        !self.displayInsight.isEmpty
+    }
+
+    /// Nutrition highlights from detailed insight
+    var nutritionHighlights: [String] {
+        self.detailedInsight?.nutritionHighlights ?? []
+    }
+
+    /// Health tip from detailed insight
+    var healthTip: String? {
+        self.detailedInsight?.tip
+    }
+
+    /// Whether we have detailed insight loaded
+    var hasDetailedInsight: Bool {
+        self.detailedInsight != nil
+    }
+
+    /// Fetches detailed insight from Gemini LLM
+    func fetchDetailedInsight() async {
+        guard !self.isLoadingDetailedInsight, self.detailedInsight == nil else { return }
+
+        self.isLoadingDetailedInsight = true
+        self.detailedInsightError = nil
+
+        do {
+            if let provider = insightProvider {
+                let insight = try await provider.getDetailedInsight(for: self.meal)
+                self.detailedInsight = insight
+            }
+        } catch {
+            print("❌ Failed to fetch detailed insight: \(error)")
+            self.detailedInsightError = "Couldn't load detailed analysis"
+        }
+
+        self.isLoadingDetailedInsight = false
     }
 }
 
@@ -39,30 +102,51 @@ struct ScoreBreakdownSheet: View {
     let meal: Meal
     let onDismiss: () -> Void
 
-    private var viewModel: ScoreBreakdownViewModel {
-        ScoreBreakdownViewModel(meal: self.meal)
+    @StateObject private var viewModel: ScoreBreakdownViewModel
+
+    init(meal: Meal, onDismiss: @escaping () -> Void) {
+        self.meal = meal
+        self.onDismiss = onDismiss
+        self._viewModel = StateObject(wrappedValue: ScoreBreakdownViewModel(meal: meal))
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                // Score circle
-                self.scoreCircle
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Score circle
+                    self.scoreCircle
 
-                // Meal info
-                self.mealInfoSection
+                    // Meal info
+                    self.mealInfoSection
 
-                // Reasoning section
-                if self.viewModel.hasReasoning {
-                    self.reasoningSection
+                    // AI Insight section
+                    if self.viewModel.hasInsight {
+                        self.insightSection
+                    }
+
+                    // Nutrition highlights (if detailed insight loaded)
+                    if !self.viewModel.nutritionHighlights.isEmpty {
+                        self.nutritionSection
+                    }
+
+                    // Health tip (if available)
+                    if let tip = self.viewModel.healthTip {
+                        self.tipSection(tip: tip)
+                    }
+
+                    // Load more details button
+                    if !self.viewModel.hasDetailedInsight, self.meal.isAIAnalyzed {
+                        self.loadDetailsButton
+                    }
+
+                    Spacer(minLength: 20)
+
+                    // Dismiss button
+                    self.dismissButton
                 }
-
-                Spacer()
-
-                // Dismiss button
-                self.dismissButton
+                .padding(24)
             }
-            .padding(24)
             .navigationTitle("Score Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -76,7 +160,7 @@ struct ScoreBreakdownSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }
 
@@ -135,13 +219,16 @@ struct ScoreBreakdownSheet: View {
         )
     }
 
-    private var reasoningSection: some View {
+    private var insightSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Why this score?")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.secondary)
+            HStack {
+                Text("✨")
+                Text("AI Analysis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
 
-            Text(self.viewModel.reasoning)
+            Text(self.viewModel.displayInsight)
                 .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
@@ -152,6 +239,80 @@ struct ScoreBreakdownSheet: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.tertiarySystemBackground))
         )
+    }
+
+    private var nutritionSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Nutrition Highlights")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            ForEach(self.viewModel.nutritionHighlights, id: \.self) { highlight in
+                HStack(alignment: .top, spacing: 8) {
+                    Text("•")
+                        .foregroundStyle(self.scoreColor)
+                    Text(highlight)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(.primary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.tertiarySystemBackground))
+        )
+    }
+
+    private func tipSection(tip: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("💡")
+                Text("Tip")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(tip)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(self.scoreColor.opacity(0.1))
+        )
+    }
+
+    private var loadDetailsButton: some View {
+        Button {
+            Task {
+                await self.viewModel.fetchDetailedInsight()
+            }
+        } label: {
+            HStack {
+                if self.viewModel.isLoadingDetailedInsight {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "sparkles")
+                }
+                Text(self.viewModel.isLoadingDetailedInsight ? "Loading..." : "Get Detailed Analysis")
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .foregroundStyle(self.scoreColor)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 20)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(self.scoreColor, lineWidth: 1)
+            )
+        }
+        .disabled(self.viewModel.isLoadingDetailedInsight)
+        .buttonStyle(.plain)
     }
 
     private var dismissButton: some View {
@@ -190,13 +351,14 @@ struct ScoreBreakdownSheet: View {
 
 // MARK: - Previews
 
-#Preview("High Score") {
+#Preview("High Score with AI Insight") {
     ScoreBreakdownSheet(
         meal: Meal(
             mealType: .lunch,
             items: ["Grilled salmon", "Steamed broccoli", "Brown rice"],
             healthScore: 0.9,
-            isAIAnalyzed: true
+            isAIAnalyzed: true,
+            aiInsight: "Excellent protein-rich meal with omega-3 fatty acids and fiber from vegetables."
         ),
         onDismiss: {}
     )
