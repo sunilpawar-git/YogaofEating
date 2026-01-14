@@ -1,13 +1,13 @@
 import XCTest
 @testable import Yoga_of_Eating
 
-/// Tests for the Peekaboo Star Button and Insight Bottom Sheet.
-/// Phase 6: Floating star button that reveals insights.
+/// Tests for Insight functionality via Smiley long-press.
+/// Updated: Peekaboo star removed, insights now accessed via smiley long-press.
 @MainActor
 final class InsightPeekabooTests: XCTestCase {
-    // MARK: - Peekaboo Button Visibility Tests
+    // MARK: - Insight Availability Tests
 
-    func test_peekabooButton_visibleWhenInsightAvailable() {
+    func test_insight_isAvailable_whenInsightTextNotEmpty() {
         // Given
         let insight = DailyInsight(
             date: Date(),
@@ -16,25 +16,25 @@ final class InsightPeekabooTests: XCTestCase {
             confidence: 0.8
         )
 
-        // When - simulate having an insight
+        // When - check if insight has content
         let hasInsight = insight.insightText.isEmpty == false
 
         // Then
         XCTAssertTrue(hasInsight)
     }
 
-    func test_peekabooButton_hiddenWhenNoInsight() {
+    func test_insight_isNotAvailable_whenNil() {
         // Given
         let insight: DailyInsight? = nil
 
         // When
-        let shouldShow = insight != nil
+        let hasInsight = insight != nil
 
         // Then
-        XCTAssertFalse(shouldShow)
+        XCTAssertFalse(hasInsight)
     }
 
-    func test_peekabooButton_showsUnreadIndicator() {
+    func test_insight_unreadIndicator_tracksViewedState() {
         // Given
         var insight = DailyInsight(
             date: Date(),

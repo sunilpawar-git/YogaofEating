@@ -159,6 +159,7 @@
 
         // MARK: - Formatted Score Tests
 
+        @MainActor
         func test_scoreBreakdownViewModel_formattedScore() {
             // Given: A meal with specific score
             let meal = Meal(
@@ -177,6 +178,7 @@
 
         // MARK: - Meal Description Tests
 
+        @MainActor
         func test_scoreBreakdownViewModel_mealDescription() {
             // Given: A meal with multiple items
             let meal = Meal(
@@ -195,6 +197,7 @@
             XCTAssertTrue(viewModel.mealDescription.contains("Orange juice"))
         }
 
+        @MainActor
         func test_scoreBreakdownViewModel_mealDescription_handlesEmptyItems() {
             // Given: A meal with no items
             let meal = Meal(
@@ -209,6 +212,46 @@
 
             // Then: Should return empty or placeholder
             XCTAssertTrue(viewModel.mealDescription.isEmpty || viewModel.mealDescription == "No items logged")
+        }
+
+        // MARK: - AI Insight Display Tests
+
+        @MainActor
+        func test_scoreBreakdownViewModel_displayInsight_usesAIInsight() {
+            // Given: A meal with AI insight
+            let meal = Meal(
+                mealType: .snacks,
+                items: ["Whey Protein shake"],
+                healthScore: 0.8,
+                isAIAnalyzed: true,
+                aiInsight: "High in protein, supports muscle recovery."
+            )
+
+            // When
+            let viewModel = ScoreBreakdownViewModel(meal: meal)
+
+            // Then: Should display the AI insight
+            XCTAssertEqual(viewModel.displayInsight, "High in protein, supports muscle recovery.")
+            XCTAssertTrue(viewModel.hasInsight)
+        }
+
+        @MainActor
+        func test_scoreBreakdownViewModel_displayInsight_fallsBackToTemplate() {
+            // Given: A meal without AI insight
+            let meal = Meal(
+                mealType: .lunch,
+                items: ["Salad"],
+                healthScore: 0.85,
+                isAIAnalyzed: true,
+                aiInsight: nil
+            )
+
+            // When
+            let viewModel = ScoreBreakdownViewModel(meal: meal)
+
+            // Then: Should fall back to template reasoning
+            XCTAssertFalse(viewModel.displayInsight.isEmpty)
+            XCTAssertTrue(viewModel.hasInsight)
         }
     }
 #endif

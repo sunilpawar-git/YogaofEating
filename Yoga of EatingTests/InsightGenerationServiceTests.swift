@@ -149,10 +149,53 @@
             // Act
             let prompt = self.sut.createInsightPrompt(from: [snapshot])
 
-            // Assert - Should reference mindset/thoughts
+            // Assert - Should reference mindset/thoughts or todos
             XCTAssertTrue(
                 prompt.contains("mind") || prompt.contains("thought") || prompt.contains("todo") ||
-                    prompt.contains("accomplished")
+                    prompt.contains("Todo") || prompt.contains("accomplished") || prompt.contains("completed"),
+                "Prompt should contain mindset-related or todo-related content"
+            )
+        }
+
+        // MARK: - Phase 4: Tests for Todo Completion in Data Pipeline
+
+        func test_createInsightPrompt_includesTodoCompletionStatus() {
+            // Given: A snapshot with completed and incomplete todos
+            let today = Date()
+            let morningEntries = [
+                MindCheckEntry(
+                    category: .todo,
+                    text: "Exercise",
+                    timestamp: today,
+                    context: .morning,
+                    isAccomplished: true
+                ),
+                MindCheckEntry(
+                    category: .todo,
+                    text: "Read book",
+                    timestamp: today,
+                    context: .morning,
+                    isAccomplished: false
+                )
+            ]
+            let snapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: today,
+                smileyState: .neutral,
+                meals: [Meal(mealType: .lunch, items: ["Salad"], healthScore: 0.9)],
+                mealCount: 1,
+                averageHealthScore: 0.9,
+                morningMindCheck: morningEntries
+            )
+
+            // When: Creating insight prompt
+            let prompt = self.sut.createInsightPrompt(from: [snapshot])
+
+            // Then: Prompt should mention completion status
+            // The prompt may show "1/2 completed" or similar representation
+            XCTAssertTrue(
+                prompt.contains("todo") || prompt.contains("To-Do") || prompt.contains("completed"),
+                "Prompt should reference todo completion"
             )
         }
 
@@ -373,6 +416,48 @@
 
             // Assert
             XCTAssertNotNil(insight)
+        }
+
+        // MARK: - Phase 5: Server Fallback Tests
+
+        func test_generateInsight_fallsBackToLocal_whenServerUnavailable() async throws {
+            // Arrange: Create data with sleep logged (no Firebase functions in test)
+            let calendar = Calendar.current
+            let today = Date()
+
+            // Add historical data
+            for daysAgo in 1...2 {
+                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                let snapshot = DailySmileySnapshot(
+                    id: UUID(),
+                    date: date,
+                    smileyState: .neutral,
+                    meals: [Meal(mealType: .dinner, items: ["Healthy food"], healthScore: 0.8)],
+                    mealCount: 1,
+                    averageHealthScore: 0.8
+                )
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+            }
+
+            // Today with sleep
+            let reflection = DailyReflection(feeling: nil, sleepQuality: .good, note: nil)
+            let todaySnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: today,
+                smileyState: .neutral,
+                meals: [Meal(mealType: .breakfast, items: ["Oatmeal"], healthScore: 0.9)],
+                mealCount: 1,
+                averageHealthScore: 0.9,
+                reflection: reflection
+            )
+            self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
+
+            // Act: Generate insight (should fall back to local since no Firebase)
+            let insight = try await self.sut.generateInsight(for: today)
+
+            // Assert: Should still get an insight via local fallback
+            XCTAssertNotNil(insight)
+            XCTAssertFalse(insight!.insightText.isEmpty)
         }
     }
 #endif

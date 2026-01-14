@@ -85,24 +85,37 @@ extension MainViewModel {
     }
 
     /// Handles completion of evening review (with morning todo updates).
+    /// Phase 3: Now also accepts feeling for holistic End-of-Day capture.
     /// - Parameters:
     ///   - updatedMorningEntries: Morning entries with accomplished status updated
     ///   - eveningEntries: New evening entries (gratitude, let go)
-    func completeEveningReview(updatedMorningEntries: [MindCheckEntry], eveningEntries: [MindCheckEntry]) {
+    ///   - feeling: Optional overall feeling (for End-of-Day flow)
+    func completeEveningReview(
+        updatedMorningEntries: [MindCheckEntry],
+        eveningEntries: [MindCheckEntry],
+        feeling: ReflectionFeeling? = nil
+    ) {
         // Update morning entries with accomplished status
         self.saveMorningMindCheck(updatedMorningEntries)
 
         // Save evening entries
         self.saveEveningMindCheck(eveningEntries)
 
+        // Save feeling if provided (Phase 3: holistic End-of-Day)
+        if let feeling {
+            self.saveOverallFeeling(feeling)
+        }
+
         self.showEveningMindCheckSheet = false
         self.editingEveningEntries = nil
+        self.isEndOfDayFlow = false // Reset flag
     }
 
     /// Handles dismissal of evening mind check input without saving.
     func dismissEveningMindCheckInput() {
         self.showEveningMindCheckSheet = false
         self.editingEveningEntries = nil
+        self.isEndOfDayFlow = false // Reset flag
     }
 
     // MARK: - Edit Methods

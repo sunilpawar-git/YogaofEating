@@ -43,12 +43,12 @@
         // MARK: - Tests: MindCheckInputView
 
         func test_mindCheckInputView_morningContext_hasCorrectCategories() {
-            // Morning categories: todo, gratitude, thinking
-            let morningCategories: [MindCheckCategory] = [.todo, .gratitude, .thinking]
+            // Phase 2: Morning now only offers To-Do category for new entries
+            let availableMorningCategories = MindCheckCategory.categories(for: .morning)
 
-            for category in morningCategories {
-                XCTAssertEqual(category.context, .morning, "\(category) should be a morning category")
-            }
+            XCTAssertEqual(availableMorningCategories.count, 1, "Morning should only offer To-Do")
+            XCTAssertTrue(availableMorningCategories.contains(.todo))
+            // Note: .gratitude and .thinking still exist for backward compatibility
         }
 
         func test_mindCheckInputView_eveningContext_hasCorrectCategories() {
@@ -72,13 +72,12 @@
             XCTAssertEqual(MindCheckCategory.letGo.context, .evening)
         }
 
-        func test_mindCheckCategory_morningCategories_returnsThreeCategories() {
+        func test_mindCheckCategory_morningCategories_returnsOnlyTodo() {
+            // Phase 2: Static morningCategories should only return To-Do
             let morningCategories = MindCheckCategory.morningCategories
 
-            XCTAssertEqual(morningCategories.count, 3)
+            XCTAssertEqual(morningCategories.count, 1, "morningCategories should only contain To-Do")
             XCTAssertTrue(morningCategories.contains(.todo))
-            XCTAssertTrue(morningCategories.contains(.gratitude))
-            XCTAssertTrue(morningCategories.contains(.thinking))
         }
 
         func test_mindCheckCategory_eveningCategories_returnsThreeCategories() {

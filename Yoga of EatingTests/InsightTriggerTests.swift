@@ -112,7 +112,7 @@ final class InsightTriggerTests: XCTestCase {
         XCTAssertEqual(self.sut.currentInsight?.insightText, "Test insight text")
     }
 
-    func test_currentInsight_makesPeekabooStarVisible() async {
+    func test_currentInsight_makesInsightAvailable() async {
         // Given: Setup data and mock insight
         self.setupHistoricalDataForInsight()
         self.mockInsightService.mockInsight = DailyInsight(
@@ -122,8 +122,8 @@ final class InsightTriggerTests: XCTestCase {
             confidence: 0.7
         )
 
-        // Initially star should be hidden
-        XCTAssertFalse(self.sut.shouldShowPeekabooStar)
+        // Initially no insight should be available
+        XCTAssertFalse(self.sut.hasInsightAvailable)
 
         // When: Save sleep quality to trigger insight
         self.sut.saveSleepQuality(.good)
@@ -131,8 +131,8 @@ final class InsightTriggerTests: XCTestCase {
         // Wait for async task
         try? await Task.sleep(nanoseconds: 100_000_000)
 
-        // Then: Peekaboo star should now be visible
-        XCTAssertTrue(self.sut.shouldShowPeekabooStar)
+        // Then: Insight should now be available
+        XCTAssertTrue(self.sut.hasInsightAvailable)
     }
 
     func test_newInsight_hasUnreadIndicator() async {
@@ -195,6 +195,54 @@ final class InsightTriggerTests: XCTestCase {
 
         // Then: currentInsight should be cleared
         XCTAssertNil(self.sut.currentInsight)
+    }
+
+    // MARK: - Phase 2: Smiley Long-Press Tests
+
+    func test_handleSmileyLongPress_whenInsightAvailable_showsInsightSheet() {
+        // Given: Have an insight available
+        self.sut.currentInsight = DailyInsight(
+            date: Date(),
+            insightText: "Test insight",
+            insightType: .encouragement,
+            confidence: 0.8
+        )
+        XCTAssertFalse(self.sut.showInsightSheet)
+
+        // When: Long-press on smiley
+        self.sut.handleSmileyLongPress()
+
+        // Then: Insight sheet should be shown
+        XCTAssertTrue(self.sut.showInsightSheet)
+    }
+
+    func test_handleSmileyLongPress_whenNoInsight_doesNotShowSheet() {
+        // Given: No insight available
+        self.sut.currentInsight = nil
+        XCTAssertFalse(self.sut.showInsightSheet)
+
+        // When: Long-press on smiley
+        self.sut.handleSmileyLongPress()
+
+        // Then: Insight sheet should NOT be shown
+        XCTAssertFalse(self.sut.showInsightSheet)
+    }
+
+    func test_smileyTap_stillCreatesNewMeal() {
+        // Given: Have an insight available (should not interfere with tap)
+        self.sut.currentInsight = DailyInsight(
+            date: Date(),
+            insightText: "Test insight",
+            insightType: .pattern,
+            confidence: 0.7
+        )
+        XCTAssertTrue(self.sut.meals.isEmpty)
+
+        // When: Normal tap (not long-press)
+        self.sut.createNewMeal()
+
+        // Then: Meal should be created
+        XCTAssertEqual(self.sut.meals.count, 1)
     }
 
     // MARK: - Helpers

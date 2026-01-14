@@ -1,3 +1,5 @@
+import FirebaseCore
+import FirebaseFunctions
 import Foundation
 
 /// Protocol for insight generation to enable testing.
@@ -13,21 +15,35 @@ protocol InsightGenerationServiceProtocol {
 
 /// Service for generating AI-powered insights from user data.
 /// Correlates food, mindset, sleep, and feeling data to provide personalized insights.
+/// Tries server-side Gemini generation first, falls back to local PatternAnalyzer.
 @MainActor
 class InsightGenerationService: InsightGenerationServiceProtocol {
     // MARK: - Properties
 
     private let historicalService: any HistoricalDataServiceProtocol
     private let patternAnalyzer: PatternAnalyzer
+    private var functions: Functions?
 
     /// Number of days to look back for insight generation
     private let lookbackDays: Int = 7
 
+    /// Number of days to send to server (last 1-3 days for focused insights)
+    private let serverLookbackDays: Int = 3
+
     // MARK: - Initialization
 
-    init(historicalService: any HistoricalDataServiceProtocol) {
+    init(historicalService: any HistoricalDataServiceProtocol, functions: Functions? = nil) {
         self.historicalService = historicalService
         self.patternAnalyzer = PatternAnalyzer()
+
+        // Only initialize Firebase Functions if Firebase is configured
+        if let providedFunctions = functions {
+            self.functions = providedFunctions
+        } else if FirebaseApp.app() != nil {
+            self.functions = Functions.functions()
+        } else {
+            self.functions = nil
+        }
     }
 
     // MARK: - Data Gathering
@@ -87,10 +103,20 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
                 dayData.append("  Feeling: \(feeling.displayName)")
             }
 
-            // Morning mind check
+            // Morning mind check (Phase 4: include todo completion)
             if let morningEntries = snapshot.morningMindCheck, !morningEntries.isEmpty {
-                let thoughts = morningEntries.map { "\($0.category.displayName): \($0.text)" }.joined(separator: "; ")
-                dayData.append("  Morning thoughts: \(thoughts)")
+                // Count completed todos
+                let todos = morningEntries.filter { $0.category == .todo }
+                if !todos.isEmpty {
+                    let completedCount = todos.count(where: { $0.isAccomplished == true })
+                    dayData.append("  Todos: \(completedCount)/\(todos.count) completed")
+                }
+                // Include other thoughts
+                let otherThoughts = morningEntries.filter { $0.category != .todo }
+                    .map { "\($0.category.displayName): \($0.text)" }
+                if !otherThoughts.isEmpty {
+                    dayData.append("  Morning thoughts: \(otherThoughts.joined(separator: "; "))")
+                }
             }
 
             // Evening mind check
@@ -152,7 +178,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     // MARK: - Insight Generation
 
     /// Generates an insight for the given date using AI.
-    /// Uses PatternAnalyzer to detect correlations and generate rich, date-referenced insights.
+    /// Tries server-side Gemini generation first, falls back to local PatternAnalyzer.
     /// - Parameter date: The date to generate insight for
     /// - Returns: A generated insight, or nil if conditions aren't met
     func generateInsight(for date: Date) async throws -> DailyInsight? {
@@ -162,7 +188,16 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
         let snapshots = self.gatherDataForInsight()
 
-        // Use PatternAnalyzer to detect patterns
+        // Try server-side generation first (last 1-3 days for focused insights)
+        let recentSnapshots = Array(snapshots.prefix(self.serverLookbackDays))
+        if let serverInsight = await self.generateInsightFromServer(snapshots: recentSnapshots, date: date) {
+            print("✨ Using server-generated insight from Gemini")
+            self.saveInsight(serverInsight, for: date)
+            return serverInsight
+        }
+
+        // Fallback to local PatternAnalyzer
+        print("📊 Using local PatternAnalyzer for insight generation")
         let patterns = self.patternAnalyzer.analyzePatterns(from: snapshots)
 
         // Generate insight based on detected patterns or fallback to generic
@@ -181,6 +216,122 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
         self.saveInsight(insight, for: date)
         return insight
+    }
+
+    // MARK: - Server-Side Generation
+
+    /// Calls the Firebase Cloud Function to generate insight using Gemini.
+    /// - Parameters:
+    ///   - snapshots: The recent snapshots to analyze
+    ///   - date: The date for the insight
+    /// - Returns: A DailyInsight if successful, nil otherwise
+    private func generateInsightFromServer(
+        snapshots: [DailySmileySnapshot],
+        date: Date
+    ) async -> DailyInsight? {
+        guard let functions = self.functions else {
+            print("⚠️ Firebase Functions not available for insight generation")
+            return nil
+        }
+
+        // Prepare data for server
+        let userData = snapshots.map { snapshot -> [String: Any] in
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "EEEE"
+            let dayName = dateFormatter.string(from: snapshot.date)
+
+            var data: [String: Any] = [
+                "date": dayName,
+                "averageHealthScore": snapshot.averageHealthScore
+            ]
+
+            // Add meals
+            if !snapshot.meals.isEmpty {
+                data["meals"] = snapshot.meals.map { meal -> [String: Any] in
+                    [
+                        "items": meal.items,
+                        "healthScore": meal.healthScore,
+                        "mealType": meal.mealType.rawValue
+                    ]
+                }
+            }
+
+            // Add sleep quality
+            if let reflection = snapshot.reflection, let sleep = reflection.sleepQuality {
+                data["sleepQuality"] = sleep.displayName
+            }
+
+            // Add feeling
+            if let reflection = snapshot.reflection, let feeling = reflection.feeling {
+                data["feeling"] = feeling.displayName
+            }
+
+            // Add morning mind check (Phase 4: include isAccomplished for todos)
+            if let morningEntries = snapshot.morningMindCheck, !morningEntries.isEmpty {
+                data["morningMindCheck"] = morningEntries.map { entry -> [String: Any] in
+                    var entryData: [String: Any] = [
+                        "text": entry.text,
+                        "category": entry.category.displayName
+                    ]
+                    // Include completion status for todos
+                    if entry.category == .todo {
+                        entryData["isAccomplished"] = entry.isAccomplished ?? false
+                    }
+                    return entryData
+                }
+            }
+
+            // Add evening mind check
+            if let eveningEntries = snapshot.eveningMindCheck, !eveningEntries.isEmpty {
+                data["eveningMindCheck"] = eveningEntries.map { entry -> [String: Any] in
+                    [
+                        "text": entry.text,
+                        "category": entry.category.displayName
+                    ]
+                }
+            }
+
+            return data
+        }
+
+        do {
+            print("📡 Calling Firebase Cloud Function 'generateInsight'")
+            let result = try await functions.httpsCallable("generateInsight").call(["userData": userData])
+
+            guard let responseData = result.data as? [String: Any] else {
+                print("⚠️ Invalid response format from generateInsight")
+                return nil
+            }
+
+            guard let insightText = responseData["insightText"] as? String,
+                  let insightTypeString = responseData["insightType"] as? String,
+                  let confidence = responseData["confidence"] as? Double
+            else {
+                print("⚠️ Missing required fields in generateInsight response")
+                return nil
+            }
+
+            // Parse insight type
+            let insightType: InsightType = switch insightTypeString {
+            case "foodSleep": .foodSleep
+            case "mindsetFeeling": .mindsetFeeling
+            case "pattern": .pattern
+            default: .encouragement
+            }
+
+            print("✅ Received insight from server: \(insightText.prefix(50))...")
+
+            return DailyInsight(
+                date: date,
+                insightText: insightText,
+                insightType: insightType,
+                confidence: confidence
+            )
+
+        } catch {
+            print("❌ Server insight generation failed: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     // MARK: - Private Helpers
