@@ -10,26 +10,10 @@
     final class MindCheckUITests: XCTestCase {
         // MARK: - Tests: MindCheckPillView
 
-        func test_mindCheckPillView_morningContext_hasCorrectLabel() {
-            // Arrange
-            let view = MindCheckPillView(context: .morning, action: {})
-
-            // Assert
-            XCTAssertEqual(view.context, .morning)
-        }
-
-        func test_mindCheckPillView_eveningContext_hasCorrectLabel() {
-            // Arrange
-            let view = MindCheckPillView(context: .evening, action: {})
-
-            // Assert
-            XCTAssertEqual(view.context, .evening)
-        }
-
         func test_mindCheckPillView_actionInvoked_whenTapped() {
             // Arrange
             var actionCalled = false
-            let view = MindCheckPillView(context: .morning) {
+            let view = MindCheckPillView {
                 actionCalled = true
             }
 
@@ -147,11 +131,6 @@
         func test_eveningInput_showsCorrectTitle() {
             // Evening title should be "Evening Review"
             XCTAssertEqual(Strings.MindCheck.eveningTitle, "Evening Review")
-        }
-
-        func test_eveningInput_showsCorrectSubtitle() {
-            // Evening subtitle should ask about the day
-            XCTAssertEqual(Strings.MindCheck.eveningSubtitle, "How did your day go?")
         }
 
         func test_entryLimitGuidance_showsCorrectText() {

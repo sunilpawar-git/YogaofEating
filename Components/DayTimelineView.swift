@@ -52,20 +52,11 @@ struct DayTimelineView: View {
     /// Whether to show the morning mind check pill (after sleep quality)
     var showMorningMindCheckPill: Bool = false
 
-    /// Whether to show the evening mind check pill (before End-of-Day)
-    var showEveningMindCheckPill: Bool = false
-
     /// Today's morning mind check entries (for displaying badge)
     var todaysMorningMindCheck: [MindCheckEntry]?
 
-    /// Today's evening mind check entries (for displaying badge)
-    var todaysEveningMindCheck: [MindCheckEntry]?
-
     /// Callback when user taps the morning mind check pill
     var onMorningMindCheckTap: (() -> Void)?
-
-    /// Callback when user taps the evening mind check pill
-    var onEveningMindCheckTap: (() -> Void)?
 
     /// Callback when a meal is updated
     var onUpdateMeal: ((UUID, MealType, [String]) -> Void)?
@@ -85,6 +76,8 @@ struct DayTimelineView: View {
     // MARK: - State
 
     @State private var breathingMeals: Set<UUID> = []
+    @State private var showInsightCoachmark: Bool = false
+    @AppStorage(StorageKeys.insightCoachmarkSeen) private var insightCoachmarkSeen: Bool = false
 
     // MARK: - Body
 
@@ -105,7 +98,7 @@ struct DayTimelineView: View {
                     }
                     .padding(.bottom, 16)
                 } else if self.showMorningMindCheckPill {
-                    MindCheckPillView(context: .morning) {
+                    MindCheckPillView {
                         self.onMorningMindCheckTap?()
                     }
                     .padding(.bottom, 16)
@@ -126,22 +119,6 @@ struct DayTimelineView: View {
                 } else if index < sortedMeals.count - 1 {
                     // Fallback spacing if no period found
                     Spacer().frame(height: 30)
-                }
-            }
-
-            // Evening mind check: pill or badge before feeling
-            if self.isToday {
-                if let eveningEntries = self.todaysEveningMindCheck, !eveningEntries.isEmpty {
-                    MindCheckBadgeView(entries: eveningEntries, context: .evening) {
-                        // Tap to edit existing entries
-                        self.onEveningMindCheckTap?()
-                    }
-                    .padding(.top, 16)
-                } else if self.showEveningMindCheckPill {
-                    MindCheckPillView(context: .evening) {
-                        self.onEveningMindCheckTap?()
-                    }
-                    .padding(.top, 16)
                 }
             }
 
@@ -171,6 +148,10 @@ struct DayTimelineView: View {
         }
         .frame(maxWidth: .infinity)
         .background(alignment: .center) { self.timelineLine }
+        .onAppear { self.updateInsightCoachmark() }
+        .onChange(of: self.hasInsightAvailable) { _, _ in
+            self.updateInsightCoachmark()
+        }
     }
 
     // MARK: - Meal Block
@@ -307,30 +288,45 @@ struct DayTimelineView: View {
 
     private var smileyAddButton: some View {
         VStack(spacing: 16) {
-            // Smiley with optional red dot indicator for insights
-            ZStack(alignment: .topTrailing) {
-                SmileyView(state: self.smileyState)
-                    .frame(width: 120, height: 120)
-
-                // Red dot indicator when insight is available
-                if self.hasInsightAvailable {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 16, height: 16)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white, lineWidth: 2)
-                        )
-                        .offset(x: 8, y: -8)
+            SmileyView(state: self.smileyState)
+                .frame(width: 120, height: 120)
+                .overlay(alignment: .topTrailing) {
+                    // Red dot indicator when insight is available
+                    if self.hasInsightAvailable {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 14, height: 14)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white, lineWidth: 2)
+                            )
+                            .offset(x: 4, y: -4)
+                    }
                 }
-            }
-            .onTapGesture {
-                self.onSmileyTap?()
-                SensoryService.shared.playNudge(style: .medium)
-            }
-            .onLongPressGesture(minimumDuration: 0.5) {
-                self.onSmileyLongPress?()
-            }
+                .overlay(alignment: .top) {
+                    if self.showInsightCoachmark {
+                        self.insightCoachmark
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .offset(y: -44)
+                    }
+                }
+                .onTapGesture {
+                    if self.showInsightCoachmark {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            self.showInsightCoachmark = false
+                        }
+                    }
+                    self.onSmileyTap?()
+                    SensoryService.shared.playNudge(style: .medium)
+                }
+                .onLongPressGesture(minimumDuration: 0.5) {
+                    if self.showInsightCoachmark {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            self.showInsightCoachmark = false
+                        }
+                    }
+                    self.onSmileyLongPress?()
+                }
 
             // Hint text changes when insight available
             Text(self.hasInsightAvailable ? "TAP TO LOG · HOLD FOR INSIGHT" : "TAP TO LOG")
@@ -568,6 +564,39 @@ struct DayTimelineView: View {
         if score >= 0.8 { return .green }
         if score >= 0.5 { return .blue }
         return .orange
+    }
+
+    // MARK: - Insight Coachmark
+
+    private var insightCoachmark: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "hand.tap")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
+            Text("Hold to view insight")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule()
+                .fill(Color.black.opacity(0.75))
+        )
+        .accessibilityLabel("Hold the smiley to view insight")
+    }
+
+    private func updateInsightCoachmark() {
+        guard self.isToday, self.hasInsightAvailable, !self.insightCoachmarkSeen else { return }
+        self.insightCoachmarkSeen = true
+        withAnimation(.easeOut(duration: 0.2)) {
+            self.showInsightCoachmark = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            withAnimation(.easeOut(duration: 0.2)) {
+                self.showInsightCoachmark = false
+            }
+        }
     }
 }
 
