@@ -103,23 +103,6 @@ struct BreathingContentView: View {
     .padding()
 }
 
-// MARK: - Delete Action Modifier
-
-/// A view modifier that adds swipe-to-delete functionality.
-struct DeleteActionModifier: ViewModifier {
-    let onDelete: () -> Void
-
-    func body(content: Content) -> some View {
-        content.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                self.onDelete()
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-    }
-}
-
 // MARK: - Recent Meals Add Button
 
 /// A small circular "+" button for adding from recent meals
