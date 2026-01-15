@@ -44,10 +44,15 @@ extension MainViewModel {
             )
 
             // Update the specific meal's health score, AI analyzed flag, and basic insight
+            // NOTE: We create a new array copy to ensure @Published triggers SwiftUI view updates.
+            // Direct in-place mutation (meals[index].property = value) may not reliably trigger
+            // observation in SwiftUI, causing the UI to display stale values.
             if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
-                meals[verifyIndex].healthScore = result.score
-                meals[verifyIndex].isAIAnalyzed = true
-                meals[verifyIndex].aiInsight = result.insight
+                var updatedMeals = meals
+                updatedMeals[verifyIndex].healthScore = result.score
+                updatedMeals[verifyIndex].isAIAnalyzed = true
+                updatedMeals[verifyIndex].aiInsight = result.insight
+                meals = updatedMeals
                 saveData()
                 print("📊 Updated meal healthScore to: \(result.score), isAIAnalyzed: true")
                 if let insight = result.insight {

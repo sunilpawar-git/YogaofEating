@@ -60,9 +60,6 @@ class MainViewModel: ObservableObject {
     /// Entries being edited (nil when creating new entries)
     @Published var editingMorningEntries: [MindCheckEntry]?
 
-    /// Entries being edited for evening (nil when creating new entries)
-    @Published var editingEveningEntries: [MindCheckEntry]?
-
     // MARK: - Insights (Phase 6 - Peekaboo Star)
 
     /// Controls visibility of the insight bottom sheet
@@ -189,15 +186,17 @@ class MainViewModel: ObservableObject {
         // Check if items actually changed
         let itemsChanged = self.meals[index].items != items
 
+        // Only update items and recalculate local score if content actually changed
+        // This prevents overwriting AI scores with local scores on redundant updates
+        guard itemsChanged else { return }
+
         // Local synchronous update for immediate feedback
         let healthScore = self.logicService.calculateHealthScore(for: items)
         self.meals[index].items = items
         self.meals[index].healthScore = healthScore
 
-        // Reset AI analyzed flag if items changed (content needs re-analysis)
-        if itemsChanged {
-            self.meals[index].isAIAnalyzed = false
-        }
+        // Reset AI analyzed flag since content needs re-analysis
+        self.meals[index].isAIAnalyzed = false
 
         self.saveData()
         print("📝 Local healthScore set to: \(healthScore)")
@@ -214,11 +213,9 @@ class MainViewModel: ObservableObject {
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
-        // Only trigger AI analysis if items changed
-        if itemsChanged {
-            Task {
-                await self.performDeepAnalysis(for: mealId, items: items)
-            }
+        // Trigger AI analysis for new items
+        Task {
+            await self.performDeepAnalysis(for: mealId, items: items)
         }
     }
 
@@ -228,37 +225,45 @@ class MainViewModel: ObservableObject {
 
         // Check if items actually changed
         let itemsChanged = self.meals[index].items != items
+        let mealTypeChanged = self.meals[index].mealType != mealType
 
-        // Local synchronous update
-        let healthScore = self.logicService.calculateHealthScore(for: items)
-        self.meals[index].mealType = mealType
-        self.meals[index].items = items
-        self.meals[index].healthScore = healthScore
+        // Skip if nothing changed - prevents overwriting AI scores with local scores
+        guard itemsChanged || mealTypeChanged else { return }
 
-        // Reset AI analyzed flag if items changed (content needs re-analysis)
+        // Update meal type if changed
+        if mealTypeChanged {
+            self.meals[index].mealType = mealType
+        }
+
+        // Only recalculate local score if items changed
         if itemsChanged {
+            let healthScore = self.logicService.calculateHealthScore(for: items)
+            self.meals[index].items = items
+            self.meals[index].healthScore = healthScore
+            // Reset AI analyzed flag since content needs re-analysis
             self.meals[index].isAIAnalyzed = false
-        }
 
-        self.saveData()
+            self.saveData()
 
-        // Play personalized haptic feedback based on health score and user risk level
-        if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
-            SensoryService.shared.playMealFeedbackHaptic(
-                for: healthScore,
-                riskLevel: profile.riskLevel,
-                userDefaults: nil
-            )
-        }
+            // Play personalized haptic feedback based on health score and user risk level
+            if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
+                SensoryService.shared.playMealFeedbackHaptic(
+                    for: healthScore,
+                    riskLevel: profile.riskLevel,
+                    userDefaults: nil
+                )
+            }
 
-        // Immediately update smiley state with current meal scores
-        self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
+            // Immediately update smiley state with current meal scores
+            self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
-        // Only trigger AI analysis if items changed
-        if itemsChanged {
+            // Trigger AI analysis for new items
             Task {
                 await self.performDeepAnalysis(for: mealId, items: items)
             }
+        } else {
+            // Only meal type changed, just save
+            self.saveData()
         }
     }
 
