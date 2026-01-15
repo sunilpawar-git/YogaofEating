@@ -103,8 +103,8 @@
             )
             XCTAssertTrue(mealBlocks.firstMatch.waitForExistence(timeout: 3), "Meal block should exist")
 
-            // Perform long press gesture (2 seconds duration as per design)
-            mealBlocks.firstMatch.press(forDuration: 2.0)
+            // Perform long press gesture (1 second duration as per design)
+            mealBlocks.firstMatch.press(forDuration: 1.0)
 
             // Assert: Delete confirmation alert should appear
             let deleteAlert = self.app.alerts["Delete this meal?"]
@@ -146,19 +146,19 @@
             }
             sleep(1)
 
-            // Act: Find the meal block and perform long press (2 seconds)
+            // Act: Find the meal block and perform long press (1 second)
             let mealBlocks = self.app.otherElements.matching(
                 NSPredicate(format: "identifier BEGINSWITH 'meal-block-'")
             )
             XCTAssertTrue(mealBlocks.firstMatch.exists, "Meal block should exist")
 
-            mealBlocks.firstMatch.press(forDuration: 2.0)
+            mealBlocks.firstMatch.press(forDuration: 1.0)
 
             // Assert: Delete alert should appear
             let deleteAlert = self.app.alerts["Delete this meal?"]
             XCTAssertTrue(
                 deleteAlert.waitForExistence(timeout: 3),
-                "Delete alert should appear after 2 second long press"
+                "Delete alert should appear after 1 second long press"
             )
 
             // Verify alert message
@@ -183,7 +183,7 @@
             let textField = self.app.textFields.firstMatch
             XCTAssertTrue(textField.waitForExistence(timeout: 3))
 
-            // Act: Find the meal block and perform a short press (less than 2 seconds)
+            // Act: Find the meal block and perform a short press (less than 1 second)
             let mealBlocks = self.app.otherElements.matching(
                 NSPredicate(format: "identifier BEGINSWITH 'meal-block-'")
             )
