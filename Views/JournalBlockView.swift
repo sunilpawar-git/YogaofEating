@@ -61,7 +61,7 @@ struct JournalBlockView: View {
             .scaleEffect(self.isPressed ? 0.96 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: self.isPressed)
             .animation(.easeInOut(duration: 0.5), value: self.meal.healthScore)
-            .onLongPressGesture(minimumDuration: 2.0) {
+            .onLongPressGesture(minimumDuration: 1.0) {
                 SensoryService.shared.playNudge(style: .heavy)
                 self.showDeleteAlert = true
             } onPressingChanged: { pressing in

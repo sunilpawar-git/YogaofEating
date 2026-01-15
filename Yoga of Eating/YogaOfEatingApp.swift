@@ -33,9 +33,15 @@ struct YogaOfEatingApp: App {
         // This prevents the "default Firebase app has not yet been configured" warning
         // that occurs when MainViewModel (created as @StateObject) initializes AILogicService
         let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
-        if !isCIEnvironment, FirebaseApp.app() == nil {
-            FirebaseApp.configure()
-            print("🔥 Firebase initialized (App init)")
+        if !isCIEnvironment {
+            // Configure Firebase unconditionally (it's safe to call multiple times)
+            // Check if already configured to avoid unnecessary work
+            if FirebaseApp.app() == nil {
+                FirebaseApp.configure()
+                print("🔥 Firebase initialized (App init)")
+            } else {
+                print("🔥 Firebase already configured")
+            }
         }
 
         // Check if running UI tests and reset data if needed
@@ -105,12 +111,18 @@ struct YogaOfEatingApp: App {
             let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
 
             if !isTestEnvironment, !isCIEnvironment {
-                // Firebase is now initialized in YogaOfEatingApp.init() to prevent race conditions
-                // Just initialize AuthService here
+                // Ensure Firebase is configured early in app lifecycle
+                // This runs before SwiftUI's @main init, providing an early initialization point
+                if FirebaseApp.app() == nil {
+                    FirebaseApp.configure()
+                    print("🔥 Firebase initialized (AppDelegate)")
+                }
+
+                // Initialize AuthService
                 _ = AuthService.shared
                 print("👤 AuthService initialized (AppDelegate)")
             } else {
-                print("🧪 Skipping AuthService initialization in test/CI environment")
+                print("🧪 Skipping Firebase and AuthService initialization in test/CI environment")
             }
 
             return true
