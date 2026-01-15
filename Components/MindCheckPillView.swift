@@ -5,40 +5,14 @@ import SwiftUI
 struct MindCheckPillView: View {
     // MARK: - Properties
 
-    /// The context (morning or evening) this pill is for
-    let context: MindCheckContext
-
     /// Action to perform when tapped
     let action: () -> Void
 
     // MARK: - Private
 
-    private var emoji: String {
-        switch self.context {
-        case .morning:
-            "🌅"
-        case .evening:
-            "🌙"
-        }
-    }
-
-    private var labelText: String {
-        switch self.context {
-        case .morning:
-            Strings.MindCheck.morningPillText
-        case .evening:
-            Strings.MindCheck.eveningPillText
-        }
-    }
-
-    private var accessibilityLabel: String {
-        switch self.context {
-        case .morning:
-            "Log morning mind check"
-        case .evening:
-            "Log evening mind check"
-        }
-    }
+    private let emoji = "🌅"
+    private let labelText = Strings.MindCheck.morningPillText
+    private let accessibilityLabel = "Log morning mind check"
 
     // MARK: - Body
 
@@ -74,12 +48,8 @@ struct MindCheckPillView: View {
 #if DEBUG
     #Preview("Morning Pill") {
         VStack(spacing: 20) {
-            MindCheckPillView(context: .morning) {
+            MindCheckPillView {
                 print("Morning tapped")
-            }
-
-            MindCheckPillView(context: .evening) {
-                print("Evening tapped")
             }
         }
         .padding()

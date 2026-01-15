@@ -14,8 +14,6 @@ enum Strings {
 
         // Evening
         static let eveningTitle = "Evening Review"
-        static let eveningSubtitle = "How did your day go?"
-        static let eveningPillText = "How was your day?"
 
         // Common
         static let entryLimitHint = "Up to 3 thoughts"

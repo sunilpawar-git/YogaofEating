@@ -74,23 +74,6 @@ final class MindCheckEditTests: XCTestCase {
     }
 
     @MainActor
-    func test_mainViewModel_editEveningMindCheck_setsEditMode() {
-        // Given
-        let viewModel = MainViewModel()
-        let existingEntries = [
-            MindCheckEntry(category: .accomplished, text: "Completed task", context: .evening)
-        ]
-
-        // When
-        viewModel.editEveningMindCheck(existingEntries)
-
-        // Then
-        XCTAssertTrue(viewModel.showEveningMindCheckSheet)
-        XCTAssertNotNil(viewModel.editingEveningEntries)
-        XCTAssertEqual(viewModel.editingEveningEntries?.count, 1)
-    }
-
-    @MainActor
     func test_mainViewModel_completeMindCheckInput_clearsEditMode() {
         // Given
         let viewModel = MainViewModel()

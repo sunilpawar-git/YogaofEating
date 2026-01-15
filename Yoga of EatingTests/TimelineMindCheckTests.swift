@@ -52,28 +52,6 @@
             XCTAssertFalse(self.viewModel.showMorningMindCheckPill)
         }
 
-        // MARK: - Tests: Evening Mind Check Pill Placement
-
-        func test_eveningMindCheckPill_showsWhenMealsExist() {
-            // Arrange: Create a meal
-            self.viewModel.createNewMeal()
-
-            // Assert: Pill should show
-            XCTAssertTrue(self.viewModel.showEveningMindCheckPill)
-        }
-
-        func test_eveningMindCheckPill_hidesAfterMindCheckLogged() {
-            // Arrange: Create a meal and log evening mind check
-            self.viewModel.createNewMeal()
-            let entries = [
-                MindCheckEntry(category: .accomplished, text: "Done", timestamp: Date(), context: .evening)
-            ]
-            self.viewModel.saveEveningMindCheck(entries)
-
-            // Assert: Pill should hide
-            XCTAssertFalse(self.viewModel.showEveningMindCheckPill)
-        }
-
         // MARK: - Tests: Mind Check Badge Display
 
         func test_morningMindCheckBadge_showsAfterLogging() {
@@ -86,18 +64,6 @@
             // Assert: Badge data should be available
             XCTAssertNotNil(self.viewModel.todaysMorningMindCheck)
             XCTAssertEqual(self.viewModel.todaysMorningMindCheck?.count, 1)
-        }
-
-        func test_eveningMindCheckBadge_showsAfterLogging() {
-            // Arrange: Log evening mind check
-            let entries = [
-                MindCheckEntry(category: .accomplished, text: "Done", timestamp: Date(), context: .evening)
-            ]
-            self.viewModel.saveEveningMindCheck(entries)
-
-            // Assert: Badge data should be available
-            XCTAssertNotNil(self.viewModel.todaysEveningMindCheck)
-            XCTAssertEqual(self.viewModel.todaysEveningMindCheck?.count, 1)
         }
 
         // MARK: - Tests: Sheet Triggers
@@ -131,21 +97,6 @@
             // Assert
             XCTAssertFalse(self.viewModel.showMorningMindCheckSheet)
             XCTAssertNotNil(self.viewModel.todaysMorningMindCheck)
-        }
-
-        func test_completeEveningMindCheck_closesSheetAndSavesData() {
-            // Arrange
-            self.viewModel.showEveningMindCheckSheet = true
-            let entries = [
-                MindCheckEntry(category: .letGo, text: "Stress", timestamp: Date(), context: .evening)
-            ]
-
-            // Act
-            self.viewModel.completeEveningMindCheckInput(entries)
-
-            // Assert
-            XCTAssertFalse(self.viewModel.showEveningMindCheckSheet)
-            XCTAssertNotNil(self.viewModel.todaysEveningMindCheck)
         }
 
         // MARK: - Tests: Historical Day Mind Check Display (Phase 1)

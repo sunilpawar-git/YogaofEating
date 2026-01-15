@@ -31,6 +31,10 @@ enum StorageKeys {
     static let healthSyncEnabled = "health_sync_enabled"
     static let showHealthInsights = "show_health_insights"
 
+    // MARK: - Coachmarks
+
+    static let insightCoachmarkSeen = "insight_coachmark_seen"
+
     // MARK: - All Keys (for bulk operations like deleteAll)
 
     static let allKeys: [String] = [
@@ -46,6 +50,7 @@ enum StorageKeys {
         hapticsEnabled,
         soundEnabled,
         healthSyncEnabled,
-        showHealthInsights
+        showHealthInsights,
+        insightCoachmarkSeen
     ]
 }

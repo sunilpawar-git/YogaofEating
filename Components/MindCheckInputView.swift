@@ -6,9 +6,6 @@ import SwiftUI
 struct MindCheckInputView: View {
     // MARK: - Properties
 
-    /// The context (morning or evening) this input is for
-    let context: MindCheckContext
-
     /// Existing entries to edit (nil for new entry mode)
     let existingEntries: [MindCheckEntry]?
 
@@ -21,12 +18,10 @@ struct MindCheckInputView: View {
     // MARK: - Initialization
 
     init(
-        context: MindCheckContext,
         existingEntries: [MindCheckEntry]? = nil,
         onSave: @escaping ([MindCheckEntry]) -> Void,
         onDismiss: @escaping () -> Void
     ) {
-        self.context = context
         self.existingEntries = existingEntries
         self.onSave = onSave
         self.onDismiss = onDismiss
@@ -46,25 +41,15 @@ struct MindCheckInputView: View {
     }
 
     private var availableCategories: [MindCheckCategory] {
-        MindCheckCategory.categories(for: self.context)
+        MindCheckCategory.morningCategories
     }
 
     private var title: String {
-        switch self.context {
-        case .morning:
-            Strings.MindCheck.morningTitle
-        case .evening:
-            Strings.MindCheck.eveningTitle
-        }
+        Strings.MindCheck.morningTitle
     }
 
     private var subtitle: String {
-        switch self.context {
-        case .morning:
-            Strings.MindCheck.morningSubtitle
-        case .evening:
-            Strings.MindCheck.eveningSubtitle
-        }
+        Strings.MindCheck.morningSubtitle
     }
 
     private var hasValidEntries: Bool {
@@ -202,7 +187,7 @@ struct MindCheckInputView: View {
                     category: draft.category,
                     text: draft.text.trimmingCharacters(in: .whitespacesAndNewlines),
                     timestamp: Date(),
-                    context: self.context
+                    context: .morning
                 )
             }
 
@@ -309,19 +294,6 @@ struct MindCheckEntryDraft: Identifiable {
 #if DEBUG
     #Preview("Morning Input") {
         MindCheckInputView(
-            context: .morning,
-            onSave: { entries in
-                print("Saved: \(entries)")
-            },
-            onDismiss: {
-                print("Dismissed")
-            }
-        )
-    }
-
-    #Preview("Evening Input") {
-        MindCheckInputView(
-            context: .evening,
             onSave: { entries in
                 print("Saved: \(entries)")
             },

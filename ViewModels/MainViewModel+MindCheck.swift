@@ -18,18 +18,6 @@ extension MainViewModel {
         return true
     }
 
-    /// Returns true if the evening mind check pill should be shown.
-    /// Shows when: at least one meal exists AND evening mind check is not yet logged.
-    var showEveningMindCheckPill: Bool {
-        // Must have at least one meal
-        guard !self.meals.isEmpty else { return false }
-
-        // Must not have evening mind check logged
-        guard self.todaysEveningMindCheck == nil else { return false }
-
-        return true
-    }
-
     /// Returns today's morning mind check entries if logged.
     var todaysMorningMindCheck: [MindCheckEntry]? {
         let today = Date()
@@ -76,14 +64,6 @@ extension MainViewModel {
         self.editingMorningEntries = nil
     }
 
-    /// Handles completion of evening mind check input.
-    /// - Parameter entries: The entered mind check entries
-    func completeEveningMindCheckInput(_ entries: [MindCheckEntry]) {
-        self.saveEveningMindCheck(entries)
-        self.showEveningMindCheckSheet = false
-        self.editingEveningEntries = nil
-    }
-
     /// Handles completion of evening review (with morning todo updates).
     /// Phase 3: Now also accepts feeling for holistic End-of-Day capture.
     /// - Parameters:
@@ -107,14 +87,12 @@ extension MainViewModel {
         }
 
         self.showEveningMindCheckSheet = false
-        self.editingEveningEntries = nil
         self.isEndOfDayFlow = false // Reset flag
     }
 
     /// Handles dismissal of evening mind check input without saving.
     func dismissEveningMindCheckInput() {
         self.showEveningMindCheckSheet = false
-        self.editingEveningEntries = nil
         self.isEndOfDayFlow = false // Reset flag
     }
 
@@ -127,10 +105,8 @@ extension MainViewModel {
         self.showMorningMindCheckSheet = true
     }
 
-    /// Opens the evening mind check sheet in edit mode with existing entries.
-    /// - Parameter entries: The existing entries to edit
-    func editEveningMindCheck(_ entries: [MindCheckEntry]) {
-        self.editingEveningEntries = entries
+    /// Opens the evening review sheet for end-of-day reflection.
+    func openEveningReview() {
         self.showEveningMindCheckSheet = true
     }
 }

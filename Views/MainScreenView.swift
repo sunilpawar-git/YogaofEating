@@ -49,7 +49,6 @@ struct MainScreenView: View {
             }
             .sheet(isPresented: self.$viewModel.showMorningMindCheckSheet) {
                 MindCheckInputView(
-                    context: .morning,
                     existingEntries: self.viewModel.editingMorningEntries,
                     onSave: { entries in
                         self.viewModel.completeMorningMindCheckInput(entries)
@@ -62,40 +61,23 @@ struct MainScreenView: View {
                 .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: self.$viewModel.showEveningMindCheckSheet) {
-                // Use EveningReviewView if morning entries exist (for accountability)
-                // Otherwise use standard MindCheckInputView
-                if let morningEntries = self.viewModel.todaysMorningMindCheck, !morningEntries.isEmpty {
-                    EveningReviewView(
-                        morningEntries: morningEntries,
-                        existingEveningEntries: self.viewModel.editingEveningEntries,
-                        showFeelingSelection: self.viewModel.isEndOfDayFlow,
-                        onSave: { updatedMorning, evening, feeling in
-                            self.viewModel.completeEveningReview(
-                                updatedMorningEntries: updatedMorning,
-                                eveningEntries: evening,
-                                feeling: feeling
-                            )
-                        },
-                        onDismiss: {
-                            self.viewModel.dismissEveningMindCheckInput()
-                        }
-                    )
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-                } else {
-                    MindCheckInputView(
-                        context: .evening,
-                        existingEntries: self.viewModel.editingEveningEntries,
-                        onSave: { entries in
-                            self.viewModel.completeEveningMindCheckInput(entries)
-                        },
-                        onDismiss: {
-                            self.viewModel.dismissEveningMindCheckInput()
-                        }
-                    )
-                    .presentationDetents([.medium])
-                    .presentationDragIndicator(.visible)
-                }
+                EveningReviewView(
+                    morningEntries: self.viewModel.todaysMorningMindCheck ?? [],
+                    existingEveningEntries: self.viewModel.todaysEveningMindCheck,
+                    showFeelingSelection: self.viewModel.isEndOfDayFlow,
+                    onSave: { updatedMorning, evening, feeling in
+                        self.viewModel.completeEveningReview(
+                            updatedMorningEntries: updatedMorning,
+                            eveningEntries: evening,
+                            feeling: feeling
+                        )
+                    },
+                    onDismiss: {
+                        self.viewModel.dismissEveningMindCheckInput()
+                    }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: self.$viewModel.showInsightSheet) {
                 if let insight = self.viewModel.currentInsight {
@@ -226,23 +208,13 @@ struct MainScreenView: View {
             todaysFeeling: self.viewModel.todaysFeeling,
             showEndOfDayPill: self.viewModel.showEndOfDayPill,
             showMorningMindCheckPill: self.viewModel.showMorningMindCheckPill,
-            showEveningMindCheckPill: self.viewModel.showEveningMindCheckPill,
             todaysMorningMindCheck: self.viewModel.todaysMorningMindCheck,
-            todaysEveningMindCheck: self.viewModel.todaysEveningMindCheck,
             onMorningMindCheckTap: {
                 // Check if we're editing existing entries or creating new
                 if let existingEntries = self.viewModel.todaysMorningMindCheck, !existingEntries.isEmpty {
                     self.viewModel.editMorningMindCheck(existingEntries)
                 } else {
                     self.viewModel.showMorningMindCheckSheet = true
-                }
-            },
-            onEveningMindCheckTap: {
-                // Check if we're editing existing entries or creating new
-                if let existingEntries = self.viewModel.todaysEveningMindCheck, !existingEntries.isEmpty {
-                    self.viewModel.editEveningMindCheck(existingEntries)
-                } else {
-                    self.viewModel.showEveningMindCheckSheet = true
                 }
             },
             onUpdateMeal: { mealId, mealType, items in
