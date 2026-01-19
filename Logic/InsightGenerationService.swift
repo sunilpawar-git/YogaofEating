@@ -235,14 +235,22 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         }
 
         // Prepare data for server
+        // Mark which day is "today" (the date we're generating insight for)
+        let calendar = Calendar.current
+        let todayNormalized = calendar.startOfDay(for: date)
+
         let userData = snapshots.map { snapshot -> [String: Any] in
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "EEEE"
             let dayName = dateFormatter.string(from: snapshot.date)
 
+            // Mark if this snapshot is for "today" (the insight date)
+            let isToday = calendar.isDate(snapshot.date, inSameDayAs: todayNormalized)
+
             var data: [String: Any] = [
                 "date": dayName,
-                "averageHealthScore": snapshot.averageHealthScore
+                "averageHealthScore": snapshot.averageHealthScore,
+                "isToday": isToday
             ]
 
             // Add meals
@@ -296,7 +304,15 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
         do {
             print("📡 Calling Firebase Cloud Function 'generateInsight'")
-            let result = try await functions.httpsCallable("generateInsight").call(["userData": userData])
+            // Pass the insight date so server knows which day is "today"
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "EEEE, MMMM d"
+            let insightDateString = dateFormatter.string(from: date)
+
+            let result = try await functions.httpsCallable("generateInsight").call([
+                "userData": userData,
+                "insightDate": insightDateString
+            ])
 
             guard let responseData = result.data as? [String: Any] else {
                 print("⚠️ Invalid response format from generateInsight")

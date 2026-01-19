@@ -68,6 +68,12 @@ class MainViewModel: ObservableObject {
     /// The current insight to display (generated when sleep is logged)
     @Published var currentInsight: DailyInsight?
 
+    /// Suggested sleep quality from Apple HealthKit (if available)
+    @Published var suggestedSleepQuality: SleepQuality?
+
+    /// Sleep data from Apple HealthKit (for display)
+    @Published var appleSleepData: SleepData?
+
     // MARK: - AI Analysis Tracking
 
     /// Tracks meal IDs currently being analyzed to prevent concurrent duplicate requests.
@@ -623,6 +629,8 @@ class MainViewModel: ObservableObject {
         if self.isMorningSleepContext() {
             self.pendingMealCreation = true
             self.showSleepQualitySheet = true
+            // Fetch Apple HealthKit sleep data if available
+            self.fetchAppleSleepData()
         } else {
             self.createNewMeal()
         }
@@ -665,11 +673,39 @@ class MainViewModel: ObservableObject {
     /// Dismisses the sleep quality sheet without saving.
     func dismissSleepQualityInput() {
         self.showSleepQualitySheet = false
+        // Clear suggested sleep data when dismissed
+        self.suggestedSleepQuality = nil
+        self.appleSleepData = nil
 
         // Still create the meal even if user skips
         if self.pendingMealCreation {
             self.pendingMealCreation = false
             self.createNewMeal()
+        }
+    }
+
+    /// Fetches sleep data from Apple HealthKit and suggests a sleep quality.
+    /// This runs asynchronously and updates suggestedSleepQuality if data is available.
+    private func fetchAppleSleepData() {
+        Task {
+            do {
+                // Request authorization first
+                _ = try await HealthKitService.shared.requestAuthorization()
+
+                // Fetch sleep data for today
+                if let sleepData = try await HealthKitService.shared.fetchSleepData(for: Date()) {
+                    await MainActor.run {
+                        self.appleSleepData = sleepData
+                        self.suggestedSleepQuality = sleepData.sleepQuality
+                        print(
+                            "📊 Apple HealthKit sleep data: \(sleepData.formattedDuration), Score: \(sleepData.sleepScore ?? 0)"
+                        )
+                    }
+                }
+            } catch {
+                print("⚠️ Failed to fetch Apple sleep data: \(error.localizedDescription)")
+                // Silently fail - user can still manually select sleep quality
+            }
         }
     }
 

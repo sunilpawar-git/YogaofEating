@@ -157,9 +157,17 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
-    // 3. Build data summary for prompt
+    // 3. Identify which day is "today" (the insight date)
+    const insightDate = request.data.insightDate || null;
+    const todayDay = userData.find(day => day.isToday === true);
+    const todaySleep = todayDay?.sleepQuality || null;
+    const todayDateName = todayDay?.date || insightDate || "today";
+
+    // 4. Build data summary for prompt
     const dataSummary = userData.map(day => {
-        let summary = `**${day.date}**:\n`;
+        const isToday = day.isToday === true;
+        const dayLabel = isToday ? `**${day.date} (TODAY)**` : `**${day.date}**`;
+        let summary = `${dayLabel}:\n`;
         
         // Meals
         if (day.meals && day.meals.length > 0) {
@@ -168,9 +176,12 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
             summary += `  - Food: ${mealItems || 'Not logged'} (Health: ${avgScore}%)\n`;
         }
         
-        // Sleep
+        // Sleep - highlight today's sleep
         if (day.sleepQuality) {
-            summary += `  - Sleep: ${day.sleepQuality}\n`;
+            const sleepLabel = isToday ? `  - Sleep: ${day.sleepQuality} ⭐ (TODAY'S SLEEP)` : `  - Sleep: ${day.sleepQuality}`;
+            summary += `${sleepLabel}\n`;
+        } else if (isToday) {
+            summary += `  - Sleep: Not logged yet\n`;
         }
         
         // Feeling
@@ -201,21 +212,29 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
         return summary;
     }).join("\n");
 
-    // 4. Construct Prompt (Phase 4: Enhanced to correlate food, todos, feeling, sleep)
+    // 5. Construct Prompt - explicitly instruct AI to consider today's sleep
+    const todayContext = todaySleep 
+        ? `IMPORTANT: The user logged their sleep quality for ${todayDateName} as "${todaySleep}". This is TODAY's sleep data and should be incorporated into your analysis. Look for connections between yesterday's food choices and TODAY's sleep quality.`
+        : `Note: Today's sleep quality has not been logged yet.`;
+
     const prompt = `You are a compassionate wellness coach analyzing a user's food, sleep, todo completion, and mindset data.
 
-Here is the user's data from the last ${userData.length} day(s):
+${todayContext}
+
+Here is the user's data from the last ${userData.length} day(s) (most recent first):
 
 ${dataSummary}
 
 Based on this data, generate ONE personalized insight that:
-1. Identifies a specific pattern or connection between:
-   - Food quality/timing and sleep quality
+1. **MUST incorporate TODAY's sleep quality** (if logged) when analyzing patterns
+2. Identifies a specific pattern or connection between:
+   - Yesterday's food quality/timing and TODAY's sleep quality (if today's sleep is logged)
+   - Food quality/timing and sleep quality across days
    - Todo completion rate and end-of-day feeling
    - Overall productivity and wellbeing
-2. References specific days when relevant (e.g., "On Monday, completing all your todos...")
-3. Provides one actionable suggestion
-4. Is warm, encouraging, and under 50 words
+3. References specific days when relevant (e.g., "On ${todayDateName}, your ${todaySleep || 'sleep'}...")
+4. Provides one actionable suggestion
+5. Is warm, encouraging, and under 50 words
 
 Return a JSON object (no markdown formatting) with:
 - "insightText": The insight message (string, under 50 words)
@@ -224,7 +243,7 @@ Return a JSON object (no markdown formatting) with:
 
 Example Response:
 {
-  "insightText": "On Tuesday, completing 3/3 todos and eating healthy correlated with your great mood. Keep that momentum going!",
+  "insightText": "On ${todayDateName}, your ${todaySleep || 'sleep'} quality suggests yesterday's food choices may have impacted your rest. Consider lighter evening meals for better sleep.",
   "insightType": "foodSleep",
   "confidence": 0.85
 }`;

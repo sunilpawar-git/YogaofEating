@@ -30,9 +30,11 @@ struct MainScreenView: View {
                     },
                     onDismiss: {
                         self.viewModel.dismissSleepQualityInput()
-                    }
+                    },
+                    suggestedQuality: self.viewModel.suggestedSleepQuality,
+                    sleepData: self.viewModel.appleSleepData
                 )
-                .presentationDetents([.height(280)])
+                .presentationDetents([.height(320)])
                 .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: self.$viewModel.showOverallFeelingSheet) {
