@@ -9,7 +9,7 @@ protocol InsightGenerationServiceProtocol {
     func createInsightPrompt(from snapshots: [DailySmileySnapshot]) -> String
     func saveInsight(_ insight: DailyInsight, for date: Date)
     func shouldGenerateInsight(for date: Date) -> Bool
-    func generateInsight(for date: Date) async throws -> DailyInsight?
+    func generateInsight(for date: Date, healthKitSleepData: [Date: SleepData]) async throws -> DailyInsight?
     func generateWeeklyInsight() async -> WeeklyInsight?
 }
 
@@ -179,9 +179,11 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
     /// Generates an insight for the given date using AI.
     /// Tries server-side Gemini generation first, falls back to local PatternAnalyzer.
-    /// - Parameter date: The date to generate insight for
+    /// - Parameters:
+    ///   - date: The date to generate insight for
+    ///   - healthKitSleepData: Dictionary mapping dates to HealthKit sleep data for objective metrics
     /// - Returns: A generated insight, or nil if conditions aren't met
-    func generateInsight(for date: Date) async throws -> DailyInsight? {
+    func generateInsight(for date: Date, healthKitSleepData: [Date: SleepData] = [:]) async throws -> DailyInsight? {
         guard self.shouldGenerateInsight(for: date) else {
             return nil
         }
@@ -190,7 +192,11 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
         // Try server-side generation first (last 1-3 days for focused insights)
         let recentSnapshots = Array(snapshots.prefix(self.serverLookbackDays))
-        if let serverInsight = await self.generateInsightFromServer(snapshots: recentSnapshots, date: date) {
+        if let serverInsight = await self.generateInsightFromServer(
+            snapshots: recentSnapshots,
+            date: date,
+            healthKitSleepData: healthKitSleepData
+        ) {
             print("✨ Using server-generated insight from Gemini")
             self.saveInsight(serverInsight, for: date)
             return serverInsight
@@ -224,10 +230,12 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     /// - Parameters:
     ///   - snapshots: The recent snapshots to analyze
     ///   - date: The date for the insight
+    ///   - healthKitSleepData: Dictionary mapping dates to HealthKit sleep data
     /// - Returns: A DailyInsight if successful, nil otherwise
     private func generateInsightFromServer(
         snapshots: [DailySmileySnapshot],
-        date: Date
+        date: Date,
+        healthKitSleepData: [Date: SleepData] = [:]
     ) async -> DailyInsight? {
         guard let functions = self.functions else {
             print("⚠️ Firebase Functions not available for insight generation")
@@ -264,7 +272,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
                 }
             }
 
-            // Add sleep quality
+            // Add sleep quality (subjective - user's reported feeling)
             if let reflection = snapshot.reflection, let sleep = reflection.sleepQuality {
                 data["sleepQuality"] = sleep.displayName
             }
@@ -272,6 +280,22 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             // Add feeling
             if let reflection = snapshot.reflection, let feeling = reflection.feeling {
                 data["feeling"] = feeling.displayName
+            }
+
+            // Add Apple HealthKit sleep data (objective metrics)
+            let snapshotDateNormalized = calendar.startOfDay(for: snapshot.date)
+            if let sleepData = healthKitSleepData.first(where: {
+                calendar.isDate($0.key, inSameDayAs: snapshotDateNormalized)
+            })?.value {
+                var appleSleepData: [String: Any] = [
+                    "durationHours": sleepData.sleepDuration / 3600.0,
+                    "timeInBedHours": sleepData.timeInBed / 3600.0,
+                    "efficiency": sleepData.efficiency
+                ]
+                if let score = sleepData.sleepScore {
+                    appleSleepData["score"] = score
+                }
+                data["appleSleepData"] = appleSleepData
             }
 
             // Add morning mind check (Phase 4: include isAccomplished for todos)

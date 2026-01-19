@@ -161,6 +161,7 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
     const insightDate = request.data.insightDate || null;
     const todayDay = userData.find(day => day.isToday === true);
     const todaySleep = todayDay?.sleepQuality || null;
+    const todayAppleSleep = todayDay?.appleSleepData || null;
     const todayDateName = todayDay?.date || insightDate || "today";
 
     // 4. Build data summary for prompt
@@ -176,12 +177,24 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
             summary += `  - Food: ${mealItems || 'Not logged'} (Health: ${avgScore}%)\n`;
         }
         
-        // Sleep - highlight today's sleep
+        // Sleep - highlight today's sleep (subjective user rating)
         if (day.sleepQuality) {
-            const sleepLabel = isToday ? `  - Sleep: ${day.sleepQuality} ⭐ (TODAY'S SLEEP)` : `  - Sleep: ${day.sleepQuality}`;
+            const sleepLabel = isToday ? `  - Sleep (user-reported): ${day.sleepQuality} ⭐ (TODAY'S SLEEP)` : `  - Sleep (user-reported): ${day.sleepQuality}`;
             summary += `${sleepLabel}\n`;
         } else if (isToday) {
-            summary += `  - Sleep: Not logged yet\n`;
+            summary += `  - Sleep (user-reported): Not logged yet\n`;
+        }
+        
+        // Apple HealthKit sleep data (objective metrics from Apple Watch)
+        if (day.appleSleepData) {
+            const apple = day.appleSleepData;
+            const durationHours = apple.durationHours ? apple.durationHours.toFixed(1) : 'N/A';
+            const score = apple.score !== undefined ? Math.round(apple.score) + '%' : 'N/A';
+            const efficiency = apple.efficiency ? Math.round(apple.efficiency) + '%' : 'N/A';
+            const objectiveLabel = isToday 
+                ? `  - Apple Watch Sleep ⌚ (OBJECTIVE): Score ${score}, Duration ${durationHours}h, Efficiency ${efficiency} ⭐`
+                : `  - Apple Watch Sleep ⌚: Score ${score}, Duration ${durationHours}h, Efficiency ${efficiency}`;
+            summary += `${objectiveLabel}\n`;
         }
         
         // Feeling
@@ -212,10 +225,27 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
         return summary;
     }).join("\n");
 
-    // 5. Construct Prompt - explicitly instruct AI to consider today's sleep
-    const todayContext = todaySleep 
-        ? `IMPORTANT: The user logged their sleep quality for ${todayDateName} as "${todaySleep}". This is TODAY's sleep data and should be incorporated into your analysis. Look for connections between yesterday's food choices and TODAY's sleep quality.`
-        : `Note: Today's sleep quality has not been logged yet.`;
+    // 5. Construct Prompt - explicitly instruct AI to consider today's sleep (both subjective and objective)
+    let todayContext = '';
+    
+    if (todaySleep && todayAppleSleep) {
+        // Both subjective and objective data available
+        const appleScore = todayAppleSleep.score !== undefined ? Math.round(todayAppleSleep.score) + '%' : 'N/A';
+        const appleDuration = todayAppleSleep.durationHours ? todayAppleSleep.durationHours.toFixed(1) + 'h' : 'N/A';
+        todayContext = `IMPORTANT: Today (${todayDateName}) has BOTH sleep data sources:
+- User-reported sleep quality: "${todaySleep}" (SUBJECTIVE - how the user FEELS they slept)
+- Apple Watch metrics: Score ${appleScore}, Duration ${appleDuration} (OBJECTIVE - measured data)
+
+Compare these two sources! If they differ (e.g., user says "poor" but Apple shows 80%), explore why the user might feel differently than what metrics show. This discrepancy can reveal important insights about perceived vs actual rest quality.`;
+    } else if (todaySleep) {
+        todayContext = `IMPORTANT: The user logged their sleep quality for ${todayDateName} as "${todaySleep}". This is TODAY's subjective sleep data and should be incorporated into your analysis. Look for connections between yesterday's food choices and TODAY's sleep quality.`;
+    } else if (todayAppleSleep) {
+        const appleScore = todayAppleSleep.score !== undefined ? Math.round(todayAppleSleep.score) + '%' : 'N/A';
+        const appleDuration = todayAppleSleep.durationHours ? todayAppleSleep.durationHours.toFixed(1) + 'h' : 'N/A';
+        todayContext = `IMPORTANT: Apple Watch recorded objective sleep metrics for ${todayDateName}: Score ${appleScore}, Duration ${appleDuration}. The user hasn't logged their subjective feeling yet, but you can still analyze how yesterday's food choices may have affected these objective metrics.`;
+    } else {
+        todayContext = `Note: Today's sleep quality has not been logged yet (neither subjective nor Apple Watch data available).`;
+    }
 
     const prompt = `You are a compassionate wellness coach analyzing a user's food, sleep, todo completion, and mindset data.
 
@@ -225,14 +255,20 @@ Here is the user's data from the last ${userData.length} day(s) (most recent fir
 
 ${dataSummary}
 
+ANALYSIS GUIDELINES:
+- When Apple Watch data is available, use it as OBJECTIVE truth for sleep duration and quality
+- User-reported sleep quality reflects PERCEIVED rest (may differ from metrics due to dreams, stress, etc.)
+- If both sources exist, note any discrepancies - they reveal important insights
+- Example: "Your Apple Watch shows 7.5h of sleep with 85% efficiency, but you felt it was only 'poor' - this might indicate stress or vivid dreams affecting perceived rest quality"
+
 Based on this data, generate ONE personalized insight that:
-1. **MUST incorporate TODAY's sleep quality** (if logged) when analyzing patterns
+1. **MUST incorporate sleep data** (prioritize Apple Watch metrics when available for objective analysis)
 2. Identifies a specific pattern or connection between:
-   - Yesterday's food quality/timing and TODAY's sleep quality (if today's sleep is logged)
-   - Food quality/timing and sleep quality across days
+   - Yesterday's food quality/timing and TODAY's sleep quality (both objective metrics and subjective feeling)
+   - Discrepancies between Apple Watch metrics and user's perceived sleep quality
+   - Food quality/timing and sleep patterns across days
    - Todo completion rate and end-of-day feeling
-   - Overall productivity and wellbeing
-3. References specific days when relevant (e.g., "On ${todayDateName}, your ${todaySleep || 'sleep'}...")
+3. References specific days and metrics when relevant
 4. Provides one actionable suggestion
 5. Is warm, encouraging, and under 50 words
 
@@ -241,9 +277,9 @@ Return a JSON object (no markdown formatting) with:
 - "insightType": One of "foodSleep", "mindsetFeeling", "pattern", or "encouragement"
 - "confidence": A number between 0.0 and 1.0 indicating how confident you are in this insight
 
-Example Response:
+Example Response (with both data sources):
 {
-  "insightText": "On ${todayDateName}, your ${todaySleep || 'sleep'} quality suggests yesterday's food choices may have impacted your rest. Consider lighter evening meals for better sleep.",
+  "insightText": "Your Apple Watch shows solid 7.5h sleep with 85% efficiency, yet you rated it 'poor'. Yesterday's late dinner might have affected how rested you feel despite good metrics. Try finishing meals 3 hours before bed.",
   "insightType": "foodSleep",
   "confidence": 0.85
 }`;
