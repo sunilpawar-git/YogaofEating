@@ -9,6 +9,24 @@ struct SleepQualityInputView: View {
     /// Callback when user dismisses without selection
     let onDismiss: () -> Void
 
+    /// Optional suggested sleep quality from Apple HealthKit
+    let suggestedQuality: SleepQuality?
+
+    /// Optional sleep data from HealthKit (for display)
+    let sleepData: SleepData?
+
+    init(
+        onSelect: @escaping (SleepQuality) -> Void,
+        onDismiss: @escaping () -> Void,
+        suggestedQuality: SleepQuality? = nil,
+        sleepData: SleepData? = nil
+    ) {
+        self.onSelect = onSelect
+        self.onDismiss = onDismiss
+        self.suggestedQuality = suggestedQuality
+        self.sleepData = sleepData
+    }
+
     var body: some View {
         VStack(spacing: 20) {
             // Header
@@ -23,6 +41,24 @@ struct SleepQualityInputView: View {
                 Text("How did you sleep?")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+
+                // Show Apple HealthKit suggestion if available
+                if let suggested = self.suggestedQuality, let data = self.sleepData {
+                    HStack(spacing: 4) {
+                        Image(systemName: "applewatch")
+                            .font(.caption2)
+                            .foregroundColor(.blue)
+                        Text("Apple suggests: \(suggested.displayName)")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        if let score = data.sleepScore {
+                            Text("(\(Int(score))%)")
+                                .font(.caption2)
+                                .foregroundColor(.blue.opacity(0.7))
+                        }
+                    }
+                    .padding(.top, 4)
+                }
             }
             .padding(.top, 24)
 
@@ -49,7 +85,9 @@ struct SleepQualityInputView: View {
     }
 
     private func sleepQualityButton(_ quality: SleepQuality) -> some View {
-        Button {
+        let isSuggested = quality == self.suggestedQuality
+
+        return Button {
             self.onSelect(quality)
         } label: {
             VStack(spacing: 6) {
@@ -60,11 +98,22 @@ struct SleepQualityInputView: View {
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
+
+                // Show indicator if this is Apple's suggestion
+                if isSuggested {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                }
             }
             .frame(width: 70, height: 70)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.primary.opacity(0.05))
+                    .fill(isSuggested ? Color.blue.opacity(0.1) : Color.primary.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSuggested ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
@@ -79,6 +128,8 @@ struct SleepQualityInputView: View {
         },
         onDismiss: {
             print("Dismissed")
-        }
+        },
+        suggestedQuality: .good,
+        sleepData: nil
     )
 }
