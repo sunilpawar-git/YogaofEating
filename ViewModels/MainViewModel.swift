@@ -183,12 +183,15 @@ class MainViewModel: ObservableObject {
     func updateMealItems(_ mealId: UUID, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
-        // Check if items actually changed
-        let itemsChanged = self.meals[index].items != items
+        // Check if items meaningfully changed (normalized comparison to handle whitespace)
+        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: items)
 
         // Only update items and recalculate local score if content actually changed
         // This prevents overwriting AI scores with local scores on redundant updates
-        guard itemsChanged else { return }
+        guard contentChanged else {
+            print("⏭️ Skipping update - content unchanged after normalization")
+            return
+        }
 
         // Local synchronous update for immediate feedback
         let healthScore = self.logicService.calculateHealthScore(for: items)
@@ -219,24 +222,69 @@ class MainViewModel: ObservableObject {
         }
     }
 
+    /// Updates meal items locally WITHOUT triggering AI analysis.
+    /// Use this for real-time updates during typing to provide immediate local feedback.
+    /// AI analysis should be triggered separately via explicit user action (Done button, focus loss).
+    func updateMealItemsLocalOnly(_ mealId: UUID, items: [String]) {
+        guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
+
+        // Check if items meaningfully changed (normalized comparison to handle whitespace)
+        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: items)
+
+        // Only update if content actually changed
+        guard contentChanged else { return }
+
+        // Update items
+        self.meals[index].items = items
+
+        // Only recalculate local score if meal hasn't been AI-analyzed yet
+        // This preserves AI scores during typing - they'll be re-analyzed on "done"
+        if !self.meals[index].isAIAnalyzed {
+            let healthScore = self.logicService.calculateHealthScore(for: items)
+            self.meals[index].healthScore = healthScore
+            print("📝 Local-only update: healthScore set to \(healthScore)")
+        } else {
+            // Mark that content changed since last AI analysis
+            self.meals[index].isAIAnalyzed = false
+            print("📝 Local-only update: items changed, AI score invalidated")
+        }
+
+        self.saveData()
+    }
+
+    /// Explicitly triggers AI analysis for a meal.
+    /// Call this when user performs a "done" action (focus loss, Done button, Return key).
+    /// This resets the isAIAnalyzed flag and calls performDeepAnalysis.
+    func triggerAIAnalysisForMeal(_ mealId: UUID) async {
+        guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
+
+        // Reset the AI analyzed flag to allow re-analysis
+        self.meals[index].isAIAnalyzed = false
+        self.saveData()
+
+        // Get current items and trigger analysis
+        let items = self.meals[index].items
+        await self.performDeepAnalysis(for: mealId, items: items)
+    }
+
     /// Updates meal type and items together.
+    /// Called on "done" actions (focus loss, Done button, Return key) - always triggers AI analysis
+    /// if the meal hasn't been AI-analyzed yet.
     func updateMeal(_ mealId: UUID, mealType: MealType, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
-        // Check if items actually changed
-        let itemsChanged = self.meals[index].items != items
+        // Check if items meaningfully changed (normalized comparison to handle whitespace)
+        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: items)
         let mealTypeChanged = self.meals[index].mealType != mealType
-
-        // Skip if nothing changed - prevents overwriting AI scores with local scores
-        guard itemsChanged || mealTypeChanged else { return }
+        let needsAIAnalysis = !self.meals[index].isAIAnalyzed && !items.isEmpty
 
         // Update meal type if changed
         if mealTypeChanged {
             self.meals[index].mealType = mealType
         }
 
-        // Only recalculate local score if items changed
-        if itemsChanged {
+        // Only recalculate local score if items meaningfully changed
+        if contentChanged {
             let healthScore = self.logicService.calculateHealthScore(for: items)
             self.meals[index].items = items
             self.meals[index].healthScore = healthScore
@@ -261,9 +309,16 @@ class MainViewModel: ObservableObject {
             Task {
                 await self.performDeepAnalysis(for: mealId, items: items)
             }
-        } else {
+        } else if mealTypeChanged {
             // Only meal type changed, just save
             self.saveData()
+        } else if needsAIAnalysis {
+            // Content was already updated locally, but AI analysis hasn't run yet
+            // This happens when local updates occurred during typing, then user triggers "done"
+            print("🔄 Triggering AI analysis for meal that was updated locally")
+            Task {
+                await self.triggerAIAnalysisForMeal(mealId)
+            }
         }
     }
 

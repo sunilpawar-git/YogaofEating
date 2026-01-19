@@ -217,17 +217,24 @@ struct MainScreenView: View {
                     self.viewModel.showMorningMindCheckSheet = true
                 }
             },
-            onUpdateMeal: { mealId, mealType, items in
-                self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
-            },
-            onUpdateTimestamp: { mealId, timestamp in
-                self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
-            },
-            onDeleteMeal: { mealId in
-                withAnimation(.spring()) {
-                    self.viewModel.deleteMeal(mealId)
+            mealActions: MealUpdateActions(
+                onUpdate: { mealId, mealType, items in
+                    // Full update - triggers AI analysis (called on "done" actions)
+                    self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
+                },
+                onLocalUpdate: { mealId, _, items in
+                    // Local-only update - NO AI analysis (called during typing)
+                    self.viewModel.updateMealItemsLocalOnly(mealId, items: items)
+                },
+                onUpdateTimestamp: { mealId, timestamp in
+                    self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
+                },
+                onDelete: { mealId in
+                    withAnimation(.spring()) {
+                        self.viewModel.deleteMeal(mealId)
+                    }
                 }
-            },
+            ),
             recentMeals: self.viewModel.getRecentUniqueMeals()
         )
     }
@@ -250,13 +257,19 @@ struct MainScreenView: View {
             isToday: false,
             smileyState: snapshot?.smileyState ?? .neutral,
             snapshot: snapshot,
-            onCopyMeal: { meal in
-                // Copy meal to today and navigate to today
-                self.viewModel.copyMealToToday(meal)
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    self.viewModel.navigateToToday()
+            mealActions: MealUpdateActions(
+                onUpdate: { _, _, _ in },
+                onLocalUpdate: { _, _, _ in },
+                onUpdateTimestamp: { _, _ in },
+                onDelete: { _ in },
+                onCopy: { meal in
+                    // Copy meal to today and navigate to today
+                    self.viewModel.copyMealToToday(meal)
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        self.viewModel.navigateToToday()
+                    }
                 }
-            }
+            )
         )
     }
 

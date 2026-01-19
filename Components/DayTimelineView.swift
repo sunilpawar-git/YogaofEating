@@ -58,17 +58,8 @@ struct DayTimelineView: View {
     /// Callback when user taps the morning mind check pill
     var onMorningMindCheckTap: (() -> Void)?
 
-    /// Callback when a meal is updated
-    var onUpdateMeal: ((UUID, MealType, [String]) -> Void)?
-
-    /// Callback when a meal's timestamp is updated
-    var onUpdateTimestamp: ((UUID, Date) -> Void)?
-
-    /// Callback when a meal is deleted
-    var onDeleteMeal: ((UUID) -> Void)?
-
-    /// Callback when a historical meal is copied to today
-    var onCopyMeal: ((Meal) -> Void)?
+    /// Grouped meal update actions (reduces callback proliferation)
+    var mealActions: MealUpdateActions = .empty
 
     /// Recent meals from past 3 days for quick-add feature (only for today)
     var recentMeals: [Meal] = []
@@ -163,21 +154,24 @@ struct DayTimelineView: View {
                 meal: meal,
                 isBreathing: self.breathingMeals.contains(meal.id),
                 onUpdate: { mealType, newItems in
-                    self.onUpdateMeal?(meal.id, mealType, newItems)
+                    self.mealActions.onUpdate(meal.id, mealType, newItems)
+                },
+                onLocalUpdate: { mealType, newItems in
+                    self.mealActions.onLocalUpdate(meal.id, mealType, newItems)
                 },
                 onTimestampUpdate: { newTimestamp in
-                    self.onUpdateTimestamp?(meal.id, newTimestamp)
+                    self.mealActions.onUpdateTimestamp(meal.id, newTimestamp)
                 },
                 onDelete: {
                     withAnimation(.spring()) {
-                        self.onDeleteMeal?(meal.id)
+                        self.mealActions.onDelete(meal.id)
                     }
                 },
                 recentMeals: self.recentMeals
             )
         } else {
             // Read-only view for historical days
-            ReadOnlyMealCardView(meal: meal, onCopyMeal: self.onCopyMeal)
+            ReadOnlyMealCardView(meal: meal, onCopyMeal: self.mealActions.onCopy)
         }
     }
 
