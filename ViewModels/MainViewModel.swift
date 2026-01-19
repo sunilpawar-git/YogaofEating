@@ -132,6 +132,29 @@ class MainViewModel: ObservableObject {
 
             // Still check if we need to reset for a new day since the last save
             self.checkAndResetIfNewDay()
+
+            // If sleep quality is already logged today, fetch Apple sleep data for badge display
+            if self.todaysSleepQuality != nil {
+                self.fetchAppleSleepDataForBadge()
+            }
+        }
+    }
+
+    /// Fetches Apple sleep data for badge display (after sleep quality is already saved).
+    /// Called on app load when sleep quality is already logged.
+    private func fetchAppleSleepDataForBadge() {
+        Task {
+            do {
+                _ = try await HealthKitService.shared.requestAuthorization()
+                if let sleepData = try await HealthKitService.shared.fetchSleepData(for: Date()) {
+                    await MainActor.run {
+                        self.appleSleepData = sleepData
+                        print("📊 Loaded Apple sleep data for badge: \(sleepData.formattedDuration)")
+                    }
+                }
+            } catch {
+                // Silently fail - badge will just not show Apple metrics
+            }
         }
     }
 
@@ -547,7 +570,7 @@ class MainViewModel: ObservableObject {
     }
 
     /// Saves sleep quality for today, merging with existing reflection if present.
-    /// Also triggers insight generation if conditions are met.
+    /// Also triggers insight generation and ensures Apple sleep data is available for badge.
     /// - Parameters:
     ///   - quality: The sleep quality to save
     ///   - date: When it was logged (defaults to now)
@@ -560,6 +583,11 @@ class MainViewModel: ObservableObject {
             self.historicalService.updateReflection(for: date, reflection: merged)
         } else {
             self.historicalService.updateReflection(for: date, reflection: newReflection)
+        }
+
+        // Fetch Apple sleep data for badge if not already available
+        if self.appleSleepData == nil {
+            self.fetchAppleSleepDataForBadge()
         }
 
         // Trigger insight generation after sleep is logged (Phase 2-4)
@@ -577,10 +605,16 @@ class MainViewModel: ObservableObject {
             return
         }
 
-        // Trigger async insight generation
+        // Trigger async insight generation with HealthKit sleep data
         Task {
             do {
-                if let insight = try await self.insightService.generateInsight(for: date) {
+                // Fetch HealthKit sleep data for the last 3 days (matching serverLookbackDays)
+                let healthKitSleepData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
+
+                if let insight = try await self.insightService.generateInsight(
+                    for: date,
+                    healthKitSleepData: healthKitSleepData
+                ) {
                     // Phase 3: Assign to currentInsight
                     self.currentInsight = insight
                 }
@@ -588,6 +622,33 @@ class MainViewModel: ObservableObject {
                 print("⚠️ Insight generation failed: \(error.localizedDescription)")
             }
         }
+    }
+
+    /// Fetches HealthKit sleep data for the last N days for insight generation.
+    /// - Parameter date: The reference date (typically today)
+    /// - Returns: Dictionary mapping dates to their HealthKit sleep data
+    private func fetchHealthKitSleepDataForInsights(relativeTo date: Date) async -> [Date: SleepData] {
+        var sleepDataByDate: [Date: SleepData] = [:]
+        let calendar = Calendar.current
+
+        // Fetch sleep data for the last 3 days (matching serverLookbackDays in InsightGenerationService)
+        for daysAgo in 0..<3 {
+            guard let targetDate = calendar.date(byAdding: .day, value: -daysAgo, to: date) else { continue }
+
+            do {
+                if let sleepData = try await HealthKitService.shared.fetchSleepData(for: targetDate) {
+                    sleepDataByDate[calendar.startOfDay(for: targetDate)] = sleepData
+                    print(
+                        "📊 Fetched HealthKit sleep data for \(targetDate): score=\(sleepData.sleepScore ?? 0), duration=\(sleepData.formattedDuration)"
+                    )
+                }
+            } catch {
+                print("⚠️ Failed to fetch HealthKit sleep data for \(targetDate): \(error.localizedDescription)")
+                // Continue with other dates even if one fails
+            }
+        }
+
+        return sleepDataByDate
     }
 
     /// Saves overall feeling for today, merging with existing reflection if present.

@@ -418,6 +418,145 @@
             XCTAssertNotNil(insight)
         }
 
+        // MARK: - Phase 6: HealthKit Sleep Data Integration Tests
+
+        func test_generateInsight_acceptsHealthKitSleepData() async throws {
+            // Given: Setup data with sleep logged
+            let calendar = Calendar.current
+            let today = Date()
+
+            // Add historical data
+            for daysAgo in 1...2 {
+                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                let snapshot = DailySmileySnapshot(
+                    id: UUID(),
+                    date: date,
+                    smileyState: .neutral,
+                    meals: [Meal(mealType: .dinner, items: ["Healthy food"], healthScore: 0.8)],
+                    mealCount: 1,
+                    averageHealthScore: 0.8
+                )
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+            }
+
+            // Today with sleep
+            let reflection = DailyReflection(feeling: nil, sleepQuality: .good, note: nil)
+            let todaySnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: today,
+                smileyState: .neutral,
+                meals: [Meal(mealType: .breakfast, items: ["Oatmeal"], healthScore: 0.9)],
+                mealCount: 1,
+                averageHealthScore: 0.9,
+                reflection: reflection
+            )
+            self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
+
+            // Create mock HealthKit sleep data
+            let healthKitSleepData: [Date: SleepData] = [
+                calendar.startOfDay(for: today): SleepData(
+                    sleepDuration: 7.5 * 3600, // 7.5 hours
+                    timeInBed: 8 * 3600, // 8 hours
+                    sleepStart: nil,
+                    sleepEnd: nil,
+                    sleepScore: 85
+                )
+            ]
+
+            // When: Generate insight with HealthKit data
+            let insight = try await self.sut.generateInsight(
+                for: today,
+                healthKitSleepData: healthKitSleepData
+            )
+
+            // Then: Should still get an insight (fallback to local since no Firebase in tests)
+            XCTAssertNotNil(insight)
+            XCTAssertFalse(insight!.insightText.isEmpty)
+        }
+
+        func test_generateInsight_worksWithoutHealthKitData() async throws {
+            // Given: Setup data with sleep logged but no HealthKit data
+            let calendar = Calendar.current
+            let today = Date()
+
+            // Add historical data
+            for daysAgo in 1...2 {
+                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                let snapshot = DailySmileySnapshot(
+                    id: UUID(),
+                    date: date,
+                    smileyState: .neutral,
+                    meals: [Meal(mealType: .dinner, items: ["Food"], healthScore: 0.7)],
+                    mealCount: 1,
+                    averageHealthScore: 0.7
+                )
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+            }
+
+            // Today with sleep
+            let reflection = DailyReflection(feeling: nil, sleepQuality: .poor, note: nil)
+            let todaySnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: today,
+                smileyState: .neutral,
+                meals: [Meal(mealType: .breakfast, items: ["Toast"], healthScore: 0.6)],
+                mealCount: 1,
+                averageHealthScore: 0.6,
+                reflection: reflection
+            )
+            self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
+
+            // When: Generate insight with empty HealthKit data (backward compatible)
+            let insight = try await self.sut.generateInsight(for: today, healthKitSleepData: [:])
+
+            // Then: Should still generate an insight
+            XCTAssertNotNil(insight)
+        }
+
+        func test_generateInsight_handlesMultipleDaysOfHealthKitData() async throws {
+            // Given: Setup data for multiple days
+            let calendar = Calendar.current
+            let today = Date()
+
+            // Add 3 days of historical data
+            for daysAgo in 0..<3 {
+                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                let reflection = daysAgo == 0 ? DailyReflection(feeling: nil, sleepQuality: .good, note: nil) : nil
+                let snapshot = DailySmileySnapshot(
+                    id: UUID(),
+                    date: date,
+                    smileyState: .neutral,
+                    meals: [Meal(mealType: .lunch, items: ["Lunch"], healthScore: 0.7)],
+                    mealCount: 1,
+                    averageHealthScore: 0.7,
+                    reflection: reflection
+                )
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+            }
+
+            // Create HealthKit sleep data for all 3 days
+            var healthKitSleepData: [Date: SleepData] = [:]
+            for daysAgo in 0..<3 {
+                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
+                healthKitSleepData[calendar.startOfDay(for: date)] = SleepData(
+                    sleepDuration: Double(6 + daysAgo) * 3600,
+                    timeInBed: Double(7 + daysAgo) * 3600,
+                    sleepStart: nil,
+                    sleepEnd: nil,
+                    sleepScore: Double(70 + daysAgo * 5)
+                )
+            }
+
+            // When: Generate insight with multiple days of HealthKit data
+            let insight = try await self.sut.generateInsight(
+                for: today,
+                healthKitSleepData: healthKitSleepData
+            )
+
+            // Then: Should generate an insight
+            XCTAssertNotNil(insight)
+        }
+
         // MARK: - Phase 5: Server Fallback Tests
 
         func test_generateInsight_fallsBackToLocal_whenServerUnavailable() async throws {

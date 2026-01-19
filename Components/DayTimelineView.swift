@@ -1,5 +1,46 @@
 import SwiftUI
 
+// MARK: - Today Reflection Data
+
+/// Groups today's reflection-related data and callbacks to reduce parameter proliferation.
+/// Only used when `isToday` is true.
+struct TodayReflectionData {
+    /// Today's logged sleep quality (for displaying badge)
+    var sleepQuality: SleepQuality?
+
+    /// Today's Apple HealthKit sleep data (for displaying in badge)
+    var appleSleepData: SleepData?
+
+    /// Today's logged overall feeling (for displaying badge)
+    var feeling: ReflectionFeeling?
+
+    /// Whether to show the End-of-Day pill (only for today when feeling not logged)
+    var showEndOfDayPill: Bool = false
+
+    /// Whether to show the morning mind check pill (after sleep quality)
+    var showMorningMindCheckPill: Bool = false
+
+    /// Today's morning mind check entries (for displaying badge)
+    var morningMindCheck: [MindCheckEntry]?
+
+    /// Callback when user taps to edit sleep quality badge
+    var onEditSleep: (() -> Void)?
+
+    /// Callback when user taps to edit overall feeling badge
+    var onEditFeeling: (() -> Void)?
+
+    /// Callback when user taps the End-of-Day pill
+    var onEndOfDayTap: (() -> Void)?
+
+    /// Callback when user taps the morning mind check pill
+    var onMorningMindCheckTap: (() -> Void)?
+
+    /// Creates an empty reflection data (for historical views or previews)
+    static let empty = TodayReflectionData()
+}
+
+// MARK: - Day Timeline View
+
 /// A reusable view that displays a day's meal timeline.
 /// Used for both today (editable) and historical days (read-only).
 struct DayTimelineView: View {
@@ -29,40 +70,42 @@ struct DayTimelineView: View {
     /// Whether an insight is available (for showing red dot indicator)
     var hasInsightAvailable: Bool = false
 
-    /// Callback when user taps to edit sleep quality badge (only for today)
-    var onEditSleep: (() -> Void)?
-
-    /// Callback when user taps to edit overall feeling badge (only for today)
-    var onEditFeeling: (() -> Void)?
-
-    /// Callback when user taps the End-of-Day pill (only for today)
-    var onEndOfDayTap: (() -> Void)?
-
-    /// Today's logged sleep quality (for displaying badge)
-    var todaysSleepQuality: SleepQuality?
-
-    /// Today's logged overall feeling (for displaying badge)
-    var todaysFeeling: ReflectionFeeling?
-
-    /// Whether to show the End-of-Day pill (only for today when feeling not logged)
-    var showEndOfDayPill: Bool = false
-
-    // MARK: - Mind Check Properties
-
-    /// Whether to show the morning mind check pill (after sleep quality)
-    var showMorningMindCheckPill: Bool = false
-
-    /// Today's morning mind check entries (for displaying badge)
-    var todaysMorningMindCheck: [MindCheckEntry]?
-
-    /// Callback when user taps the morning mind check pill
-    var onMorningMindCheckTap: (() -> Void)?
+    /// Grouped reflection data for today (sleep, feeling, mind check, and callbacks)
+    var reflectionData: TodayReflectionData = .empty
 
     /// Grouped meal update actions (reduces callback proliferation)
     var mealActions: MealUpdateActions = .empty
 
     /// Recent meals from past 3 days for quick-add feature (only for today)
     var recentMeals: [Meal] = []
+
+    // MARK: - Legacy Parameter Support (Deprecated)
+
+    // These are kept for backward compatibility but internally map to reflectionData
+
+    /// Today's logged sleep quality (for displaying badge)
+    /// - Note: Prefer using `reflectionData.sleepQuality` instead
+    var todaysSleepQuality: SleepQuality? { self.reflectionData.sleepQuality }
+
+    /// Today's Apple HealthKit sleep data (for displaying in badge)
+    /// - Note: Prefer using `reflectionData.appleSleepData` instead
+    var appleSleepData: SleepData? { self.reflectionData.appleSleepData }
+
+    /// Today's logged overall feeling (for displaying badge)
+    /// - Note: Prefer using `reflectionData.feeling` instead
+    var todaysFeeling: ReflectionFeeling? { self.reflectionData.feeling }
+
+    /// Whether to show the End-of-Day pill
+    /// - Note: Prefer using `reflectionData.showEndOfDayPill` instead
+    var showEndOfDayPill: Bool { self.reflectionData.showEndOfDayPill }
+
+    /// Whether to show the morning mind check pill
+    /// - Note: Prefer using `reflectionData.showMorningMindCheckPill` instead
+    var showMorningMindCheckPill: Bool { self.reflectionData.showMorningMindCheckPill }
+
+    /// Today's morning mind check entries
+    /// - Note: Prefer using `reflectionData.morningMindCheck` instead
+    var todaysMorningMindCheck: [MindCheckEntry]? { self.reflectionData.morningMindCheck }
 
     // MARK: - State
 
@@ -85,12 +128,12 @@ struct DayTimelineView: View {
                 if let morningEntries = self.todaysMorningMindCheck, !morningEntries.isEmpty {
                     MindCheckBadgeView(entries: morningEntries, context: .morning) {
                         // Tap to edit existing entries
-                        self.onMorningMindCheckTap?()
+                        self.reflectionData.onMorningMindCheckTap?()
                     }
                     .padding(.bottom, 16)
                 } else if self.showMorningMindCheckPill {
                     MindCheckPillView {
-                        self.onMorningMindCheckTap?()
+                        self.reflectionData.onMorningMindCheckTap?()
                     }
                     .padding(.bottom, 16)
                 }
@@ -229,8 +272,9 @@ struct DayTimelineView: View {
             type: .sleep(quality),
             isTappable: true,
             onTap: {
-                self.onEditSleep?()
-            }
+                self.reflectionData.onEditSleep?()
+            },
+            sleepData: self.appleSleepData
         )
     }
 
@@ -239,7 +283,7 @@ struct DayTimelineView: View {
             type: .feeling(feeling),
             isTappable: true,
             onTap: {
-                self.onEditFeeling?()
+                self.reflectionData.onEditFeeling?()
             }
         )
     }
@@ -248,7 +292,7 @@ struct DayTimelineView: View {
 
     private var endOfDayPill: some View {
         Button(action: {
-            self.onEndOfDayTap?()
+            self.reflectionData.onEndOfDayTap?()
             SensoryService.shared.playNudge(style: .light)
         }) {
             HStack(spacing: 6) {
@@ -729,8 +773,37 @@ struct ReadOnlyMealCardView: View {
             smileyState: .neutral,
             snapshot: nil,
             onSmileyTap: { print("Smiley tapped") },
-            todaysSleepQuality: .good,
-            todaysFeeling: .calm
+            reflectionData: TodayReflectionData(
+                sleepQuality: .good,
+                feeling: .calm
+            )
+        )
+    }
+}
+
+#Preview("Today Timeline - With Apple Sleep Data") {
+    ScrollView {
+        DayTimelineView(
+            meals: [
+                Meal(mealType: .breakfast, items: ["Oatmeal", "Berries"], healthScore: 0.9),
+                Meal(mealType: .lunch, items: ["Salad", "Chicken"], healthScore: 0.8)
+            ],
+            fastingPeriods: [],
+            isToday: true,
+            smileyState: .neutral,
+            snapshot: nil,
+            onSmileyTap: { print("Smiley tapped") },
+            reflectionData: TodayReflectionData(
+                sleepQuality: .good,
+                appleSleepData: SleepData(
+                    sleepDuration: 7.5 * 3600,
+                    timeInBed: 8 * 3600,
+                    sleepStart: nil,
+                    sleepEnd: nil,
+                    sleepScore: 85
+                ),
+                feeling: .calm
+            )
         )
     }
 }

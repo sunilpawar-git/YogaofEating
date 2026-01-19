@@ -322,7 +322,7 @@ class MockInsightGenerationService: InsightGenerationServiceProtocol {
         return data.count >= 2
     }
 
-    func generateInsight(for date: Date) async throws -> DailyInsight? {
+    func generateInsight(for date: Date, healthKitSleepData _: [Date: SleepData] = [:]) async throws -> DailyInsight? {
         self.generateInsightCalled = true
         guard self.shouldGenerateInsight(for: date) else {
             return nil

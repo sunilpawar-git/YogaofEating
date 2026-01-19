@@ -194,31 +194,30 @@ struct MainScreenView: View {
                 self.viewModel.handleSmileyLongPress()
             },
             hasInsightAvailable: self.viewModel.hasInsightAvailable,
-            onEditSleep: {
-                // Show sleep quality sheet for editing
-                self.viewModel.showSleepQualitySheet = true
-            },
-            onEditFeeling: {
-                // Show overall feeling sheet for editing
-                self.viewModel.showOverallFeelingSheet = true
-            },
-            onEndOfDayTap: {
-                // Handle End-of-Day pill tap
-                self.viewModel.handleEndOfDayPillTap()
-            },
-            todaysSleepQuality: self.viewModel.todaysSleepQuality,
-            todaysFeeling: self.viewModel.todaysFeeling,
-            showEndOfDayPill: self.viewModel.showEndOfDayPill,
-            showMorningMindCheckPill: self.viewModel.showMorningMindCheckPill,
-            todaysMorningMindCheck: self.viewModel.todaysMorningMindCheck,
-            onMorningMindCheckTap: {
-                // Check if we're editing existing entries or creating new
-                if let existingEntries = self.viewModel.todaysMorningMindCheck, !existingEntries.isEmpty {
-                    self.viewModel.editMorningMindCheck(existingEntries)
-                } else {
-                    self.viewModel.showMorningMindCheckSheet = true
+            reflectionData: TodayReflectionData(
+                sleepQuality: self.viewModel.todaysSleepQuality,
+                appleSleepData: self.viewModel.appleSleepData,
+                feeling: self.viewModel.todaysFeeling,
+                showEndOfDayPill: self.viewModel.showEndOfDayPill,
+                showMorningMindCheckPill: self.viewModel.showMorningMindCheckPill,
+                morningMindCheck: self.viewModel.todaysMorningMindCheck,
+                onEditSleep: {
+                    self.viewModel.showSleepQualitySheet = true
+                },
+                onEditFeeling: {
+                    self.viewModel.showOverallFeelingSheet = true
+                },
+                onEndOfDayTap: {
+                    self.viewModel.handleEndOfDayPillTap()
+                },
+                onMorningMindCheckTap: {
+                    if let existingEntries = self.viewModel.todaysMorningMindCheck, !existingEntries.isEmpty {
+                        self.viewModel.editMorningMindCheck(existingEntries)
+                    } else {
+                        self.viewModel.showMorningMindCheckSheet = true
+                    }
                 }
-            },
+            ),
             mealActions: MealUpdateActions(
                 onUpdate: { mealId, mealType, items in
                     // Full update - triggers AI analysis (called on "done" actions)
