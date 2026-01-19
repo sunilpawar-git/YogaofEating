@@ -1,5 +1,51 @@
 import Foundation
 
+// MARK: - MealUpdateActions
+
+/// Groups all meal-related update callbacks to reduce callback proliferation.
+/// Use this struct to pass meal actions through the view hierarchy cleanly.
+struct MealUpdateActions {
+    /// Called on "done" actions (focus loss, Return key, Done button) - triggers AI analysis
+    let onUpdate: (UUID, MealType, [String]) -> Void
+
+    /// Called during typing for local-only updates - NO AI analysis
+    let onLocalUpdate: (UUID, MealType, [String]) -> Void
+
+    /// Called when meal timestamp is updated
+    let onUpdateTimestamp: (UUID, Date) -> Void
+
+    /// Called when meal is deleted
+    let onDelete: (UUID) -> Void
+
+    /// Called when a historical meal is copied to today
+    let onCopy: ((Meal) -> Void)?
+
+    /// Default empty actions for previews and optional usage
+    static let empty = MealUpdateActions(
+        onUpdate: { _, _, _ in },
+        onLocalUpdate: { _, _, _ in },
+        onUpdateTimestamp: { _, _ in },
+        onDelete: { _ in },
+        onCopy: nil
+    )
+
+    init(
+        onUpdate: @escaping (UUID, MealType, [String]) -> Void,
+        onLocalUpdate: @escaping (UUID, MealType, [String]) -> Void = { _, _, _ in },
+        onUpdateTimestamp: @escaping (UUID, Date) -> Void = { _, _ in },
+        onDelete: @escaping (UUID) -> Void,
+        onCopy: ((Meal) -> Void)? = nil
+    ) {
+        self.onUpdate = onUpdate
+        self.onLocalUpdate = onLocalUpdate
+        self.onUpdateTimestamp = onUpdateTimestamp
+        self.onDelete = onDelete
+        self.onCopy = onCopy
+    }
+}
+
+// MARK: - MealType
+
 /// Meal type categorization for better organization
 enum MealType: String, Codable, CaseIterable {
     case breakfast

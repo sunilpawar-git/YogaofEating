@@ -30,19 +30,10 @@ struct MindCheckInputView: View {
     // MARK: - State
 
     @State private var entries: [MindCheckEntryDraft] = []
-    @State private var showCategoryPicker = false
     @State private var isInitialized = false
     @FocusState private var focusedEntryId: UUID?
 
     // MARK: - Private
-
-    private var isEditMode: Bool {
-        self.existingEntries != nil && !(self.existingEntries?.isEmpty ?? true)
-    }
-
-    private var availableCategories: [MindCheckCategory] {
-        MindCheckCategory.morningCategories
-    }
 
     private var title: String {
         Strings.MindCheck.morningTitle
@@ -69,65 +60,45 @@ struct MindCheckInputView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header with subtitle
+                // Header with subtitle and entry count
                 VStack(spacing: 4) {
                     Text(self.subtitle)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+
+                    if !self.entries.isEmpty {
+                        Text(self.entryCountText)
+                            .font(.caption)
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
                 }
                 .padding(.top, 8)
                 .padding(.bottom, 12)
 
-                // Category pills for adding entries
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(self.availableCategories, id: \.self) { category in
-                            CategoryAddButton(category: category, isDisabled: !self.canAddMore) {
-                                self.addEntry(for: category)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.bottom, 8)
-
-                // Entry count indicator
-                if !self.entries.isEmpty {
-                    Text(self.entryCountText)
-                        .font(.caption)
-                        .foregroundColor(.secondary.opacity(0.7))
-                        .padding(.bottom, 8)
-                }
-
                 Divider()
 
-                // Entries list
-                if self.entries.isEmpty {
-                    Spacer()
-                    VStack(spacing: 12) {
-                        Text(Strings.MindCheck.tapCategoryHint)
-                            .font(.callout)
-                            .foregroundColor(.secondary)
-
-                        Text(Strings.MindCheck.entryLimitHint)
-                            .font(.caption)
-                            .foregroundColor(.secondary.opacity(0.7))
+                // Entries list - always show list with add button
+                List {
+                    ForEach(self.$entries) { $entry in
+                        MindCheckEntryRow(
+                            entry: $entry,
+                            onDelete: { self.deleteEntry(entry) }
+                        )
+                        .focused(self.$focusedEntryId, equals: entry.id)
                     }
-                    Spacer()
-                } else {
-                    List {
-                        ForEach(self.$entries) { $entry in
-                            MindCheckEntryRow(
-                                entry: $entry,
-                                onDelete: { self.deleteEntry(entry) }
-                            )
-                            .focused(self.$focusedEntryId, equals: entry.id)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+
+                    // Add button row at bottom when can add more
+                    if self.canAddMore {
+                        AddEntryRow {
+                            self.addEntry(for: .todo)
                         }
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                     }
-                    .listStyle(.plain)
                 }
+                .listStyle(.plain)
             }
             .navigationTitle(self.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -154,10 +125,8 @@ struct MindCheckInputView: View {
             // Prefill with existing entries if in edit mode
             if let existing = self.existingEntries, !existing.isEmpty {
                 self.entries = existing.map { MindCheckEntryDraft(from: $0) }
-            } else {
-                // Start with first category selected if empty
-                self.addEntry(for: self.availableCategories.first ?? .todo)
             }
+            // Otherwise start empty - user taps "Add To-Do" to begin
         }
     }
 
@@ -197,37 +166,6 @@ struct MindCheckInputView: View {
 
 // MARK: - Supporting Views
 
-/// Button for adding a new entry of a specific category
-private struct CategoryAddButton: View {
-    let category: MindCheckCategory
-    var isDisabled: Bool = false
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: self.action) {
-            HStack(spacing: 4) {
-                Text(self.category.emoji)
-                    .font(.system(size: 14))
-                Text(self.category.displayName)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .opacity(self.isDisabled ? 0.5 : 1.0)
-            .background(
-                Capsule()
-                    .fill(Color.accentColor.opacity(0.1))
-                    .overlay(
-                        Capsule()
-                            .strokeBorder(Color.accentColor.opacity(0.3), lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .disabled(self.isDisabled)
-    }
-}
-
 /// Row for displaying and editing a single entry
 private struct MindCheckEntryRow: View {
     @Binding var entry: MindCheckEntryDraft
@@ -263,6 +201,41 @@ private struct MindCheckEntryRow: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.primary.opacity(0.03))
         )
+    }
+}
+
+/// Row for adding a new entry - appears at bottom of list
+private struct AddEntryRow: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: self.action) {
+            HStack(spacing: 12) {
+                // Plus icon in circle
+                Image(systemName: "plus.circle.fill")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 20))
+                    .frame(width: 32, height: 32)
+
+                // Add text
+                Text("Add To-Do")
+                    .font(.body)
+                    .foregroundColor(.accentColor)
+
+                Spacer()
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.accentColor.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(Color.accentColor.opacity(0.2), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 

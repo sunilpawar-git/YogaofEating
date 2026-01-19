@@ -1,16 +1,46 @@
 import SwiftUI
 
+// MARK: - Done Button Visibility Configuration
+
+/// Controls when the Done button appears in JournalBlockView.
+/// This allows easy adjustment based on UX feedback without code changes.
+enum DoneButtonVisibility {
+    /// Always show when text field is focused (default, most discoverable)
+    case whenFocused
+
+    /// Show only when there's content in the text field
+    case whenHasContent
+
+    /// Never show (rely on focus loss and return key only)
+    case never
+}
+
 struct JournalBlockView: View {
     let meal: Meal
     let isBreathing: Bool
+
+    /// Called on "done" actions (focus loss, Return key, Done button) - triggers AI analysis
     let onUpdate: (MealType, [String]) -> Void
+
+    /// Called during typing for local-only updates - NO AI analysis
+    /// Use this for real-time feedback while user types
+    let onLocalUpdate: (MealType, [String]) -> Void
+
     let onTimestampUpdate: (Date) -> Void
     let onDelete: () -> Void
 
     /// Recent meals from past 3 days for quick-add feature
     var recentMeals: [Meal] = []
 
+    /// Controls when the Done button is visible. Configurable for UX refinement.
+    static var doneButtonVisibility: DoneButtonVisibility = .whenFocused
+
     private let maxCharacterLimit: Int = 1000
+
+    /// Debounce delay in nanoseconds for local updates during typing.
+    /// 500ms (500_000_000 ns) balances responsiveness with reducing excessive updates.
+    /// Note: This is for LOCAL updates only - AI analysis is triggered on "done" actions.
+    static let localUpdateDebounceNanoseconds: UInt64 = 500_000_000
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -33,11 +63,14 @@ struct JournalBlockView: View {
     @State private var lastSentItems: [String] = []
     /// Controls visibility of score breakdown sheet
     @State private var showScoreBreakdown: Bool = false
+    /// Prevents duplicate AI triggers when Done button dismisses focus
+    @State private var skipNextFocusLoss: Bool = false
 
     init(
         meal: Meal,
         isBreathing: Bool,
         onUpdate: @escaping (MealType, [String]) -> Void,
+        onLocalUpdate: @escaping (MealType, [String]) -> Void = { _, _ in },
         onTimestampUpdate: @escaping (Date) -> Void = { _ in },
         onDelete: @escaping () -> Void,
         recentMeals: [Meal] = []
@@ -45,6 +78,7 @@ struct JournalBlockView: View {
         self.meal = meal
         self.isBreathing = isBreathing
         self.onUpdate = onUpdate
+        self.onLocalUpdate = onLocalUpdate
         self.onTimestampUpdate = onTimestampUpdate
         self.onDelete = onDelete
         self.recentMeals = recentMeals
@@ -129,10 +163,58 @@ struct JournalBlockView: View {
 
     private var textInputSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            self.mealTextField
+            HStack(alignment: .top, spacing: 8) {
+                self.mealTextField
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Done button visibility is configurable via doneButtonVisibility
+                if self.shouldShowDoneButton {
+                    self.doneButton
+                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                }
+            }
             self.itemCountFooter
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeInOut(duration: 0.2), value: self.isFocused)
+    }
+
+    /// Determines if Done button should be shown based on configuration
+    private var shouldShowDoneButton: Bool {
+        switch Self.doneButtonVisibility {
+        case .whenFocused:
+            self.isFocused
+        case .whenHasContent:
+            self.isFocused && !self.rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .never:
+            false
+        }
+    }
+
+    /// Done button to explicitly confirm entry and trigger AI analysis
+    private var doneButton: some View {
+        Button {
+            self.handleDoneButtonTap()
+        } label: {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 24))
+                .foregroundColor(.green)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("done-button-\(self.meal.id)")
+        .accessibilityLabel("Done")
+        .accessibilityHint("Confirm meal entry and analyze")
+    }
+
+    private func handleDoneButtonTap() {
+        // Set flag to prevent handleFocusChange from also triggering AI
+        self.skipNextFocusLoss = true
+        // Dismiss keyboard (this will trigger handleFocusChange, but we skip it)
+        self.isFocused = false
+        // Trigger submit (which calls onUpdate for AI analysis)
+        self.handleSubmit()
+        // Haptic feedback
+        SensoryService.shared.playNudge(style: .light)
     }
 
     private var mealTextField: some View {
@@ -277,19 +359,29 @@ struct JournalBlockView: View {
     private func handleTextChange(_ newValue: String) {
         self.debounceTask?.cancel()
         self.debounceTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            // Short debounce for local updates - just enough to batch rapid keystrokes
+            try? await Task.sleep(nanoseconds: Self.localUpdateDebounceNanoseconds)
             guard !Task.isCancelled else { return }
             let items = self.parseItems(from: newValue)
             self.lastSentItems = items
-            self.onUpdate(self.selectedMealType, items)
+            // Use onLocalUpdate for typing - NO AI analysis triggered
+            self.onLocalUpdate(self.selectedMealType, items)
         }
     }
 
     private func handleFocusChange(_ focused: Bool) {
         if !focused {
             self.debounceTask?.cancel()
+
+            // Skip if Done button already triggered the update
+            if self.skipNextFocusLoss {
+                self.skipNextFocusLoss = false
+                return
+            }
+
             let items = self.parseItems(from: self.rawText)
             self.lastSentItems = items
+            // Use onUpdate for "done" action - triggers AI analysis
             self.onUpdate(self.selectedMealType, items)
         }
     }
@@ -298,6 +390,7 @@ struct JournalBlockView: View {
         self.debounceTask?.cancel()
         let items = self.parseItems(from: self.rawText)
         self.lastSentItems = items
+        // Use onUpdate for "done" action - triggers AI analysis
         self.onUpdate(self.selectedMealType, items)
     }
 
