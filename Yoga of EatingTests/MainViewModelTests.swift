@@ -419,6 +419,236 @@
             // ID should be different (new meal)
             XCTAssertNotEqual(copiedMeal.id, historicalMeal.id)
         }
+
+        // MARK: - Tests: Mind Check (Phase 3)
+
+        func test_showMorningMindCheckPill_trueAfterSleepLogged() {
+            // Arrange: Log sleep quality
+            self.sut.saveSleepQuality(.good)
+
+            // Assert: Morning mind check pill should show
+            XCTAssertTrue(self.sut.showMorningMindCheckPill)
+        }
+
+        func test_showMorningMindCheckPill_falseBeforeSleepLogged() {
+            // Assert: No sleep logged, pill should not show
+            XCTAssertFalse(self.sut.showMorningMindCheckPill)
+        }
+
+        func test_showMorningMindCheckPill_falseAfterMindCheckLogged() {
+            // Arrange: Log sleep and mind check
+            self.sut.saveSleepQuality(.good)
+            let entries = [
+                MindCheckEntry(category: .todo, text: "Task", timestamp: Date(), context: .morning)
+            ]
+            self.sut.saveMorningMindCheck(entries)
+
+            // Assert: Mind check already logged, pill should not show
+            XCTAssertFalse(self.sut.showMorningMindCheckPill)
+        }
+
+        func test_saveMorningMindCheck_updatesHistoricalData() {
+            // Arrange
+            let entries = [
+                MindCheckEntry(category: .todo, text: "Buy groceries", timestamp: Date(), context: .morning)
+            ]
+
+            // Act
+            self.sut.saveMorningMindCheck(entries)
+
+            // Assert
+            let snapshot = self.mockHistorical.getSnapshot(for: Date())
+            XCTAssertNotNil(snapshot?.morningMindCheck)
+            XCTAssertEqual(snapshot?.morningMindCheck?.count, 1)
+        }
+
+        func test_saveEveningMindCheck_updatesHistoricalData() {
+            // Arrange
+            let entries = [
+                MindCheckEntry(category: .accomplished, text: "Finished work", timestamp: Date(), context: .evening)
+            ]
+
+            // Act
+            self.sut.saveEveningMindCheck(entries)
+
+            // Assert
+            let snapshot = self.mockHistorical.getSnapshot(for: Date())
+            XCTAssertNotNil(snapshot?.eveningMindCheck)
+            XCTAssertEqual(snapshot?.eveningMindCheck?.count, 1)
+        }
+
+        func test_todaysMorningMindCheck_returnsEntriesWhenLogged() {
+            // Arrange
+            let entries = [
+                MindCheckEntry(category: .gratitude, text: "Family", timestamp: Date(), context: .morning)
+            ]
+            self.sut.saveMorningMindCheck(entries)
+
+            // Assert
+            XCTAssertNotNil(self.sut.todaysMorningMindCheck)
+            XCTAssertEqual(self.sut.todaysMorningMindCheck?.count, 1)
+        }
+
+        func test_todaysEveningMindCheck_returnsEntriesWhenLogged() {
+            // Arrange
+            let entries = [
+                MindCheckEntry(category: .letGo, text: "Stress", timestamp: Date(), context: .evening)
+            ]
+            self.sut.saveEveningMindCheck(entries)
+
+            // Assert
+            XCTAssertNotNil(self.sut.todaysEveningMindCheck)
+            XCTAssertEqual(self.sut.todaysEveningMindCheck?.count, 1)
+        }
+
+        // MARK: - AI Analysis Score Update Tests (Regression Prevention)
+
+        /// Regression test: Verifies that meal healthScore is correctly updated after AI analysis completes.
+        /// This test catches the bug where in-place array mutation didn't trigger SwiftUI view updates,
+        /// causing the UI to display the local score (e.g., 50%) instead of the AI score (e.g., 80%).
+        func test_performDeepAnalysis_updatesHealthScoreFromAI() async throws {
+            // Given: Create ViewModel with AI-capable mock service
+            let mockAILogic = RegressionTestAIMock()
+            mockAILogic.localScore = 0.5 // Local calculation returns 50%
+            mockAILogic.aiScore = 0.8 // AI returns 80%
+            mockAILogic.nextState = SmileyState(scale: 0.9, mood: .serene)
+
+            let viewModel = MainViewModel(
+                logicService: mockAILogic,
+                persistenceService: self.mockPersistence,
+                historicalService: self.mockHistorical
+            )
+
+            // When: Create a meal (will get local score initially)
+            viewModel.createNewMeal()
+            let mealId = try XCTUnwrap(viewModel.meals.first?.id)
+            viewModel.updateMealItems(mealId, items: ["Healthy Smoothie"])
+
+            // Initial score should be local score (50%)
+            XCTAssertEqual(viewModel.meals.first?.healthScore ?? 0, 0.5, accuracy: 0.01)
+
+            // Wait for async AI analysis to complete
+            try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+
+            // Then: Score should be updated to AI score (80%)
+            let updatedScore = try XCTUnwrap(viewModel.meals.first?.healthScore)
+            XCTAssertEqual(
+                updatedScore,
+                0.8,
+                accuracy: 0.01,
+                "Health score should be updated to AI score (0.8), not local score (0.5)"
+            )
+            XCTAssertTrue(viewModel.meals.first?.isAIAnalyzed ?? false, "Meal should be marked as AI analyzed")
+            XCTAssertEqual(mockAILogic.analyzeCallCount, 1, "AI analysis should be called exactly once")
+        }
+
+        /// Test that AI analysis failure gracefully falls back without crashing
+        func test_performDeepAnalysis_handlesFailureGracefully() async throws {
+            // Given: Create ViewModel with failing AI service
+            let mockAILogic = RegressionTestAIMock()
+            mockAILogic.localScore = 0.5
+            mockAILogic.shouldFail = true
+
+            let viewModel = MainViewModel(
+                logicService: mockAILogic,
+                persistenceService: self.mockPersistence,
+                historicalService: self.mockHistorical
+            )
+
+            // When: Create a meal and trigger AI analysis
+            viewModel.createNewMeal()
+            let mealId = try XCTUnwrap(viewModel.meals.first?.id)
+            viewModel.updateMealItems(mealId, items: ["Test Meal"])
+
+            // Wait for async analysis to fail
+            try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+
+            // Then: Should still have local score, not crash
+            let score = try XCTUnwrap(viewModel.meals.first?.healthScore)
+            XCTAssertEqual(score, 0.5, accuracy: 0.01, "Should retain local score after AI failure")
+            XCTAssertFalse(
+                viewModel.meals.first?.isAIAnalyzed ?? true,
+                "Should not be marked as AI analyzed after failure"
+            )
+        }
+
+        /// Test that duplicate AI analysis requests are prevented
+        func test_performDeepAnalysis_preventsDuplicateRequests() async throws {
+            // Given: Create ViewModel with AI service
+            let mockAILogic = RegressionTestAIMock()
+            mockAILogic.localScore = 0.5
+            mockAILogic.aiScore = 0.8
+
+            let viewModel = MainViewModel(
+                logicService: mockAILogic,
+                persistenceService: self.mockPersistence,
+                historicalService: self.mockHistorical
+            )
+
+            // When: Create meal and update items multiple times rapidly
+            viewModel.createNewMeal()
+            let mealId = try XCTUnwrap(viewModel.meals.first?.id)
+
+            // Rapid updates that would trigger multiple analysis requests
+            viewModel.updateMealItems(mealId, items: ["Meal v1"])
+
+            // Wait for first analysis to complete
+            try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+
+            // Update again (should skip since already analyzed)
+            let preCount = mockAILogic.analyzeCallCount
+            viewModel.updateMealItems(mealId, items: ["Meal v1"]) // Same items
+
+            try await Task.sleep(nanoseconds: 50_000_000) // 50ms
+
+            // Then: Should not trigger another analysis for same items
+            XCTAssertEqual(mockAILogic.analyzeCallCount, preCount, "Should skip analysis when items haven't changed")
+        }
+    }
+
+    // MARK: - Regression Test Mock for AI Score Update Bug
+
+    /// Mock AI service for regression testing that verifies @Published array triggers UI updates.
+    /// This mock simulates the async AI analysis flow with configurable local vs AI scores.
+    /// Named uniquely to avoid conflict with MockAILogicService in MainViewModelAIAnalysisTests.
+    @MainActor
+    class RegressionTestAIMock: MealLogicProvider, AIAnalysisProvider {
+        var localScore: Double = 0.5
+        var aiScore: Double = 0.8
+        var aiMood: SmileyMood = .serene
+        var aiSound: String = "chime"
+        var aiInsight: String? = "Test insight"
+        var nextState = SmileyState.neutral
+        var analyzeCallCount = 0
+        var shouldFail = false
+
+        func calculateHealthScore(for _: String) -> Double {
+            self.localScore
+        }
+
+        func calculateHealthScore(for items: [String]) -> Double {
+            guard !items.isEmpty else { return 0.5 }
+            return self.localScore
+        }
+
+        func calculateNextState(from _: SmileyState, healthScore _: Double) -> SmileyState {
+            self.nextState
+        }
+
+        func analyzeMealQuality(description _: String) async throws -> (
+            score: Double,
+            mood: SmileyMood,
+            sound: String,
+            insight: String?
+        ) {
+            self.analyzeCallCount += 1
+            if self.shouldFail {
+                throw NSError(domain: "AI", code: 1, userInfo: [NSLocalizedDescriptionKey: "AI analysis failed"])
+            }
+            // Simulate network delay
+            try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+            return (self.aiScore, self.aiMood, self.aiSound, self.aiInsight)
+        }
     }
 
 #endif

@@ -16,6 +16,7 @@ struct MainScreenView: View {
                     .ignoresSafeArea()
 
                 self.mainContent
+                // Note: Peekaboo star removed - insights now accessed via smiley long-press
             }
             .toolbar { self.toolbarContent }
             .sheet(isPresented: self.$showingSettings) {
@@ -29,9 +30,11 @@ struct MainScreenView: View {
                     },
                     onDismiss: {
                         self.viewModel.dismissSleepQualityInput()
-                    }
+                    },
+                    suggestedQuality: self.viewModel.suggestedSleepQuality,
+                    sleepData: self.viewModel.appleSleepData
                 )
-                .presentationDetents([.height(280)])
+                .presentationDetents([.height(320)])
                 .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: self.$viewModel.showOverallFeelingSheet) {
@@ -45,6 +48,50 @@ struct MainScreenView: View {
                 )
                 .presentationDetents([.height(280)])
                 .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: self.$viewModel.showMorningMindCheckSheet) {
+                MindCheckInputView(
+                    existingEntries: self.viewModel.editingMorningEntries,
+                    onSave: { entries in
+                        self.viewModel.completeMorningMindCheckInput(entries)
+                    },
+                    onDismiss: {
+                        self.viewModel.dismissMorningMindCheckInput()
+                    }
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: self.$viewModel.showEveningMindCheckSheet) {
+                EveningReviewView(
+                    morningEntries: self.viewModel.todaysMorningMindCheck ?? [],
+                    existingEveningEntries: self.viewModel.todaysEveningMindCheck,
+                    showFeelingSelection: self.viewModel.isEndOfDayFlow,
+                    onSave: { updatedMorning, evening, feeling in
+                        self.viewModel.completeEveningReview(
+                            updatedMorningEntries: updatedMorning,
+                            eveningEntries: evening,
+                            feeling: feeling
+                        )
+                    },
+                    onDismiss: {
+                        self.viewModel.dismissEveningMindCheckInput()
+                    }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: self.$viewModel.showInsightSheet) {
+                if let insight = self.viewModel.currentInsight {
+                    InsightBottomSheet(
+                        insight: insight,
+                        onDismiss: {
+                            self.viewModel.dismissInsight()
+                        }
+                    )
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                }
             }
             // Note: Auto-prompt removed - now using user-initiated reflections via smiley tap
         }
@@ -142,32 +189,53 @@ struct MainScreenView: View {
                 // Use context-aware smiley tap handling (morning sleep only)
                 self.viewModel.handleSmileyTap()
             },
-            onEditSleep: {
-                // Show sleep quality sheet for editing
-                self.viewModel.showSleepQualitySheet = true
+            onSmileyLongPress: {
+                // Show insight if available
+                self.viewModel.handleSmileyLongPress()
             },
-            onEditFeeling: {
-                // Show overall feeling sheet for editing
-                self.viewModel.showOverallFeelingSheet = true
-            },
-            onEndOfDayTap: {
-                // Handle End-of-Day pill tap
-                self.viewModel.handleEndOfDayPillTap()
-            },
-            todaysSleepQuality: self.viewModel.todaysSleepQuality,
-            todaysFeeling: self.viewModel.todaysFeeling,
-            showEndOfDayPill: self.viewModel.showEndOfDayPill,
-            onUpdateMeal: { mealId, mealType, items in
-                self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
-            },
-            onUpdateTimestamp: { mealId, timestamp in
-                self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
-            },
-            onDeleteMeal: { mealId in
-                withAnimation(.spring()) {
-                    self.viewModel.deleteMeal(mealId)
+            hasInsightAvailable: self.viewModel.hasInsightAvailable,
+            reflectionData: TodayReflectionData(
+                sleepQuality: self.viewModel.todaysSleepQuality,
+                appleSleepData: self.viewModel.appleSleepData,
+                feeling: self.viewModel.todaysFeeling,
+                showEndOfDayPill: self.viewModel.showEndOfDayPill,
+                showMorningMindCheckPill: self.viewModel.showMorningMindCheckPill,
+                morningMindCheck: self.viewModel.todaysMorningMindCheck,
+                onEditSleep: {
+                    self.viewModel.showSleepQualitySheet = true
+                },
+                onEditFeeling: {
+                    self.viewModel.showOverallFeelingSheet = true
+                },
+                onEndOfDayTap: {
+                    self.viewModel.handleEndOfDayPillTap()
+                },
+                onMorningMindCheckTap: {
+                    if let existingEntries = self.viewModel.todaysMorningMindCheck, !existingEntries.isEmpty {
+                        self.viewModel.editMorningMindCheck(existingEntries)
+                    } else {
+                        self.viewModel.showMorningMindCheckSheet = true
+                    }
                 }
-            },
+            ),
+            mealActions: MealUpdateActions(
+                onUpdate: { mealId, mealType, items in
+                    // Full update - triggers AI analysis (called on "done" actions)
+                    self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
+                },
+                onLocalUpdate: { mealId, _, items in
+                    // Local-only update - NO AI analysis (called during typing)
+                    self.viewModel.updateMealItemsLocalOnly(mealId, items: items)
+                },
+                onUpdateTimestamp: { mealId, timestamp in
+                    self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
+                },
+                onDelete: { mealId in
+                    withAnimation(.spring()) {
+                        self.viewModel.deleteMeal(mealId)
+                    }
+                }
+            ),
             recentMeals: self.viewModel.getRecentUniqueMeals()
         )
     }
@@ -190,13 +258,19 @@ struct MainScreenView: View {
             isToday: false,
             smileyState: snapshot?.smileyState ?? .neutral,
             snapshot: snapshot,
-            onCopyMeal: { meal in
-                // Copy meal to today and navigate to today
-                self.viewModel.copyMealToToday(meal)
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    self.viewModel.navigateToToday()
+            mealActions: MealUpdateActions(
+                onUpdate: { _, _, _ in },
+                onLocalUpdate: { _, _, _ in },
+                onUpdateTimestamp: { _, _ in },
+                onDelete: { _ in },
+                onCopy: { meal in
+                    // Copy meal to today and navigate to today
+                    self.viewModel.copyMealToToday(meal)
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        self.viewModel.navigateToToday()
+                    }
                 }
-            }
+            )
         )
     }
 

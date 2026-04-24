@@ -4,10 +4,57 @@ import SwiftUI
 // MARK: - AI Analysis Extension
 
 extension MainViewModel {
+    /// Minimum character count required before triggering AI analysis.
+    /// Prevents excessive API calls while user is still typing short content.
+    static let minimumContentLength: Int = 5
+
+    /// Normalizes meal content for comparison to avoid redundant AI analysis.
+    /// Trims whitespace and normalizes internal spacing.
+    static func normalizeContent(_ items: [String]) -> String {
+        items
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+            .lowercased()
+    }
+
+    /// Checks if two item arrays represent meaningfully different content.
+    /// Returns true if content is different enough to warrant re-analysis.
+    static func contentMeaningfullyChanged(old: [String], new: [String]) -> Bool {
+        let oldNormalized = self.normalizeContent(old)
+        let newNormalized = self.normalizeContent(new)
+        return oldNormalized != newNormalized
+    }
+
     /// Performs deep AI analysis for a meal and updates smiley state accordingly.
     func performDeepAnalysis(for mealId: UUID, items: [String]) async {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
+
+        // Skip if already analyzed - prevents duplicate API calls
+        guard !meals[index].isAIAnalyzed else {
+            print("⏭️ Skipping analysis - meal already analyzed")
+            return
+        }
+
+        // Prevent concurrent duplicate requests for the same meal
+        // This addresses the "GTMSessionFetcher was already running" warning
+        guard !analysisInProgress.contains(mealId) else {
+            print("⏭️ Skipping analysis - request already in progress for this meal")
+            return
+        }
+
         let description = items.joined(separator: ", ")
+
+        // Skip analysis if content is too short (user still typing)
+        // This reduces unnecessary API calls during incremental typing
+        guard description.count >= Self.minimumContentLength else {
+            print("⏭️ Skipping analysis - content too short (\(description.count) < \(Self.minimumContentLength) chars)")
+            return
+        }
+
+        // Mark this meal as being analyzed
+        analysisInProgress.insert(mealId)
+        defer { analysisInProgress.remove(mealId) }
 
         // Only proceed if we are using a service that supports AI analysis
         guard let aiService = logicService as? AIAnalysisProvider else {
@@ -25,12 +72,21 @@ extension MainViewModel {
                     + "Mood: \(result.mood.rawValue), Sound: \(result.sound)"
             )
 
-            // Update the specific meal's health score and AI analyzed flag
+            // Update the specific meal's health score, AI analyzed flag, and basic insight
+            // NOTE: We create a new array copy to ensure @Published triggers SwiftUI view updates.
+            // Direct in-place mutation (meals[index].property = value) may not reliably trigger
+            // observation in SwiftUI, causing the UI to display stale values.
             if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
-                meals[verifyIndex].healthScore = result.score
-                meals[verifyIndex].isAIAnalyzed = true
+                var updatedMeals = meals
+                updatedMeals[verifyIndex].healthScore = result.score
+                updatedMeals[verifyIndex].isAIAnalyzed = true
+                updatedMeals[verifyIndex].aiInsight = result.insight
+                meals = updatedMeals
                 saveData()
                 print("📊 Updated meal healthScore to: \(result.score), isAIAnalyzed: true")
+                if let insight = result.insight {
+                    print("💡 Basic insight: \(insight.prefix(50))...")
+                }
             }
 
             // Update overall Smiley state based on new CUMULATIVE health

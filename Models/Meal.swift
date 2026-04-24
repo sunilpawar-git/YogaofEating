@@ -1,5 +1,51 @@
 import Foundation
 
+// MARK: - MealUpdateActions
+
+/// Groups all meal-related update callbacks to reduce callback proliferation.
+/// Use this struct to pass meal actions through the view hierarchy cleanly.
+struct MealUpdateActions {
+    /// Called on "done" actions (focus loss, Return key, Done button) - triggers AI analysis
+    let onUpdate: (UUID, MealType, [String]) -> Void
+
+    /// Called during typing for local-only updates - NO AI analysis
+    let onLocalUpdate: (UUID, MealType, [String]) -> Void
+
+    /// Called when meal timestamp is updated
+    let onUpdateTimestamp: (UUID, Date) -> Void
+
+    /// Called when meal is deleted
+    let onDelete: (UUID) -> Void
+
+    /// Called when a historical meal is copied to today
+    let onCopy: ((Meal) -> Void)?
+
+    /// Default empty actions for previews and optional usage
+    static let empty = MealUpdateActions(
+        onUpdate: { _, _, _ in },
+        onLocalUpdate: { _, _, _ in },
+        onUpdateTimestamp: { _, _ in },
+        onDelete: { _ in },
+        onCopy: nil
+    )
+
+    init(
+        onUpdate: @escaping (UUID, MealType, [String]) -> Void,
+        onLocalUpdate: @escaping (UUID, MealType, [String]) -> Void = { _, _, _ in },
+        onUpdateTimestamp: @escaping (UUID, Date) -> Void = { _, _ in },
+        onDelete: @escaping (UUID) -> Void,
+        onCopy: ((Meal) -> Void)? = nil
+    ) {
+        self.onUpdate = onUpdate
+        self.onLocalUpdate = onLocalUpdate
+        self.onUpdateTimestamp = onUpdateTimestamp
+        self.onDelete = onDelete
+        self.onCopy = onCopy
+    }
+}
+
+// MARK: - MealType
+
 /// Meal type categorization for better organization
 enum MealType: String, Codable, CaseIterable {
     case breakfast
@@ -38,6 +84,7 @@ struct Meal: Identifiable, Codable, Equatable {
     var items: [String]
     var healthScore: Double // 0.0 (unhealthy) to 1.0 (very healthy)
     var isAIAnalyzed: Bool // True after AI (Gemini) has analyzed the meal
+    var aiInsight: String? // AI-generated insight/reasoning for the health score
 
     /// Backward compatibility: computed property that joins items
     var description: String {
@@ -50,13 +97,20 @@ struct Meal: Identifiable, Codable, Equatable {
         }
     }
 
+    /// Whether the meal has a non-empty AI insight
+    var hasAIInsight: Bool {
+        guard let insight = aiInsight else { return false }
+        return !insight.isEmpty
+    }
+
     init(
         id: UUID = UUID(),
         timestamp: Date = Date(),
         mealType: MealType? = nil,
         items: [String] = [],
         healthScore: Double = 0.5,
-        isAIAnalyzed: Bool = false
+        isAIAnalyzed: Bool = false,
+        aiInsight: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -64,6 +118,7 @@ struct Meal: Identifiable, Codable, Equatable {
         self.items = items
         self.healthScore = healthScore
         self.isAIAnalyzed = isAIAnalyzed
+        self.aiInsight = aiInsight
     }
 
     /// Legacy initializer for backward compatibility
@@ -74,5 +129,6 @@ struct Meal: Identifiable, Codable, Equatable {
         self.items = description.isEmpty ? [] : [description]
         self.healthScore = healthScore
         self.isAIAnalyzed = false
+        self.aiInsight = nil
     }
 }
