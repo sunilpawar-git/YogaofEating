@@ -16,8 +16,8 @@ jobs:
       - name: Validate workflow structure
         run: |
           echo "✅ Repository structure validated"
-          [ -f "Yoga of Eating.xcodeproj" ] && echo "✅ Xcode project found" || exit 1
-          [ -d "functions" ] && echo "✅ Firebase functions found" || exit 1
+          [ -d "Yoga of Eating.xcodeproj" ] && echo "✅ Xcode project found" || (echo "❌ Xcode project not found" && exit 1)
+          [ -d "functions" ] && echo "✅ Firebase functions found" || (echo "❌ Firebase functions not found" && exit 1)
           echo "✅ Setup validation passed"
 
   swiftlint:
