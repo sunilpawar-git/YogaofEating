@@ -16,9 +16,17 @@ struct DailySmileySnapshot: Codable, Identifiable {
     /// Added in Phase 1 - backward compatible with existing snapshots (defaults to nil).
     let reflection: DailyReflection?
 
+    /// Optional morning mind check entries (todos, gratitude, thoughts).
+    /// Added in Phase 2 - Mind Check feature.
+    let morningMindCheck: [MindCheckEntry]?
+
+    /// Optional evening mind check entries (accomplished, grateful for, let go).
+    /// Added in Phase 2 - Mind Check feature.
+    let eveningMindCheck: [MindCheckEntry]?
+
     // MARK: - Initialization
 
-    /// Creates a new daily snapshot with all properties including optional reflection.
+    /// Creates a new daily snapshot with all properties including optional reflection and mind checks.
     init(
         id: UUID,
         date: Date,
@@ -26,7 +34,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
         meals: [Meal],
         mealCount: Int,
         averageHealthScore: Double,
-        reflection: DailyReflection? = nil
+        reflection: DailyReflection? = nil,
+        morningMindCheck: [MindCheckEntry]? = nil,
+        eveningMindCheck: [MindCheckEntry]? = nil
     ) {
         self.id = id
         self.date = Calendar(identifier: .gregorian).startOfDay(for: date) // Normalize to midnight
@@ -35,6 +45,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.mealCount = mealCount
         self.averageHealthScore = averageHealthScore
         self.reflection = reflection
+        self.morningMindCheck = morningMindCheck
+        self.eveningMindCheck = eveningMindCheck
     }
 
     // MARK: - Codable (Backward Compatible)
@@ -47,6 +59,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         case mealCount
         case averageHealthScore
         case reflection
+        case morningMindCheck
+        case eveningMindCheck
     }
 
     init(from decoder: Decoder) throws {
@@ -59,8 +73,10 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.meals = try container.decode([Meal].self, forKey: .meals)
         self.mealCount = try container.decode(Int.self, forKey: .mealCount)
         self.averageHealthScore = try container.decode(Double.self, forKey: .averageHealthScore)
-        // Backward compatibility: reflection may not exist in legacy data
+        // Backward compatibility: optional fields may not exist in legacy data
         self.reflection = try container.decodeIfPresent(DailyReflection.self, forKey: .reflection)
+        self.morningMindCheck = try container.decodeIfPresent([MindCheckEntry].self, forKey: .morningMindCheck)
+        self.eveningMindCheck = try container.decodeIfPresent([MindCheckEntry].self, forKey: .eveningMindCheck)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -72,6 +88,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         try container.encode(self.mealCount, forKey: .mealCount)
         try container.encode(self.averageHealthScore, forKey: .averageHealthScore)
         try container.encodeIfPresent(self.reflection, forKey: .reflection)
+        try container.encodeIfPresent(self.morningMindCheck, forKey: .morningMindCheck)
+        try container.encodeIfPresent(self.eveningMindCheck, forKey: .eveningMindCheck)
     }
 
     // MARK: - Computed Properties
@@ -93,5 +111,96 @@ struct DailySmileySnapshot: Codable, Identifiable {
             ? min(max(self.smileyState.scale, 0.1), 10.0)
             : 1.0
         return SmileyState(scale: validScale, mood: self.smileyState.mood)
+    }
+
+    /// Returns true if morning mind check has been logged with at least one entry
+    var hasMorningMindCheck: Bool {
+        guard let entries = self.morningMindCheck else { return false }
+        return !entries.isEmpty
+    }
+
+    /// Returns true if evening mind check has been logged with at least one entry
+    var hasEveningMindCheck: Bool {
+        guard let entries = self.eveningMindCheck else { return false }
+        return !entries.isEmpty
+    }
+
+    // MARK: - Factory Methods
+
+    /// Creates a snapshot from current day's data.
+    /// Automatically calculates mealCount and averageHealthScore from the meals array.
+    /// - Parameters:
+    ///   - date: The date for this snapshot
+    ///   - smileyState: The smiley state at end of day
+    ///   - meals: All meals logged for the day
+    ///   - reflection: Optional end-of-day reflection
+    ///   - morningMindCheck: Optional morning mind check entries
+    ///   - eveningMindCheck: Optional evening mind check entries
+    /// - Returns: A new DailySmileySnapshot with computed metrics
+    static func create(
+        date: Date,
+        smileyState: SmileyState,
+        meals: [Meal],
+        reflection: DailyReflection? = nil,
+        morningMindCheck: [MindCheckEntry]? = nil,
+        eveningMindCheck: [MindCheckEntry]? = nil
+    ) -> DailySmileySnapshot {
+        let mealCount = meals.count
+        let averageHealthScore = meals.isEmpty
+            ? 0.5
+            : meals.map(\.healthScore).reduce(0.0, +) / Double(meals.count)
+
+        return DailySmileySnapshot(
+            id: UUID(),
+            date: date,
+            smileyState: smileyState,
+            meals: meals,
+            mealCount: mealCount,
+            averageHealthScore: averageHealthScore,
+            reflection: reflection,
+            morningMindCheck: morningMindCheck,
+            eveningMindCheck: eveningMindCheck
+        )
+    }
+
+    /// Creates a copy of this snapshot with updated mind check entries.
+    /// Useful for adding mind check data to an existing snapshot.
+    /// - Parameters:
+    ///   - morningMindCheck: New morning mind check entries (nil to keep existing)
+    ///   - eveningMindCheck: New evening mind check entries (nil to keep existing)
+    /// - Returns: A new snapshot with updated mind check data
+    func withMindChecks(
+        morningMindCheck: [MindCheckEntry]? = nil,
+        eveningMindCheck: [MindCheckEntry]? = nil
+    ) -> DailySmileySnapshot {
+        DailySmileySnapshot(
+            id: self.id,
+            date: self.date,
+            smileyState: self.smileyState,
+            meals: self.meals,
+            mealCount: self.mealCount,
+            averageHealthScore: self.averageHealthScore,
+            reflection: self.reflection,
+            morningMindCheck: morningMindCheck ?? self.morningMindCheck,
+            eveningMindCheck: eveningMindCheck ?? self.eveningMindCheck
+        )
+    }
+
+    /// Creates a copy of this snapshot with updated reflection.
+    /// Useful for adding reflection data to an existing snapshot.
+    /// - Parameter reflection: The new reflection data
+    /// - Returns: A new snapshot with updated reflection
+    func withReflection(_ reflection: DailyReflection) -> DailySmileySnapshot {
+        DailySmileySnapshot(
+            id: self.id,
+            date: self.date,
+            smileyState: self.smileyState,
+            meals: self.meals,
+            mealCount: self.mealCount,
+            averageHealthScore: self.averageHealthScore,
+            reflection: reflection,
+            morningMindCheck: self.morningMindCheck,
+            eveningMindCheck: self.eveningMindCheck
+        )
     }
 }
