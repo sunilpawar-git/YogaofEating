@@ -143,6 +143,36 @@ enum AppTheme {
         static let background = Color(.secondarySystemBackground)
     }
 
+    // MARK: - Module Colors (SSOT for Reflect/Laser/Highlight/Energise)
+
+    enum ModuleColors {
+        static let reflect = Color.purple
+        static let laser = Color.orange
+        static let highlight = Color.teal
+        static let energise = Color.green
+    }
+
+    // MARK: - Hero Ring
+
+    enum HeroRing {
+        static let heroSize: CGFloat = 160
+        static let heroLineWidth: CGFloat = 10
+        static let headerSize: CGFloat = 44
+        static let headerLineWidth: CGFloat = 4
+        static let centerFontRatio: CGFloat = 0.25
+        /// Height of the module card stack below the hero ring
+        static let cardStackHeight: CGFloat = 200
+    }
+
+    // MARK: - Card List Limits
+
+    enum Card {
+        /// Maximum number of todo rows shown in the Laser module card
+        static let maxVisibleTodos: Int = 4
+        /// Maximum number of meal rows shown in the Energise module card
+        static let maxVisibleMeals: Int = 3
+    }
+
     // MARK: - Score Badge Theme
 
     enum ScoreBadge {
@@ -167,6 +197,14 @@ enum AppTheme {
 
         /// Poor score color (red)
         static let poor = Color.red
+
+        /// Canonical health-score-to-color mapping used across all views.
+        /// Thresholds: ≥0.7 excellent, ≥0.4 moderate, else poor.
+        static func healthScoreColor(for score: Double) -> Color {
+            if score >= 0.7 { return excellent }
+            if score >= 0.4 { return moderate }
+            return poor
+        }
     }
 
     // MARK: - Animation

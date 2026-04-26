@@ -89,6 +89,15 @@ class SettingsViewModel: ObservableObject {
         }
     }
 
+    @Published var isRadialHomeEnabled: Bool {
+        didSet {
+            self.userDefaults.set(
+                self.isRadialHomeEnabled,
+                forKey: StorageKeys.useRadialHome
+            )
+        }
+    }
+
     // MARK: - Cloud Sync Published Properties
 
     @Published var syncStatus: SyncStatus = .idle
@@ -140,6 +149,7 @@ class SettingsViewModel: ObservableObject {
         self.isHealthSyncEnabled = userDefaults.bool(forKey: StorageKeys.healthSyncEnabled)
         self.showHealthInsights = userDefaults.bool(forKey: StorageKeys.showHealthInsights)
         self.isMindfulWriteEnabled = userDefaults.bool(forKey: StorageKeys.healthKitMindfulWriteEnabled)
+        self.isRadialHomeEnabled = userDefaults.bool(forKey: StorageKeys.useRadialHome)
 
         #if canImport(Network)
             self.networkMonitor = NWPathMonitor()

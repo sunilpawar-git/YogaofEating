@@ -41,6 +41,10 @@ enum StorageKeys {
     /// Duration in seconds approximated for a mindful session when evening review completes.
     static let mindfulSessionDuration: TimeInterval = 300
 
+    // MARK: - Home Screen
+
+    static let useRadialHome = "useRadialHome"
+
     // MARK: - Coachmarks
 
     static let insightCoachmarkSeen = "insight_coachmark_seen"
@@ -62,6 +66,7 @@ enum StorageKeys {
         healthSyncEnabled,
         showHealthInsights,
         healthKitMindfulWriteEnabled,
+        useRadialHome,
         insightCoachmarkSeen
     ]
 }

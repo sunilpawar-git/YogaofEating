@@ -275,6 +275,25 @@ enum Strings {
         static let yesterday = "Yesterday"
     }
 
+    // MARK: - Home (Radial Home Screen)
+
+    enum Home {
+        static let avatarNeutral = "😐"
+        static let avatarSerene = "😌"
+        static let avatarOverwhelmed = "😩"
+
+        static let setIntentionPrompt = "Set today's eating intention"
+        static let logMealPrompt = "What are you eating?"
+        static let noTodosYet = "No intentions yet"
+        static let focusNotRated = "Rate your focus"
+        static let planVsExecution = "Plan vs Execution"
+        static let endOfDayButton = "End of Day"
+
+        static func mealsLoggedCount(_ count: Int) -> String {
+            "\(count) meal\(count == 1 ? "" : "s") logged"
+        }
+    }
+
     // MARK: - Accessibility
 
     enum Accessibility {

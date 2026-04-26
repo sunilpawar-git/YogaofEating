@@ -30,5 +30,6 @@ extension Strings {
         static let mindfulSessionSync = "Log mindful sessions to Health"
         static let mindfulSessionSyncDescription =
             "Each evening review is recorded as a mindful session in the Health app."
+        static let radialHomeBeta = "New Home Screen (Beta)"
     }
 }
