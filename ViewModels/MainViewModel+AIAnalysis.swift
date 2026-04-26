@@ -70,31 +70,7 @@ extension MainViewModel {
                     + "Mood: \(result.mood.rawValue), Sound: \(result.sound)"
             )
 
-            // Update the specific meal's health score, AI analyzed flag, and basic insight
-            // NOTE: We create a new array copy to ensure @Published triggers SwiftUI view updates.
-            // Direct in-place mutation (meals[index].property = value) may not reliably trigger
-            // observation in SwiftUI, causing the UI to display stale values.
-            if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
-                var updatedMeals = meals
-                updatedMeals[verifyIndex].healthScore = result.score
-                updatedMeals[verifyIndex].isAIAnalyzed = true
-                updatedMeals[verifyIndex].aiInsight = result.insight
-                meals = updatedMeals
-                saveData()
-                #if DEBUG
-                    print("📊 Updated meal healthScore to: \(result.score)")
-                #endif
-            }
-
-            // Update overall Smiley state based on new CUMULATIVE health
-            await self.reanalyzeAllMealsForSmileyState()
-            print(
-                "😊 Smiley state updated - Current mood: \(smileyState.mood.rawValue), "
-                    + "Scale: \(smileyState.scale)"
-            )
-
-            // Sound feedback removed - was distracting during typing
-            // Users can still enable sounds in Settings if desired, but sounds won't play automatically
+            await self.applyAIResult(result, mealId: mealId)
 
         } catch {
             #if DEBUG
@@ -103,6 +79,33 @@ extension MainViewModel {
             // Fallback: Ensure smiley state is consistent with local score
             await self.reanalyzeAllMealsForSmileyState()
         }
+    }
+
+    private func applyAIResult(
+        // swiftlint:disable:next large_tuple
+        _ result: (score: Double, mood: SmileyMood, sound: String, insight: String?),
+        mealId: UUID
+    ) async {
+        // NOTE: We create a new array copy to ensure @Published triggers SwiftUI view updates.
+        // Direct in-place mutation (meals[index].property = value) may not reliably trigger
+        // observation in SwiftUI, causing the UI to display stale values.
+        if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
+            var updatedMeals = meals
+            updatedMeals[verifyIndex].healthScore = result.score
+            updatedMeals[verifyIndex].isAIAnalyzed = true
+            updatedMeals[verifyIndex].aiInsight = result.insight
+            meals = updatedMeals
+            saveData()
+            #if DEBUG
+                print("📊 Updated meal healthScore to: \(result.score)")
+            #endif
+        }
+
+        await self.reanalyzeAllMealsForSmileyState()
+        print(
+            "😊 Smiley state updated - Current mood: \(smileyState.mood.rawValue), "
+                + "Scale: \(smileyState.scale)"
+        )
     }
 
     /// Reanalyzes all meals to update the smiley state.

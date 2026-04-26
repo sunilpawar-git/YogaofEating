@@ -1,6 +1,6 @@
+// swiftlint:disable file_length
 import Foundation
 
-/// Analyzes user data to detect patterns between food, sleep, todos, and mood.
 /// Used by InsightGenerationService to create rich, date-referenced insights.
 class PatternAnalyzer {
     // MARK: - Configuration

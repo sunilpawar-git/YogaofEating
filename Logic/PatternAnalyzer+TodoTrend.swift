@@ -6,7 +6,6 @@ extension PatternAnalyzer {
     func analyzeTodoCompletionTrend(
         from snapshots: [DailySmileySnapshot]
     ) -> [InsightPattern] {
-        let calendar = Calendar.current
         let sorted = snapshots
             .filter { $0.morningMindCheck?.contains(where: { $0.category == .todo }) == true }
             .sorted { $0.date < $1.date }

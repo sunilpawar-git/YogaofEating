@@ -8,9 +8,8 @@ protocol MealLogicProvider {
     func calculateNextState(from currentState: SmileyState, healthScore: Double) -> SmileyState
 }
 
-/// Protocol for services that provide AI-powered meal analysis
 protocol AIAnalysisProvider: MealLogicProvider {
-    /// Analyzes meal quality and returns score, mood, sound, and optional basic insight
+    // swiftlint:disable:next large_tuple
     func analyzeMealQuality(description: String, intention: String?) async throws -> (
         score: Double,
         mood: SmileyMood,
@@ -20,6 +19,7 @@ protocol AIAnalysisProvider: MealLogicProvider {
 }
 
 extension AIAnalysisProvider {
+    // swiftlint:disable:next large_tuple
     func analyzeMealQuality(description: String) async throws -> (
         score: Double,
         mood: SmileyMood,
@@ -114,7 +114,7 @@ class MealLogicService: MealLogicProvider {
         return ScoringConstants.neutralBase + adjustedDeviation
     }
 
-    /// Apply contextual adjustments based on food type and user risk level
+    // swiftlint:disable:next cyclomatic_complexity
     private func applyContextualAdjustments(
         score: Double,
         description: String,

@@ -9,8 +9,7 @@ protocol CloudSyncServiceProtocol {
 
 /// Service for interacting with Firebase Firestore to sync heatmap data.
 class CloudSyncService: CloudSyncServiceProtocol {
-    // Lazy initialization to prevent crash when Firebase isn't configured (e.g., unit tests)
-    private lazy var db: Firestore? = {
+    private lazy var database: Firestore? = {
         if NSClassFromString("XCTestCase") != nil {
             return nil
         }
@@ -22,8 +21,7 @@ class CloudSyncService: CloudSyncServiceProtocol {
     /// Uploads a single snapshot to Firestore.
     /// Uses the normalized date string as the document ID to prevent duplicates.
     func upload(snapshot: DailySmileySnapshot, userId: String) async throws {
-        guard let db = self.db else {
-            // Skip during unit tests
+        guard let database = self.database else {
             print("☁️ CloudSync: Skipping upload (no db - likely unit test)")
             return
         }
@@ -31,8 +29,8 @@ class CloudSyncService: CloudSyncServiceProtocol {
         let docPath = "users/\(userId)/\(self.collectionName)/\(dateString)"
         print("☁️ CloudSync: Uploading to \(docPath)")
 
-        let docRef = db.collection("users").document(userId)
-            .collection(self.collectionName).document(dateString)
+        let userDoc = database.collection("users").document(userId)
+        let docRef = userDoc.collection(self.collectionName).document(dateString)
 
         let data = try self.encode(snapshot)
 
@@ -49,13 +47,11 @@ class CloudSyncService: CloudSyncServiceProtocol {
 
     /// Fetches all snapshots for a given user from Firestore.
     func fetchAll(userId: String) async throws -> [DailySmileySnapshot] {
-        guard let db = self.db else {
-            // Return empty during unit tests
+        guard let database = self.database else {
             return []
         }
-        let querySnapshot = try await db.collection("users").document(userId)
-            .collection(self.collectionName)
-            .getDocuments()
+        let userDoc = database.collection("users").document(userId)
+        let querySnapshot = try await userDoc.collection(self.collectionName).getDocuments()
 
         return try querySnapshot.documents.compactMap { document in
             try self.decode(document.data())

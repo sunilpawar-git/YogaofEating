@@ -1,7 +1,5 @@
 import Foundation
 
-/// Represents how the user felt at the end of the day based on their eating.
-/// Part of the "Yoga of Eating" mindfulness tracking.
 // swiftlint:disable identifier_name switch_case_on_newline
 enum ReflectionFeeling: String, Codable, CaseIterable {
     case great

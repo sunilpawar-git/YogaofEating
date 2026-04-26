@@ -63,12 +63,21 @@ struct PreferencesSettingsView: View {
 
     private var integrationsSection: some View {
         Section {
-            Toggle("Sync Body Metrics (Apple Health)", isOn: self.$viewModel.isHealthSyncEnabled)
-                .accessibilityIdentifier("health-sync-toggle")
+            Toggle(
+                "Sync Body Metrics (Apple Health)",
+                isOn: self.$viewModel.isHealthSyncEnabled
+            )
+            .accessibilityIdentifier("health-sync-toggle")
+
+            Toggle(
+                Strings.Settings.mindfulSessionSync,
+                isOn: self.$viewModel.isMindfulWriteEnabled
+            )
+            .accessibilityIdentifier("mindful-write-toggle")
         } header: {
             Text("Integrations")
         } footer: {
-            Text("When enabled, your height, weight, age, and gender will be synced from Apple Health.")
+            Text(Strings.Settings.mindfulSessionSyncDescription)
                 .font(.caption)
         }
     }

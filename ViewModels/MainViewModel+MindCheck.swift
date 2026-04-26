@@ -87,7 +87,28 @@ extension MainViewModel {
         }
 
         self.showEveningMindCheckSheet = false
-        self.isEndOfDayFlow = false // Reset flag
+        self.isEndOfDayFlow = false
+
+        self.scheduleSmartNudges()
+        self.logMindfulSessionIfEnabled()
+    }
+
+    private func logMindfulSessionIfEnabled() {
+        guard UserDefaults.standard.bool(
+            forKey: StorageKeys.healthKitMindfulWriteEnabled
+        ) else { return }
+
+        let end = Date()
+        let start = end.addingTimeInterval(
+            -StorageKeys.mindfulSessionDuration
+        )
+        Task {
+            try? await HealthKitService.shared
+                .requestMindfulWriteAuthorization()
+            try? await HealthKitService.shared.logMindfulSession(
+                start: start, end: end
+            )
+        }
     }
 
     /// Handles dismissal of evening mind check input without saving.

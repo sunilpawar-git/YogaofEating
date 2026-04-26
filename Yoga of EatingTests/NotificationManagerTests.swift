@@ -100,19 +100,114 @@
                 "Meal reminder should NOT be scheduled when explicitly disabled"
             )
         }
+
+        // MARK: - A.1 Regression: smart nudges must not wipe morning nudge
+
+        func test_scheduleSmartNudges_doesNotRemoveMorningNudge() {
+            // Given: morning nudge is already scheduled
+            self.sut.scheduleMorningNudge()
+            XCTAssertEqual(
+                self.mockCenter.requests.count, 1,
+                "Pre-condition: morning nudge should be scheduled"
+            )
+
+            // When: smart nudges are scheduled
+            let times = [DateComponents(hour: 9, minute: 0)]
+            self.sut.scheduleSmartNudges(
+                times: times, message: "test"
+            )
+
+            // Then: morning nudge must still be present
+            let morningNudge = self.mockCenter.requests.first {
+                $0.identifier == "morning_nudge"
+            }
+            XCTAssertNotNil(
+                morningNudge,
+                "Morning nudge must survive scheduleSmartNudges"
+            )
+            XCTAssertEqual(
+                self.mockCenter.requests.count, 2,
+                "Should have morning nudge + 1 smart nudge"
+            )
+        }
+
+        func test_scheduleSmartNudges_usesIdentifierRemoval_notRemoveAll() {
+            self.sut.scheduleMorningNudge()
+            self.sut.scheduleSmartNudges(
+                times: [DateComponents(hour: 9, minute: 0)], message: "m"
+            )
+
+            // removeAll should NOT have been triggered
+            XCTAssertFalse(
+                self.mockCenter.requests.isEmpty,
+                "removeAll must not have been called (morning nudge should remain)"
+            )
+            let wasRemoveAllCalled = !self.mockCenter.removedIdentifiers.isEmpty
+            XCTAssertTrue(
+                wasRemoveAllCalled,
+                "Should have called removePendingNotificationRequests(withIdentifiers:)"
+            )
+        }
+
+        // MARK: - A.4 Regression: cancelMorningNudge only cancels morning nudge
+
+        func test_cancelMorningNudge_doesNotCancelSmartNudges() {
+            // Given: morning nudge + smart nudge scheduled
+            self.sut.scheduleMorningNudge()
+            self.sut.scheduleSmartNudges(
+                times: [DateComponents(hour: 9, minute: 0)], message: "m"
+            )
+            XCTAssertEqual(self.mockCenter.requests.count, 2)
+
+            // When: cancel only morning nudge
+            self.sut.cancelMorningNudge()
+
+            // Then: smart nudge must still exist
+            let smartNudge = self.mockCenter.requests.first {
+                $0.identifier.hasPrefix("smart_nudge_")
+            }
+            XCTAssertNotNil(
+                smartNudge,
+                "Smart nudge must survive cancelMorningNudge"
+            )
+            XCTAssertEqual(
+                self.mockCenter.requests.count, 1,
+                "Only morning nudge should be removed"
+            )
+        }
+
+        // MARK: - A.6: StorageKeys used for morning nudge key
+
+        func test_morningNudge_usesStorageKeys() {
+            UserDefaults.standard.set(
+                false, forKey: StorageKeys.morningNudgeEnabled
+            )
+            self.sut.scheduleMorningNudge()
+            XCTAssertEqual(
+                self.mockCenter.requests.count, 0,
+                "Should respect StorageKeys.morningNudgeEnabled"
+            )
+            UserDefaults.standard.removeObject(
+                forKey: StorageKeys.morningNudgeEnabled
+            )
+        }
     }
 
     // Mock for UNUserNotificationCenter
     @MainActor
     final class MockNotificationCenter: NotificationCenterProtocol {
         var requests: [UNNotificationRequest] = []
+        var removedIdentifiers: [String] = []
 
-        func add(_ request: UNNotificationRequest, withCompletionHandler completionHandler: ((Error?) -> Void)?) {
+        func add(
+            _ request: UNNotificationRequest,
+            withCompletionHandler completionHandler: ((Error?) -> Void)?
+        ) {
             self.requests.append(request)
             completionHandler?(nil)
         }
 
-        func requestAuthorization(
+        nonisolated func requestAuthorization(
             options _: UNAuthorizationOptions,
             completionHandler: @escaping (Bool, Error?) -> Void
         ) {
@@ -121,6 +216,15 @@
 
         func removeAllPendingNotificationRequests() {
             self.requests.removeAll()
+        }
+
+        func removePendingNotificationRequests(
+            withIdentifiers identifiers: [String]
+        ) {
+            self.removedIdentifiers.append(contentsOf: identifiers)
+            self.requests.removeAll {
+                identifiers.contains($0.identifier)
+            }
         }
     }
 

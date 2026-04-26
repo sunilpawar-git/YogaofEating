@@ -29,6 +29,9 @@ enum AppTheme {
     /// Warning accent (yellow-orange)
     static let warningAccent = Color.yellow.opacity(0.2)
 
+    /// Streak accent (warm orange for streak pill)
+    static let streakAccent = Color.orange
+
     /// Primary accent (app tint)
     static let primaryAccent = Color.accentColor
 

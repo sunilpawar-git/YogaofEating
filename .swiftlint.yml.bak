@@ -1,0 +1,107 @@
+disabled_rules:
+  - trailing_whitespace
+  - todo
+
+opt_in_rules:
+  - attributes
+  - closure_end_indentation
+  - closure_spacing
+  - collection_alignment
+  - colon
+  - comma
+  - contains_over_first_not_nil
+  - convenience_type
+  - discouraged_object_literal
+  - empty_count
+  - empty_string
+  - empty_xctest_method
+  - explicit_init
+  - fatal_error_message
+  - file_header
+  - file_name
+  - first_where
+  - force_unwrapping
+  - function_default_parameter_at_end
+  - identical_operands
+  - implicit_return
+  - joined_default_parameter
+  - last_where
+  - legacy_random
+  - let_var_whitespace
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - modifier_order
+  - multiline_arguments
+  - multiline_function_chains
+  - multiline_literal_brackets
+  - multiline_parameters
+  - nimble_operator
+  - nsobject_prefer_isequal
+  - operator_usage_whitespace
+  - overridden_super_call
+  - override_in_extension
+  - pattern_matching_keywords
+  - private_action
+  - private_outlet
+  - prohibited_super_call
+  - quick_discouraged_call
+  - quick_discouraged_focused_test
+  - quick_discouraged_pending_test
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - sorted_first_last
+  - sorted_imports
+  - static_operator
+  - strong_iboutlet
+  - switch_case_on_newline
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - untyped_error_in_catch
+  - vertical_parameter_alignment_on_call
+  - xct_specific_matcher
+  - yoda_condition
+
+analyzer_rules:
+  - unused_import
+  - unused_declaration
+
+included:
+  - Yoga of Eating
+
+excluded:
+  - Yoga of EatingTests
+  - Yoga of EatingUITests
+  - Pods
+
+force_unwrapping: error
+force_cast: error
+
+file_length:
+  warning: 250
+  error: 300
+
+function_body_length:
+  warning: 40
+  error: 50
+
+type_body_length:
+  warning: 250
+  error: 300
+
+line_length: 120
+
+cyclomatic_complexity:
+  warning: 7
+  error: 10
+
+nesting:
+  type_level: 3
+
+identifier_name:
+  min_length: 3
+  max_length: 40
+  allowed_symbols: ["_"]
+
+large_tuple: 3
+
+reporter: "xcode"

@@ -30,6 +30,16 @@ enum StorageKeys {
 
     static let healthSyncEnabled = "health_sync_enabled"
     static let showHealthInsights = "show_health_insights"
+    static let healthKitMindfulWriteEnabled = "healthkit_mindful_write_enabled"
+
+    // MARK: - App Group
+
+    static let appGroupIdentifier = "group.com.yogaofeating.shared"
+
+    // MARK: - HealthKit
+
+    /// Duration in seconds approximated for a mindful session when evening review completes.
+    static let mindfulSessionDuration: TimeInterval = 300
 
     // MARK: - Coachmarks
 
@@ -51,6 +61,7 @@ enum StorageKeys {
         soundEnabled,
         healthSyncEnabled,
         showHealthInsights,
+        healthKitMindfulWriteEnabled,
         insightCoachmarkSeen
     ]
 }

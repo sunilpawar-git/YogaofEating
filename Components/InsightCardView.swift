@@ -13,7 +13,8 @@ struct InsightCardView: View {
 
     // MARK: - Private
 
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorScheme)
+    private var colorScheme
 
     private var cardBackground: Color {
         self.colorScheme == .dark
@@ -96,7 +97,8 @@ struct InsightCardView: View {
         InsightCardView(
             insight: DailyInsight(
                 date: Date(),
-                insightText: "Your late dinner yesterday (pasta at 9pm) may have affected your sleep. Try eating dinner earlier for better rest.",
+                insightText: "Your late dinner yesterday (pasta at 9pm) may have affected your sleep. "
+                    + "Try eating dinner earlier for better rest.",
                 insightType: .foodSleep,
                 confidence: 0.85
             )
@@ -110,7 +112,8 @@ struct InsightCardView: View {
         InsightCardView(
             insight: DailyInsight(
                 date: Date(),
-                insightText: "Great job maintaining healthy eating patterns this week! Your energy levels seem to reflect your balanced choices. 💪",
+                insightText: "Great job maintaining healthy eating patterns this week! "
+                    + "Your energy levels seem to reflect your balanced choices. 💪",
                 insightType: .encouragement,
                 confidence: 0.9
             )

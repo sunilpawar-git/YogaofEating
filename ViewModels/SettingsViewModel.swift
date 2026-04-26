@@ -8,7 +8,6 @@ import HealthKit
     import Network
 #endif
 
-/// ViewModel for the Settings screen, owning all user preferences and sync logic.
 @MainActor
 class SettingsViewModel: ObservableObject {
     // MARK: - User Profile Published Properties
@@ -77,32 +76,37 @@ class SettingsViewModel: ObservableObject {
         }
     }
 
-    // Note: isPersonalizedFeedbackEnabled removed - feature is always on
-
     @Published var showHealthInsights: Bool {
         didSet { self.userDefaults.set(self.showHealthInsights, forKey: StorageKeys.showHealthInsights) }
+    }
+
+    @Published var isMindfulWriteEnabled: Bool {
+        didSet {
+            self.userDefaults.set(
+                self.isMindfulWriteEnabled,
+                forKey: StorageKeys.healthKitMindfulWriteEnabled
+            )
+        }
     }
 
     // MARK: - Cloud Sync Published Properties
 
     @Published var syncStatus: SyncStatus = .idle
 
-    // MARK: - Private Properties
+    // MARK: - Properties
 
     private let userDefaults: UserDefaults
-    private let historicalService: any HistoricalDataServiceProtocol
-    private var syncTask: Task<Void, Never>?
+    let historicalService: any HistoricalDataServiceProtocol
+    var syncTask: Task<Void, Never>?
     private let networkMonitor: NWPathMonitor?
-    private var isNetworkAvailable = true
+    var isNetworkAvailable = true
 
     // MARK: - Constants
 
-    // Keys moved to StorageKeys.swift for centralization
-
-    private let SYNC_SUCCESS_DISPLAY_DURATION: UInt64 = 2_000_000_000 // 2 seconds
-    private let SYNC_ERROR_DISPLAY_DURATION: UInt64 = 3_000_000_000 // 3 seconds
-    private let SYNC_MAX_RETRY_ATTEMPTS = 3
-    private let SYNC_RETRY_DELAY: UInt64 = 1_000_000_000 // 1 second
+    let SYNC_SUCCESS_DISPLAY_DURATION: UInt64 = 2_000_000_000
+    let SYNC_ERROR_DISPLAY_DURATION: UInt64 = 3_000_000_000
+    let SYNC_MAX_RETRY_ATTEMPTS = 3
+    let SYNC_RETRY_DELAY: UInt64 = 1_000_000_000
 
     // MARK: - Sync Status Enum
 
@@ -122,7 +126,6 @@ class SettingsViewModel: ObservableObject {
         self.userDefaults = userDefaults
         self.historicalService = historicalService
 
-        // Load initial values from UserDefaults
         self.name = userDefaults.string(forKey: StorageKeys.userName) ?? "User"
         self.height = userDefaults.string(forKey: StorageKeys.userHeight) ?? "175"
         self.weight = userDefaults.string(forKey: StorageKeys.userWeight) ?? "75"
@@ -135,8 +138,8 @@ class SettingsViewModel: ObservableObject {
         self.areHapticsEnabled = userDefaults.object(forKey: StorageKeys.hapticsEnabled) as? Bool ?? true
         self.isSoundEnabled = userDefaults.object(forKey: StorageKeys.soundEnabled) as? Bool ?? true
         self.isHealthSyncEnabled = userDefaults.bool(forKey: StorageKeys.healthSyncEnabled)
-        // Note: isPersonalizedFeedbackEnabled initialization removed - feature is always on
         self.showHealthInsights = userDefaults.bool(forKey: StorageKeys.showHealthInsights)
+        self.isMindfulWriteEnabled = userDefaults.bool(forKey: StorageKeys.healthKitMindfulWriteEnabled)
 
         #if canImport(Network)
             self.networkMonitor = NWPathMonitor()
@@ -188,127 +191,6 @@ class SettingsViewModel: ObservableObject {
                 print("❌ HealthKit sync failed: \(error.localizedDescription)")
                 self.isHealthSyncEnabled = false
             }
-        }
-    }
-
-    // MARK: - Cloud Sync
-
-    func performCloudSync() {
-        self.syncTask?.cancel()
-        self.syncTask = Task {
-            await self.performSyncWithRetry()
-        }
-    }
-
-    func cancelCloudSync() {
-        self.syncTask?.cancel()
-        if self.syncStatus == .syncing {
-            self.syncStatus = .idle
-        }
-    }
-
-    private func performSyncWithRetry(attempt: Int = 1) async {
-        guard self.isNetworkAvailable else {
-            await self.handleSyncError(
-                NSError(
-                    domain: "SyncError",
-                    code: -1009,
-                    userInfo: [
-                        NSLocalizedDescriptionKey: "No internet connection. Please check your network and try again."
-                    ]
-                ),
-                shouldRetry: false
-            )
-            return
-        }
-
-        self.syncStatus = .syncing
-
-        do {
-            try await self.historicalService.syncToFirebase()
-            if !Task.isCancelled {
-                await self.handleSyncSuccess()
-            }
-        } catch {
-            if !Task.isCancelled {
-                let shouldRetry = attempt < self.SYNC_MAX_RETRY_ATTEMPTS
-                await self.handleSyncError(error, shouldRetry: shouldRetry, attempt: attempt)
-            }
-        }
-    }
-
-    private func handleSyncSuccess() async {
-        self.syncStatus = .success
-
-        #if canImport(UIKit)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-        #endif
-
-        try? await Task.sleep(nanoseconds: self.SYNC_SUCCESS_DISPLAY_DURATION)
-
-        if !Task.isCancelled {
-            self.syncStatus = .idle
-        }
-    }
-
-    private func handleSyncError(_ error: Error, shouldRetry: Bool, attempt: Int = 1) async {
-        if shouldRetry {
-            self.syncStatus = .error("Sync failed. Retrying... (Attempt \(attempt)/\(self.SYNC_MAX_RETRY_ATTEMPTS))")
-            try? await Task.sleep(nanoseconds: self.SYNC_RETRY_DELAY)
-            if !Task.isCancelled {
-                await self.performSyncWithRetry(attempt: attempt + 1)
-            }
-        } else {
-            self.syncStatus = .error(error.localizedDescription)
-
-            #if canImport(UIKit)
-                UINotificationFeedbackGenerator().notificationOccurred(.error)
-            #endif
-
-            try? await Task.sleep(nanoseconds: self.SYNC_ERROR_DISPLAY_DURATION)
-
-            if !Task.isCancelled {
-                self.syncStatus = .idle
-            }
-        }
-    }
-
-    // MARK: - Notification Handling
-
-    private func handleMorningNudgeChange(_ enabled: Bool) {
-        if enabled {
-            NotificationManager.shared.scheduleMorningNudge()
-        } else {
-            NotificationManager.shared.cancelAllNotifications()
-        }
-    }
-
-    // MARK: - Sync Status Helpers
-
-    var syncStatusText: String {
-        switch self.syncStatus {
-        case .idle: "Sync with Cloud"
-        case .syncing: "Syncing..."
-        case .success: "Synced!"
-        case .error: "Sync Failed"
-        }
-    }
-
-    var syncAccessibilityLabel: String {
-        switch self.syncStatus {
-        case .idle: "Sync with Cloud button"
-        case .syncing: "Syncing data to cloud"
-        case .success: "Sync completed successfully"
-        case let .error(message): "Sync failed: \(message)"
-        }
-    }
-
-    var syncAccessibilityHint: String {
-        switch self.syncStatus {
-        case .idle: "Double tap to sync your data with cloud storage"
-        case .syncing: "Sync in progress, please wait"
-        case .success: "Sync completed"
-        case .error: "Double tap to retry sync"
         }
     }
 }

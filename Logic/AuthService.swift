@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import Combine
 import FirebaseAuth
 import FirebaseCore
@@ -23,6 +24,7 @@ extension FirebaseAuth.User: AuthUser {}
 @MainActor
 protocol AuthCoreProvider {
     var currentUser: AuthUser? { get }
+
     func signInWithGoogle() async throws -> AuthUser
     func signOut() throws
     func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any
@@ -37,6 +39,7 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
         return Auth.auth().currentUser
     }
 
+    // swiftlint:disable:next function_body_length
     func signInWithGoogle() async throws -> AuthUser {
         guard let clientID = FirebaseApp.app()?.options.clientID else {
             throw NSError(
@@ -136,6 +139,7 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
 @MainActor
 protocol AuthServiceProtocol: ObservableObject {
     var currentUser: AuthUser? { get }
+
     func signInWithGoogle() async throws
     func signOut()
 }

@@ -1,6 +1,7 @@
 disabled_rules:
   - trailing_whitespace
   - todo
+  - opening_brace
 
 opt_in_rules:
   - attributes
@@ -18,10 +19,8 @@ opt_in_rules:
   - explicit_init
   - fatal_error_message
   - file_header
-  - file_name
   - first_where
   - force_unwrapping
-  - function_default_parameter_at_end
   - identical_operands
   - implicit_return
   - joined_default_parameter
@@ -53,7 +52,6 @@ opt_in_rules:
   - sorted_imports
   - static_operator
   - strong_iboutlet
-  - switch_case_on_newline
   - unavailable_function
   - unneeded_parentheses_in_closure_argument
   - untyped_error_in_catch
@@ -66,6 +64,11 @@ analyzer_rules:
   - unused_declaration
 
 included:
+  - Logic
+  - Views
+  - Components
+  - ViewModels
+  - Models
   - Yoga of Eating
 
 excluded:
