@@ -6,7 +6,6 @@ import SwiftUI
 @MainActor
 struct MainScreenView: View {
     @EnvironmentObject var viewModel: MainViewModel
-    @State private var breathingMeals: Set<UUID> = []
     @State private var showingSettings = false
 
     var body: some View {
@@ -79,6 +78,18 @@ struct MainScreenView: View {
                     }
                 )
                 .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: self.$viewModel.showReflectSheet) {
+                ReflectInputView(
+                    onSave: { energy, intention in
+                        self.viewModel.completeReflectInput(energy: energy, intention: intention)
+                    },
+                    onDismiss: {
+                        self.viewModel.dismissReflectInput()
+                    }
+                )
+                .presentationDetents([.height(440)])
                 .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: self.$viewModel.showInsightSheet) {
@@ -184,7 +195,7 @@ struct MainScreenView: View {
             fastingPeriods: self.viewModel.fastingPeriods,
             isToday: true,
             smileyState: self.viewModel.smileyState,
-            snapshot: nil,
+            snapshot: self.viewModel.historicalService.getSnapshot(for: Date()),
             onSmileyTap: {
                 // Use context-aware smiley tap handling (morning sleep only)
                 self.viewModel.handleSmileyTap()
@@ -236,7 +247,16 @@ struct MainScreenView: View {
                     }
                 }
             ),
-            recentMeals: self.viewModel.getRecentUniqueMeals()
+            recentMeals: self.viewModel.getRecentUniqueMeals(),
+            currentInsight: self.viewModel.currentInsight,
+            onInsightDismiss: {
+                self.viewModel.dismissInsight()
+            },
+            dailyIntention: self.viewModel.todaysIntention,
+            onFocusRate: { rating in
+                self.viewModel.saveFocusRating(rating)
+            },
+            hasFocusRating: self.viewModel.todaysFocusRating != nil
         )
     }
 
@@ -245,7 +265,8 @@ struct MainScreenView: View {
     @ViewBuilder
     private func historicalDayContent(daysAgo: Int) -> some View {
         let calendar = Calendar.current
-        let date = calendar.date(byAdding: .day, value: -daysAgo, to: calendar.startOfDay(for: Date()))!
+        let date = calendar.date(byAdding: .day, value: -daysAgo, to: calendar.startOfDay(for: Date())) ?? calendar
+            .startOfDay(for: Date())
         let snapshot = self.viewModel.historicalService.getSnapshot(for: date)
         let meals = snapshot?.meals ?? []
         let fastingPeriods = FastingLogicService.calculateFastingPeriods(

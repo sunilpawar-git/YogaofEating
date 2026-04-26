@@ -24,6 +24,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
     /// Added in Phase 2 - Mind Check feature.
     let eveningMindCheck: [MindCheckEntry]?
 
+    /// Optional AI-generated daily insight for this day.
+    let dailyInsight: DailyInsight?
+
     // MARK: - Initialization
 
     /// Creates a new daily snapshot with all properties including optional reflection and mind checks.
@@ -36,10 +39,11 @@ struct DailySmileySnapshot: Codable, Identifiable {
         averageHealthScore: Double,
         reflection: DailyReflection? = nil,
         morningMindCheck: [MindCheckEntry]? = nil,
-        eveningMindCheck: [MindCheckEntry]? = nil
+        eveningMindCheck: [MindCheckEntry]? = nil,
+        dailyInsight: DailyInsight? = nil
     ) {
         self.id = id
-        self.date = Calendar(identifier: .gregorian).startOfDay(for: date) // Normalize to midnight
+        self.date = Calendar(identifier: .gregorian).startOfDay(for: date)
         self.smileyState = smileyState
         self.meals = meals
         self.mealCount = mealCount
@@ -47,6 +51,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.reflection = reflection
         self.morningMindCheck = morningMindCheck
         self.eveningMindCheck = eveningMindCheck
+        self.dailyInsight = dailyInsight
     }
 
     // MARK: - Codable (Backward Compatible)
@@ -61,6 +66,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
         case reflection
         case morningMindCheck
         case eveningMindCheck
+        case dailyInsight
     }
 
     init(from decoder: Decoder) throws {
@@ -73,10 +79,10 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.meals = try container.decode([Meal].self, forKey: .meals)
         self.mealCount = try container.decode(Int.self, forKey: .mealCount)
         self.averageHealthScore = try container.decode(Double.self, forKey: .averageHealthScore)
-        // Backward compatibility: optional fields may not exist in legacy data
         self.reflection = try container.decodeIfPresent(DailyReflection.self, forKey: .reflection)
         self.morningMindCheck = try container.decodeIfPresent([MindCheckEntry].self, forKey: .morningMindCheck)
         self.eveningMindCheck = try container.decodeIfPresent([MindCheckEntry].self, forKey: .eveningMindCheck)
+        self.dailyInsight = try container.decodeIfPresent(DailyInsight.self, forKey: .dailyInsight)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -90,6 +96,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
         try container.encodeIfPresent(self.reflection, forKey: .reflection)
         try container.encodeIfPresent(self.morningMindCheck, forKey: .morningMindCheck)
         try container.encodeIfPresent(self.eveningMindCheck, forKey: .eveningMindCheck)
+        try container.encodeIfPresent(self.dailyInsight, forKey: .dailyInsight)
     }
 
     // MARK: - Computed Properties
@@ -143,7 +150,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         meals: [Meal],
         reflection: DailyReflection? = nil,
         morningMindCheck: [MindCheckEntry]? = nil,
-        eveningMindCheck: [MindCheckEntry]? = nil
+        eveningMindCheck: [MindCheckEntry]? = nil,
+        dailyInsight: DailyInsight? = nil
     ) -> DailySmileySnapshot {
         let mealCount = meals.count
         let averageHealthScore = meals.isEmpty
@@ -159,7 +167,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
             averageHealthScore: averageHealthScore,
             reflection: reflection,
             morningMindCheck: morningMindCheck,
-            eveningMindCheck: eveningMindCheck
+            eveningMindCheck: eveningMindCheck,
+            dailyInsight: dailyInsight
         )
     }
 
@@ -182,7 +191,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
             averageHealthScore: self.averageHealthScore,
             reflection: self.reflection,
             morningMindCheck: morningMindCheck ?? self.morningMindCheck,
-            eveningMindCheck: eveningMindCheck ?? self.eveningMindCheck
+            eveningMindCheck: eveningMindCheck ?? self.eveningMindCheck,
+            dailyInsight: self.dailyInsight
         )
     }
 
@@ -200,7 +210,26 @@ struct DailySmileySnapshot: Codable, Identifiable {
             averageHealthScore: self.averageHealthScore,
             reflection: reflection,
             morningMindCheck: self.morningMindCheck,
-            eveningMindCheck: self.eveningMindCheck
+            eveningMindCheck: self.eveningMindCheck,
+            dailyInsight: self.dailyInsight
+        )
+    }
+
+    /// Creates a copy of this snapshot with an attached daily insight.
+    /// - Parameter insight: The daily insight to attach
+    /// - Returns: A new snapshot with the daily insight set
+    func withDailyInsight(_ insight: DailyInsight) -> DailySmileySnapshot {
+        DailySmileySnapshot(
+            id: self.id,
+            date: self.date,
+            smileyState: self.smileyState,
+            meals: self.meals,
+            mealCount: self.mealCount,
+            averageHealthScore: self.averageHealthScore,
+            reflection: self.reflection,
+            morningMindCheck: self.morningMindCheck,
+            eveningMindCheck: self.eveningMindCheck,
+            dailyInsight: insight
         )
     }
 }

@@ -6,25 +6,13 @@ import SwiftUI
 extension MainViewModel {
     // MARK: - Computed Properties
 
-    /// Returns today's generated insight if available.
-    var todaysInsight: DailyInsight? {
-        // For now, insights are not persisted - will be added in future
-        // This will be populated when insight generation is triggered
-        nil
-    }
-
-    /// Returns true if the insight card should be shown.
-    /// Shows when: there's an unviewed insight for today.
+    /// Whether an unviewed insight exists (drives both inline card and smiley red dot)
     var showInsightCard: Bool {
-        guard let insight = self.todaysInsight else { return false }
-        return !insight.isViewed
-    }
-
-    /// Whether an unread insight is available (for smiley red dot indicator)
-    var hasUnreadInsight: Bool {
         guard let insight = self.currentInsight else { return false }
         return !insight.isViewed
     }
+
+    var hasUnreadInsight: Bool { self.showInsightCard }
 
     /// Whether any insight is available (for enabling long-press on smiley)
     var hasInsightAvailable: Bool {
@@ -33,13 +21,13 @@ extension MainViewModel {
 
     // MARK: - Insight Actions
 
-    /// Dismisses the current insight card.
+    /// Dismisses the current insight card and persists the viewed state.
     func dismissInsight() {
-        // Mark insight as viewed
         self.showInsightSheet = false
-        if self.currentInsight != nil {
-            self.currentInsight?.markAsViewed()
-        }
+        guard var insight = self.currentInsight else { return }
+        insight.markAsViewed()
+        self.currentInsight = insight
+        self.historicalService.updateDailyInsight(for: insight.date, insight: insight)
     }
 
     /// Opens the insight bottom sheet

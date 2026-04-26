@@ -79,6 +79,21 @@ struct DayTimelineView: View {
     /// Recent meals from past 3 days for quick-add feature (only for today)
     var recentMeals: [Meal] = []
 
+    /// Current AI-generated insight to display inline (for today only)
+    var currentInsight: DailyInsight?
+
+    /// Callback to dismiss the inline insight card
+    var onInsightDismiss: (() -> Void)?
+
+    /// Today's daily intention for alignment hints on meal cards
+    var dailyIntention: String?
+
+    /// Callback when user rates their focus level (1-3)
+    var onFocusRate: ((Int) -> Void)?
+
+    /// Whether focus has already been rated today
+    var hasFocusRating: Bool = false
+
     // MARK: - Legacy Parameter Support (Deprecated)
 
     // These are kept for backward compatibility but internally map to reflectionData
@@ -117,6 +132,12 @@ struct DayTimelineView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Day Ring progress summary
+            if let snap = self.snapshot {
+                self.dayRingHeader(for: snap)
+                    .padding(.bottom, 12)
+            }
+
             // Sleep badge at TOP of timeline (for today only)
             if self.isToday, let sleepQuality = self.todaysSleepQuality {
                 self.sleepBadge(sleepQuality)
@@ -139,6 +160,17 @@ struct DayTimelineView: View {
                 }
             }
 
+            // Inline insight card (shown after sleep + mind check, before meals)
+            if self.isToday, let insight = self.currentInsight, !insight.isViewed {
+                InsightCardView(insight: insight, onDismiss: self.onInsightDismiss)
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 16)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity
+                    ))
+            }
+
             let sortedMeals = self.meals.sorted { $0.timestamp < $1.timestamp }
 
             ForEach(Array(sortedMeals.enumerated()), id: \.element.id) { index, meal in
@@ -154,6 +186,15 @@ struct DayTimelineView: View {
                     // Fallback spacing if no period found
                     Spacer().frame(height: 30)
                 }
+            }
+
+            // Focus check prompt (after 2+ meals, if not yet rated)
+            if self.isToday, sortedMeals.count >= 2, !self.hasFocusRating,
+               let onRate = self.onFocusRate
+            {
+                FocusCheckView(onRate: onRate)
+                    .padding(.horizontal, 4)
+                    .padding(.top, 12)
             }
 
             // Feeling badge above smiley (for today only, when logged)
@@ -210,7 +251,8 @@ struct DayTimelineView: View {
                         self.mealActions.onDelete(meal.id)
                     }
                 },
-                recentMeals: self.recentMeals
+                recentMeals: self.recentMeals,
+                dailyIntention: self.dailyIntention
             )
         } else {
             // Read-only view for historical days
@@ -248,6 +290,18 @@ struct DayTimelineView: View {
             }
         }
         .frame(height: spacing)
+    }
+
+    // MARK: - Day Ring Header
+
+    private func dayRingHeader(for snapshot: DailySmileySnapshot) -> some View {
+        let progress = DayModuleProgress.compute(from: snapshot)
+        return HStack(spacing: 12) {
+            DayRingView(progress: progress, ringSize: 44, lineWidth: 4)
+            DayRingLegend()
+            Spacer()
+        }
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Timeline Line
@@ -726,10 +780,14 @@ struct ReadOnlyMealCardView: View {
         .padding(.horizontal, 24)
     }
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        return f
+    }()
+
     private var formattedTime: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: self.meal.timestamp)
+        Self.timeFormatter.string(from: self.meal.timestamp)
     }
 
     private var scoreColor: Color {

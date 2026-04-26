@@ -18,32 +18,7 @@ struct InsightBottomSheet: View {
     // MARK: - Private
 
     private var accentGradient: LinearGradient {
-        switch self.insight.insightType {
-        case .foodSleep:
-            LinearGradient(
-                colors: [.indigo.opacity(0.15), .purple.opacity(0.08)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .mindsetFeeling:
-            LinearGradient(
-                colors: [.teal.opacity(0.15), .cyan.opacity(0.08)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .pattern:
-            LinearGradient(
-                colors: [.orange.opacity(0.15), .yellow.opacity(0.08)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .encouragement:
-            LinearGradient(
-                colors: [.green.opacity(0.15), .mint.opacity(0.08)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
+        self.insight.insightType.gradient(intensity: 0.15)
     }
 
     // MARK: - Body

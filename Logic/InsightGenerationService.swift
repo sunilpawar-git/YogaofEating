@@ -86,6 +86,21 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             var dayData: [String] = []
             dayData.append("**\(dayName)**:")
 
+            // Morning energy and daily intention
+            if let reflection = snapshot.reflection {
+                if let energy = reflection.morningEnergyLevel {
+                    dayData.append("  Morning Energy: \(energy)/5")
+                }
+                if let intention = reflection.dailyIntention, !intention.isEmpty {
+                    dayData.append("  Daily Intention: \"\(intention)\"")
+                }
+                if let focus = reflection.focusRating {
+                    let clampedFocus = max(0, min(focus, 3))
+                    let label = ["", "Scattered", "Okay", "Locked In"][clampedFocus]
+                    dayData.append("  Focus: \(label) (\(focus)/3)")
+                }
+            }
+
             // Meals
             if !snapshot.meals.isEmpty {
                 let mealItems = snapshot.meals.flatMap(\.items).prefix(5).joined(separator: ", ")
@@ -121,9 +136,18 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
             // Evening mind check
             if let eveningEntries = snapshot.eveningMindCheck, !eveningEntries.isEmpty {
-                let reflections = eveningEntries.map { "\($0.category.displayName): \($0.text)" }
-                    .joined(separator: "; ")
-                dayData.append("  Evening reflections: \(reflections)")
+                let observations = eveningEntries
+                    .filter { $0.category == .observation }
+                    .map(\.text)
+                if !observations.isEmpty {
+                    dayData.append("  Observations: \(observations.joined(separator: "; "))")
+                }
+                let otherEvening = eveningEntries
+                    .filter { $0.category != .observation }
+                    .map { "\($0.category.displayName): \($0.text)" }
+                if !otherEvening.isEmpty {
+                    dayData.append("  Evening reflections: \(otherEvening.joined(separator: "; "))")
+                }
             }
 
             promptParts.append(contentsOf: dayData)
@@ -131,9 +155,11 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         }
 
         promptParts.append("Provide a single, personalized insight (2-3 sentences max) that:")
-        promptParts.append("1. Identifies a pattern between food choices and sleep/mood/energy")
-        promptParts.append("2. Is encouraging and actionable")
-        promptParts.append("3. Does not repeat previous insights")
+        promptParts.append("1. Identifies a pattern between food choices and sleep/mood/energy/focus")
+        promptParts.append("2. If focus data exists, consider how food affected focus levels")
+        promptParts.append("3. If observations exist, weave them into the insight")
+        promptParts.append("4. Is encouraging and actionable")
+        promptParts.append("5. Does not repeat previous insights")
 
         return promptParts.joined(separator: "\n")
     }
@@ -144,10 +170,8 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     /// - Parameters:
     ///   - insight: The insight to save
     ///   - date: The date to associate the insight with
-    func saveInsight(_ insight: DailyInsight, for _: Date) {
-        // TODO: Implement storage - will be added in future phase
-        // For now, insights are ephemeral
-        print("📊 Insight generated: \(insight.insightText)")
+    func saveInsight(_ insight: DailyInsight, for date: Date) {
+        self.historicalService.updateDailyInsight(for: date, insight: insight)
     }
 
     // MARK: - Check Methods
@@ -197,13 +221,17 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             date: date,
             healthKitSleepData: healthKitSleepData
         ) {
-            print("✨ Using server-generated insight from Gemini")
+            #if DEBUG
+                print("✨ Using server-generated insight from Gemini")
+            #endif
             self.saveInsight(serverInsight, for: date)
             return serverInsight
         }
 
         // Fallback to local PatternAnalyzer
-        print("📊 Using local PatternAnalyzer for insight generation")
+        #if DEBUG
+            print("📊 Using local PatternAnalyzer for insight generation")
+        #endif
         let patterns = self.patternAnalyzer.analyzePatterns(from: snapshots)
 
         // Generate insight based on detected patterns or fallback to generic
@@ -238,7 +266,9 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         healthKitSleepData: [Date: SleepData] = [:]
     ) async -> DailyInsight? {
         guard let functions = self.functions else {
-            print("⚠️ Firebase Functions not available for insight generation")
+            #if DEBUG
+                print("⚠️ Firebase Functions not available for insight generation")
+            #endif
             return nil
         }
 
@@ -280,6 +310,29 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             // Add feeling
             if let reflection = snapshot.reflection, let feeling = reflection.feeling {
                 data["feeling"] = feeling.displayName
+            }
+
+            // Add morning energy level and daily intention (Reflect data)
+            if let reflection = snapshot.reflection {
+                if let energy = reflection.morningEnergyLevel {
+                    data["morningEnergyLevel"] = energy
+                }
+                if let intention = reflection.dailyIntention, !intention.isEmpty {
+                    data["dailyIntention"] = intention
+                }
+                if let focus = reflection.focusRating {
+                    data["focusRating"] = focus
+                }
+            }
+
+            // Add observations from evening mind check
+            if let eveningEntries = snapshot.eveningMindCheck {
+                let observations = eveningEntries
+                    .filter { $0.category == .observation }
+                    .map(\.text)
+                if !observations.isEmpty {
+                    data["observations"] = observations
+                }
             }
 
             // Add Apple HealthKit sleep data (objective metrics)
@@ -327,7 +380,9 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         }
 
         do {
-            print("📡 Calling Firebase Cloud Function 'generateInsight'")
+            #if DEBUG
+                print("📡 Calling Firebase Cloud Function 'generateInsight'")
+            #endif
             // Pass the insight date so server knows which day is "today"
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "EEEE, MMMM d"
@@ -339,7 +394,9 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             ])
 
             guard let responseData = result.data as? [String: Any] else {
-                print("⚠️ Invalid response format from generateInsight")
+                #if DEBUG
+                    print("⚠️ Invalid response format from generateInsight")
+                #endif
                 return nil
             }
 
@@ -347,7 +404,9 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
                   let insightTypeString = responseData["insightType"] as? String,
                   let confidence = responseData["confidence"] as? Double
             else {
-                print("⚠️ Missing required fields in generateInsight response")
+                #if DEBUG
+                    print("⚠️ Missing required fields in generateInsight response")
+                #endif
                 return nil
             }
 
@@ -356,10 +415,14 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             case "foodSleep": .foodSleep
             case "mindsetFeeling": .mindsetFeeling
             case "pattern": .pattern
+            case "intentAlignment": .intentAlignment
+            case "focusFood": .focusFood
             default: .encouragement
             }
 
-            print("✅ Received insight from server: \(insightText.prefix(50))...")
+            #if DEBUG
+                print("✅ Received server insight")
+            #endif
 
             return DailyInsight(
                 date: date,
@@ -369,7 +432,9 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             )
 
         } catch {
-            print("❌ Server insight generation failed: \(error.localizedDescription)")
+            #if DEBUG
+                print("❌ Server insight generation failed: \(error.localizedDescription)")
+            #endif
             return nil
         }
     }
@@ -424,6 +489,10 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             "Your consistency is paying off"
         case .encouragement:
             "Keep up the great work"
+        case .intentAlignment:
+            "Setting a daily intention helps you eat more mindfully"
+        case .focusFood:
+            "Notice how lighter meals support sustained focus"
         }
     }
 
@@ -478,7 +547,9 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
         let calendar = Calendar.current
         let today = Date()
-        let weekStart = calendar.date(byAdding: .day, value: -6, to: today)!
+        guard let weekStart = calendar.date(byAdding: .day, value: -6, to: today) else {
+            return nil
+        }
 
         // Analyze patterns across the week
         let patterns = self.patternAnalyzer.analyzePatterns(from: snapshots)

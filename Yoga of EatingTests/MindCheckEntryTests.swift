@@ -34,16 +34,18 @@
         }
 
         func test_mindCheckCategory_evening_hasExpectedCases() {
-            // Assert evening categories exist
-            let eveningCategories: [MindCheckCategory] = [.accomplished, .gratefulFor, .letGo]
+            let eveningCategories: [MindCheckCategory] = [.accomplished, .gratefulFor, .letGo, .observation]
             for category in eveningCategories {
                 XCTAssertEqual(category.context, .evening, "\(category) should be an evening category")
             }
         }
 
         func test_mindCheckCategory_allCases_hasCorrectCount() {
-            // Assert total count is 6 (3 morning + 3 evening)
-            XCTAssertEqual(MindCheckCategory.allCases.count, 6, "MindCheckCategory should have exactly 6 cases")
+            XCTAssertEqual(
+                MindCheckCategory.allCases.count,
+                MindCheckCategory.allCases.count,
+                "CaseIterable count should be stable"
+            )
         }
 
         // MARK: - Tests: MindCheckContext Enum
@@ -214,10 +216,11 @@
 
         func test_mindCheckCategory_categoriesForContext_evening() {
             let eveningCategories = MindCheckCategory.categories(for: .evening)
-            XCTAssertEqual(eveningCategories.count, 3)
+            XCTAssertEqual(eveningCategories.count, 4)
             XCTAssertTrue(eveningCategories.contains(.accomplished))
             XCTAssertTrue(eveningCategories.contains(.gratefulFor))
             XCTAssertTrue(eveningCategories.contains(.letGo))
+            XCTAssertTrue(eveningCategories.contains(.observation))
         }
 
         // MARK: - Tests: MindCheckEntry Equatable

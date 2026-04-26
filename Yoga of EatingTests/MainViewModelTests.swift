@@ -604,6 +604,112 @@
             // Then: Should not trigger another analysis for same items
             XCTAssertEqual(mockAILogic.analyzeCallCount, preCount, "Should skip analysis when items haven't changed")
         }
+
+        // MARK: - Tests: Phase 1.6 — Reflect Flow
+
+        func test_completeSleepQualityInput_chainsToReflectSheet_whenNoIntention() {
+            // Arrange
+            XCTAssertNil(self.sut.todaysIntention)
+
+            // Act
+            self.sut.completeSleepQualityInput(.good)
+
+            // Assert
+            XCTAssertTrue(self.sut.showReflectSheet, "Should chain to Reflect sheet when no intention is set")
+            XCTAssertFalse(self.sut.showSleepQualitySheet, "Sleep sheet should be dismissed")
+        }
+
+        func test_completeSleepQualityInput_doesNotChain_whenIntentionExists() {
+            // Arrange
+            self.sut.completeReflectInput(energy: 3, intention: "Eat lighter")
+            XCTAssertNotNil(self.sut.todaysIntention)
+
+            // Act
+            self.sut.completeSleepQualityInput(.great)
+
+            // Assert
+            XCTAssertFalse(self.sut.showReflectSheet, "Should NOT chain when intention already exists")
+        }
+
+        func test_completeReflectInput_savesEnergyAndIntention() {
+            // Act
+            self.sut.completeReflectInput(energy: 4, intention: "No sugar today")
+
+            // Assert
+            XCTAssertEqual(self.sut.todaysIntention, "No sugar today")
+            XCTAssertEqual(self.sut.todaysEnergyLevel, 4)
+            XCTAssertFalse(self.sut.showReflectSheet, "Reflect sheet should be dismissed")
+        }
+
+        func test_completeReflectInput_mergesWithExistingSleep() {
+            // Arrange
+            self.sut.completeSleepQualityInput(.good)
+
+            // Act
+            self.sut.completeReflectInput(energy: 3, intention: "Stay hydrated")
+
+            // Assert
+            XCTAssertEqual(self.sut.todaysSleepQuality, .good)
+            XCTAssertEqual(self.sut.todaysIntention, "Stay hydrated")
+            XCTAssertEqual(self.sut.todaysEnergyLevel, 3)
+        }
+
+        func test_dismissReflectInput_doesNotSaveData() {
+            // Act
+            self.sut.dismissReflectInput()
+
+            // Assert
+            XCTAssertNil(self.sut.todaysIntention)
+            XCTAssertNil(self.sut.todaysEnergyLevel)
+            XCTAssertFalse(self.sut.showReflectSheet)
+        }
+
+        func test_todaysIntention_returnsNil_whenNoReflection() {
+            XCTAssertNil(self.sut.todaysIntention)
+        }
+
+        func test_todaysEnergyLevel_returnsNil_whenNoReflection() {
+            XCTAssertNil(self.sut.todaysEnergyLevel)
+        }
+
+        func test_showInsightCard_returnsFalse_whenNoInsight() {
+            XCTAssertFalse(self.sut.showInsightCard)
+        }
+
+        func test_loadData_restoresInsightFromSnapshot() {
+            // Arrange
+            let today = Date()
+            let insight = DailyInsight(
+                date: today,
+                insightText: "Persisted insight",
+                insightType: .foodSleep,
+                confidence: 0.8
+            )
+            let snapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: today,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                dailyInsight: insight
+            )
+            self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+
+            self.mockPersistence.savedData = PersistenceService.AppData(
+                meals: [],
+                smileyState: .neutral,
+                lastResetDate: today,
+                historicalData: self.mockHistorical.historicalData
+            )
+
+            // Act
+            self.sut.loadData()
+
+            // Assert
+            XCTAssertNotNil(self.sut.currentInsight)
+            XCTAssertEqual(self.sut.currentInsight?.insightText, "Persisted insight")
+        }
     }
 
     // MARK: - Regression Test Mock for AI Score Update Bug
@@ -635,7 +741,7 @@
             self.nextState
         }
 
-        func analyzeMealQuality(description _: String) async throws -> (
+        func analyzeMealQuality(description _: String, intention _: String? = nil) async throws -> (
             score: Double,
             mood: SmileyMood,
             sound: String,
@@ -645,9 +751,72 @@
             if self.shouldFail {
                 throw NSError(domain: "AI", code: 1, userInfo: [NSLocalizedDescriptionKey: "AI analysis failed"])
             }
-            // Simulate network delay
-            try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+            try await Task.sleep(nanoseconds: 10_000_000)
             return (self.aiScore, self.aiMood, self.aiSound, self.aiInsight)
+        }
+    }
+
+    // MARK: - Phase 2.2: Focus Rating Tests
+
+    @MainActor
+    final class FocusRatingViewModelTests: XCTestCase {
+        var sut: MainViewModel!
+        var mockHistorical: MockHistoricalDataService!
+        var mockPersistence: MockPersistenceService!
+        var mockLogic: MockMealLogicService!
+
+        override func setUp() {
+            super.setUp()
+            self.mockHistorical = MockHistoricalDataService()
+            self.mockPersistence = MockPersistenceService()
+            self.mockLogic = MockMealLogicService()
+            self.sut = MainViewModel(
+                logicService: self.mockLogic,
+                persistenceService: self.mockPersistence,
+                historicalService: self.mockHistorical
+            )
+        }
+
+        override func tearDown() {
+            self.sut = nil
+            self.mockHistorical = nil
+            self.mockPersistence = nil
+            self.mockLogic = nil
+            super.tearDown()
+        }
+
+        func test_todaysFocusRating_defaultsToNil() {
+            XCTAssertNil(self.sut.todaysFocusRating)
+        }
+
+        func test_saveFocusRating_persistsToReflection() {
+            self.sut.saveFocusRating(3)
+
+            let snapshot = self.mockHistorical.historicalData.snapshot(for: Date())
+            XCTAssertEqual(snapshot?.reflection?.focusRating, 3)
+        }
+
+        func test_saveFocusRating_mergesWithExistingReflection() {
+            self.sut.completeSleepQualityInput(.good)
+            self.sut.dismissReflectInput()
+            self.sut.saveFocusRating(2)
+
+            let snapshot = self.mockHistorical.historicalData.snapshot(for: Date())
+            XCTAssertEqual(snapshot?.reflection?.focusRating, 2)
+            XCTAssertEqual(snapshot?.reflection?.sleepQuality, .good)
+        }
+
+        func test_todaysFocusRating_readsFromReflection() {
+            self.sut.saveFocusRating(1)
+            XCTAssertEqual(self.sut.todaysFocusRating, 1)
+        }
+
+        func test_saveFocusRating_clampsTo1Through3() {
+            self.sut.saveFocusRating(0)
+            XCTAssertEqual(self.sut.todaysFocusRating, 1)
+
+            self.sut.saveFocusRating(5)
+            XCTAssertEqual(self.sut.todaysFocusRating, 3)
         }
     }
 

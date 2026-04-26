@@ -132,3 +132,11 @@ struct Meal: Identifiable, Codable, Equatable {
         self.aiInsight = nil
     }
 }
+
+extension Collection<Meal> {
+    /// Average health score across meals (0.5 default when empty).
+    var averageHealthScore: Double {
+        guard !self.isEmpty else { return 0.5 }
+        return self.map(\.healthScore).reduce(0.0, +) / Double(self.count)
+    }
+}

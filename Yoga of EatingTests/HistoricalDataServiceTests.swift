@@ -498,7 +498,6 @@
                 meals: [],
                 mealCount: 0,
                 averageHealthScore: 0.5
-                // No reflection parameter - uses default nil
             )
 
             // Act
@@ -507,6 +506,184 @@
             // Assert
             let loaded = self.sut.getSnapshot(for: legacySnapshot.date)
             XCTAssertNil(loaded?.reflection, "Legacy snapshot should have nil reflection")
+        }
+
+        // MARK: - Tests: Phase 1.2 — Daily Insight Persistence
+
+        func test_updateDailyInsight_addsInsightToExistingSnapshot() {
+            // Arrange
+            let date = Date()
+            let snapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: date,
+                smileyState: .neutral,
+                meals: [Meal(mealType: .breakfast, items: ["Oatmeal"], healthScore: 0.8)],
+                mealCount: 1,
+                averageHealthScore: 0.8
+            )
+            self.sut.historicalData.addOrUpdate(snapshot: snapshot)
+
+            let insight = DailyInsight(
+                date: date,
+                insightText: "Lighter dinners helped your sleep.",
+                insightType: .foodSleep,
+                confidence: 0.85
+            )
+
+            // Act
+            self.sut.updateDailyInsight(for: date, insight: insight)
+
+            // Assert
+            let updated = self.sut.getSnapshot(for: date)
+            XCTAssertNotNil(updated?.dailyInsight)
+            XCTAssertEqual(updated?.dailyInsight?.insightText, "Lighter dinners helped your sleep.")
+            XCTAssertEqual(updated?.dailyInsight?.insightType, .foodSleep)
+            XCTAssertEqual(updated?.meals.count, 1, "Meals should be preserved")
+        }
+
+        func test_updateDailyInsight_createsSnapshotWhenNoneExists() {
+            // Arrange
+            let date = Date()
+            let insight = DailyInsight(
+                date: date,
+                insightText: "Keep logging to discover patterns.",
+                insightType: .encouragement,
+                confidence: 0.5
+            )
+
+            // Act
+            self.sut.updateDailyInsight(for: date, insight: insight)
+
+            // Assert
+            let created = self.sut.getSnapshot(for: date)
+            XCTAssertNotNil(created)
+            XCTAssertNotNil(created?.dailyInsight)
+            XCTAssertEqual(created?.dailyInsight?.insightText, "Keep logging to discover patterns.")
+            XCTAssertEqual(created?.meals.count, 0, "Should have empty meals")
+        }
+
+        func test_updateDailyInsight_preservesExistingData() {
+            // Arrange
+            let date = Date()
+            let reflection = DailyReflection(sleepQuality: .good, timestamp: date)
+            let morningEntries = [
+                MindCheckEntry(category: .todo, text: "Task", timestamp: date, context: .morning)
+            ]
+            let snapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: date,
+                smileyState: SmileyState(scale: 1.5, mood: .serene),
+                meals: [Meal(mealType: .lunch, items: ["Salad"], healthScore: 0.9)],
+                mealCount: 1,
+                averageHealthScore: 0.9,
+                reflection: reflection,
+                morningMindCheck: morningEntries
+            )
+            self.sut.historicalData.addOrUpdate(snapshot: snapshot)
+
+            let insight = DailyInsight(
+                date: date,
+                insightText: "Great patterns detected.",
+                insightType: .pattern,
+                confidence: 0.7
+            )
+
+            // Act
+            self.sut.updateDailyInsight(for: date, insight: insight)
+
+            // Assert
+            let updated = self.sut.getSnapshot(for: date)
+            XCTAssertNotNil(updated?.dailyInsight)
+            XCTAssertNotNil(updated?.reflection, "Reflection should be preserved")
+            XCTAssertEqual(updated?.reflection?.sleepQuality, .good)
+            XCTAssertNotNil(updated?.morningMindCheck, "Mind check should be preserved")
+            XCTAssertEqual(updated?.meals.count, 1, "Meals should be preserved")
+        }
+
+        func test_updateDailyInsight_persistsToDisk() {
+            // Arrange
+            let date = Date()
+            let insight = DailyInsight(
+                date: date,
+                insightText: "Test persistence",
+                insightType: .encouragement,
+                confidence: 0.6
+            )
+
+            // Act
+            self.sut.updateDailyInsight(for: date, insight: insight)
+
+            // Assert
+            XCTAssertTrue(self.mockPersistence.saveCalled, "Should persist to disk")
+        }
+
+        func test_updateReflection_preservesMindChecksAndInsight() {
+            // Arrange — snapshot with mind checks and insight
+            let date = Date()
+            let morningEntries = [
+                MindCheckEntry(category: .todo, text: "Buy groceries", timestamp: date, context: .morning)
+            ]
+            let eveningEntries = [
+                MindCheckEntry(category: .gratefulFor, text: "Good weather", timestamp: date, context: .evening)
+            ]
+            let insight = DailyInsight(
+                date: date,
+                insightText: "Test insight",
+                insightType: .encouragement,
+                confidence: 0.7
+            )
+            let snapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: date,
+                smileyState: .neutral,
+                meals: self.createTestMeals(),
+                mealCount: 2,
+                averageHealthScore: 0.7,
+                morningMindCheck: morningEntries,
+                eveningMindCheck: eveningEntries,
+                dailyInsight: insight
+            )
+            self.sut.historicalData.addOrUpdate(snapshot: snapshot)
+            self.sut.saveHistoricalData()
+
+            // Act — update reflection should NOT wipe mind checks or insight
+            let reflection = DailyReflection(feeling: .calm, sleepQuality: .good)
+            self.sut.updateReflection(for: date, reflection: reflection)
+
+            // Assert
+            let updated = self.sut.getSnapshot(for: date)
+            XCTAssertNotNil(updated?.reflection, "Reflection should be set")
+            XCTAssertEqual(updated?.reflection?.feeling, .calm)
+            XCTAssertNotNil(updated?.morningMindCheck, "Morning mind check must be preserved")
+            XCTAssertEqual(updated?.morningMindCheck?.count, 1)
+            XCTAssertNotNil(updated?.eveningMindCheck, "Evening mind check must be preserved")
+            XCTAssertEqual(updated?.eveningMindCheck?.count, 1)
+            XCTAssertNotNil(updated?.dailyInsight, "Daily insight must be preserved")
+            XCTAssertEqual(updated?.dailyInsight?.insightText, "Test insight")
+        }
+
+        func test_archiveCurrentDay_preservesDailyInsight() {
+            // Arrange
+            let date = Date()
+            let insight = DailyInsight(
+                date: date,
+                insightText: "Preserved insight",
+                insightType: .pattern,
+                confidence: 0.8
+            )
+            self.sut.updateDailyInsight(for: date, insight: insight)
+
+            // Act — archive should preserve the insight
+            self.sut.archiveCurrentDay(
+                meals: [Meal(mealType: .dinner, items: ["Rice"], healthScore: 0.7)],
+                state: .neutral,
+                date: date
+            )
+
+            // Assert
+            let archived = self.sut.getSnapshot(for: date)
+            XCTAssertNotNil(archived?.dailyInsight, "archiveCurrentDay should preserve dailyInsight")
+            XCTAssertEqual(archived?.dailyInsight?.insightText, "Preserved insight")
         }
     }
 #endif

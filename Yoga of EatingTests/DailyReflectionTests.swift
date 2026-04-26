@@ -364,14 +364,18 @@
                 timestamp: self.testDate
             )
 
-            // Act
+            // Note is truncated to 500 chars on init
+            XCTAssertEqual(self.sut.note?.count, 500)
+
+            // Act — round-trip should preserve the truncated value
             let encoder = JSONEncoder()
             let data = try encoder.encode(self.sut)
             let decoder = JSONDecoder()
             let decoded = try decoder.decode(DailyReflection.self, from: data)
 
             // Assert
-            XCTAssertEqual(decoded.note, longNote)
+            XCTAssertEqual(decoded.note, self.sut.note)
+            XCTAssertEqual(decoded.note?.count, 500)
         }
 
         func test_reflection_withSpecialCharactersInNote_handlesCorrectly() throws {
@@ -624,6 +628,202 @@
             XCTAssertEqual(merged.sleepLoggedAt, sleepTime)
             XCTAssertEqual(merged.feeling, .calm)
             XCTAssertEqual(merged.feelingLoggedAt, feelingTime)
+        }
+
+        // MARK: - Tests: Phase 1.1 — Morning Energy + Daily Intention
+
+        func test_init_withEnergyAndIntention_setsProperties() {
+            // Arrange & Act
+            self.sut = DailyReflection(
+                sleepQuality: .good,
+                sleepLoggedAt: self.testDate,
+                morningEnergyLevel: 4,
+                dailyIntention: "Eat mindfully today",
+                timestamp: self.testDate
+            )
+
+            // Assert
+            XCTAssertEqual(self.sut.morningEnergyLevel, 4)
+            XCTAssertEqual(self.sut.dailyIntention, "Eat mindfully today")
+            XCTAssertEqual(self.sut.sleepQuality, .good)
+        }
+
+        func test_init_withoutEnergyAndIntention_defaultsToNil() {
+            // Arrange & Act
+            self.sut = DailyReflection(
+                feeling: .calm,
+                sleepQuality: .good,
+                timestamp: self.testDate
+            )
+
+            // Assert
+            XCTAssertNil(self.sut.morningEnergyLevel, "Energy level should default to nil")
+            XCTAssertNil(self.sut.dailyIntention, "Daily intention should default to nil")
+        }
+
+        func test_codable_encodesAndDecodes_withEnergyAndIntention() throws {
+            // Arrange
+            self.sut = DailyReflection(
+                sleepQuality: .great,
+                sleepLoggedAt: self.testDate,
+                morningEnergyLevel: 3,
+                dailyIntention: "Choose lighter meals",
+                timestamp: self.testDate
+            )
+
+            // Act
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(self.sut)
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailyReflection.self, from: data)
+
+            // Assert
+            XCTAssertEqual(decoded.morningEnergyLevel, 3)
+            XCTAssertEqual(decoded.dailyIntention, "Choose lighter meals")
+            XCTAssertEqual(decoded.sleepQuality, .great)
+        }
+
+        func test_codable_backwardCompatibility_withoutEnergyAndIntention() throws {
+            // Arrange - Legacy JSON without morningEnergyLevel and dailyIntention
+            let legacyJSON = """
+            {
+                "feeling": "calm",
+                "sleepQuality": "good",
+                "timestamp": \(self.testDate.timeIntervalSince1970)
+            }
+            """.data(using: .utf8)!
+
+            // Act
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailyReflection.self, from: legacyJSON)
+
+            // Assert
+            XCTAssertEqual(decoded.feeling, .calm)
+            XCTAssertEqual(decoded.sleepQuality, .good)
+            XCTAssertNil(decoded.morningEnergyLevel, "Legacy data should have nil morningEnergyLevel")
+            XCTAssertNil(decoded.dailyIntention, "Legacy data should have nil dailyIntention")
+        }
+
+        func test_merging_combinesEnergyAndIntention() {
+            // Arrange
+            let sleepReflection = DailyReflection(
+                sleepQuality: .good,
+                sleepLoggedAt: self.testDate,
+                morningEnergyLevel: 4,
+                dailyIntention: "Stay hydrated",
+                timestamp: self.testDate
+            )
+            let feelingReflection = DailyReflection(
+                feeling: .calm,
+                feelingLoggedAt: self.testDate,
+                timestamp: self.testDate
+            )
+
+            // Act
+            let merged = sleepReflection.merging(with: feelingReflection)
+
+            // Assert
+            XCTAssertEqual(merged.morningEnergyLevel, 4)
+            XCTAssertEqual(merged.dailyIntention, "Stay hydrated")
+            XCTAssertEqual(merged.sleepQuality, .good)
+            XCTAssertEqual(merged.feeling, .calm)
+        }
+
+        func test_withReflect_createsReflectionWithEnergyAndIntention() {
+            // Arrange & Act
+            let reflection = DailyReflection.withReflect(
+                energyLevel: 5,
+                intention: "No sugar today",
+                at: self.testDate
+            )
+
+            // Assert
+            XCTAssertEqual(reflection.morningEnergyLevel, 5)
+            XCTAssertEqual(reflection.dailyIntention, "No sugar today")
+            XCTAssertNil(reflection.feeling)
+            XCTAssertNil(reflection.sleepQuality)
+        }
+
+        func test_merging_preservesExistingEnergyWhenOtherIsNil() {
+            // Arrange
+            let reflectionWithEnergy = DailyReflection(
+                morningEnergyLevel: 3,
+                dailyIntention: "Eat slowly",
+                timestamp: self.testDate
+            )
+            let reflectionWithoutEnergy = DailyReflection(
+                feeling: .tired,
+                feelingLoggedAt: self.testDate,
+                timestamp: self.testDate
+            )
+
+            // Act
+            let merged = reflectionWithEnergy.merging(with: reflectionWithoutEnergy)
+
+            // Assert
+            XCTAssertEqual(merged.morningEnergyLevel, 3)
+            XCTAssertEqual(merged.dailyIntention, "Eat slowly")
+            XCTAssertEqual(merged.feeling, .tired)
+        }
+
+        // MARK: - Phase 2.2: Focus Rating
+
+        func test_focusRating_defaultsToNil() {
+            let reflection = DailyReflection()
+            XCTAssertNil(reflection.focusRating)
+        }
+
+        func test_focusRating_canBeSetInInit() {
+            let reflection = DailyReflection(focusRating: 2)
+            XCTAssertEqual(reflection.focusRating, 2)
+        }
+
+        func test_focusRating_encodesAndDecodes() throws {
+            let reflection = DailyReflection(
+                sleepQuality: .good,
+                focusRating: 3,
+                timestamp: self.testDate
+            )
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(reflection)
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailyReflection.self, from: data)
+
+            XCTAssertEqual(decoded.focusRating, 3)
+            XCTAssertEqual(decoded.sleepQuality, .good)
+        }
+
+        func test_focusRating_backwardCompatibility_decodesNilFromLegacy() throws {
+            let json = """
+            {
+                "sleepQuality": "good",
+                "timestamp": 1000000
+            }
+            """
+            let data = json.data(using: .utf8)!
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailyReflection.self, from: data)
+
+            XCTAssertNil(decoded.focusRating)
+            XCTAssertEqual(decoded.sleepQuality, .good)
+        }
+
+        func test_focusRating_merging_preservesSelfValue() {
+            let withFocus = DailyReflection(focusRating: 3)
+            let withoutFocus = DailyReflection(feeling: .calm)
+            let merged = withFocus.merging(with: withoutFocus)
+
+            XCTAssertEqual(merged.focusRating, 3)
+            XCTAssertEqual(merged.feeling, .calm)
+        }
+
+        func test_focusRating_merging_fallsBackToOther() {
+            let withoutFocus = DailyReflection(feeling: .great)
+            let withFocus = DailyReflection(focusRating: 1)
+            let merged = withoutFocus.merging(with: withFocus)
+
+            XCTAssertEqual(merged.focusRating, 1)
+            XCTAssertEqual(merged.feeling, .great)
         }
     }
 #endif

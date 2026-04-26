@@ -50,6 +50,8 @@ enum Strings {
             static let morningTodosHeader = "Your morning intentions"
             static let gratitudeHeader = "What are you grateful for?"
             static let letGoHeader = "What do you need to let go?"
+            static let observationHeader = "What did you notice today?"
+            static let observationPlaceholder = "e.g. I felt more alert after a lighter lunch..."
             static let feelingHeader = "How do you feel?"
             static let noMorningTodos = "No morning todos to review"
             static let accomplished = "Done"
@@ -78,12 +80,15 @@ enum Strings {
         static let gotIt = "Got it"
         static let dismiss = "Dismiss"
 
-        // Insight types
+        static let basedOn = "Based on:"
+
         enum InsightType {
             static let foodSleep = "Food & Sleep"
             static let mindsetFeeling = "Mindset & Feeling"
             static let pattern = "Pattern"
             static let encouragement = "Encouragement"
+            static let intentAlignment = "Intent Alignment"
+            static let focusFood = "Focus & Food"
         }
     }
 
@@ -93,6 +98,9 @@ enum Strings {
         static let endOfDay = "End of Day"
         static let tapToLog = "TAP TO LOG"
         static let noMealsLogged = "No meals logged"
+        static let avgHealthScore = "Avg. Health Score"
+        static let noItemsLogged = "No items logged"
+        static let copyMeal = "Copy meal to today"
 
         static func mealsLogged(_ count: Int) -> String {
             "\(count) meal\(count == 1 ? "" : "s") logged"
@@ -123,6 +131,38 @@ enum Strings {
             static let tired = "Tired"
             static let heavy = "Heavy"
         }
+    }
+
+    // MARK: - Reflect
+
+    enum Reflect {
+        static let title = "Set Your Intention"
+        static let subtitle = "How's your energy, and what's your eating goal today?"
+        static let energyLabel = "Morning Energy"
+        static let intentionPlaceholder = "e.g. Eat lighter meals, No sugar today..."
+        static let intentionLabel = "Today's Intention"
+        static let saveButton = "Set Intention"
+        static let skipButton = "Skip"
+        static let defaultIntention = "Eat mindfully"
+        static let energyLabels = ["Low", "Tired", "Okay", "Good", "Great"]
+        static let energyEmojis = ["😴", "🥱", "😐", "🙂", "⚡️"]
+    }
+
+    enum DayRing {
+        static let reflect = "Reflect"
+        static let laser = "Laser"
+        static let highlight = "Highlight"
+        static let energise = "Energize"
+    }
+
+    enum Focus {
+        static let promptTitle = "How's your focus?"
+        static let scattered = "Scattered"
+        static let okay = "Okay"
+        static let lockedIn = "Locked In"
+        static let scatteredIcon = "cloud"
+        static let okayIcon = "circle"
+        static let lockedInIcon = "bolt.fill"
     }
 
     // MARK: - Common

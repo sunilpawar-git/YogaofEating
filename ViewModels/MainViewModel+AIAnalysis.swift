@@ -32,23 +32,16 @@ extension MainViewModel {
 
         // Skip if already analyzed - prevents duplicate API calls
         guard !meals[index].isAIAnalyzed else {
-            print("⏭️ Skipping analysis - meal already analyzed")
             return
         }
 
-        // Prevent concurrent duplicate requests for the same meal
-        // This addresses the "GTMSessionFetcher was already running" warning
         guard !analysisInProgress.contains(mealId) else {
-            print("⏭️ Skipping analysis - request already in progress for this meal")
             return
         }
 
         let description = items.joined(separator: ", ")
 
-        // Skip analysis if content is too short (user still typing)
-        // This reduces unnecessary API calls during incremental typing
         guard description.count >= Self.minimumContentLength else {
-            print("⏭️ Skipping analysis - content too short (\(description.count) < \(Self.minimumContentLength) chars)")
             return
         }
 
@@ -65,8 +58,13 @@ extension MainViewModel {
         }
 
         do {
-            print("🤖 AI Analysis started for meal: \(description)")
-            let result = try await aiService.analyzeMealQuality(description: description)
+            #if DEBUG
+                print("🤖 AI Analysis started")
+            #endif
+            let result = try await aiService.analyzeMealQuality(
+                description: description,
+                intention: todaysIntention
+            )
             print(
                 "✅ AI Analysis successful - Score: \(result.score), "
                     + "Mood: \(result.mood.rawValue), Sound: \(result.sound)"
@@ -83,10 +81,9 @@ extension MainViewModel {
                 updatedMeals[verifyIndex].aiInsight = result.insight
                 meals = updatedMeals
                 saveData()
-                print("📊 Updated meal healthScore to: \(result.score), isAIAnalyzed: true")
-                if let insight = result.insight {
-                    print("💡 Basic insight: \(insight.prefix(50))...")
-                }
+                #if DEBUG
+                    print("📊 Updated meal healthScore to: \(result.score)")
+                #endif
             }
 
             // Update overall Smiley state based on new CUMULATIVE health
@@ -100,8 +97,9 @@ extension MainViewModel {
             // Users can still enable sounds in Settings if desired, but sounds won't play automatically
 
         } catch {
-            print("❌ AI Analysis failed: \(error.localizedDescription)")
-            print("   Error details: \(error)")
+            #if DEBUG
+                print("❌ AI Analysis failed: \(error.localizedDescription)")
+            #endif
             // Fallback: Ensure smiley state is consistent with local score
             await self.reanalyzeAllMealsForSmileyState()
         }
@@ -116,11 +114,7 @@ extension MainViewModel {
             return
         }
 
-        // Calculate average health score from all meals
-        let totalScore = meals.map(\.healthScore).reduce(0.0, +)
-        let avgScore = totalScore / Double(meals.count)
-
-        updateSmileyState(with: avgScore)
+        updateSmileyState(with: meals.averageHealthScore)
         saveData()
     }
 }

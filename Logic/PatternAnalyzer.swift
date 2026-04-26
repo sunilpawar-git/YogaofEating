@@ -31,6 +31,7 @@ class PatternAnalyzer {
         patterns.append(contentsOf: self.analyzeTodoMoodCorrelation(from: snapshots))
         patterns.append(contentsOf: self.analyzeGratitudePractice(from: snapshots))
         patterns.append(contentsOf: self.analyzeMealTimingPatterns(from: snapshots))
+        patterns.append(contentsOf: self.analyzeTodoCompletionTrend(from: snapshots))
 
         // Sort by confidence and return
         return patterns.sorted { $0.confidence > $1.confidence }
@@ -50,9 +51,8 @@ class PatternAnalyzer {
 
         // Check overlap
         let overlappingDays = lateDinnerDays.filter { lateDinner in
-            // Check if next day had poor sleep
             let calendar = Calendar.current
-            let nextDay = calendar.date(byAdding: .day, value: 1, to: lateDinner.date)!
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: lateDinner.date) else { return false }
             return poorSleepDays.contains { calendar.isDate($0.date, inSameDayAs: nextDay) }
         }
 
@@ -219,7 +219,7 @@ class PatternAnalyzer {
 
         let overlappingEarly = earlyEatingDays.filter { early in
             let calendar = Calendar.current
-            let nextDay = calendar.date(byAdding: .day, value: 1, to: early.date)!
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: early.date) else { return false }
             return goodSleepDays.contains { calendar.isDate($0.date, inSameDayAs: nextDay) }
         }
 

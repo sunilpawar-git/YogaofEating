@@ -11,12 +11,23 @@ protocol MealLogicProvider {
 /// Protocol for services that provide AI-powered meal analysis
 protocol AIAnalysisProvider: MealLogicProvider {
     /// Analyzes meal quality and returns score, mood, sound, and optional basic insight
-    func analyzeMealQuality(description: String) async throws -> (
+    func analyzeMealQuality(description: String, intention: String?) async throws -> (
         score: Double,
         mood: SmileyMood,
         sound: String,
         insight: String?
     )
+}
+
+extension AIAnalysisProvider {
+    func analyzeMealQuality(description: String) async throws -> (
+        score: Double,
+        mood: SmileyMood,
+        sound: String,
+        insight: String?
+    ) {
+        try await self.analyzeMealQuality(description: description, intention: nil)
+    }
 }
 
 class MealLogicService: MealLogicProvider {
