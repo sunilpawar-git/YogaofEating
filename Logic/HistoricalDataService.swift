@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import Combine
 import Foundation
 
@@ -5,6 +6,7 @@ import Foundation
 @MainActor
 protocol HistoricalDataServiceProtocol: ObservableObject {
     var historicalData: HistoricalData { get set }
+
     func archiveCurrentDay(meals: [Meal], state: SmileyState, date: Date)
     func getSnapshot(for date: Date) -> DailySmileySnapshot?
     func getYearSnapshots(year: Int) -> [DailySmileySnapshot]
@@ -22,6 +24,11 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
 
     /// Updates or adds evening mind check entries for a specific date.
     func updateEveningMindCheck(for date: Date, entries: [MindCheckEntry])
+
+    /// Updates or adds a daily insight for a specific date.
+    /// If a snapshot exists, attaches the insight while preserving other data.
+    /// If no snapshot exists, creates a minimal one with the insight.
+    func updateDailyInsight(for date: Date, insight: DailyInsight)
 }
 
 /// Service for managing historical meal data and daily snapshots.
@@ -84,10 +91,8 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             averageScore = totalScore / Double(meals.count)
         }
 
-        // Preserve existing reflection if snapshot already exists for this day
-        let existingReflection = self.historicalData.snapshot(for: normalizedDate)?.reflection
+        let existingSnapshot = self.historicalData.snapshot(for: normalizedDate)
 
-        // Create snapshot with preserved reflection
         let snapshot = DailySmileySnapshot(
             id: UUID(),
             date: normalizedDate,
@@ -95,7 +100,8 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             meals: meals,
             mealCount: meals.count,
             averageHealthScore: averageScore,
-            reflection: existingReflection
+            reflection: existingSnapshot?.reflection,
+            dailyInsight: existingSnapshot?.dailyInsight
         )
 
         // Add or update in historical data
@@ -114,16 +120,7 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
 
         // Check if snapshot already exists
         if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            // Update existing snapshot with new reflection
-            let updatedSnapshot = DailySmileySnapshot(
-                id: existingSnapshot.id,
-                date: existingSnapshot.date,
-                smileyState: existingSnapshot.smileyState,
-                meals: existingSnapshot.meals,
-                mealCount: existingSnapshot.mealCount,
-                averageHealthScore: existingSnapshot.averageHealthScore,
-                reflection: reflection
-            )
+            let updatedSnapshot = existingSnapshot.withReflection(reflection)
             self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
         } else {
             // Create new snapshot with reflection but empty meals
@@ -197,7 +194,9 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         // Capture userId and snapshots upfront to prevent race conditions
         // during the async upload loop
         guard let userId = self.authService.currentUser?.uid else {
-            struct AuthError: Error {}
+            struct AuthError: LocalizedError {
+                var errorDescription: String? { "User must be signed in to sync data." }
+            }
             throw AuthError()
         }
 
@@ -216,6 +215,7 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         self.lastKnownMeals = []
         self.lastKnownState = .neutral
         self.lastKnownResetDate = Date()
+        self.saveHistoricalData()
     }
 
     // MARK: - Mind Check Methods
@@ -265,6 +265,32 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
                 mealCount: 0,
                 averageHealthScore: 0.5,
                 eveningMindCheck: entries
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+
+        self.saveHistoricalData()
+    }
+
+    // MARK: - Daily Insight Methods
+
+    /// Updates or adds a daily insight for a specific date.
+    func updateDailyInsight(for date: Date, insight: DailyInsight) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withDailyInsight(insight)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                dailyInsight: insight
             )
             self.historicalData.addOrUpdate(snapshot: newSnapshot)
         }

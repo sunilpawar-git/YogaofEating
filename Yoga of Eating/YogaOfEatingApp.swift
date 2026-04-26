@@ -16,6 +16,7 @@ struct YogaOfEatingApp: App {
 
     // Shared state across the app
     @StateObject private var viewModel = MainViewModel()
+    @StateObject private var premiumManager = PremiumManager()
 
     @AppStorage("app_theme")
     private var theme: Int = 0 // 0: System, 1: Light, 2: Dark
@@ -77,9 +78,14 @@ struct YogaOfEatingApp: App {
             } else {
                 MainScreenView()
                     .environmentObject(self.viewModel)
+                    .environmentObject(self.premiumManager)
                     .preferredColorScheme(self.colorScheme)
                     .onOpenURL { url in
                         GIDSignIn.sharedInstance.handle(url)
+                    }
+                    .task {
+                        self.premiumManager.startListeningForTransactions()
+                        await self.premiumManager.restorePurchases()
                     }
             }
         }

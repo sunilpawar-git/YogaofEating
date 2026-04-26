@@ -1,7 +1,6 @@
 import Foundation
 
-/// Represents how the user felt at the end of the day based on their eating.
-/// Part of the "Yoga of Eating" mindfulness tracking.
+// swiftlint:disable identifier_name switch_case_on_newline
 enum ReflectionFeeling: String, Codable, CaseIterable {
     case great
     case calm
@@ -49,6 +48,8 @@ enum SleepQuality: String, Codable, CaseIterable {
     }
 }
 
+// swiftlint:enable identifier_name switch_case_on_newline
+
 /// Captures the user's daily reflection about sleep quality (morning) and overall feeling (evening).
 /// Supports separate logging of sleep and feeling at different times of day.
 struct DailyReflection: Codable, Equatable {
@@ -71,6 +72,15 @@ struct DailyReflection: Codable, Equatable {
 
     /// When overall feeling was logged (evening)
     let feelingLoggedAt: Date?
+
+    /// Morning energy level on a 1-5 scale (logged alongside sleep quality)
+    let morningEnergyLevel: Int?
+
+    /// Short daily eating intention set in the morning (~140 chars max)
+    let dailyIntention: String?
+
+    /// Mid-day focus rating (1=scattered, 2=okay, 3=locked-in)
+    let focusRating: Int?
 
     // MARK: - Computed Properties
 
@@ -99,6 +109,9 @@ struct DailyReflection: Codable, Equatable {
         sleepQuality: SleepQuality? = nil,
         sleepLoggedAt: Date? = nil,
         feelingLoggedAt: Date? = nil,
+        morningEnergyLevel: Int? = nil,
+        dailyIntention: String? = nil,
+        focusRating: Int? = nil,
         note: String? = nil,
         timestamp: Date = Date()
     ) {
@@ -106,7 +119,10 @@ struct DailyReflection: Codable, Equatable {
         self.sleepQuality = sleepQuality
         self.sleepLoggedAt = sleepLoggedAt
         self.feelingLoggedAt = feelingLoggedAt
-        self.note = note
+        self.morningEnergyLevel = morningEnergyLevel.map { max(1, min($0, 5)) }
+        self.dailyIntention = dailyIntention.map { String($0.prefix(200)) }
+        self.focusRating = focusRating.map { max(1, min($0, 3)) }
+        self.note = note.map { String($0.prefix(500)) }
         self.timestamp = timestamp
     }
 
@@ -138,6 +154,24 @@ struct DailyReflection: Codable, Equatable {
         )
     }
 
+    /// Creates a reflection with morning energy level and daily intention.
+    /// - Parameters:
+    ///   - energyLevel: Morning energy (1-5)
+    ///   - intention: Daily eating intention
+    ///   - date: When it was logged (defaults to now)
+    /// - Returns: A new DailyReflection with reflect data
+    static func withReflect(
+        energyLevel: Int,
+        intention: String,
+        at date: Date = Date()
+    ) -> DailyReflection {
+        DailyReflection(
+            morningEnergyLevel: energyLevel,
+            dailyIntention: intention,
+            timestamp: date
+        )
+    }
+
     /// Merges this reflection with another, combining sleep and feeling data.
     /// - Parameter other: The other reflection to merge with
     /// - Returns: A new DailyReflection with combined data
@@ -147,6 +181,9 @@ struct DailyReflection: Codable, Equatable {
             sleepQuality: self.sleepQuality ?? other.sleepQuality,
             sleepLoggedAt: self.sleepLoggedAt ?? other.sleepLoggedAt,
             feelingLoggedAt: self.feelingLoggedAt ?? other.feelingLoggedAt,
+            morningEnergyLevel: self.morningEnergyLevel ?? other.morningEnergyLevel,
+            dailyIntention: self.dailyIntention ?? other.dailyIntention,
+            focusRating: self.focusRating ?? other.focusRating,
             note: self.note ?? other.note,
             timestamp: max(self.timestamp, other.timestamp)
         )
@@ -161,6 +198,9 @@ struct DailyReflection: Codable, Equatable {
         case timestamp
         case sleepLoggedAt
         case feelingLoggedAt
+        case morningEnergyLevel
+        case dailyIntention
+        case focusRating
     }
 
     init(from decoder: Decoder) throws {
@@ -169,9 +209,11 @@ struct DailyReflection: Codable, Equatable {
         self.sleepQuality = try container.decodeIfPresent(SleepQuality.self, forKey: .sleepQuality)
         self.note = try container.decodeIfPresent(String.self, forKey: .note)
         self.timestamp = try container.decode(Date.self, forKey: .timestamp)
-        // New fields - decode if present for backward compatibility
         self.sleepLoggedAt = try container.decodeIfPresent(Date.self, forKey: .sleepLoggedAt)
         self.feelingLoggedAt = try container.decodeIfPresent(Date.self, forKey: .feelingLoggedAt)
+        self.morningEnergyLevel = try container.decodeIfPresent(Int.self, forKey: .morningEnergyLevel)
+        self.dailyIntention = try container.decodeIfPresent(String.self, forKey: .dailyIntention)
+        self.focusRating = try container.decodeIfPresent(Int.self, forKey: .focusRating)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -182,5 +224,8 @@ struct DailyReflection: Codable, Equatable {
         try container.encode(self.timestamp, forKey: .timestamp)
         try container.encodeIfPresent(self.sleepLoggedAt, forKey: .sleepLoggedAt)
         try container.encodeIfPresent(self.feelingLoggedAt, forKey: .feelingLoggedAt)
+        try container.encodeIfPresent(self.morningEnergyLevel, forKey: .morningEnergyLevel)
+        try container.encodeIfPresent(self.dailyIntention, forKey: .dailyIntention)
+        try container.encodeIfPresent(self.focusRating, forKey: .focusRating)
     }
 }

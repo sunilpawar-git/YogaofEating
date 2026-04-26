@@ -1,21 +1,35 @@
+// swiftlint:disable file_length
 import Foundation
 import HealthKit
 
-/// Service to handle HealthKit interactions for reading body metrics.
 class HealthKitService {
     static let shared = HealthKitService()
 
     private let healthStore: HKHealthStore?
+    private(set) var writeStore: (any HKHealthStoreWritable)?
 
-    /// Enable debug logging for sleep data processing
-    var enableSleepLogging = true
+    /// Enable debug logging for sleep data processing. Disabled in release builds.
+    #if DEBUG
+        var enableSleepLogging = true
+    #else
+        var enableSleepLogging = false
+    #endif
 
     private init() {
         if HKHealthStore.isHealthDataAvailable() {
-            self.healthStore = HKHealthStore()
+            let store = HKHealthStore()
+            self.healthStore = store
+            self.writeStore = store
         } else {
             self.healthStore = nil
+            self.writeStore = nil
         }
+    }
+
+    init(writeStore: some HKHealthStoreWritable) {
+        self.healthStore = nil
+        self.writeStore = writeStore
+        self.enableSleepLogging = false
     }
 
     // MARK: - Authorization
@@ -26,16 +40,34 @@ class HealthKitService {
             throw HealthKitError.notAvailable
         }
 
-        let typesToRead: Set<HKObjectType> = [
-            HKObjectType.quantityType(forIdentifier: .bodyMass)!,
-            HKObjectType.quantityType(forIdentifier: .height)!,
-            HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!,
-            HKObjectType.characteristicType(forIdentifier: .biologicalSex)!,
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
-        ]
+        let typesToRead: Set<HKObjectType> = Set([
+            HKObjectType.quantityType(forIdentifier: .bodyMass),
+            HKObjectType.quantityType(forIdentifier: .height),
+            HKObjectType.characteristicType(forIdentifier: .dateOfBirth),
+            HKObjectType.characteristicType(forIdentifier: .biologicalSex),
+            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)
+        ].compactMap(\.self))
 
         try await healthStore.requestAuthorization(toShare: [], read: typesToRead)
         return true
+    }
+
+    /// Requests write authorization for mindful sessions.
+    func requestMindfulWriteAuthorization() async throws {
+        guard let healthStore else {
+            throw HealthKitError.notAvailable
+        }
+
+        var typesToWrite: Set<HKSampleType> = []
+        if let mindful = HKCategoryType.categoryType(
+            forIdentifier: .mindfulSession
+        ) {
+            typesToWrite.insert(mindful)
+        }
+
+        try await healthStore.requestAuthorization(
+            toShare: typesToWrite, read: []
+        )
     }
 
     // MARK: - Body Metrics
@@ -162,9 +194,11 @@ class HealthKitService {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
 
-        // 6 PM previous day to noon today
-        let windowStart = calendar.date(byAdding: .hour, value: -6, to: startOfDay)!
-        let windowEnd = calendar.date(byAdding: .hour, value: 12, to: startOfDay)!
+        guard let windowStart = calendar.date(byAdding: .hour, value: -6, to: startOfDay),
+              let windowEnd = calendar.date(byAdding: .hour, value: 12, to: startOfDay)
+        else {
+            return (startOfDay, startOfDay)
+        }
 
         return (windowStart, windowEnd)
     }
@@ -207,7 +241,7 @@ class HealthKitService {
         return SleepDataProcessor.processSleepSamples(sleepSamples, enableLogging: self.enableSleepLogging)
     }
 
-    /// Converts an HKCategorySample to SleepSampleData.
+    // swiftlint:disable:next cyclomatic_complexity
     private func convertToSleepSampleData(_ sample: HKCategorySample) -> SleepSampleData? {
         let value = sample.value
         let stage: SleepStage

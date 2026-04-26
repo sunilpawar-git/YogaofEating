@@ -8,6 +8,7 @@ struct PreferencesSettingsView: View {
     var body: some View {
         Form {
             self.appearanceSection
+            self.homeScreenSection
             self.notificationsSection
             self.sensorySection
             self.integrationsSection
@@ -29,6 +30,20 @@ struct PreferencesSettingsView: View {
             }
             .accessibilityIdentifier("theme-picker")
             .accessibilityLabel("Theme")
+        }
+    }
+
+    // MARK: - Home Screen Section
+
+    private var homeScreenSection: some View {
+        Section {
+            Toggle(
+                Strings.Settings.radialHomeBeta,
+                isOn: self.$viewModel.isRadialHomeEnabled
+            )
+            .accessibilityIdentifier("radial-home-toggle")
+        } header: {
+            Text("Home Screen")
         }
     }
 
@@ -63,12 +78,21 @@ struct PreferencesSettingsView: View {
 
     private var integrationsSection: some View {
         Section {
-            Toggle("Sync Body Metrics (Apple Health)", isOn: self.$viewModel.isHealthSyncEnabled)
-                .accessibilityIdentifier("health-sync-toggle")
+            Toggle(
+                "Sync Body Metrics (Apple Health)",
+                isOn: self.$viewModel.isHealthSyncEnabled
+            )
+            .accessibilityIdentifier("health-sync-toggle")
+
+            Toggle(
+                Strings.Settings.mindfulSessionSync,
+                isOn: self.$viewModel.isMindfulWriteEnabled
+            )
+            .accessibilityIdentifier("mindful-write-toggle")
         } header: {
             Text("Integrations")
         } footer: {
-            Text("When enabled, your height, weight, age, and gender will be synced from Apple Health.")
+            Text(Strings.Settings.mindfulSessionSyncDescription)
                 .font(.caption)
         }
     }

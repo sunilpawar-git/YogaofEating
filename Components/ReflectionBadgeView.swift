@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A subtle inline badge displaying sleep quality or overall feeling.
 /// Designed to be minimalist and blend with the timeline aesthetic.
 struct ReflectionBadgeView: View {
     /// The type of reflection to display

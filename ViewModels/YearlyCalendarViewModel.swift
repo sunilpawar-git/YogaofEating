@@ -124,8 +124,8 @@ class YearlyCalendarViewModel: ObservableObject {
         let mondayBasedOffset = (firstWeekday + 5) % 7
 
         // Add placeholder cells before Jan 1st to align the grid
-        for i in 0..<mondayBasedOffset {
-            cells.append(.placeholder(index: i))
+        for idx in 0..<mondayBasedOffset {
+            cells.append(.placeholder(index: idx))
         }
 
         // Add all actual dates for the year

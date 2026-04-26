@@ -56,26 +56,29 @@ class AILogicService: AIAnalysisProvider {
 
     // MARK: - Async Cloud Function Call
 
-    /// Calls the 'analyzeMeal' Firebase Cloud Function.
-    func analyzeMealQuality(description: String) async throws -> (
+    // swiftlint:disable:next large_tuple
+    func analyzeMealQuality(description: String, intention: String? = nil) async throws -> (
         score: Double,
         mood: SmileyMood,
         sound: String,
         insight: String?
     ) {
         guard let functions = self.functions else {
-            print("⚠️ Firebase Functions not available, returning default values")
             return (0.5, .neutral, "tink", nil)
         }
 
-        print("📡 Calling Firebase Cloud Function 'analyzeMeal' with description: '\(description)'")
+        #if DEBUG
+            print("📡 Calling Firebase Cloud Function 'analyzeMeal'")
+        #endif
 
-        let result = try await functions.httpsCallable("analyzeMeal").call(["description": description])
+        var requestData: [String: Any] = ["description": description]
+        if let intention, !intention.isEmpty {
+            requestData["intention"] = intention
+        }
 
-        print("📥 Received response from Cloud Function")
+        let result = try await functions.httpsCallable("analyzeMeal").call(requestData)
 
         guard let data = result.data as? [String: Any] else {
-            print("⚠️ Invalid response format from Cloud Function")
             throw NSError(
                 domain: "AILogicService",
                 code: 0,
@@ -88,28 +91,24 @@ class AILogicService: AIAnalysisProvider {
         let sound = data["sound"] as? String ?? "tink"
         let insight = data["insight"] as? String
 
-        let mood = SmileyMood(rawValue: moodString) ?? .neutral
+        let mood = SmileyMood.fromServer(moodString) ?? .neutral
 
-        print("📋 Parsed response - healthScore: \(score), mood: \(moodString), sound: \(sound)")
-        if let insight {
-            print("💡 Insight received: \(insight.prefix(50))...")
-        }
+        #if DEBUG
+            print("📋 Parsed response - healthScore: \(score), mood: \(moodString), sound: \(sound)")
+        #endif
 
         return (score, mood, sound, insight)
     }
 }
 
 extension SmileyMood {
-    init?(rawValue: String) {
-        switch rawValue.lowercased() {
-        case "serene":
-            self = .serene
-        case "neutral":
-            self = .neutral
-        case "overwhelmed":
-            self = .overwhelmed
-        default:
-            return nil
+    /// Parses a server-returned mood string (case-insensitive).
+    static func fromServer(_ value: String) -> SmileyMood? {
+        switch value.lowercased() {
+        case "serene": .serene
+        case "neutral": .neutral
+        case "overwhelmed": .overwhelmed
+        default: nil
         }
     }
 }
@@ -147,7 +146,6 @@ extension AILogicService: MealInsightProvider {
     /// Fetches detailed insight for a specific meal (on-demand)
     func getDetailedInsight(for meal: Meal) async throws -> DetailedMealInsight {
         guard let functions = self.functions else {
-            print("⚠️ Firebase Functions not available, returning fallback insight")
             return DetailedMealInsight(
                 summary: "This meal contributes to your daily nutrition.",
                 nutritionHighlights: [],
@@ -156,7 +154,9 @@ extension AILogicService: MealInsightProvider {
             )
         }
 
-        print("📡 Calling Firebase Cloud Function 'getMealInsight'")
+        #if DEBUG
+            print("📡 Calling Firebase Cloud Function 'getMealInsight'")
+        #endif
 
         let requestData: [String: Any] = [
             "mealItems": meal.items,
@@ -179,7 +179,9 @@ extension AILogicService: MealInsightProvider {
         let tip = data["tip"] as? String
         let category = data["category"] as? String ?? "moderate"
 
-        print("📋 Received detailed insight - category: \(category)")
+        #if DEBUG
+            print("📋 Received detailed insight - category: \(category)")
+        #endif
 
         return DetailedMealInsight(
             summary: summary,

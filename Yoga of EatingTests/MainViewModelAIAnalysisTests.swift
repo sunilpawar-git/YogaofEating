@@ -741,14 +741,11 @@
             return nextState
         }
 
-        func analyzeMealQuality(description _: String) async throws
+        func analyzeMealQuality(description _: String, intention _: String? = nil) async throws
             -> (score: Double, mood: SmileyMood, sound: String, insight: String?)
         {
             self.analyzeCallCount += 1
-
-            // Simulate network delay
-            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-
+            try? await Task.sleep(nanoseconds: 100_000_000)
             return self.mockAnalysisResult
         }
     }
@@ -786,7 +783,7 @@
             return nextState
         }
 
-        func analyzeMealQuality(description _: String) async throws
+        func analyzeMealQuality(description _: String, intention _: String? = nil) async throws
             -> (score: Double, mood: SmileyMood, sound: String, insight: String?)
         {
             self.analyzeCalled = true

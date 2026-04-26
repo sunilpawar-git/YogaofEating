@@ -36,8 +36,7 @@
         }
 
         func test_mindCheckInputView_eveningContext_hasCorrectCategories() {
-            // Evening categories: accomplished, gratefulFor, letGo
-            let eveningCategories: [MindCheckCategory] = [.accomplished, .gratefulFor, .letGo]
+            let eveningCategories: [MindCheckCategory] = [.accomplished, .gratefulFor, .letGo, .observation]
 
             for category in eveningCategories {
                 XCTAssertEqual(category.context, .evening, "\(category) should be an evening category")
@@ -54,6 +53,7 @@
             XCTAssertEqual(MindCheckCategory.accomplished.context, .evening)
             XCTAssertEqual(MindCheckCategory.gratefulFor.context, .evening)
             XCTAssertEqual(MindCheckCategory.letGo.context, .evening)
+            XCTAssertEqual(MindCheckCategory.observation.context, .evening)
         }
 
         func test_mindCheckCategory_morningCategories_returnsOnlyTodo() {
@@ -64,13 +64,14 @@
             XCTAssertTrue(morningCategories.contains(.todo))
         }
 
-        func test_mindCheckCategory_eveningCategories_returnsThreeCategories() {
+        func test_mindCheckCategory_eveningCategories_returnsFourCategories() {
             let eveningCategories = MindCheckCategory.eveningCategories
 
-            XCTAssertEqual(eveningCategories.count, 3)
+            XCTAssertEqual(eveningCategories.count, 4)
             XCTAssertTrue(eveningCategories.contains(.accomplished))
             XCTAssertTrue(eveningCategories.contains(.gratefulFor))
             XCTAssertTrue(eveningCategories.contains(.letGo))
+            XCTAssertTrue(eveningCategories.contains(.observation))
         }
 
         // MARK: - Tests: MindCheckEntryRow

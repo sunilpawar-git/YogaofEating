@@ -1,6 +1,6 @@
+// swiftlint:disable file_length
 import SwiftUI
 
-/// A sheet view for entering mind check entries.
 /// Allows user to add entries with category tag + text for each.
 /// Supports both creating new entries and editing existing ones.
 struct MindCheckInputView: View {

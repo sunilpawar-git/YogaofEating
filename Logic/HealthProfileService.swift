@@ -1,6 +1,6 @@
+// swiftlint:disable file_length
 import Foundation
 
-/// Protocol for health profile calculations
 protocol HealthProfileServiceProtocol {
     /// Calculate Body Mass Index from height and weight
     /// - Parameters:

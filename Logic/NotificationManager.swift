@@ -7,8 +7,12 @@ protocol NotificationCenterProtocol: Sendable {
         options: UNAuthorizationOptions,
         completionHandler: @escaping @Sendable (Bool, Error?) -> Void
     )
-    func add(_ request: UNNotificationRequest, withCompletionHandler completionHandler: (@Sendable (Error?) -> Void)?)
+    func add(
+        _ request: UNNotificationRequest,
+        withCompletionHandler completionHandler: (@Sendable (Error?) -> Void)?
+    )
     func removeAllPendingNotificationRequests()
+    func removePendingNotificationRequests(withIdentifiers identifiers: [String])
 }
 
 extension UNUserNotificationCenter: NotificationCenterProtocol {}
@@ -32,56 +36,119 @@ class NotificationManager {
         }
     }
 
+    // MARK: - Identifiers
+
+    private static let morningNudgeID = "morning_nudge"
+    private static let smartNudgePrefix = "smart_nudge_"
+    static let maxSmartNudgeSlots = 3
+
+    // MARK: - Morning Nudge
+
     /// The "Morning Nudge" to plan the day's meals.
     func scheduleMorningNudge() {
-        guard UserDefaults.standard.object(forKey: "morning_nudge_enabled") as? Bool ?? true else {
-            return
-        }
+        guard UserDefaults.standard.object(
+            forKey: StorageKeys.morningNudgeEnabled
+        ) as? Bool ?? true else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Good Morning!"
-        content.body = "Time to plan your mindful meals for today. The Smiley is waiting for you 🙂"
+        content.title = Strings.Notifications.morningTitle
+        content.body = Strings.Notifications.morningBody
         content.sound = .default
 
         var dateComponents = DateComponents()
-        dateComponents.hour = 8 // 8:00 AM
+        dateComponents.hour = 8
 
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-        let request = UNNotificationRequest(identifier: "morning_nudge", content: content, trigger: trigger)
-
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: dateComponents, repeats: true
+        )
+        let request = UNNotificationRequest(
+            identifier: Self.morningNudgeID,
+            content: content,
+            trigger: trigger
+        )
         self.center.add(request, withCompletionHandler: nil)
     }
 
+    /// Cancels only the morning nudge — does not affect other notifications.
+    func cancelMorningNudge() {
+        self.center.removePendingNotificationRequests(
+            withIdentifiers: [Self.morningNudgeID]
+        )
+    }
+
+    // MARK: - Meal Reminders
+
     /// Individual meal reminders.
     func scheduleMealReminder(label: String, hour: Int, minute: Int) {
-        guard UserDefaults.standard.object(forKey: "meal_reminders_enabled") as? Bool ?? true else {
-            return
-        }
+        guard UserDefaults.standard.object(
+            forKey: StorageKeys.mealRemindersEnabled
+        ) as? Bool ?? true else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Meal Time"
-        content.body = "What are you planning for \(label.lowercased())? Let your friend know."
+        content.title = Strings.Notifications.mealReminderTitle
+        content.body = Strings.Notifications.mealReminderBody(label)
         content.sound = .default
 
         var dateComponents = DateComponents()
         dateComponents.hour = hour
         dateComponents.minute = minute
 
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-        let request = UNNotificationRequest(identifier: "meal_reminder_\(label)", content: content, trigger: trigger)
-
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: dateComponents, repeats: true
+        )
+        let request = UNNotificationRequest(
+            identifier: "meal_reminder_\(label)",
+            content: content,
+            trigger: trigger
+        )
         self.center.add(request, withCompletionHandler: nil)
     }
 
     /// Schedules default meal reminders (Breakfast, Lunch, Dinner).
-    /// Called on app startup.
     func scheduleDefaultMealReminders() {
         self.scheduleMealReminder(label: "Breakfast", hour: 8, minute: 0)
         self.scheduleMealReminder(label: "Lunch", hour: 13, minute: 0)
         self.scheduleMealReminder(label: "Dinner", hour: 20, minute: 0)
     }
 
-    /// Clears all pending notifications.
+    // MARK: - Smart Nudges
+
+    /// Schedules pattern-aware nudges, replacing only smart nudge slots.
+    /// Morning nudge and other notifications are NOT affected.
+    func scheduleSmartNudges(
+        times: [DateComponents], message: String
+    ) {
+        guard UserDefaults.standard.object(
+            forKey: StorageKeys.mealRemindersEnabled
+        ) as? Bool ?? true else { return }
+
+        let oldIDs = (0..<Self.maxSmartNudgeSlots).map {
+            "\(Self.smartNudgePrefix)\($0)"
+        }
+        self.center.removePendingNotificationRequests(
+            withIdentifiers: oldIDs
+        )
+
+        for (idx, time) in times.prefix(Self.maxSmartNudgeSlots).enumerated() {
+            let content = UNMutableNotificationContent()
+            content.title = Strings.Notifications.mealReminderTitle
+            content.body = message
+            content.sound = .default
+
+            let trigger = UNCalendarNotificationTrigger(
+                dateMatching: time, repeats: true
+            )
+            let request = UNNotificationRequest(
+                identifier: "\(Self.smartNudgePrefix)\(idx)",
+                content: content,
+                trigger: trigger
+            )
+            self.center.add(request, withCompletionHandler: nil)
+        }
+    }
+
+    // MARK: - Cancel
+
     func cancelAllNotifications() {
         self.center.removeAllPendingNotificationRequests()
     }

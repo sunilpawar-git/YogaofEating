@@ -131,7 +131,8 @@ struct UserProfileSettingsView: View {
             Text("Privacy")
         } footer: {
             Text(
-                "All health calculations are done on your device. Data never leaves your phone except for encrypted cloud sync."
+                "All health calculations are done on your device."
+                    + " Data never leaves your phone except for encrypted cloud sync."
             )
             .font(.caption)
         }

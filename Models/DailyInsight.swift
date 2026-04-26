@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Types of insights the AI can generate based on user data patterns.
 enum InsightType: String, Codable, CaseIterable {
@@ -14,6 +15,12 @@ enum InsightType: String, Codable, CaseIterable {
     /// General encouragement when no clear pattern is found
     case encouragement
 
+    /// How well meals aligned with the user's stated daily intention
+    case intentAlignment
+
+    /// Correlation between focus level and food choices
+    case focusFood
+
     /// SF Symbol icon name for this insight type
     var icon: String {
         switch self {
@@ -25,6 +32,10 @@ enum InsightType: String, Codable, CaseIterable {
             "chart.line.uptrend.xyaxis"
         case .encouragement:
             "sparkles"
+        case .intentAlignment:
+            "target"
+        case .focusFood:
+            "bolt.circle"
         }
     }
 
@@ -39,6 +50,53 @@ enum InsightType: String, Codable, CaseIterable {
             "Pattern"
         case .encouragement:
             "Encouragement"
+        case .intentAlignment:
+            "Intent Alignment"
+        case .focusFood:
+            "Focus & Food"
+        }
+    }
+
+    /// Accent gradient for card backgrounds (shared across InsightCardView and InsightBottomSheet).
+    func gradient(intensity: Double = 0.3) -> LinearGradient {
+        let secondary = intensity * 0.66
+        return switch self {
+        case .foodSleep:
+            LinearGradient(
+                colors: [.indigo.opacity(intensity), .purple.opacity(secondary)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .mindsetFeeling:
+            LinearGradient(
+                colors: [.teal.opacity(intensity), .cyan.opacity(secondary)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .pattern:
+            LinearGradient(
+                colors: [.orange.opacity(intensity), .yellow.opacity(secondary)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .encouragement:
+            LinearGradient(
+                colors: [.green.opacity(intensity), .mint.opacity(secondary)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .intentAlignment:
+            LinearGradient(
+                colors: [.blue.opacity(intensity), .indigo.opacity(secondary)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .focusFood:
+            LinearGradient(
+                colors: [.yellow.opacity(intensity), .orange.opacity(secondary)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
     }
 }
@@ -95,9 +153,9 @@ struct DailyInsight: Codable, Identifiable, Equatable {
     ) {
         self.id = id
         self.date = date
-        self.insightText = insightText
+        self.insightText = String(insightText.prefix(500))
         self.insightType = insightType
-        self.confidence = confidence
+        self.confidence = max(0.0, min(confidence, 1.0))
         self.isViewed = isViewed
         self.references = references
     }
@@ -110,8 +168,9 @@ struct DailyInsight: Codable, Identifiable, Equatable {
         self.date = try container.decode(Date.self, forKey: .date)
         self.insightText = try container.decode(String.self, forKey: .insightText)
         self.insightType = try container.decode(InsightType.self, forKey: .insightType)
-        self.confidence = try container.decode(Double.self, forKey: .confidence)
-        self.isViewed = try container.decode(Bool.self, forKey: .isViewed)
+        let rawConfidence = try container.decode(Double.self, forKey: .confidence)
+        self.confidence = max(0.0, min(rawConfidence, 1.0))
+        self.isViewed = try container.decodeIfPresent(Bool.self, forKey: .isViewed) ?? false
         self.references = try container.decodeIfPresent([InsightReference].self, forKey: .references) ?? []
     }
 

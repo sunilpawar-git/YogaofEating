@@ -21,6 +21,7 @@ enum MindCheckCategory: String, Codable, CaseIterable {
     case accomplished
     case gratefulFor
     case letGo
+    case observation
 
     /// The emoji representation for UI display
     var emoji: String {
@@ -37,6 +38,8 @@ enum MindCheckCategory: String, Codable, CaseIterable {
             "🙏"
         case .letGo:
             "🍃"
+        case .observation:
+            "👁️"
         }
     }
 
@@ -55,6 +58,8 @@ enum MindCheckCategory: String, Codable, CaseIterable {
             "Grateful for"
         case .letGo:
             "Let go of"
+        case .observation:
+            "Observed"
         }
     }
 
@@ -63,7 +68,7 @@ enum MindCheckCategory: String, Codable, CaseIterable {
         switch self {
         case .todo, .gratitude, .thinking:
             .morning
-        case .accomplished, .gratefulFor, .letGo:
+        case .accomplished, .gratefulFor, .letGo, .observation:
             .evening
         }
     }
@@ -80,17 +85,12 @@ enum MindCheckCategory: String, Codable, CaseIterable {
             // Phase 2: Morning only allows To-Do entries
             [.todo]
         case .evening:
-            [.accomplished, .gratefulFor, .letGo]
+            [.accomplished, .gratefulFor, .letGo, .observation]
         }
     }
 
-    /// Static list of morning categories available for new entries
-    /// - Note: Phase 2 - Only To-Do is now available for morning.
-    ///   Legacy categories (.gratitude, .thinking) kept in enum for backward compatibility.
-    static let morningCategories: [MindCheckCategory] = [.todo]
-
-    /// Static list of evening categories
-    static let eveningCategories: [MindCheckCategory] = [.accomplished, .gratefulFor, .letGo]
+    static var morningCategories: [MindCheckCategory] { categories(for: .morning) }
+    static var eveningCategories: [MindCheckCategory] { categories(for: .evening) }
 }
 
 /// Represents a single mind check entry - a thought, intention, or reflection
@@ -141,7 +141,7 @@ struct MindCheckEntry: Codable, Identifiable, Equatable {
     ) {
         self.id = id
         self.category = category
-        self.text = text
+        self.text = String(text.prefix(500))
         self.timestamp = timestamp
         self.context = context
         self.isAccomplished = isAccomplished

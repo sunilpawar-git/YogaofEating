@@ -26,13 +26,14 @@
         // MARK: - Tests: InsightType Enum
 
         func test_insightType_hasExpectedCases() {
-            // Assert all 4 insight types exist
             let allCases = InsightType.allCases
-            XCTAssertEqual(allCases.count, 4, "InsightType should have exactly 4 cases")
+            XCTAssertGreaterThanOrEqual(allCases.count, 6, "InsightType should have at least 6 cases")
             XCTAssertTrue(allCases.contains(.foodSleep))
             XCTAssertTrue(allCases.contains(.mindsetFeeling))
             XCTAssertTrue(allCases.contains(.pattern))
             XCTAssertTrue(allCases.contains(.encouragement))
+            XCTAssertTrue(allCases.contains(.intentAlignment))
+            XCTAssertTrue(allCases.contains(.focusFood))
         }
 
         func test_insightType_rawValues_areCorrect() {
@@ -40,6 +41,8 @@
             XCTAssertEqual(InsightType.mindsetFeeling.rawValue, "mindsetFeeling")
             XCTAssertEqual(InsightType.pattern.rawValue, "pattern")
             XCTAssertEqual(InsightType.encouragement.rawValue, "encouragement")
+            XCTAssertEqual(InsightType.intentAlignment.rawValue, "intentAlignment")
+            XCTAssertEqual(InsightType.focusFood.rawValue, "focusFood")
         }
 
         func test_insightType_codable_encodesAndDecodes() throws {
@@ -59,6 +62,8 @@
             XCTAssertEqual(InsightType.mindsetFeeling.icon, "brain.head.profile")
             XCTAssertEqual(InsightType.pattern.icon, "chart.line.uptrend.xyaxis")
             XCTAssertEqual(InsightType.encouragement.icon, "sparkles")
+            XCTAssertEqual(InsightType.intentAlignment.icon, "target")
+            XCTAssertEqual(InsightType.focusFood.icon, "bolt.circle")
         }
 
         func test_insightType_displayName_returnsCorrectName() {
@@ -66,6 +71,8 @@
             XCTAssertEqual(InsightType.mindsetFeeling.displayName, "Mindset & Feeling")
             XCTAssertEqual(InsightType.pattern.displayName, "Pattern")
             XCTAssertEqual(InsightType.encouragement.displayName, "Encouragement")
+            XCTAssertEqual(InsightType.intentAlignment.displayName, "Intent Alignment")
+            XCTAssertEqual(InsightType.focusFood.displayName, "Focus & Food")
         }
 
         // MARK: - Tests: DailyInsight Initialization

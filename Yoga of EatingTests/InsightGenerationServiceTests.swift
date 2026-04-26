@@ -224,9 +224,16 @@
             // Act
             self.sut.saveInsight(insight, for: today)
 
-            // Assert - For now, just verify it doesn't crash
-            // Full persistence will be implemented with the service
-            XCTAssertNotNil(insight)
+            // Assert - Insight is now persisted via updateDailyInsight
+            XCTAssertTrue(self.mockHistorical.updateDailyInsightCalled)
+            XCTAssertEqual(
+                self.mockHistorical.lastUpdatedInsight?.insightText,
+                "Your eating patterns suggest a connection."
+            )
+
+            let savedSnapshot = self.mockHistorical.getSnapshot(for: today)
+            XCTAssertNotNil(savedSnapshot?.dailyInsight)
+            XCTAssertEqual(savedSnapshot?.dailyInsight?.insightType, .foodSleep)
         }
 
         // MARK: - Tests: Check If Insight Needed
