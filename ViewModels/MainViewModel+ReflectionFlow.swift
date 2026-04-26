@@ -140,7 +140,6 @@ extension MainViewModel {
     }
 
     func triggerInsightGenerationIfNeeded(for date: Date) {
-        // swiftlint:disable:next opening_brace
         if let existing = self.currentInsight,
            Calendar.current.isDate(existing.date, inSameDayAs: date)
         {

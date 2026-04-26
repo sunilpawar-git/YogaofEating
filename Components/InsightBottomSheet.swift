@@ -13,7 +13,8 @@ struct InsightBottomSheet: View {
 
     // MARK: - Environment
 
-    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorScheme)
+    private var colorScheme
 
     // MARK: - Private
 
@@ -152,7 +153,7 @@ struct InsightBottomSheet: View {
         Button(action: {
             SensoryService.shared.playNudge(style: .light)
             self.onDismiss()
-        }) {
+        }, label: {
             Text(Strings.Insight.gotIt)
                 .font(.headline)
                 .foregroundColor(.white)
@@ -162,7 +163,7 @@ struct InsightBottomSheet: View {
                     RoundedRectangle(cornerRadius: 14)
                         .fill(Color.accentColor)
                 )
-        }
+        })
         .buttonStyle(.plain)
         .padding(.top, 10)
     }
@@ -175,6 +176,7 @@ struct InsightBottomSheet: View {
         InsightBottomSheet(
             insight: DailyInsight(
                 date: Date(),
+                // swiftlint:disable:next line_length
                 insightText: "On 12 Jan, late evening coffee may have disturbed your sleep. On 14 Jan, three todo completions and good overall diet led to good 'End of Day' feeling and good sleep. Consider finishing dinner earlier for better sleep.",
                 insightType: .foodSleep,
                 confidence: 0.85,
@@ -200,7 +202,8 @@ struct InsightBottomSheet: View {
         InsightBottomSheet(
             insight: DailyInsight(
                 date: Date(),
-                insightText: "Great job! Your healthy eating choices over the past week are likely contributing to better energy and sleep. Keep it up!",
+                insightText: "Great job! Your healthy eating choices over the past week are "
+                    + "likely contributing to better energy and sleep. Keep it up!",
                 insightType: .encouragement,
                 confidence: 0.9
             ),

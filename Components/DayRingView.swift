@@ -48,9 +48,9 @@ struct DayRingView: View {
                 self.animatedProgress = self.progress
             }
         }
-        .onChange(of: self.progress) { newValue in
+        .onChange(of: self.progress) { _, newProgress in
             withAnimation(.easeOut(duration: 0.4)) {
-                self.animatedProgress = newValue
+                self.animatedProgress = newProgress
             }
         }
         .accessibilityElement(children: .ignore)

@@ -4,8 +4,11 @@ import SwiftUI
     import UIKit
 #endif
 
+// swiftlint:disable file_length
+// swiftlint:disable:next type_body_length
 struct SettingsView: View {
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss)
+    var dismiss
     @EnvironmentObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: SettingsViewModel
     @ObservedObject private var authService = AuthService.shared
@@ -36,7 +39,8 @@ struct SettingsView: View {
                     Button("Clear", role: .destructive) { self.mainViewModel.deleteAllData() }
                 } message: {
                     Text(
-                        "This will permanently delete all logged meals, history, and user settings. This action cannot be undone."
+                        "This will permanently delete all logged meals, history, and user settings."
+                            + " This action cannot be undone."
                     )
                 }
         }
@@ -96,7 +100,7 @@ struct SettingsView: View {
 
     private var syncButton: some View {
         VStack(spacing: 0) {
-            Button(action: { self.viewModel.performCloudSync() }) {
+            Button(action: { self.viewModel.performCloudSync() }, label: {
                 HStack {
                     switch self.viewModel.syncStatus {
                     case .idle:
@@ -122,7 +126,7 @@ struct SettingsView: View {
                 .background(self.syncBackgroundColor)
                 .cornerRadius(8)
                 .animation(.easeInOut(duration: 0.3), value: self.viewModel.syncStatus)
-            }
+            })
             .buttonStyle(.borderless)
             .disabled(self.viewModel.syncStatus == .syncing)
             .accessibilityLabel(self.viewModel.syncAccessibilityLabel)
@@ -148,12 +152,12 @@ struct SettingsView: View {
     private var signInButton: some View {
         Button(action: {
             Task { try? await self.authService.signInWithGoogle() }
-        }) {
+        }, label: {
             HStack {
                 Image(systemName: "person.crop.circle.badge.plus")
                 Text("Login with Google")
             }
-        }
+        })
     }
 
     private var heatmapLink: some View {
@@ -215,8 +219,7 @@ struct SettingsView: View {
 
     // MARK: - Toolbar
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
+    @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {
         #if canImport(UIKit)
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Done") { self.dismiss() }

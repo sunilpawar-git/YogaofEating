@@ -79,4 +79,19 @@ class PersistenceService: PersistenceServiceProtocol {
         guard let url = fileURL else { return }
         try? FileManager.default.removeItem(at: url)
     }
+
+    /// Writes a widget snapshot to the specified container directory.
+    static func writeWidgetSnapshot(
+        _ snapshot: WidgetSnapshot, to containerURL: URL
+    ) {
+        do {
+            let data = try JSONEncoder().encode(snapshot)
+            let fileURL = containerURL.appendingPathComponent(
+                WidgetDataProvider.fileName
+            )
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            // Silently fail — widget displays empty state
+        }
+    }
 }

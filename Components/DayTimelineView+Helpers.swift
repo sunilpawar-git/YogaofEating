@@ -1,12 +1,31 @@
+// swiftlint:disable file_length
 import SwiftUI
 
 extension DayTimelineView {
+    /// Resolves the appropriate header: full day-ring + streak, streak-only, or empty.
+    @ViewBuilder var headerView: some View {
+        if let snap = self.snapshot {
+            self.dayRingHeader(for: snap)
+        } else if self.isToday,
+                  self.streak.current >= Strings.Streak.minimumDisplay
+        {
+            HStack {
+                Spacer()
+                StreakPillView(streak: self.streak)
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
     func dayRingHeader(for snapshot: DailySmileySnapshot) -> some View {
         let progress = DayModuleProgress.compute(from: snapshot)
         return HStack(spacing: 12) {
             DayRingView(progress: progress, ringSize: 44, lineWidth: 4)
             DayRingLegend()
             Spacer()
+            if self.streak.current >= Strings.Streak.minimumDisplay {
+                StreakPillView(streak: self.streak)
+            }
         }
         .padding(.horizontal, 4)
     }
@@ -45,7 +64,7 @@ extension DayTimelineView {
         Button(action: {
             self.reflectionData.onEndOfDayTap?()
             SensoryService.shared.playNudge(style: .light)
-        }) {
+        }, label: {
             HStack(spacing: 6) {
                 Image(systemName: "moon.fill")
                     .font(.system(size: 12))
@@ -59,7 +78,7 @@ extension DayTimelineView {
             .padding(.vertical, 8)
             .background(Capsule().fill(Color.purple.opacity(0.1)))
             .overlay(Capsule().stroke(Color.purple.opacity(0.3), lineWidth: 1))
-        }
+        })
         .buttonStyle(.plain)
         .accessibilityIdentifier("end-of-day-pill")
         .accessibilityLabel(Strings.Timeline.endOfDay)

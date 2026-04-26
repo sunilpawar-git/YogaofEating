@@ -8,33 +8,40 @@ struct FAQView: View {
             Section("General") {
                 FAQItem(
                     question: "What is 'Yoga of Eating'?",
-                    answer: "It's a mindful approach to nutrition focusing on how food affects your energy and well-being, rather than just counting calories."
+                    answer: "It's a mindful approach to nutrition focusing on how food affects your energy"
+                        + " and well-being, rather than just counting calories."
                 )
                 FAQItem(
                     question: "How does the Smiley work?",
-                    answer: "The Smiley reflects the cumulative 'health' of your recent meals. Eat mindfully and healthily to keep it happy!"
+                    answer: "The Smiley reflects the cumulative 'health' of your recent meals."
+                        + " Eat mindfully and healthily to keep it happy!"
                 )
             }
 
             Section("AI & Analysis") {
                 FAQItem(
                     question: "How is my food analyzed?",
-                    answer: "We use advanced AI (powered by Google Gemini) to interpret your meal descriptions. It estimates nutritional value and 'sattvic' quality based on your input."
+                    answer: "We use advanced AI (powered by Google Gemini) to interpret your meal descriptions."
+                        + " It estimates nutritional value and 'sattvic' quality based on your input."
                 )
                 FAQItem(
                     question: "Is the AI advice medical advice?",
-                    answer: "No. The AI provides general wellness insights based on common nutritional knowledge. Always consult a doctor for medical issues."
+                    answer: "No. The AI provides general wellness insights based on common nutritional knowledge."
+                        + " Always consult a doctor for medical issues."
                 )
             }
 
             Section("Data & Privacy") {
                 FAQItem(
                     question: "Where is my data stored?",
-                    answer: "By default, all your data is stored securely on your device. It never leaves your phone unless you choose to Sync."
+                    answer: "By default, all your data is stored securely on your device."
+                        + " It never leaves your phone unless you choose to Sync."
                 )
                 FAQItem(
                     question: "How does Sync work?",
-                    answer: "If you sign in, you can sync your data to the cloud. This allows you to restore your data if you lose your device. Passwords and sensitive data are encrypted."
+                    answer: "If you sign in, you can sync your data to the cloud."
+                        + " This allows you to restore your data if you lose your device."
+                        + " Passwords and sensitive data are encrypted."
                 )
             }
         }

@@ -93,7 +93,8 @@ enum ScoreReasoningGenerator {
 
     private static func generateExcellentReasoning(mealType: MealType, items: [String]) -> String {
         let itemsText = items.prefix(2).joined(separator: " and ")
-        return "\(itemsText) is a nutritious choice for \(mealType.displayName.lowercased()). Great balance of nutrients!"
+        return "\(itemsText) is a nutritious choice for "
+            + "\(mealType.displayName.lowercased()). Great balance of nutrients!"
     }
 
     private static func generateGoodReasoning(mealType: MealType, items: [String]) -> String {

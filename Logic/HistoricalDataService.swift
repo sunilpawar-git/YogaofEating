@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import Combine
 import Foundation
 
@@ -5,6 +6,7 @@ import Foundation
 @MainActor
 protocol HistoricalDataServiceProtocol: ObservableObject {
     var historicalData: HistoricalData { get set }
+
     func archiveCurrentDay(meals: [Meal], state: SmileyState, date: Date)
     func getSnapshot(for date: Date) -> DailySmileySnapshot?
     func getYearSnapshots(year: Int) -> [DailySmileySnapshot]

@@ -62,9 +62,9 @@ struct ReadOnlyMealCardView: View {
     }
 
     private static let timeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.timeStyle = .short
-        return f
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
     }()
 
     private var formattedTime: String { Self.timeFormatter.string(from: self.meal.timestamp) }

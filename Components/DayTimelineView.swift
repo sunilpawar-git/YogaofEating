@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import SwiftUI
 
 // MARK: - Today Reflection Data
@@ -97,6 +98,9 @@ struct DayTimelineView: View {
     /// Whether focus has already been rated today
     var hasFocusRating: Bool = false
 
+    /// Current consistency streak for display
+    var streak: ConsistencyStreak = .empty
+
     // MARK: - Legacy Parameter Support (Deprecated)
 
     // These are kept for backward compatibility but internally map to reflectionData
@@ -130,17 +134,16 @@ struct DayTimelineView: View {
     @State private var breathingMeals: Set<UUID> = []
     @State var showInsightCoachmark: Bool = false
     @State var coachmarkDismissTask: Task<Void, Never>?
-    @AppStorage(StorageKeys.insightCoachmarkSeen) var insightCoachmarkSeen: Bool = false
+    @AppStorage(StorageKeys.insightCoachmarkSeen)
+    var insightCoachmarkSeen: Bool = false
 
     // MARK: - Body
 
     var body: some View {
         VStack(spacing: 0) {
-            // Day Ring progress summary
-            if let snap = self.snapshot {
-                self.dayRingHeader(for: snap)
-                    .padding(.bottom, 12)
-            }
+            // Day Ring progress summary (or standalone streak pill when no snapshot)
+            self.headerView
+                .padding(.bottom, 12)
 
             // Sleep badge at TOP of timeline (for today only)
             if self.isToday, let sleepQuality = self.todaysSleepQuality {
@@ -256,7 +259,8 @@ struct DayTimelineView: View {
                     }
                 },
                 recentMeals: self.recentMeals,
-                dailyIntention: self.dailyIntention
+                dailyIntention: self.dailyIntention,
+                onMicroReflection: self.mealActions.onMicroReflection
             )
         } else {
             // Read-only view for historical days

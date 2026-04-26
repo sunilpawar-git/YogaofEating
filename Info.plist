@@ -27,6 +27,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Yoga of Eating uses your health data to calculate BMI, analyze sleep patterns, and provide personalized feedback on your meals and wellbeing.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Yoga of Eating can log your evening review as a mindful session in the Health app.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

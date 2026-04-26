@@ -226,6 +226,43 @@ enum Strings {
         static let lockedInIcon = "bolt.fill"
     }
 
+    // MARK: - MicroReflection
+
+    enum MicroReflection {
+        static let hungerLabel = "Hunger before"
+        static let satisfactionLabel = "Satisfaction after"
+        static let overeatingHint =
+            "You often eat past hunger — try smaller portions"
+        static let notHungryAtDinner =
+            "You tend to eat dinner without being hungry"
+    }
+
+    // MARK: - Streak
+
+    enum Streak {
+        static let minimumDisplay = 2
+        static let flameEmoji = "🔥"
+
+        static func pill(_ count: Int) -> String {
+            "\(count) day streak"
+        }
+
+        static let bestRecord = "Best"
+        static let streakPopoverTitle = "Your Streak"
+    }
+
+    // MARK: - Nudge
+
+    enum Nudge {
+        static let streakRisk =
+            "Don't break your streak — log your meal"
+        static let gentle = "How are you eating today?"
+
+        static func streakKeepGoing(_ count: Int) -> String {
+            "\(count)-day streak! Keep it going — log your meal"
+        }
+    }
+
     // MARK: - Common
 
     enum Common {

@@ -50,6 +50,7 @@ enum SleepDataProcessor {
     /// - Returns: Tuple of (asleep duration, in-bed duration, session start, session end)
     static func calculateSessionDurations(
         from samples: [SleepSampleData]
+        // swiftlint:disable:next large_tuple
     ) -> (asleepDuration: TimeInterval, inBedDuration: TimeInterval, start: Date?, end: Date?) {
         var totalAsleep: TimeInterval = 0
         var totalInBed: TimeInterval = 0
@@ -58,10 +59,10 @@ enum SleepDataProcessor {
 
         for sample in samples {
             // Track session boundaries
-            if sessionStart == nil || sample.startDate < sessionStart! {
+            if sessionStart.map({ sample.startDate < $0 }) ?? true {
                 sessionStart = sample.startDate
             }
-            if sessionEnd == nil || sample.endDate > sessionEnd! {
+            if sessionEnd.map({ sample.endDate > $0 }) ?? true {
                 sessionEnd = sample.endDate
             }
 
@@ -123,26 +124,22 @@ enum SleepDataProcessor {
     static func selectPreferredSource(from sources: [String]) -> String? {
         guard !sources.isEmpty else { return nil }
 
-        return sources.sorted { source1, source2 in
+        return sources.min { source1, source2 in
             let isWatch1 = source1.lowercased().contains("watch")
             let isWatch2 = source2.lowercased().contains("watch")
             if isWatch1, !isWatch2 { return true }
             if !isWatch1, isWatch2 { return false }
 
-            // Secondary: prefer Apple's own health app
             let isApple1 = source1.lowercased().contains("apple")
             let isApple2 = source2.lowercased().contains("apple")
             if isApple1, !isApple2 { return true }
             return false
-        }.first
+        }
     }
 
     // MARK: - Full Processing Pipeline
 
-    /// Processes raw samples into SleepData for the most recent sleep session.
-    /// - Parameter samples: All sleep samples from HealthKit
-    /// - Parameter enableLogging: Whether to print debug logs
-    /// - Returns: Processed SleepData for the most recent session, or nil
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     static func processSleepSamples(
         _ samples: [SleepSampleData],
         enableLogging: Bool = false

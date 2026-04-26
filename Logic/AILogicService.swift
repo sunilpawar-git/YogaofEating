@@ -56,7 +56,7 @@ class AILogicService: AIAnalysisProvider {
 
     // MARK: - Async Cloud Function Call
 
-    /// Calls the 'analyzeMeal' Firebase Cloud Function.
+    // swiftlint:disable:next large_tuple
     func analyzeMealQuality(description: String, intention: String? = nil) async throws -> (
         score: Double,
         mood: SmileyMood,

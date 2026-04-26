@@ -2,7 +2,8 @@ import StoreKit
 import SwiftUI
 
 struct PaywallView: View {
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dismiss)
+    private var dismiss
     @EnvironmentObject var premiumManager: PremiumManager
 
     @State private var purchaseError: Error?

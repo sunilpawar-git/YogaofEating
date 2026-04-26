@@ -1,6 +1,6 @@
+// swiftlint:disable file_length
 import SwiftUI
 
-/// A sheet view for evening reflection that shows morning todos with checkboxes
 /// and allows adding gratitude and let-go entries.
 /// Phase 3: Now also supports feeling selection for holistic End-of-Day capture.
 /// This creates an accountability loop - user reviews what they set out to do.
