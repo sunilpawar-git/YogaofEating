@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 import Foundation
 
 /// Centralized string resources for the app.
@@ -58,6 +59,11 @@ enum Strings {
             static let notAccomplished = "Not done"
             static let markAsDone = "Mark as done"
             static let markAsNotDone = "Mark as not done"
+            static let toggleHint = "Tap to toggle completion status"
+
+            static func accessibilityLabel(_ text: String, accomplished: Bool) -> String {
+                "\(text), \(accomplished ? "completed" : "not completed")"
+            }
         }
 
         // Historical Mind Check Display
@@ -76,6 +82,9 @@ enum Strings {
     enum Insight {
         static let dailyTitle = "Daily Insight"
         static let weeklyTitle = "Weekly Summary"
+        static let weeklyWinsTitle = "Wins"
+        static let weeklyImprovementsTitle = "Improvement Areas"
+        static let weeklyWinPrefix = "Win"
         static let basedOnPatterns = "Based on your patterns"
         static let gotIt = "Got it"
         static let dismiss = "Dismiss"
@@ -97,6 +106,7 @@ enum Strings {
     enum Timeline {
         static let endOfDay = "End of Day"
         static let tapToLog = "TAP TO LOG"
+        static let tapToLogHoldForInsight = "TAP TO LOG · HOLD FOR INSIGHT"
         static let noMealsLogged = "No meals logged"
         static let avgHealthScore = "Avg. Health Score"
         static let noItemsLogged = "No items logged"
@@ -153,6 +163,57 @@ enum Strings {
         static let laser = "Laser"
         static let highlight = "Highlight"
         static let energise = "Energize"
+    }
+
+    enum BIS {
+        static let title = "Body Intelligence"
+        static let subtitle = "Daily composite score"
+        static let moduleLabel = "Modules"
+        static let sleepLabel = "Sleep"
+        static let nutritionLabel = "Nutrition"
+        static let executionLabel = "Execution"
+
+        static func avgLabel(_ value: Int) -> String { "BIS Avg: \(value)" }
+    }
+
+    enum Trends {
+        static let title = "Trends"
+        static let bisTitle = "Body Intelligence"
+        static let moduleTitle = "Module Completion"
+        static let sleepTitle = "Sleep Score"
+        static let archetypePrefix = "Archetype"
+        static let axisDate = "Date"
+        static let axisBIS = "BIS"
+        static let axisSleep = "Sleep"
+        static let axisReflect = "Reflect"
+        static let axisLaser = "Laser"
+        static let axisHighlight = "Highlight"
+        static let axisEnergise = "Energise"
+        static let emptyState = "Log more days to see trends here."
+    }
+
+    enum Premium {
+        static let navTitle = "Premium"
+        static let heading = "Upgrade to Premium"
+        static let subtitle = "Unlock trends, archetype coaching, and PDF export."
+        static let trendFeature = "Trend charts"
+        static let archetypeFeature = "Energy archetypes"
+        static let pdfFeature = "PDF export"
+        static let productsUnavailable = "Products unavailable right now."
+        static let restorePurchases = "Restore Purchases"
+        static let close = "Close"
+        static let exportPdf = "Export PDF"
+        static let exportFailed = "Export unavailable"
+        static let purchaseFailed = "Purchase Failed"
+        static let purchaseFailedMessage = "Something went wrong. Please try again."
+    }
+
+    enum EnergyArchetype {
+        static let steadyState = "Steady State"
+        static let spikeDip = "Spike & Dip"
+        static let nocturnalOwl = "Nocturnal Owl"
+        static let earlyBird = "Early Bird"
+        static let inconsistent = "Inconsistent"
     }
 
     enum Focus {

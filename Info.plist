@@ -34,6 +34,11 @@
 		<key>UIImageName</key>
 		<string></string>
 	</dict>
+	<key>StoreKitProductIDs</key>
+	<array>
+		<string>com.yogaofeating.premium.monthly</string>
+		<string>com.yogaofeating.premium.yearly</string>
+	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

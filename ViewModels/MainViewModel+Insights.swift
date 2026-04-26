@@ -43,4 +43,14 @@ extension MainViewModel {
         SensoryService.shared.playNudge(style: .heavy)
         self.showInsightSheet = true
     }
+
+    /// Generates or refreshes the weekly summary insight when enough data exists.
+    func refreshWeeklyInsight() {
+        Task {
+            let insight = await self.insightService.generateWeeklyInsight()
+            await MainActor.run {
+                self.currentWeeklyInsight = insight
+            }
+        }
+    }
 }
