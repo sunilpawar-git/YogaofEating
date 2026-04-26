@@ -8,6 +8,7 @@ struct PreferencesSettingsView: View {
     var body: some View {
         Form {
             self.appearanceSection
+            self.homeScreenSection
             self.notificationsSection
             self.sensorySection
             self.integrationsSection
@@ -29,6 +30,20 @@ struct PreferencesSettingsView: View {
             }
             .accessibilityIdentifier("theme-picker")
             .accessibilityLabel("Theme")
+        }
+    }
+
+    // MARK: - Home Screen Section
+
+    private var homeScreenSection: some View {
+        Section {
+            Toggle(
+                Strings.Settings.radialHomeBeta,
+                isOn: self.$viewModel.isRadialHomeEnabled
+            )
+            .accessibilityIdentifier("radial-home-toggle")
+        } header: {
+            Text("Home Screen")
         }
     }
 

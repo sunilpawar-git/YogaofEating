@@ -11,6 +11,7 @@ struct MainScreenView: View {
     @State var showWeeklySummarySheet = false
     @State var showTrendsSheet = false
     @State var showPaywallSheet = false
+    @AppStorage(StorageKeys.useRadialHome) private var useRadialHome = false
 
     var body: some View {
         NavigationStack {
