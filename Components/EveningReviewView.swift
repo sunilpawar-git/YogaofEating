@@ -33,6 +33,9 @@ struct EveningReviewView: View {
     /// Let go text input
     @State private var letGoText: String = ""
 
+    /// Observation text input
+    @State private var observationText: String = ""
+
     /// Selected feeling (for End-of-Day flow)
     @State private var selectedFeeling: ReflectionFeeling?
 
@@ -41,19 +44,13 @@ struct EveningReviewView: View {
     private enum Field {
         case gratitude
         case letGo
+        case observation
     }
 
     // MARK: - Computed
 
     private var morningTodos: [MindCheckEntry] {
         self.morningEntries.filter { $0.category == .todo }
-    }
-
-    private var hasContent: Bool {
-        !self.todoStatuses.isEmpty ||
-            !self.gratitudeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            !self.letGoText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            self.selectedFeeling != nil
     }
 
     /// For End-of-Day flow, feeling is required to save
@@ -89,6 +86,11 @@ struct EveningReviewView: View {
 
                     // Let go section
                     self.letGoSection
+
+                    Divider()
+
+                    // Observation section
+                    self.observationSection
                 }
                 .padding()
             }
@@ -200,6 +202,38 @@ struct EveningReviewView: View {
         }
     }
 
+    // MARK: - Observation Section
+
+    private var observationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text(MindCheckCategory.observation.emoji)
+                    .font(.title3)
+                Text(Strings.MindCheck.EveningReview.observationHeader)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+
+            TextField(
+                Strings.MindCheck.EveningReview.observationPlaceholder,
+                text: self.$observationText,
+                axis: .vertical
+            )
+            .textFieldStyle(.plain)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.primary.opacity(0.03))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+            )
+            .focused(self.$focusedField, equals: .observation)
+            .lineLimit(3...5)
+        }
+    }
+
     // MARK: - Feeling Section (Phase 3: End-of-Day)
 
     private var feelingSection: some View {
@@ -250,6 +284,9 @@ struct EveningReviewView: View {
             if let letGo = existing.first(where: { $0.category == .letGo }) {
                 self.letGoText = letGo.text
             }
+            if let observation = existing.first(where: { $0.category == .observation }) {
+                self.observationText = observation.text
+            }
         }
     }
 
@@ -282,6 +319,17 @@ struct EveningReviewView: View {
                 MindCheckEntry(
                     category: .letGo,
                     text: trimmedLetGo,
+                    context: .evening
+                )
+            )
+        }
+
+        let trimmedObservation = self.observationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedObservation.isEmpty {
+            eveningEntries.append(
+                MindCheckEntry(
+                    category: .observation,
+                    text: trimmedObservation,
                     context: .evening
                 )
             )

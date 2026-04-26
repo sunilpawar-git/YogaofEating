@@ -151,15 +151,7 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
         let normalizedDate = calendar.startOfDay(for: date)
 
         if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = DailySmileySnapshot(
-                id: existingSnapshot.id,
-                date: existingSnapshot.date,
-                smileyState: existingSnapshot.smileyState,
-                meals: existingSnapshot.meals,
-                mealCount: existingSnapshot.mealCount,
-                averageHealthScore: existingSnapshot.averageHealthScore,
-                reflection: reflection
-            )
+            let updatedSnapshot = existingSnapshot.withReflection(reflection)
             self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
         } else {
             let newSnapshot = DailySmileySnapshot(
@@ -216,6 +208,35 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
             self.historicalData.addOrUpdate(snapshot: newSnapshot)
         }
     }
+
+    var updateDailyInsightCalled = false
+    var lastUpdatedInsight: DailyInsight?
+    var lastInsightDate: Date?
+
+    func updateDailyInsight(for date: Date, insight: DailyInsight) {
+        self.updateDailyInsightCalled = true
+        self.lastUpdatedInsight = insight
+        self.lastInsightDate = date
+
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withDailyInsight(insight)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                dailyInsight: insight
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+    }
 }
 
 @MainActor
@@ -225,7 +246,7 @@ class MockPersistenceService: PersistenceServiceProtocol {
     var deleteAllCalled = false
 
     func load() -> PersistenceService.AppData? {
-        nil
+        self.savedData
     }
 
     func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {

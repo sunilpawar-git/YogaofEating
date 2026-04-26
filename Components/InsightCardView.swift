@@ -13,7 +13,6 @@ struct InsightCardView: View {
 
     // MARK: - Private
 
-    @State private var isExpanded = true
     @Environment(\.colorScheme) private var colorScheme
 
     private var cardBackground: Color {
@@ -23,32 +22,7 @@ struct InsightCardView: View {
     }
 
     private var accentGradient: LinearGradient {
-        switch self.insight.insightType {
-        case .foodSleep:
-            LinearGradient(
-                colors: [.indigo.opacity(0.3), .purple.opacity(0.2)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .mindsetFeeling:
-            LinearGradient(
-                colors: [.teal.opacity(0.3), .cyan.opacity(0.2)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .pattern:
-            LinearGradient(
-                colors: [.orange.opacity(0.3), .yellow.opacity(0.2)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .encouragement:
-            LinearGradient(
-                colors: [.green.opacity(0.3), .mint.opacity(0.2)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
+        self.insight.insightType.gradient(intensity: 0.3)
     }
 
     // MARK: - Body
@@ -95,7 +69,7 @@ struct InsightCardView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "sparkle")
                         .font(.system(size: 10))
-                    Text("Based on your patterns")
+                    Text(Strings.Insight.basedOnPatterns)
                         .font(.system(size: 11, design: .rounded))
                 }
                 .foregroundColor(.secondary.opacity(0.7))
@@ -111,8 +85,7 @@ struct InsightCardView: View {
                 )
                 .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 4)
         )
-        .accessibilityLabel("Insight: \(self.insight.insightText)")
-        .accessibilityAddTraits(.isButton)
+        .accessibilityElement(children: .contain)
     }
 }
 

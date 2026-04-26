@@ -32,6 +32,9 @@ struct JournalBlockView: View {
     /// Recent meals from past 3 days for quick-add feature
     var recentMeals: [Meal] = []
 
+    /// Today's daily intention for showing alignment hints
+    var dailyIntention: String?
+
     /// Controls when the Done button is visible. Configurable for UX refinement.
     static var doneButtonVisibility: DoneButtonVisibility = .whenFocused
 
@@ -73,7 +76,8 @@ struct JournalBlockView: View {
         onLocalUpdate: @escaping (MealType, [String]) -> Void = { _, _ in },
         onTimestampUpdate: @escaping (Date) -> Void = { _ in },
         onDelete: @escaping () -> Void,
-        recentMeals: [Meal] = []
+        recentMeals: [Meal] = [],
+        dailyIntention: String? = nil
     ) {
         self.meal = meal
         self.isBreathing = isBreathing
@@ -82,6 +86,7 @@ struct JournalBlockView: View {
         self.onTimestampUpdate = onTimestampUpdate
         self.onDelete = onDelete
         self.recentMeals = recentMeals
+        self.dailyIntention = dailyIntention
     }
 
     var body: some View {
@@ -110,6 +115,7 @@ struct JournalBlockView: View {
             .frame(maxWidth: .infinity, alignment: .center)
             .transition(.opacity)
             .onAppear { self.initializeState() }
+            .onDisappear { self.debounceTask?.cancel() }
             .sheet(isPresented: self.$showScoreBreakdown) {
                 ScoreBreakdownSheet(meal: self.meal) {
                     self.showScoreBreakdown = false
@@ -127,7 +133,32 @@ struct JournalBlockView: View {
             } else {
                 self.cardHeader
                 self.textInputSection
+                self.alignmentHintView
             }
+        }
+    }
+
+    /// Shows an alignment hint if a daily intention is set and the meal matches/conflicts.
+    @ViewBuilder
+    private var alignmentHintView: some View {
+        if let intention = dailyIntention,
+           !meal.items.isEmpty,
+           let hint = IntentAlignmentService.alignmentHint(
+               intention: intention, mealItems: meal.items
+           )
+        {
+            HStack(spacing: 6) {
+                Image(systemName: hint.contains("nudge") ? "exclamationmark.circle" : "checkmark.circle")
+                    .font(.caption2)
+                    .foregroundColor(hint.contains("nudge") ? .orange : .green)
+
+                Text(hint)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            .padding(.top, 4)
+            .transition(.opacity)
         }
     }
 

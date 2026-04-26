@@ -544,5 +544,188 @@
             // Assert
             XCTAssertFalse(self.sut.hasEveningMindCheck)
         }
+
+        // MARK: - Tests: Phase 1.1 — DailyInsight Field
+
+        func test_init_withDailyInsight_setsProperty() {
+            // Arrange
+            let insight = DailyInsight(
+                date: self.testDate,
+                insightText: "You ate lighter on days you slept well.",
+                insightType: .foodSleep,
+                confidence: 0.8
+            )
+
+            // Act
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                dailyInsight: insight
+            )
+
+            // Assert
+            XCTAssertNotNil(self.sut.dailyInsight)
+            XCTAssertEqual(self.sut.dailyInsight?.insightText, "You ate lighter on days you slept well.")
+            XCTAssertEqual(self.sut.dailyInsight?.insightType, .foodSleep)
+        }
+
+        func test_init_withoutDailyInsight_defaultsToNil() {
+            // Arrange & Act
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75
+            )
+
+            // Assert
+            XCTAssertNil(self.sut.dailyInsight, "DailyInsight should default to nil")
+        }
+
+        func test_codable_encodesAndDecodes_withDailyInsight() throws {
+            // Arrange
+            let insight = DailyInsight(
+                date: self.testDate,
+                insightText: "Great energy when you skip sugar.",
+                insightType: .pattern,
+                confidence: 0.75
+            )
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                dailyInsight: insight
+            )
+
+            // Act
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(self.sut)
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailySmileySnapshot.self, from: data)
+
+            // Assert
+            XCTAssertNotNil(decoded.dailyInsight)
+            XCTAssertEqual(decoded.dailyInsight?.insightText, "Great energy when you skip sugar.")
+            XCTAssertEqual(decoded.dailyInsight?.insightType, .pattern)
+            XCTAssertEqual(decoded.dailyInsight!.confidence, 0.75, accuracy: 0.01)
+        }
+
+        func test_codable_backwardCompatibility_withoutDailyInsight() throws {
+            // Arrange - Legacy JSON without dailyInsight field
+            let snapshotId = UUID()
+            let legacyJSON = """
+            {
+                "id": "\(snapshotId.uuidString)",
+                "date": \(self.testDate.timeIntervalSince1970),
+                "smileyState": {"scale": 1.0, "mood": "neutral"},
+                "meals": [],
+                "mealCount": 0,
+                "averageHealthScore": 0.5
+            }
+            """.data(using: .utf8)!
+
+            // Act
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailySmileySnapshot.self, from: legacyJSON)
+
+            // Assert
+            XCTAssertNil(decoded.dailyInsight, "Legacy data should have nil dailyInsight")
+            XCTAssertEqual(decoded.id, snapshotId)
+        }
+
+        func test_withDailyInsight_createsCopyWithInsight() {
+            // Arrange
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75
+            )
+            let insight = DailyInsight(
+                date: self.testDate,
+                insightText: "Mindful eating improved your mood.",
+                insightType: .mindsetFeeling,
+                confidence: 0.9
+            )
+
+            // Act
+            let updated = self.sut.withDailyInsight(insight)
+
+            // Assert
+            XCTAssertEqual(updated.id, self.sut.id)
+            XCTAssertEqual(updated.mealCount, self.sut.mealCount)
+            XCTAssertEqual(updated.averageHealthScore, self.sut.averageHealthScore)
+            XCTAssertNotNil(updated.dailyInsight)
+            XCTAssertEqual(updated.dailyInsight?.insightText, "Mindful eating improved your mood.")
+            XCTAssertNil(self.sut.dailyInsight, "Original should remain unchanged")
+        }
+
+        func test_withMindChecks_preservesDailyInsight() {
+            // Arrange
+            let insight = DailyInsight(
+                date: self.testDate,
+                insightText: "Keep it up!",
+                insightType: .encouragement,
+                confidence: 0.6
+            )
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                dailyInsight: insight
+            )
+            let morningEntries = [
+                MindCheckEntry(category: .todo, text: "Test", timestamp: self.testDate, context: .morning)
+            ]
+
+            // Act
+            let updated = self.sut.withMindChecks(morningMindCheck: morningEntries)
+
+            // Assert
+            XCTAssertNotNil(updated.dailyInsight, "withMindChecks should preserve existing dailyInsight")
+            XCTAssertEqual(updated.dailyInsight?.insightText, "Keep it up!")
+        }
+
+        func test_withReflection_preservesDailyInsight() {
+            // Arrange
+            let insight = DailyInsight(
+                date: self.testDate,
+                insightText: "Pattern detected",
+                insightType: .pattern,
+                confidence: 0.85
+            )
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                dailyInsight: insight
+            )
+            let reflection = DailyReflection(feeling: .calm, timestamp: self.testDate)
+
+            // Act
+            let updated = self.sut.withReflection(reflection)
+
+            // Assert
+            XCTAssertNotNil(updated.dailyInsight, "withReflection should preserve existing dailyInsight")
+            XCTAssertEqual(updated.dailyInsight?.insightText, "Pattern detected")
+            XCTAssertEqual(updated.reflection?.feeling, .calm)
+        }
     }
 #endif

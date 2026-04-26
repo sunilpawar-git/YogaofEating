@@ -74,6 +74,11 @@ class MainViewModel: ObservableObject {
     /// Sleep data from Apple HealthKit (for display)
     @Published var appleSleepData: SleepData?
 
+    // MARK: - Reflect Flow (Phase 1.1 Reboot)
+
+    /// Controls visibility of the morning Reflect input sheet (energy + intention)
+    @Published var showReflectSheet: Bool = false
+
     // MARK: - AI Analysis Tracking
 
     /// Tracks meal IDs currently being analyzed to prevent concurrent duplicate requests.
@@ -99,6 +104,7 @@ class MainViewModel: ObservableObject {
     let historicalService: any HistoricalDataServiceProtocol
     let healthProfileService: HealthProfileServiceProtocol
     let insightService: InsightGenerationServiceProtocol
+    private var resetMonitorTask: Task<Void, Never>?
 
     init(
         healthProfileService: HealthProfileServiceProtocol? = nil,
@@ -132,6 +138,11 @@ class MainViewModel: ObservableObject {
 
             // Still check if we need to reset for a new day since the last save
             self.checkAndResetIfNewDay()
+
+            // Restore today's persisted insight
+            if let snapshot = self.historicalService.getSnapshot(for: Date()) {
+                self.currentInsight = snapshot.dailyInsight
+            }
 
             // If sleep quality is already logged today, fetch Apple sleep data for badge display
             if self.todaysSleepQuality != nil {
@@ -170,12 +181,16 @@ class MainViewModel: ObservableObject {
 
     /// Periodically checks if the day has changed to reset the slate.
     private func setupResetMonitoring() {
-        Task { [weak self] in
+        self.resetMonitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 60 * 1_000_000_000)
                 self?.checkAndResetIfNewDay()
             }
         }
+    }
+
+    deinit {
+        resetMonitorTask?.cancel()
     }
 
     private func checkAndResetIfNewDay() {
@@ -371,9 +386,7 @@ class MainViewModel: ObservableObject {
                 self.smileyState = .neutral
             }
         } else {
-            // Use average health score of all remaining meals
-            let avgScore = self.meals.map(\.healthScore).reduce(0.0, +) / Double(self.meals.count)
-            self.updateSmileyState(with: avgScore)
+            self.updateSmileyState(with: self.meals.averageHealthScore)
         }
         self.saveData()
     }
@@ -389,7 +402,7 @@ class MainViewModel: ObservableObject {
         if withFeedback {
             // Check user preferences before playing feedback
             // Default to true if not explicitly set
-            let hapticsEnabled = UserDefaults.standard.object(forKey: "haptics_enabled") as? Bool ?? true
+            let hapticsEnabled = UserDefaults.standard.object(forKey: StorageKeys.hapticsEnabled) as? Bool ?? true
 
             if hapticsEnabled {
                 SensoryService.shared.playNudge(style: healthScore < 0.4 ? .heavy : .light)
@@ -411,11 +424,7 @@ class MainViewModel: ObservableObject {
             return
         }
 
-        // Calculate average health score from all meals
-        let totalScore = self.meals.map(\.healthScore).reduce(0.0, +)
-        let avgScore = totalScore / Double(self.meals.count)
-
-        self.updateSmileyState(with: avgScore, withFeedback: withFeedback)
+        self.updateSmileyState(with: self.meals.averageHealthScore, withFeedback: withFeedback)
     }
 
     /// Resets the day's progress (at midnight or via manual reset).
@@ -527,6 +536,36 @@ class MainViewModel: ObservableObject {
     /// Returns today's overall feeling if logged.
     var todaysFeeling: ReflectionFeeling? {
         self.todaysReflection?.feeling
+    }
+
+    /// Returns today's daily intention if set.
+    var todaysIntention: String? {
+        self.todaysReflection?.dailyIntention
+    }
+
+    /// Returns today's morning energy level if logged.
+    var todaysEnergyLevel: Int? {
+        self.todaysReflection?.morningEnergyLevel
+    }
+
+    var todaysFocusRating: Int? {
+        self.todaysReflection?.focusRating
+    }
+
+    /// Saves a mid-day focus rating (1-3), merging with existing reflection.
+    func saveFocusRating(_ rating: Int) {
+        let clamped = min(3, max(1, rating))
+        let date = Date()
+        let focusReflection = DailyReflection(focusRating: clamped, timestamp: date)
+
+        if let existing = self.todaysReflection {
+            let merged = focusReflection.merging(with: existing)
+            self.historicalService.updateReflection(for: date, reflection: merged)
+        } else {
+            self.historicalService.updateReflection(for: date, reflection: focusReflection)
+        }
+
+        self.saveData()
     }
 
     // MARK: - Context Detection (Phase 2 - User-Initiated Reflections)
@@ -725,6 +764,40 @@ class MainViewModel: ObservableObject {
         self.saveSleepQuality(quality)
         self.showSleepQualitySheet = false
 
+        // Chain to Reflect sheet if no intention set yet
+        if self.todaysIntention == nil {
+            self.showReflectSheet = true
+        } else if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
+    }
+
+    /// Saves the morning energy level and daily intention, then dismisses the Reflect sheet.
+    /// Merges the new data into today's existing reflection.
+    func completeReflectInput(energy: Int, intention: String) {
+        let date = Date()
+        let reflectData = DailyReflection.withReflect(energyLevel: energy, intention: intention, at: date)
+
+        if let existing = self.todaysReflection {
+            let merged = reflectData.merging(with: existing)
+            self.historicalService.updateReflection(for: date, reflection: merged)
+        } else {
+            self.historicalService.updateReflection(for: date, reflection: reflectData)
+        }
+
+        self.showReflectSheet = false
+
+        if self.pendingMealCreation {
+            self.pendingMealCreation = false
+            self.createNewMeal()
+        }
+    }
+
+    /// Dismisses the Reflect sheet without saving.
+    func dismissReflectInput() {
+        self.showReflectSheet = false
+
         if self.pendingMealCreation {
             self.pendingMealCreation = false
             self.createNewMeal()
@@ -819,11 +892,15 @@ class MainViewModel: ObservableObject {
         return max(0, components.day ?? 0)
     }
 
+    private static let selectedDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, d MMM yyyy"
+        return f
+    }()
+
     /// Formatted string for the selected date (e.g., "Monday, 5 Jan 2026").
     var formattedSelectedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, d MMM yyyy"
-        return formatter.string(from: self.selectedDate)
+        Self.selectedDateFormatter.string(from: self.selectedDate)
     }
 
     /// Navigates to a specific date. Future dates are clamped to today.
