@@ -66,5 +66,4 @@ private extension EnergiseCardBody {
                 .foregroundColor(AppTheme.ModuleColors.energise)
         }
     }
-
 }

@@ -164,15 +164,6 @@ enum AppTheme {
         static let cardStackHeight: CGFloat = 200
     }
 
-    // MARK: - Card List Limits
-
-    enum Card {
-        /// Maximum number of todo rows shown in the Laser module card
-        static let maxVisibleTodos: Int = 4
-        /// Maximum number of meal rows shown in the Energise module card
-        static let maxVisibleMeals: Int = 3
-    }
-
     // MARK: - Score Badge Theme
 
     enum ScoreBadge {
@@ -201,9 +192,9 @@ enum AppTheme {
         /// Canonical health-score-to-color mapping used across all views.
         /// Thresholds: ≥0.7 excellent, ≥0.4 moderate, else poor.
         static func healthScoreColor(for score: Double) -> Color {
-            if score >= 0.7 { return excellent }
-            if score >= 0.4 { return moderate }
-            return poor
+            if score >= 0.7 { return self.excellent }
+            if score >= 0.4 { return self.moderate }
+            return self.poor
         }
     }
 
