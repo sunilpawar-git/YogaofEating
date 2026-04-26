@@ -68,100 +68,8 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     // MARK: - Prompt Creation
 
     /// Creates a prompt for the AI to generate insights.
-    /// Includes meals, sleep, mindset, and feeling data.
-    /// - Parameter snapshots: The snapshots to include in the prompt
-    /// - Returns: A formatted prompt string for the AI
     func createInsightPrompt(from snapshots: [DailySmileySnapshot]) -> String {
-        var promptParts: [String] = []
-
-        promptParts
-            .append("Analyze the following wellbeing data from the past week and provide a brief, actionable insight.")
-        promptParts.append("")
-
-        for snapshot in snapshots.prefix(7) {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "EEEE"
-            let dayName = dateFormatter.string(from: snapshot.date)
-
-            var dayData: [String] = []
-            dayData.append("**\(dayName)**:")
-
-            // Morning energy and daily intention
-            if let reflection = snapshot.reflection {
-                if let energy = reflection.morningEnergyLevel {
-                    dayData.append("  Morning Energy: \(energy)/5")
-                }
-                if let intention = reflection.dailyIntention, !intention.isEmpty {
-                    dayData.append("  Daily Intention: \"\(intention)\"")
-                }
-                if let focus = reflection.focusRating {
-                    let clampedFocus = max(0, min(focus, 3))
-                    let label = ["", "Scattered", "Okay", "Locked In"][clampedFocus]
-                    dayData.append("  Focus: \(label) (\(focus)/3)")
-                }
-            }
-
-            // Meals
-            if !snapshot.meals.isEmpty {
-                let mealItems = snapshot.meals.flatMap(\.items).prefix(5).joined(separator: ", ")
-                dayData.append("  Food: \(mealItems)")
-                dayData.append("  Health Score: \(String(format: "%.0f%%", snapshot.averageHealthScore * 100))")
-            }
-
-            // Sleep quality
-            if let reflection = snapshot.reflection, let sleep = reflection.sleepQuality {
-                dayData.append("  Sleep: \(sleep.displayName)")
-            }
-
-            // Feeling
-            if let reflection = snapshot.reflection, let feeling = reflection.feeling {
-                dayData.append("  Feeling: \(feeling.displayName)")
-            }
-
-            // Morning mind check (Phase 4: include todo completion)
-            if let morningEntries = snapshot.morningMindCheck, !morningEntries.isEmpty {
-                // Count completed todos
-                let todos = morningEntries.filter { $0.category == .todo }
-                if !todos.isEmpty {
-                    let completedCount = todos.count(where: { $0.isAccomplished == true })
-                    dayData.append("  Todos: \(completedCount)/\(todos.count) completed")
-                }
-                // Include other thoughts
-                let otherThoughts = morningEntries.filter { $0.category != .todo }
-                    .map { "\($0.category.displayName): \($0.text)" }
-                if !otherThoughts.isEmpty {
-                    dayData.append("  Morning thoughts: \(otherThoughts.joined(separator: "; "))")
-                }
-            }
-
-            // Evening mind check
-            if let eveningEntries = snapshot.eveningMindCheck, !eveningEntries.isEmpty {
-                let observations = eveningEntries
-                    .filter { $0.category == .observation }
-                    .map(\.text)
-                if !observations.isEmpty {
-                    dayData.append("  Observations: \(observations.joined(separator: "; "))")
-                }
-                let otherEvening = eveningEntries
-                    .filter { $0.category != .observation }
-                    .map { "\($0.category.displayName): \($0.text)" }
-                if !otherEvening.isEmpty {
-                    dayData.append("  Evening reflections: \(otherEvening.joined(separator: "; "))")
-                }
-            }
-
-            promptParts.append(contentsOf: dayData)
-            promptParts.append("")
-        }
-
-        promptParts.append("Provide a single, personalized insight (2-3 sentences max) that:")
-        promptParts.append("1. Identifies a pattern between food choices and sleep/mood/energy/focus")
-        promptParts.append("2. If focus data exists, consider how food affected focus levels")
-        promptParts.append("3. If observations exist, weave them into the insight")
-        promptParts.append("4. Is encouraging and actionable")
-        promptParts.append("5. Does not repeat previous insights")
-
-        return promptParts.joined(separator: "\n")
+        InsightPromptBuilder.dailyPrompt(from: snapshots)
     }
 
     // MARK: - Insight Storage
@@ -260,6 +168,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     ///   - date: The date for the insight
     ///   - healthKitSleepData: Dictionary mapping dates to HealthKit sleep data
     /// - Returns: A DailyInsight if successful, nil otherwise
+    // swiftlint:disable cyclomatic_complexity function_body_length
     private func generateInsightFromServer(
         snapshots: [DailySmileySnapshot],
         date: Date,
@@ -276,6 +185,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         // Mark which day is "today" (the date we're generating insight for)
         let calendar = Calendar.current
         let todayNormalized = calendar.startOfDay(for: date)
+        let archetype = ArchetypeClassifier.classify(snapshots: snapshots)
 
         let userData = snapshots.map { snapshot -> [String: Any] in
             let dateFormatter = DateFormatter()
@@ -390,7 +300,8 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
             let result = try await functions.httpsCallable("generateInsight").call([
                 "userData": userData,
-                "insightDate": insightDateString
+                "insightDate": insightDateString,
+                "archetype": archetype.rawValue
             ])
 
             guard let responseData = result.data as? [String: Any] else {
@@ -411,6 +322,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             }
 
             // Parse insight type
+            // swiftlint:disable switch_case_on_newline
             let insightType: InsightType = switch insightTypeString {
             case "foodSleep": .foodSleep
             case "mindsetFeeling": .mindsetFeeling
@@ -419,6 +331,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             case "focusFood": .focusFood
             default: .encouragement
             }
+            // swiftlint:enable switch_case_on_newline
 
             #if DEBUG
                 print("✅ Received server insight")
@@ -438,6 +351,8 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             return nil
         }
     }
+
+    // swiftlint:enable cyclomatic_complexity function_body_length
 
     // MARK: - Private Helpers
 
@@ -505,6 +420,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         let avgScore = snapshots.map(\.averageHealthScore).reduce(0, +) / Double(snapshots.count)
         let insightType = self.determineInsightType(from: snapshots)
 
+        // swiftlint:disable line_length
         let text = if avgScore > 0.7 {
             "Great job! Your healthy eating choices over the past week are likely contributing to better energy and sleep. Keep it up!"
         } else if avgScore > 0.5 {
@@ -512,6 +428,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         } else {
             "Consider lighter, more balanced meals - heavy or processed foods late in the day can affect how you feel the next morning."
         }
+        // swiftlint:enable line_length
 
         return (text, insightType)
     }
@@ -536,89 +453,15 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     // MARK: - Weekly Insight Generation
 
     /// Generates a weekly insight aggregating the past 7 days of data.
-    /// - Returns: A weekly insight summary, or nil if not enough data
     func generateWeeklyInsight() async -> WeeklyInsight? {
         let snapshots = self.gatherDataForInsight()
-
-        // Need at least 3 days of data for a meaningful weekly summary
-        guard snapshots.count >= 3 else {
-            return nil
-        }
-
-        let calendar = Calendar.current
-        let today = Date()
-        guard let weekStart = calendar.date(byAdding: .day, value: -6, to: today) else {
-            return nil
-        }
-
-        // Analyze patterns across the week
         let patterns = self.patternAnalyzer.analyzePatterns(from: snapshots)
-
-        // Generate summary and extract wins/improvements
-        let (summaryText, wins, improvements) = self.generateWeeklySummary(
-            from: snapshots,
-            patterns: patterns
+        let dailyInsights = snapshots.compactMap(\.dailyInsight)
+        return WeeklyInsightGenerator.generate(
+            snapshots: snapshots,
+            patterns: patterns,
+            patternAnalyzer: self.patternAnalyzer,
+            dailyInsights: dailyInsights
         )
-
-        return WeeklyInsight(
-            weekStartDate: weekStart,
-            weekEndDate: today,
-            summaryText: summaryText,
-            topPatterns: Array(patterns.prefix(3)),
-            dailyInsights: [],
-            improvementAreas: improvements,
-            wins: wins
-        )
-    }
-
-    private func generateWeeklySummary(
-        from snapshots: [DailySmileySnapshot],
-        patterns: [InsightPattern]
-    ) -> (summary: String, wins: [String], improvements: [String]) {
-        var wins: [String] = []
-        var improvements: [String] = []
-
-        // Analyze the week's data
-        let avgHealthScore = snapshots.map(\.averageHealthScore).reduce(0, +) / Double(snapshots.count)
-        let daysLogged = snapshots.count
-        let hasGoodSleep = snapshots
-            .contains { $0.reflection?.sleepQuality == .great || $0.reflection?.sleepQuality == .good }
-        let hasMindCheck = snapshots.contains { $0.hasMorningMindCheck || $0.hasEveningMindCheck }
-
-        // Determine wins
-        if daysLogged >= 5 {
-            wins.append("\(daysLogged) days of consistent logging")
-        }
-        if avgHealthScore > 0.7 {
-            wins.append("Healthy eating choices")
-        }
-        if hasGoodSleep {
-            wins.append("Quality sleep achieved")
-        }
-        if hasMindCheck {
-            wins.append("Mindful reflection practice")
-        }
-
-        // Determine improvements
-        if avgHealthScore < 0.5 {
-            improvements.append("Consider healthier meal choices")
-        }
-        if let topPattern = patterns.first, topPattern.type == .foodSleep {
-            improvements.append("Watch meal timing for better sleep")
-        }
-        if !hasMindCheck {
-            improvements.append("Try morning/evening mind checks")
-        }
-
-        // Generate summary
-        let summary = if wins.count > improvements.count {
-            "Great week! You maintained healthy habits with \(daysLogged) days of logging. Keep up the momentum!"
-        } else if wins.isEmpty {
-            "This week had room for improvement. Focus on consistency and healthier choices next week."
-        } else {
-            "A balanced week with some wins and areas to work on. Your \(wins.first ?? "effort") is paying off!"
-        }
-
-        return (summary, wins, improvements)
     }
 }

@@ -16,6 +16,9 @@ struct EveningReviewView: View {
     /// Whether to show feeling selection (true when called from End-of-Day pill)
     var showFeelingSelection: Bool = false
 
+    /// Pre-existing feeling from a previous save (restores selection when sheet re-opens).
+    var existingFeeling: ReflectionFeeling?
+
     /// Callback when user saves their review (with optional feeling for End-of-Day flow)
     let onSave: ([MindCheckEntry], [MindCheckEntry], ReflectionFeeling?) -> Void
 
@@ -53,13 +56,7 @@ struct EveningReviewView: View {
         self.morningEntries.filter { $0.category == .todo }
     }
 
-    /// For End-of-Day flow, feeling is required to save
-    private var canSave: Bool {
-        if self.showFeelingSelection {
-            return self.selectedFeeling != nil
-        }
-        return true
-    }
+    private var canSave: Bool { !self.showFeelingSelection || self.selectedFeeling != nil }
 
     // MARK: - Body
 
@@ -67,30 +64,35 @@ struct EveningReviewView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Morning todos section with checkboxes
                     self.morningTodosSection
-
                     Divider()
-
-                    // Feeling section (Phase 3: for End-of-Day holistic capture)
                     if self.showFeelingSelection {
                         self.feelingSection
-
                         Divider()
                     }
-
-                    // Gratitude section
-                    self.gratitudeSection
-
+                    self.textInputSection(
+                        emoji: MindCheckCategory.gratefulFor.emoji,
+                        title: Strings.MindCheck.EveningReview.gratitudeHeader,
+                        placeholder: "",
+                        text: self.$gratitudeText,
+                        field: .gratitude
+                    )
                     Divider()
-
-                    // Let go section
-                    self.letGoSection
-
+                    self.textInputSection(
+                        emoji: MindCheckCategory.letGo.emoji,
+                        title: Strings.MindCheck.EveningReview.letGoHeader,
+                        placeholder: "",
+                        text: self.$letGoText,
+                        field: .letGo
+                    )
                     Divider()
-
-                    // Observation section
-                    self.observationSection
+                    self.textInputSection(
+                        emoji: MindCheckCategory.observation.emoji,
+                        title: Strings.MindCheck.EveningReview.observationHeader,
+                        placeholder: Strings.MindCheck.EveningReview.observationPlaceholder,
+                        text: self.$observationText,
+                        field: .observation
+                    )
                 }
                 .padding()
             }
@@ -134,7 +136,7 @@ struct EveningReviewView: View {
             } else {
                 VStack(spacing: 8) {
                     ForEach(self.morningTodos) { todo in
-                        TodoCheckboxRow(
+                        EveningReviewTodoCheckboxRow(
                             todo: todo,
                             isAccomplished: self.binding(for: todo.id)
                         )
@@ -144,94 +146,22 @@ struct EveningReviewView: View {
         }
     }
 
-    // MARK: - Gratitude Section
+    // MARK: - Shared Text Input Section
 
-    private var gratitudeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack(spacing: 8) {
-                Text(MindCheckCategory.gratefulFor.emoji)
-                    .font(.title3)
-                Text(Strings.MindCheck.EveningReview.gratitudeHeader)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-            }
-
-            TextField("", text: self.$gratitudeText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.primary.opacity(0.03))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                )
-                .focused(self.$focusedField, equals: .gratitude)
-                .lineLimit(3...5)
-        }
-    }
-
-    // MARK: - Let Go Section
-
-    private var letGoSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack(spacing: 8) {
-                Text(MindCheckCategory.letGo.emoji)
-                    .font(.title3)
-                Text(Strings.MindCheck.EveningReview.letGoHeader)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-            }
-
-            TextField("", text: self.$letGoText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.primary.opacity(0.03))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                )
-                .focused(self.$focusedField, equals: .letGo)
-                .lineLimit(3...5)
-        }
-    }
-
-    // MARK: - Observation Section
-
-    private var observationSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text(MindCheckCategory.observation.emoji)
-                    .font(.title3)
-                Text(Strings.MindCheck.EveningReview.observationHeader)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-            }
-
-            TextField(
-                Strings.MindCheck.EveningReview.observationPlaceholder,
-                text: self.$observationText,
-                axis: .vertical
-            )
-            .textFieldStyle(.plain)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.primary.opacity(0.03))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-            )
-            .focused(self.$focusedField, equals: .observation)
-            .lineLimit(3...5)
-        }
+    private func textInputSection(
+        emoji: String,
+        title: String,
+        placeholder: String,
+        text: Binding<String>,
+        field: Field
+    ) -> some View {
+        EveningReviewTextInputSection(
+            emoji: emoji,
+            title: title,
+            placeholder: placeholder,
+            text: text
+        )
+        .focused(self.$focusedField, equals: field)
     }
 
     // MARK: - Feeling Section (Phase 3: End-of-Day)
@@ -246,7 +176,7 @@ struct EveningReviewView: View {
             // Feeling picker - horizontal row of emoji buttons
             HStack(spacing: 12) {
                 ForEach(ReflectionFeeling.allCases, id: \.self) { feeling in
-                    FeelingButton(
+                    EveningReviewFeelingButton(
                         feeling: feeling,
                         isSelected: self.selectedFeeling == feeling
                     ) {
@@ -274,6 +204,11 @@ struct EveningReviewView: View {
         // Initialize todo statuses from existing data
         for todo in self.morningTodos {
             self.todoStatuses[todo.id] = todo.isAccomplished ?? false
+        }
+
+        // Restore feeling selection when sheet re-opens
+        if self.selectedFeeling == nil {
+            self.selectedFeeling = self.existingFeeling
         }
 
         // Initialize text fields from existing evening entries
@@ -339,129 +274,3 @@ struct EveningReviewView: View {
         self.onSave(updatedMorningEntries, eveningEntries, self.selectedFeeling)
     }
 }
-
-// MARK: - Feeling Button (Phase 3)
-
-/// A button for selecting feeling in the evening review
-private struct FeelingButton: View {
-    let feeling: ReflectionFeeling
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: self.action) {
-            VStack(spacing: 4) {
-                Text(self.feeling.emoji)
-                    .font(.system(size: 28))
-
-                Text(self.feeling.displayName)
-                    .font(.caption2)
-                    .foregroundColor(self.isSelected ? .primary : .secondary)
-            }
-            .frame(minWidth: 54)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(self.isSelected ? Color.accentColor.opacity(0.15) : Color.primary.opacity(0.03))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(self.isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(self.feeling.displayName), \(self.isSelected ? "selected" : "not selected")")
-    }
-}
-
-// MARK: - Todo Checkbox Row
-
-/// A row displaying a morning todo with a checkbox to mark as done/not done
-struct TodoCheckboxRow: View {
-    let todo: MindCheckEntry
-    @Binding var isAccomplished: Bool
-
-    var body: some View {
-        Button {
-            self.isAccomplished.toggle()
-            SensoryService.shared.playNudge(style: .light)
-        } label: {
-            HStack(spacing: 12) {
-                // Checkbox
-                Image(systemName: self.isAccomplished ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 24))
-                    .foregroundColor(self.isAccomplished ? .green : .secondary.opacity(0.5))
-
-                // Todo text
-                Text(self.todo.text)
-                    .font(.body)
-                    .foregroundColor(self.isAccomplished ? .secondary : .primary)
-                    .strikethrough(self.isAccomplished, color: .secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-
-                Spacer()
-
-                // Status label
-                Text(self.isAccomplished ? Strings.MindCheck.EveningReview.accomplished : Strings.MindCheck
-                    .EveningReview.notAccomplished)
-                    .font(.caption)
-                    .foregroundColor(self.isAccomplished ? .green : .secondary)
-            }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(self.isAccomplished ? Color.green.opacity(0.08) : Color.primary.opacity(0.03))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(self.isAccomplished ? Color.green.opacity(0.2) : Color.primary.opacity(0.1), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(self.todo.text), \(self.isAccomplished ? "completed" : "not completed")")
-        .accessibilityHint("Tap to toggle completion status")
-    }
-}
-
-// MARK: - Preview
-
-#if DEBUG
-    #Preview("With Morning Todos") {
-        EveningReviewView(
-            morningEntries: [
-                MindCheckEntry(category: .todo, text: "Buy groceries", context: .morning),
-                MindCheckEntry(category: .todo, text: "Call mom", context: .morning),
-                MindCheckEntry(category: .gratitude, text: "Good health", context: .morning)
-            ],
-            existingEveningEntries: nil,
-            onSave: { _, _, _ in print("Saved") },
-            onDismiss: { print("Dismissed") }
-        )
-    }
-
-    #Preview("End of Day Flow (with Feeling)") {
-        EveningReviewView(
-            morningEntries: [
-                MindCheckEntry(category: .todo, text: "Exercise", context: .morning),
-                MindCheckEntry(category: .todo, text: "Read book", context: .morning)
-            ],
-            existingEveningEntries: nil,
-            showFeelingSelection: true,
-            onSave: { _, _, feeling in print("Saved with feeling: \(String(describing: feeling))") },
-            onDismiss: { print("Dismissed") }
-        )
-    }
-
-    #Preview("No Morning Todos") {
-        EveningReviewView(
-            morningEntries: [
-                MindCheckEntry(category: .gratitude, text: "Good health", context: .morning)
-            ],
-            existingEveningEntries: nil,
-            onSave: { _, _, _ in print("Saved") },
-            onDismiss: { print("Dismissed") }
-        )
-    }
-#endif

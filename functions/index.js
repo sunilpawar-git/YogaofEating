@@ -207,6 +207,7 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
     const todaySleep = todayDay?.sleepQuality || null;
     const todayAppleSleep = todayDay?.appleSleepData || null;
     const todayDateName = todayDay?.date || insightDate || "today";
+    const archetype = request.data.archetype || null;
 
     // 4. Build data summary for prompt
     const dataSummary = userData.map(day => {
@@ -335,10 +336,15 @@ Compare these two sources! If they differ (e.g., user says "poor" but Apple show
         intentionContext += '\n';
     }
 
+    const archetypeContext = archetype
+        ? `\nENERGY ARCHETYPE CONTEXT:\n- Current user archetype: ${archetype}\n- Consider whether this insight reinforces or challenges this archetype.\n`
+        : '';
+
     const prompt = `You are a compassionate wellness coach analyzing a user's food, sleep, todo completion, and mindset data.
 
 ${todayContext}
 ${intentionContext}
+${archetypeContext}
 Here is the user's data from the last ${userData.length} day(s) (most recent first):
 
 ${dataSummary}

@@ -6,7 +6,11 @@ import SwiftUI
 @MainActor
 struct MainScreenView: View {
     @EnvironmentObject var viewModel: MainViewModel
+    @EnvironmentObject var premiumManager: PremiumManager
     @State private var showingSettings = false
+    @State private var showWeeklySummarySheet = false
+    @State private var showTrendsSheet = false
+    @State private var showPaywallSheet = false
 
     var body: some View {
         NavigationStack {
@@ -66,6 +70,7 @@ struct MainScreenView: View {
                     morningEntries: self.viewModel.todaysMorningMindCheck ?? [],
                     existingEveningEntries: self.viewModel.todaysEveningMindCheck,
                     showFeelingSelection: self.viewModel.isEndOfDayFlow,
+                    existingFeeling: self.viewModel.todaysFeeling,
                     onSave: { updatedMorning, evening, feeling in
                         self.viewModel.completeEveningReview(
                             updatedMorningEntries: updatedMorning,
@@ -103,6 +108,35 @@ struct MainScreenView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
                 }
+            }
+            .sheet(isPresented: self.$showWeeklySummarySheet) {
+                if let weeklyInsight = self.viewModel.currentWeeklyInsight {
+                    WeeklySummaryView(
+                        insight: weeklyInsight,
+                        archetype: self.premiumManager.isPremium
+                            ? self.viewModel.currentArchetype
+                            : nil,
+                        isPremium: self.premiumManager.isPremium,
+                        bisAverage: self.averageBIS,
+                        onExport: {
+                            self.viewModel.exportWeeklyPDF(
+                                insight: weeklyInsight,
+                                archetype: self.premiumManager.isPremium ? self.viewModel.currentArchetype : nil,
+                                bisAverage: self.averageBIS
+                            )
+                        }
+                    )
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                }
+            }
+            .sheet(isPresented: self.$showTrendsSheet) {
+                TrendChartView(points: self.viewModel.trendPoints(days: 14))
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: self.$showPaywallSheet) {
+                PaywallView()
             }
             // Note: Auto-prompt removed - now using user-initiated reflections via smiley tap
         }
@@ -190,74 +224,80 @@ struct MainScreenView: View {
     // MARK: - Today Timeline (Editable)
 
     private var todayTimelineContent: some View {
-        DayTimelineView(
-            meals: self.viewModel.meals,
-            fastingPeriods: self.viewModel.fastingPeriods,
-            isToday: true,
-            smileyState: self.viewModel.smileyState,
-            snapshot: self.viewModel.historicalService.getSnapshot(for: Date()),
-            onSmileyTap: {
-                // Use context-aware smiley tap handling (morning sleep only)
-                self.viewModel.handleSmileyTap()
-            },
-            onSmileyLongPress: {
-                // Show insight if available
-                self.viewModel.handleSmileyLongPress()
-            },
-            hasInsightAvailable: self.viewModel.hasInsightAvailable,
-            reflectionData: TodayReflectionData(
-                sleepQuality: self.viewModel.todaysSleepQuality,
-                appleSleepData: self.viewModel.appleSleepData,
-                feeling: self.viewModel.todaysFeeling,
-                showEndOfDayPill: self.viewModel.showEndOfDayPill,
-                showMorningMindCheckPill: self.viewModel.showMorningMindCheckPill,
-                morningMindCheck: self.viewModel.todaysMorningMindCheck,
-                onEditSleep: {
-                    self.viewModel.showSleepQualitySheet = true
-                },
-                onEditFeeling: {
-                    self.viewModel.showOverallFeelingSheet = true
-                },
-                onEndOfDayTap: {
-                    self.viewModel.handleEndOfDayPillTap()
-                },
-                onMorningMindCheckTap: {
-                    if let existingEntries = self.viewModel.todaysMorningMindCheck, !existingEntries.isEmpty {
-                        self.viewModel.editMorningMindCheck(existingEntries)
-                    } else {
-                        self.viewModel.showMorningMindCheckSheet = true
-                    }
+        VStack(spacing: 12) {
+            if let weeklyInsight = self.viewModel.currentWeeklyInsight {
+                WeeklySummaryCardView(insight: weeklyInsight) {
+                    self.showWeeklySummarySheet = true
                 }
-            ),
-            mealActions: MealUpdateActions(
-                onUpdate: { mealId, mealType, items in
-                    // Full update - triggers AI analysis (called on "done" actions)
-                    self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
+                .padding(.horizontal, 20)
+            }
+
+            DayTimelineView(
+                meals: self.viewModel.meals,
+                fastingPeriods: self.viewModel.fastingPeriods,
+                isToday: true,
+                smileyState: self.viewModel.smileyState,
+                snapshot: self.viewModel.todaysSnapshot,
+                onSmileyTap: {
+                    self.viewModel.handleSmileyTap()
                 },
-                onLocalUpdate: { mealId, _, items in
-                    // Local-only update - NO AI analysis (called during typing)
-                    self.viewModel.updateMealItemsLocalOnly(mealId, items: items)
+                onSmileyLongPress: {
+                    self.viewModel.handleSmileyLongPress()
                 },
-                onUpdateTimestamp: { mealId, timestamp in
-                    self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
-                },
-                onDelete: { mealId in
-                    withAnimation(.spring()) {
-                        self.viewModel.deleteMeal(mealId)
+                hasInsightAvailable: self.viewModel.hasInsightAvailable,
+                hasUnreadInsight: self.viewModel.hasUnreadInsight,
+                reflectionData: TodayReflectionData(
+                    sleepQuality: self.viewModel.todaysSleepQuality,
+                    appleSleepData: self.viewModel.appleSleepData,
+                    feeling: self.viewModel.todaysFeeling,
+                    showEndOfDayPill: self.viewModel.showEndOfDayPill,
+                    showMorningMindCheckPill: self.viewModel.showMorningMindCheckPill,
+                    morningMindCheck: self.viewModel.todaysMorningMindCheck,
+                    onEditSleep: {
+                        self.viewModel.showSleepQualitySheet = true
+                    },
+                    onEditFeeling: {
+                        self.viewModel.showOverallFeelingSheet = true
+                    },
+                    onEndOfDayTap: {
+                        self.viewModel.handleEndOfDayPillTap()
+                    },
+                    onMorningMindCheckTap: {
+                        if let existingEntries = self.viewModel.todaysMorningMindCheck, !existingEntries.isEmpty {
+                            self.viewModel.editMorningMindCheck(existingEntries)
+                        } else {
+                            self.viewModel.showMorningMindCheckSheet = true
+                        }
                     }
-                }
-            ),
-            recentMeals: self.viewModel.getRecentUniqueMeals(),
-            currentInsight: self.viewModel.currentInsight,
-            onInsightDismiss: {
-                self.viewModel.dismissInsight()
-            },
-            dailyIntention: self.viewModel.todaysIntention,
-            onFocusRate: { rating in
-                self.viewModel.saveFocusRating(rating)
-            },
-            hasFocusRating: self.viewModel.todaysFocusRating != nil
-        )
+                ),
+                mealActions: MealUpdateActions(
+                    onUpdate: { mealId, mealType, items in
+                        self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
+                    },
+                    onLocalUpdate: { mealId, _, items in
+                        self.viewModel.updateMealItemsLocalOnly(mealId, items: items)
+                    },
+                    onUpdateTimestamp: { mealId, timestamp in
+                        self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
+                    },
+                    onDelete: { mealId in
+                        withAnimation(.spring()) {
+                            self.viewModel.deleteMeal(mealId)
+                        }
+                    }
+                ),
+                recentMeals: self.viewModel.getRecentUniqueMeals(),
+                currentInsight: self.viewModel.currentInsight,
+                onInsightDismiss: {
+                    self.viewModel.dismissInsight()
+                },
+                dailyIntention: self.viewModel.todaysIntention,
+                onFocusRate: { rating in
+                    self.viewModel.saveFocusRating(rating)
+                },
+                hasFocusRating: self.viewModel.todaysFocusRating != nil
+            )
+        }
     }
 
     // MARK: - Historical Day Content (Read-Only)
@@ -267,7 +307,7 @@ struct MainScreenView: View {
         let calendar = Calendar.current
         let date = calendar.date(byAdding: .day, value: -daysAgo, to: calendar.startOfDay(for: Date())) ?? calendar
             .startOfDay(for: Date())
-        let snapshot = self.viewModel.historicalService.getSnapshot(for: date)
+        let snapshot = self.viewModel.snapshot(for: date)
         let meals = snapshot?.meals ?? []
         let fastingPeriods = FastingLogicService.calculateFastingPeriods(
             from: meals.sorted { $0.timestamp < $1.timestamp }
@@ -300,6 +340,20 @@ struct MainScreenView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         #if canImport(UIKit)
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    if self.premiumManager.isPremium {
+                        self.showTrendsSheet = true
+                    } else {
+                        self.showPaywallSheet = true
+                    }
+                } label: {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.secondary.opacity(0.75))
+                }
+                .accessibilityIdentifier("trends-button")
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 self.settingsButton
             }
@@ -370,6 +424,14 @@ struct MainScreenView: View {
                 .blur(radius: 100)
                 .offset(x: -150, y: -200)
         }
+    }
+}
+
+private extension MainScreenView {
+    var averageBIS: Double {
+        let points = self.viewModel.trendPoints(days: 14)
+        guard !points.isEmpty else { return 0 }
+        return points.map(\.bis).reduce(0, +) / Double(points.count)
     }
 }
 
