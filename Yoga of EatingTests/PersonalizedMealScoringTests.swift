@@ -314,44 +314,4 @@
             XCTAssertEqual(nextState.mood, .neutral)
         }
     }
-
-    // MARK: - Mock Health Profile Service
-
-    class MockHealthProfileService: HealthProfileServiceProtocol {
-        var mockProfile: UserHealthProfile?
-
-        func calculateBMI(height _: Double, weight _: Double, unitSystem _: UnitSystem) -> Double {
-            self.mockProfile?.bmi ?? 0.0
-        }
-
-        func getBMICategory(bmi _: Double) -> BMICategory {
-            self.mockProfile?.bmiCategory ?? .normal
-        }
-
-        func calculateBMR(
-            weight _: Double,
-            height _: Double,
-            age _: Int,
-            gender _: Gender,
-            unitSystem _: UnitSystem
-        ) -> Double {
-            self.mockProfile?.bmr ?? 0.0
-        }
-
-        func calculateTDEE(bmr _: Double, activityLevel _: Double) -> Double {
-            self.mockProfile?.tdee ?? 0.0
-        }
-
-        func getSensitivityMultiplier(bmi _: Double, age _: Int) -> Double {
-            self.mockProfile?.sensitivityMultiplier ?? 1.0
-        }
-
-        func getHealthRiskLevel(bmi _: Double, age _: Int) -> HealthRiskLevel {
-            self.mockProfile?.riskLevel ?? .low
-        }
-
-        func getUserHealthProfile() -> UserHealthProfile? {
-            self.mockProfile
-        }
-    }
 #endif

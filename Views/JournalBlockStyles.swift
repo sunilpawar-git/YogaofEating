@@ -53,9 +53,11 @@ struct MealCardBackground: View {
     }
 }
 
-// MARK: - AI Sparkle Indicator
+// MARK: - AI Sparkle Indicator (Deprecated)
 
 /// Sparkle indicator shown when AI analysis completes
+/// - Note: Replaced by `MealScoreBadge` which shows the actual score percentage
+@available(*, deprecated, message: "Use MealScoreBadge instead for displaying meal health scores")
 struct AISparkleIndicator: View {
     let isAnalyzed: Bool
 
@@ -99,23 +101,6 @@ struct BreathingContentView: View {
     )
     .frame(width: 300, height: 150)
     .padding()
-}
-
-// MARK: - Delete Action Modifier
-
-/// A view modifier that adds swipe-to-delete functionality.
-struct DeleteActionModifier: ViewModifier {
-    let onDelete: () -> Void
-
-    func body(content: Content) -> some View {
-        content.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                self.onDelete()
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-    }
 }
 
 // MARK: - Recent Meals Add Button

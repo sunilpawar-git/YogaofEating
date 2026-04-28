@@ -145,5 +145,64 @@
 
             XCTAssertEqual(merged, ["Coffee", "Toast", "Eggs"])
         }
+
+        // MARK: - AI Insight Tests (Phase 5: Gemini LLM Integration)
+
+        func test_meal_aiInsight_defaultsToNil() {
+            let meal = Meal()
+
+            XCTAssertNil(meal.aiInsight, "AI insight should default to nil")
+        }
+
+        func test_meal_aiInsight_canBeSet() {
+            var meal = Meal(mealType: .lunch, items: ["Salad"])
+            meal.aiInsight = "High in fiber and vitamins. Great choice for lunch!"
+
+            XCTAssertEqual(meal.aiInsight, "High in fiber and vitamins. Great choice for lunch!")
+        }
+
+        func test_meal_aiInsight_serialization_roundtrip() throws {
+            var meal = Meal(mealType: .breakfast, items: ["Oatmeal", "Banana"])
+            meal.aiInsight = "Excellent breakfast with complex carbs and potassium."
+            meal.isAIAnalyzed = true
+
+            // Encode
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(meal)
+
+            // Decode
+            let decoder = JSONDecoder()
+            let decodedMeal = try decoder.decode(Meal.self, from: data)
+
+            XCTAssertEqual(decodedMeal.aiInsight, meal.aiInsight)
+            XCTAssertTrue(decodedMeal.isAIAnalyzed)
+        }
+
+        func test_meal_aiInsight_nilPreserved_afterSerialization() throws {
+            let meal = Meal(mealType: .dinner, items: ["Pizza"])
+            XCTAssertNil(meal.aiInsight)
+
+            // Encode
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(meal)
+
+            // Decode
+            let decoder = JSONDecoder()
+            let decodedMeal = try decoder.decode(Meal.self, from: data)
+
+            XCTAssertNil(decodedMeal.aiInsight, "Nil aiInsight should be preserved after serialization")
+        }
+
+        func test_meal_hasAIInsight_computed() {
+            var meal = Meal(mealType: .snacks, items: ["Apple"])
+
+            XCTAssertFalse(meal.hasAIInsight, "Should be false when aiInsight is nil")
+
+            meal.aiInsight = "Healthy snack choice."
+            XCTAssertTrue(meal.hasAIInsight, "Should be true when aiInsight is set")
+
+            meal.aiInsight = ""
+            XCTAssertFalse(meal.hasAIInsight, "Should be false when aiInsight is empty string")
+        }
     }
 #endif

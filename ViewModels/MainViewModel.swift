@@ -49,6 +49,44 @@ class MainViewModel: ObservableObject {
     /// Pending action to execute after reflection input is complete
     private var pendingMealCreation: Bool = false
 
+    // MARK: - Mind Check (Phase 3 - Mind Check Feature)
+
+    /// Controls visibility of the morning mind check input sheet
+    @Published var showMorningMindCheckSheet: Bool = false
+
+    /// Controls visibility of the evening mind check input sheet
+    @Published var showEveningMindCheckSheet: Bool = false
+
+    /// Whether evening review is being shown from End-of-Day pill (includes feeling selection)
+    @Published var isEndOfDayFlow: Bool = false
+
+    /// Entries being edited (nil when creating new entries)
+    @Published var editingMorningEntries: [MindCheckEntry]?
+
+    // MARK: - Insights (Phase 6 - Peekaboo Star)
+
+    /// Controls visibility of the insight bottom sheet
+    @Published var showInsightSheet: Bool = false
+
+    /// The current insight to display (generated when sleep is logged)
+    @Published var currentInsight: DailyInsight?
+
+    /// Suggested sleep quality from Apple HealthKit (if available)
+    @Published var suggestedSleepQuality: SleepQuality?
+
+    /// Sleep data from Apple HealthKit (for display)
+    @Published var appleSleepData: SleepData?
+
+    // MARK: - AI Analysis Tracking
+
+    /// Tracks meal IDs currently being analyzed to prevent concurrent duplicate requests.
+    /// This addresses the "GTMSessionFetcher was already running" warning.
+    var analysisInProgress: Set<UUID> = []
+
+    /// Tracks in-flight AI analysis tasks per meal so that rapid edits
+    /// cancel the previous task and only the most-recent request wins.
+    var aiTasks: [UUID: Task<Void, Never>] = [:]
+
     // MARK: - Day Navigation (Phase 4)
 
     /// The currently selected date for viewing. Defaults to today.
@@ -67,28 +105,27 @@ class MainViewModel: ObservableObject {
     let persistenceService: PersistenceServiceProtocol
     let historicalService: any HistoricalDataServiceProtocol
     let healthProfileService: HealthProfileServiceProtocol
-
-    /// Tracks in-flight AI analysis tasks per meal so that rapid edits
-    /// cancel the previous task and only the most-recent request wins.
-    var aiTasks: [UUID: Task<Void, Never>] = [:]
+    let insightService: InsightGenerationServiceProtocol
 
     init(
         healthProfileService: HealthProfileServiceProtocol? = nil,
         logicService: MealLogicProvider? = nil,
         persistenceService: PersistenceServiceProtocol? = nil,
         historicalService: (any HistoricalDataServiceProtocol)? = nil,
+        insightService: InsightGenerationServiceProtocol? = nil,
         skipDataLoading: Bool = false
     ) {
         let healthService = healthProfileService ?? HealthProfileService()
+        let historicalSvc = historicalService ?? HistoricalDataService()
         self.healthProfileService = healthService
         self.logicService = logicService ?? MealLogicService(healthProfileService: healthService)
         self.persistenceService = persistenceService ?? PersistenceService.shared
-        let resolvedHistorical = historicalService ?? HistoricalDataService()
-        self.historicalService = resolvedHistorical
+        self.historicalService = historicalSvc
+        self.insightService = insightService ?? InsightGenerationService(historicalService: historicalSvc)
 
         // Wire back-reference so HistoricalDataService.saveHistoricalData()
         // always delegates to the single canonical save path here.
-        if let concrete = resolvedHistorical as? HistoricalDataService {
+        if let concrete = historicalSvc as? HistoricalDataService {
             concrete.mainViewModel = self
         }
 
@@ -108,6 +145,32 @@ class MainViewModel: ObservableObject {
 
             // Still check if we need to reset for a new day since the last save
             self.checkAndResetIfNewDay()
+
+            // If sleep quality is already logged today, fetch Apple sleep data for badge display
+            if self.todaysSleepQuality != nil {
+                self.fetchAppleSleepDataForBadge()
+            }
+        }
+    }
+
+    /// Fetches Apple sleep data for badge display (after sleep quality is already saved).
+    /// Called on app load when sleep quality is already logged.
+    private func fetchAppleSleepDataForBadge() {
+        Task {
+            do {
+                _ = try await HealthKitService.shared.requestAuthorization()
+                if let sleepData = try await HealthKitService.shared.fetchSleepData(for: Date()) {
+                    await MainActor.run {
+                        self.appleSleepData = sleepData
+                        vmLogger
+                            .debug(
+                                "Loaded Apple sleep data for badge: \(sleepData.formattedDuration, privacy: .public)"
+                            )
+                    }
+                }
+            } catch {
+                // Silently fail - badge will just not show Apple metrics
+            }
         }
     }
 
@@ -165,10 +228,24 @@ class MainViewModel: ObservableObject {
     func updateMealItems(_ mealId: UUID, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
+        // Check if items meaningfully changed (normalized comparison to handle whitespace)
+        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: items)
+
+        // Only update items and recalculate local score if content actually changed
+        // This prevents overwriting AI scores with local scores on redundant updates
+        guard contentChanged else {
+            vmLogger.debug("Skipping update - content unchanged after normalization")
+            return
+        }
+
         // Local synchronous update for immediate feedback
         let healthScore = self.logicService.calculateHealthScore(for: items)
         self.meals[index].items = items
         self.meals[index].healthScore = healthScore
+
+        // Reset AI analyzed flag since content needs re-analysis
+        self.meals[index].isAIAnalyzed = false
+
         self.saveData()
         vmLogger.debug("Local healthScore set to \(healthScore, privacy: .public)")
 
@@ -184,42 +261,109 @@ class MainViewModel: ObservableObject {
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
-        // Trigger async AI analysis for refined scoring — cancel any in-flight task for this meal
-        self.aiTasks[mealId]?.cancel()
-        self.aiTasks[mealId] = Task {
+        // Trigger AI analysis for new items
+        Task {
             await self.performDeepAnalysis(for: mealId, items: items)
-            self.aiTasks[mealId] = nil
         }
     }
 
+    /// Updates meal items locally WITHOUT triggering AI analysis.
+    /// Use this for real-time updates during typing to provide immediate local feedback.
+    /// AI analysis should be triggered separately via explicit user action (Done button, focus loss).
+    func updateMealItemsLocalOnly(_ mealId: UUID, items: [String]) {
+        guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
+
+        // Check if items meaningfully changed (normalized comparison to handle whitespace)
+        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: items)
+
+        // Only update if content actually changed
+        guard contentChanged else { return }
+
+        // Update items
+        self.meals[index].items = items
+
+        // Only recalculate local score if meal hasn't been AI-analyzed yet
+        // This preserves AI scores during typing - they'll be re-analyzed on "done"
+        if !self.meals[index].isAIAnalyzed {
+            let healthScore = self.logicService.calculateHealthScore(for: items)
+            self.meals[index].healthScore = healthScore
+            vmLogger.debug("Local-only update: healthScore set to \(healthScore, privacy: .public)")
+        } else {
+            // Mark that content changed since last AI analysis
+            self.meals[index].isAIAnalyzed = false
+            vmLogger.debug("Local-only update: items changed, AI score invalidated")
+        }
+
+        self.saveData()
+    }
+
+    /// Explicitly triggers AI analysis for a meal.
+    /// Call this when user performs a "done" action (focus loss, Done button, Return key).
+    /// This resets the isAIAnalyzed flag and calls performDeepAnalysis.
+    func triggerAIAnalysisForMeal(_ mealId: UUID) async {
+        guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
+
+        // Reset the AI analyzed flag to allow re-analysis
+        self.meals[index].isAIAnalyzed = false
+        self.saveData()
+
+        // Get current items and trigger analysis
+        let items = self.meals[index].items
+        await self.performDeepAnalysis(for: mealId, items: items)
+    }
+
     /// Updates meal type and items together.
+    /// Called on "done" actions (focus loss, Done button, Return key) - always triggers AI analysis
+    /// if the meal hasn't been AI-analyzed yet.
     func updateMeal(_ mealId: UUID, mealType: MealType, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
-        // Local synchronous update
-        let healthScore = self.logicService.calculateHealthScore(for: items)
-        self.meals[index].mealType = mealType
-        self.meals[index].items = items
-        self.meals[index].healthScore = healthScore
-        self.saveData()
+        // Check if items meaningfully changed (normalized comparison to handle whitespace)
+        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: items)
+        let mealTypeChanged = self.meals[index].mealType != mealType
+        let needsAIAnalysis = !self.meals[index].isAIAnalyzed && !items.isEmpty
 
-        // Play personalized haptic feedback based on health score and user risk level
-        if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
-            SensoryService.shared.playMealFeedbackHaptic(
-                for: healthScore,
-                riskLevel: profile.riskLevel,
-                userDefaults: nil
-            )
+        // Update meal type if changed
+        if mealTypeChanged {
+            self.meals[index].mealType = mealType
         }
 
-        // Immediately update smiley state with current meal scores
-        self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
+        // Only recalculate local score if items meaningfully changed
+        if contentChanged {
+            let healthScore = self.logicService.calculateHealthScore(for: items)
+            self.meals[index].items = items
+            self.meals[index].healthScore = healthScore
+            // Reset AI analyzed flag since content needs re-analysis
+            self.meals[index].isAIAnalyzed = false
 
-        // Trigger async AI analysis — cancel any in-flight task for this meal
-        self.aiTasks[mealId]?.cancel()
-        self.aiTasks[mealId] = Task {
-            await self.performDeepAnalysis(for: mealId, items: items)
-            self.aiTasks[mealId] = nil
+            self.saveData()
+
+            // Play personalized haptic feedback based on health score and user risk level
+            if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
+                SensoryService.shared.playMealFeedbackHaptic(
+                    for: healthScore,
+                    riskLevel: profile.riskLevel,
+                    userDefaults: nil
+                )
+            }
+
+            // Immediately update smiley state with current meal scores
+            self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
+
+            // Trigger AI analysis for new items
+            Task {
+                await self.performDeepAnalysis(for: mealId, items: items)
+            }
+        } else if mealTypeChanged {
+            // Only meal type changed, just save
+            self.saveData()
+        } else if needsAIAnalysis {
+            // Content was already updated locally, but AI analysis hasn't run yet
+            // This happens when local updates occurred during typing, then user triggers "done"
+            vmLogger.debug("Triggering AI analysis for meal updated locally")
+            Task {
+                await self.triggerAIAnalysisForMeal(mealId)
+            }
         }
     }
 
@@ -305,7 +449,10 @@ class MainViewModel: ObservableObject {
             self.meals = []
         }
 
-        // 3. Save both current and historical data
+        // 3. Clear current insight (new day, new insight)
+        self.currentInsight = nil
+
+        // 4. Save both current and historical data
         self.saveData()
     }
 
@@ -439,6 +586,7 @@ class MainViewModel: ObservableObject {
     }
 
     /// Saves sleep quality for today, merging with existing reflection if present.
+    /// Also triggers insight generation and ensures Apple sleep data is available for badge.
     /// - Parameters:
     ///   - quality: The sleep quality to save
     ///   - date: When it was logged (defaults to now)
@@ -452,6 +600,69 @@ class MainViewModel: ObservableObject {
         } else {
             self.historicalService.updateReflection(for: date, reflection: newReflection)
         }
+
+        // Fetch Apple sleep data for badge if not already available
+        if self.appleSleepData == nil {
+            self.fetchAppleSleepDataForBadge()
+        }
+
+        // Trigger insight generation after sleep is logged (Phase 2-4)
+        self.triggerInsightGenerationIfNeeded(for: date)
+    }
+
+    /// Triggers insight generation if conditions are met.
+    /// Conditions: No insight exists for today AND sleep quality is logged AND historical data exists.
+    /// - Parameter date: The date to generate insight for
+    private func triggerInsightGenerationIfNeeded(for date: Date) {
+        // Phase 4: Don't regenerate if insight already exists for today
+        if let existingInsight = self.currentInsight,
+           Calendar.current.isDate(existingInsight.date, inSameDayAs: date)
+        {
+            return
+        }
+
+        // Trigger async insight generation with HealthKit sleep data
+        Task {
+            do {
+                // Fetch HealthKit sleep data for the last 3 days (matching serverLookbackDays)
+                let healthKitSleepData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
+
+                if let insight = try await self.insightService.generateInsight(
+                    for: date,
+                    healthKitSleepData: healthKitSleepData
+                ) {
+                    // Phase 3: Assign to currentInsight
+                    self.currentInsight = insight
+                }
+            } catch {
+                vmLogger.error("Insight generation failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    /// Fetches HealthKit sleep data for the last N days for insight generation.
+    /// - Parameter date: The reference date (typically today)
+    /// - Returns: Dictionary mapping dates to their HealthKit sleep data
+    private func fetchHealthKitSleepDataForInsights(relativeTo date: Date) async -> [Date: SleepData] {
+        var sleepDataByDate: [Date: SleepData] = [:]
+        let calendar = Calendar.current
+
+        // Fetch sleep data for the last 3 days (matching serverLookbackDays in InsightGenerationService)
+        for daysAgo in 0..<3 {
+            guard let targetDate = calendar.date(byAdding: .day, value: -daysAgo, to: date) else { continue }
+
+            do {
+                if let sleepData = try await HealthKitService.shared.fetchSleepData(for: targetDate) {
+                    sleepDataByDate[calendar.startOfDay(for: targetDate)] = sleepData
+                    vmLogger.debug("Fetched HealthKit sleep data")
+                }
+            } catch {
+                vmLogger.error("Failed to fetch HealthKit sleep data: \(error.localizedDescription, privacy: .public)")
+                // Continue with other dates even if one fails
+            }
+        }
+
+        return sleepDataByDate
     }
 
     /// Saves overall feeling for today, merging with existing reflection if present.
@@ -472,15 +683,29 @@ class MainViewModel: ObservableObject {
 
     // MARK: - Smiley Tap Flow (Phase 4 - User-Initiated Reflections)
 
+    /// Returns true if running UI tests. Used to bypass reflection flows during testing.
+    private var isUITesting: Bool {
+        CommandLine.arguments.contains("--uitesting")
+    }
+
     /// Handles the smiley tap action, checking for morning sleep context only.
     /// Flow:
     /// 1. If morning sleep context → Show sleep quality sheet → Then create meal
     /// 2. Otherwise → Create meal directly
     /// Note: End-of-Day feeling is now captured via a permanent pill on the timeline, not via smiley tap
+    /// During UI testing, skips all reflection checks and creates meals directly.
     func handleSmileyTap() {
+        // Skip reflection flows during UI testing for simpler test scenarios
+        if self.isUITesting {
+            self.createNewMeal()
+            return
+        }
+
         if self.isMorningSleepContext() {
             self.pendingMealCreation = true
             self.showSleepQualitySheet = true
+            // Fetch Apple HealthKit sleep data if available
+            self.fetchAppleSleepData()
         } else {
             self.createNewMeal()
         }
@@ -492,10 +717,20 @@ class MainViewModel: ObservableObject {
         !self.meals.isEmpty && self.todaysFeeling == nil
     }
 
-    /// Handles tap on the End-of-Day pill to show the feeling input sheet.
+    /// Handles tap on the End-of-Day pill to show the appropriate sheet.
+    /// Phase 3: If morning todos exist, shows EveningReviewView (holistic mindset capture).
+    /// Otherwise, shows the feeling input directly.
     func handleEndOfDayPillTap() {
         self.pendingMealCreation = false // No meal creation after this
-        self.showOverallFeelingSheet = true
+
+        // Check if morning todos exist - if so, show holistic evening review
+        if let morningEntries = self.todaysMorningMindCheck, !morningEntries.isEmpty {
+            self.isEndOfDayFlow = true // Enable feeling selection in EveningReviewView
+            self.showEveningMindCheckSheet = true
+        } else {
+            // No todos, just ask for feeling
+            self.showOverallFeelingSheet = true
+        }
     }
 
     /// Completes the sleep quality input and proceeds with meal creation if pending.
@@ -513,11 +748,37 @@ class MainViewModel: ObservableObject {
     /// Dismisses the sleep quality sheet without saving.
     func dismissSleepQualityInput() {
         self.showSleepQualitySheet = false
+        // Clear suggested sleep data when dismissed
+        self.suggestedSleepQuality = nil
+        self.appleSleepData = nil
 
         // Still create the meal even if user skips
         if self.pendingMealCreation {
             self.pendingMealCreation = false
             self.createNewMeal()
+        }
+    }
+
+    /// Fetches sleep data from Apple HealthKit and suggests a sleep quality.
+    /// This runs asynchronously and updates suggestedSleepQuality if data is available.
+    private func fetchAppleSleepData() {
+        Task {
+            do {
+                // Request authorization first
+                _ = try await HealthKitService.shared.requestAuthorization()
+
+                // Fetch sleep data for today
+                if let sleepData = try await HealthKitService.shared.fetchSleepData(for: Date()) {
+                    await MainActor.run {
+                        self.appleSleepData = sleepData
+                        self.suggestedSleepQuality = sleepData.sleepQuality
+                        vmLogger.debug("Loaded Apple sleep data for badge")
+                    }
+                }
+            } catch {
+                vmLogger.error("Failed to fetch Apple sleep data: \(error.localizedDescription, privacy: .public)")
+                // Silently fail - user can still manually select sleep quality
+            }
         }
     }
 
@@ -541,6 +802,182 @@ class MainViewModel: ObservableObject {
         if self.pendingMealCreation {
             self.pendingMealCreation = false
             self.createNewMeal()
+        }
+    }
+
+    // MARK: - Day Navigation Methods (Phase 4)
+
+    /// Returns true if the selected date is today.
+    var isViewingToday: Bool {
+        Calendar.current.isDateInToday(self.selectedDate)
+    }
+
+    /// Returns true if the user can navigate to the previous day (within maxDaysBack limit).
+    var canNavigateToPreviousDay: Bool {
+        self.selectedDayIndex < Self.maxDaysBack
+    }
+
+    /// Returns true if the user can navigate to the next day (not beyond today).
+    var canNavigateToNextDay: Bool {
+        !self.isViewingToday
+    }
+
+    /// Returns the number of days between the selected date and today (0 = today).
+    var selectedDayIndex: Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let selected = calendar.startOfDay(for: self.selectedDate)
+        let components = calendar.dateComponents([.day], from: selected, to: today)
+        return max(0, components.day ?? 0)
+    }
+
+    /// Formatted string for the selected date (e.g., "Monday, 5 Jan 2026").
+    var formattedSelectedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, d MMM yyyy"
+        return formatter.string(from: self.selectedDate)
+    }
+
+    /// Navigates to a specific date. Future dates are clamped to today.
+    /// - Parameter date: The date to navigate to
+    func navigateToDate(_ date: Date) {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let targetDay = calendar.startOfDay(for: date)
+
+        // Clamp to today if trying to navigate to future
+        if targetDay > today {
+            self.selectedDate = today
+        } else {
+            self.selectedDate = targetDay
+        }
+    }
+
+    /// Navigates to the previous day.
+    func navigateToPreviousDay() {
+        guard self.canNavigateToPreviousDay else { return }
+        let calendar = Calendar.current
+        if let previousDay = calendar.date(byAdding: .day, value: -1, to: self.selectedDate) {
+            self.navigateToDate(previousDay)
+        }
+    }
+
+    /// Navigates to the next day (towards today).
+    func navigateToNextDay() {
+        guard self.canNavigateToNextDay else { return }
+        let calendar = Calendar.current
+        if let nextDay = calendar.date(byAdding: .day, value: 1, to: self.selectedDate) {
+            self.navigateToDate(nextDay)
+        }
+    }
+
+    /// Navigates back to today.
+    func navigateToToday() {
+        self.selectedDate = Calendar.current.startOfDay(for: Date())
+    }
+
+    /// Navigates to a day by index (0 = today, 1 = yesterday, etc.).
+    /// - Parameter index: The number of days back from today
+    func navigateToIndex(_ index: Int) {
+        let calendar = Calendar.current
+        let clampedIndex = max(0, min(index, Self.maxDaysBack))
+        let today = calendar.startOfDay(for: Date())
+        if let targetDate = calendar.date(byAdding: .day, value: -clampedIndex, to: today) {
+            self.selectedDate = targetDate
+        }
+    }
+
+    /// Returns the meals for the currently selected date.
+    /// For today, returns current meals. For past days, returns historical meals.
+    func mealsForSelectedDate() -> [Meal] {
+        if self.isViewingToday {
+            self.meals
+        } else {
+            self.snapshotForSelectedDate()?.meals ?? []
+        }
+    }
+
+    /// Returns the snapshot for the currently selected date, if available.
+    func snapshotForSelectedDate() -> DailySmileySnapshot? {
+        self.historicalService.getSnapshot(for: self.selectedDate)
+    }
+
+    // MARK: - Recent Meals & Copy Meal (Repeat Meal Feature)
+
+    /// Returns unique meals from the past 3 days for quick-add suggestions.
+    /// Deduplicates by normalized items content (lowercased, sorted).
+    /// Returns max 8 meals, most recent first.
+    func getRecentUniqueMeals() -> [Meal] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+
+        var allMeals: [Meal] = []
+
+        // Collect meals from past 3 days
+        for daysAgo in 1...3 {
+            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: today) else { continue }
+            if let snapshot = self.historicalService.getSnapshot(for: date) {
+                allMeals.append(contentsOf: snapshot.meals)
+            }
+        }
+
+        // Deduplicate by normalized items (lowercased, sorted, joined)
+        var seenKeys = Set<String>()
+        var uniqueMeals: [Meal] = []
+
+        // Sort by timestamp descending (most recent first)
+        let sortedMeals = allMeals.sorted { $0.timestamp > $1.timestamp }
+
+        for meal in sortedMeals {
+            // Skip empty meals
+            guard !meal.items.isEmpty else { continue }
+
+            // Create normalized key for deduplication
+            let normalizedKey = meal.items
+                .map { $0.lowercased().trimmingCharacters(in: .whitespaces) }
+                .sorted()
+                .joined(separator: "|")
+
+            if !seenKeys.contains(normalizedKey) {
+                seenKeys.insert(normalizedKey)
+                uniqueMeals.append(meal)
+            }
+
+            // Limit to 8 meals
+            if uniqueMeals.count >= 8 {
+                break
+            }
+        }
+
+        return uniqueMeals
+    }
+
+    /// Copies a historical meal to today with a fresh ID and current timestamp.
+    /// Preserves meal type and items from the original meal.
+    /// - Parameter meal: The historical meal to copy
+    func copyMealToToday(_ meal: Meal) {
+        self.checkAndResetIfNewDay()
+
+        let newMeal = Meal(
+            id: UUID(),
+            timestamp: Date(),
+            mealType: meal.mealType,
+            items: meal.items,
+            healthScore: meal.healthScore,
+            isAIAnalyzed: false // Will be re-analyzed
+        )
+
+        withAnimation(.spring()) {
+            self.meals.append(newMeal)
+        }
+        self.saveData()
+
+        // Trigger AI analysis for the copied meal — cancel any stale task first
+        let copiedId = newMeal.id
+        self.aiTasks[copiedId]?.cancel()
+        self.aiTasks[copiedId] = Task {
+            await self.performDeepAnalysis(for: copiedId, items: newMeal.items)
+            self.aiTasks[copiedId] = nil
         }
     }
 }

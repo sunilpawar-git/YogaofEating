@@ -29,6 +29,21 @@ struct YogaOfEatingApp: App {
 
         print("📱 Yoga of Eating app starting...")
 
+        // Initialize Firebase FIRST, before any other code that might use it
+        // This prevents the "default Firebase app has not yet been configured" warning
+        // that occurs when MainViewModel (created as @StateObject) initializes AILogicService
+        let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
+        if !isCIEnvironment {
+            // Configure Firebase unconditionally (it's safe to call multiple times)
+            // Check if already configured to avoid unnecessary work
+            if FirebaseApp.app() == nil {
+                FirebaseApp.configure()
+                print("🔥 Firebase initialized (App init)")
+            } else {
+                print("🔥 Firebase already configured")
+            }
+        }
+
         // Check if running UI tests and reset data if needed
         if CommandLine.arguments.contains("--uitesting") {
             print("🧪 UI Testing mode - clearing all data")
@@ -48,7 +63,6 @@ struct YogaOfEatingApp: App {
         }
 
         // Request permissions and schedule daily nudges on startup
-        // Note: Firebase is now initialized in AppDelegate
         NotificationManager.shared.requestPermissions()
         NotificationManager.shared.scheduleMorningNudge()
         NotificationManager.shared.scheduleDefaultMealReminders()
@@ -92,22 +106,23 @@ struct YogaOfEatingApp: App {
             _: UIApplication,
             didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil
         ) -> Bool {
-            // Skip Firebase initialization in test/CI environments
+            // Skip initialization in test/CI environments
             let isTestEnvironment = NSClassFromString("XCTestCase") != nil
             let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
 
             if !isTestEnvironment, !isCIEnvironment {
-                // Initialize Firebase only in non-test environments
+                // Ensure Firebase is configured early in app lifecycle
+                // This runs before SwiftUI's @main init, providing an early initialization point
                 if FirebaseApp.app() == nil {
                     FirebaseApp.configure()
                     print("🔥 Firebase initialized (AppDelegate)")
                 }
 
-                // Initialize AuthService early
+                // Initialize AuthService
                 _ = AuthService.shared
                 print("👤 AuthService initialized (AppDelegate)")
             } else {
-                print("🧪 Skipping Firebase initialization in test/CI environment")
+                print("🧪 Skipping Firebase and AuthService initialization in test/CI environment")
             }
 
             return true

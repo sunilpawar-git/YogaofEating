@@ -94,13 +94,107 @@
             XCTAssertTrue(initialTextFields.firstMatch.waitForExistence(timeout: 3))
             let initialCount = initialTextFields.count
 
-            // Act: Delete via swipe (if available on platform)
-            // Note: Swipe actions are complex in UI tests
-            // For now, we verify the meal exists
             XCTAssertEqual(initialCount, 1, "One meal should exist")
 
-            // In a full implementation, we'd simulate swipe-to-delete or long-press
-            // This requires platform-specific gestures
+            // Act: Long-press on the meal block to trigger delete alert
+            // Find the meal block by its accessibility identifier prefix
+            let mealBlocks = self.app.otherElements.matching(
+                NSPredicate(format: "identifier BEGINSWITH 'meal-block-'")
+            )
+            XCTAssertTrue(mealBlocks.firstMatch.waitForExistence(timeout: 3), "Meal block should exist")
+
+            // Perform long press gesture (1 second duration as per design)
+            mealBlocks.firstMatch.press(forDuration: 1.0)
+
+            // Assert: Delete confirmation alert should appear
+            let deleteAlert = self.app.alerts["Delete this meal?"]
+            XCTAssertTrue(
+                deleteAlert.waitForExistence(timeout: 3),
+                "Delete confirmation alert should appear after long press"
+            )
+
+            // Verify alert has Cancel and Delete buttons
+            XCTAssertTrue(deleteAlert.buttons["Cancel"].exists, "Cancel button should exist in alert")
+            XCTAssertTrue(deleteAlert.buttons["Delete"].exists, "Delete button should exist in alert")
+
+            // Act: Tap Delete to confirm deletion
+            deleteAlert.buttons["Delete"].tap()
+
+            // Wait for deletion animation
+            sleep(1)
+
+            // Assert: Meal should be removed from timeline
+            let finalTextFieldCount = self.app.textFields.count
+            XCTAssertEqual(finalTextFieldCount, 0, "Meal should be deleted after confirmation")
+        }
+
+        func test_longPressOnMealBlock_showsDeleteAlert() throws {
+            // Arrange: Add a meal with some content
+            let addButton = self.app.buttons["add-meal-button"]
+            XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+            addButton.tap()
+
+            let textField = self.app.textFields.firstMatch
+            XCTAssertTrue(textField.waitForExistence(timeout: 3))
+            textField.tap()
+            textField.typeText("Test meal for deletion")
+
+            // Dismiss keyboard
+            let doneButton = self.app.buttons["Done"]
+            if doneButton.exists {
+                doneButton.tap()
+            }
+            sleep(1)
+
+            // Act: Find the meal block and perform long press (1 second)
+            let mealBlocks = self.app.otherElements.matching(
+                NSPredicate(format: "identifier BEGINSWITH 'meal-block-'")
+            )
+            XCTAssertTrue(mealBlocks.firstMatch.exists, "Meal block should exist")
+
+            mealBlocks.firstMatch.press(forDuration: 1.0)
+
+            // Assert: Delete alert should appear
+            let deleteAlert = self.app.alerts["Delete this meal?"]
+            XCTAssertTrue(
+                deleteAlert.waitForExistence(timeout: 3),
+                "Delete alert should appear after 1 second long press"
+            )
+
+            // Verify alert message
+            XCTAssertTrue(
+                deleteAlert.staticTexts["This action cannot be undone."].exists,
+                "Alert should show warning message"
+            )
+
+            // Cancel the deletion
+            deleteAlert.buttons["Cancel"].tap()
+
+            // Assert: Meal should still exist
+            XCTAssertTrue(mealBlocks.firstMatch.exists, "Meal should still exist after canceling deletion")
+        }
+
+        func test_shortPressOnMealBlock_doesNotTriggerDelete() throws {
+            // Arrange: Add a meal
+            let addButton = self.app.buttons["add-meal-button"]
+            XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+            addButton.tap()
+
+            let textField = self.app.textFields.firstMatch
+            XCTAssertTrue(textField.waitForExistence(timeout: 3))
+
+            // Act: Find the meal block and perform a short press (less than 1 second)
+            let mealBlocks = self.app.otherElements.matching(
+                NSPredicate(format: "identifier BEGINSWITH 'meal-block-'")
+            )
+            XCTAssertTrue(mealBlocks.firstMatch.waitForExistence(timeout: 3), "Meal block should exist")
+
+            // Short press (only 0.5 seconds - should NOT trigger delete)
+            mealBlocks.firstMatch.press(forDuration: 0.5)
+
+            // Assert: Delete alert should NOT appear
+            let deleteAlert = self.app.alerts["Delete this meal?"]
+            XCTAssertFalse(deleteAlert.waitForExistence(timeout: 1), "Delete alert should NOT appear for short press")
         }
 
         func test_smiley_updatesAfterMealEntry() throws {
@@ -177,12 +271,12 @@
         }
 
         func test_navigationArrows_existInHeader() throws {
-            // Navigation arrows should be visible
+            // Navigation arrow (previous day only) should be visible
             let previousDayButton = self.app.buttons["previous-day-button"]
-            let nextDayButton = self.app.buttons["next-day-button"]
-
             XCTAssertTrue(previousDayButton.waitForExistence(timeout: 5))
-            XCTAssertTrue(nextDayButton.exists)
+
+            // Note: Next day button was removed from UI design
+            // Users navigate backward only, with "Back to Today" button appearing on past days
         }
 
         func test_previousDayButton_navigatesToYesterday() throws {
@@ -203,12 +297,14 @@
         }
 
         func test_nextDayButton_disabledOnToday() throws {
-            // The next day button should be disabled when viewing today
-            let nextDayButton = self.app.buttons["next-day-button"]
-            XCTAssertTrue(nextDayButton.waitForExistence(timeout: 5))
+            // When viewing today, the "Back to Today" button should NOT exist
+            let todayButton = self.app.buttons["today-button"]
 
-            // On today, next day button should be disabled
-            XCTAssertFalse(nextDayButton.isEnabled, "Next day button should be disabled on today")
+            // Wait a moment for UI to stabilize
+            sleep(1)
+
+            // On today, the "Back to Today" button should not be visible
+            XCTAssertFalse(todayButton.exists, "Back to Today button should not exist when viewing today")
         }
 
         func test_nextDayButton_enabledAfterNavigatingBack() throws {
@@ -218,9 +314,9 @@
             previousDayButton.tap()
             sleep(1)
 
-            // Assert: Next day button should now be enabled
-            let nextDayButton = self.app.buttons["next-day-button"]
-            XCTAssertTrue(nextDayButton.isEnabled, "Next day button should be enabled when viewing past day")
+            // Assert: "Back to Today" button should now appear
+            let todayButton = self.app.buttons["today-button"]
+            XCTAssertTrue(todayButton.exists, "Back to Today button should appear when viewing past day")
         }
 
         func test_swipeLeftToNavigateToPreviousDay() throws {

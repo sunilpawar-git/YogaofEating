@@ -303,5 +303,246 @@
             // Assert
             XCTAssertNotEqual(snapshot1.id, snapshot2.id, "Each snapshot should have a unique ID")
         }
+
+        // MARK: - Tests: Mind Check Extension (Phase 2)
+
+        func test_snapshot_withMorningMindCheck_encodesAndDecodes() throws {
+            // Arrange
+            let morningEntries = [
+                MindCheckEntry(
+                    category: .todo,
+                    text: "Buy groceries",
+                    timestamp: self.testDate,
+                    context: .morning
+                ),
+                MindCheckEntry(
+                    category: .gratitude,
+                    text: "My health",
+                    timestamp: self.testDate,
+                    context: .morning
+                )
+            ]
+
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                morningMindCheck: morningEntries
+            )
+
+            // Act
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(self.sut)
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailySmileySnapshot.self, from: data)
+
+            // Assert
+            XCTAssertNotNil(decoded.morningMindCheck)
+            XCTAssertEqual(decoded.morningMindCheck?.count, 2)
+            XCTAssertEqual(decoded.morningMindCheck?.first?.text, "Buy groceries")
+            XCTAssertEqual(decoded.morningMindCheck?.first?.category, .todo)
+        }
+
+        func test_snapshot_withEveningMindCheck_encodesAndDecodes() throws {
+            // Arrange
+            let eveningEntries = [
+                MindCheckEntry(
+                    category: .accomplished,
+                    text: "Finished report",
+                    timestamp: self.testDate,
+                    context: .evening
+                ),
+                MindCheckEntry(
+                    category: .letGo,
+                    text: "Work stress",
+                    timestamp: self.testDate,
+                    context: .evening
+                )
+            ]
+
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                eveningMindCheck: eveningEntries
+            )
+
+            // Act
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(self.sut)
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailySmileySnapshot.self, from: data)
+
+            // Assert
+            XCTAssertNotNil(decoded.eveningMindCheck)
+            XCTAssertEqual(decoded.eveningMindCheck?.count, 2)
+            XCTAssertEqual(decoded.eveningMindCheck?.first?.text, "Finished report")
+            XCTAssertEqual(decoded.eveningMindCheck?.first?.category, .accomplished)
+        }
+
+        func test_snapshot_withBothMindChecks_encodesAndDecodes() throws {
+            // Arrange
+            let morningEntries = [
+                MindCheckEntry(category: .todo, text: "Task 1", timestamp: self.testDate, context: .morning)
+            ]
+            let eveningEntries = [
+                MindCheckEntry(category: .accomplished, text: "Done", timestamp: self.testDate, context: .evening)
+            ]
+
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                morningMindCheck: morningEntries,
+                eveningMindCheck: eveningEntries
+            )
+
+            // Act
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(self.sut)
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailySmileySnapshot.self, from: data)
+
+            // Assert
+            XCTAssertNotNil(decoded.morningMindCheck)
+            XCTAssertNotNil(decoded.eveningMindCheck)
+            XCTAssertEqual(decoded.morningMindCheck?.count, 1)
+            XCTAssertEqual(decoded.eveningMindCheck?.count, 1)
+        }
+
+        func test_snapshot_legacyData_decodesWithNilMindChecks() throws {
+            // Arrange - Legacy JSON without mind check fields
+            let snapshotId = UUID()
+            let legacyJSON = """
+            {
+                "id": "\(snapshotId.uuidString)",
+                "date": \(self.testDate.timeIntervalSince1970),
+                "smileyState": {"scale": 1.0, "mood": "neutral"},
+                "meals": [],
+                "mealCount": 0,
+                "averageHealthScore": 0.5
+            }
+            """.data(using: .utf8)!
+
+            // Act
+            let decoder = JSONDecoder()
+            let decoded = try decoder.decode(DailySmileySnapshot.self, from: legacyJSON)
+
+            // Assert
+            XCTAssertNil(decoded.morningMindCheck, "Legacy data should have nil morningMindCheck")
+            XCTAssertNil(decoded.eveningMindCheck, "Legacy data should have nil eveningMindCheck")
+            XCTAssertEqual(decoded.id, snapshotId)
+        }
+
+        func test_snapshot_hasMorningMindCheck_returnsTrueWhenPresent() {
+            // Arrange
+            let morningEntries = [
+                MindCheckEntry(category: .todo, text: "Test", timestamp: self.testDate, context: .morning)
+            ]
+
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                morningMindCheck: morningEntries
+            )
+
+            // Assert
+            XCTAssertTrue(self.sut.hasMorningMindCheck)
+        }
+
+        func test_snapshot_hasMorningMindCheck_returnsFalseWhenNil() {
+            // Arrange
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75
+            )
+
+            // Assert
+            XCTAssertFalse(self.sut.hasMorningMindCheck)
+        }
+
+        func test_snapshot_hasMorningMindCheck_returnsFalseWhenEmpty() {
+            // Arrange
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                morningMindCheck: []
+            )
+
+            // Assert
+            XCTAssertFalse(self.sut.hasMorningMindCheck)
+        }
+
+        func test_snapshot_hasEveningMindCheck_returnsTrueWhenPresent() {
+            // Arrange
+            let eveningEntries = [
+                MindCheckEntry(category: .accomplished, text: "Done", timestamp: self.testDate, context: .evening)
+            ]
+
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                eveningMindCheck: eveningEntries
+            )
+
+            // Assert
+            XCTAssertTrue(self.sut.hasEveningMindCheck)
+        }
+
+        func test_snapshot_hasEveningMindCheck_returnsFalseWhenNil() {
+            // Arrange
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75
+            )
+
+            // Assert
+            XCTAssertFalse(self.sut.hasEveningMindCheck)
+        }
+
+        func test_snapshot_hasEveningMindCheck_returnsFalseWhenEmpty() {
+            // Arrange
+            self.sut = DailySmileySnapshot(
+                id: UUID(),
+                date: self.testDate,
+                smileyState: self.testSmileyState,
+                meals: self.testMeals,
+                mealCount: 2,
+                averageHealthScore: 0.75,
+                eveningMindCheck: []
+            )
+
+            // Assert
+            XCTAssertFalse(self.sut.hasEveningMindCheck)
+        }
     }
 #endif
