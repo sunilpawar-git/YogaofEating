@@ -1,6 +1,9 @@
 import Combine
 import Foundation
+import OSLog
 import SwiftUI
+
+private let vmLogger = Logger(subsystem: "com.yogaofeating", category: "MainViewModel")
 
 /// Protocol for persistence operations to enable testing
 @MainActor
@@ -65,20 +68,31 @@ class MainViewModel: ObservableObject {
     let historicalService: any HistoricalDataServiceProtocol
     let healthProfileService: HealthProfileServiceProtocol
 
+    /// Tracks in-flight AI analysis tasks per meal so that rapid edits
+    /// cancel the previous task and only the most-recent request wins.
+    var aiTasks: [UUID: Task<Void, Never>] = [:]
+
     init(
         healthProfileService: HealthProfileServiceProtocol? = nil,
         logicService: MealLogicProvider? = nil,
         persistenceService: PersistenceServiceProtocol? = nil,
-        historicalService: (any HistoricalDataServiceProtocol)? = nil
+        historicalService: (any HistoricalDataServiceProtocol)? = nil,
+        skipDataLoading: Bool = false
     ) {
         let healthService = healthProfileService ?? HealthProfileService()
         self.healthProfileService = healthService
-        self.logicService = logicService ?? AILogicService()
+        self.logicService = logicService ?? MealLogicService(healthProfileService: healthService)
         self.persistenceService = persistenceService ?? PersistenceService.shared
-        self.historicalService = historicalService ?? HistoricalDataService()
+        let resolvedHistorical = historicalService ?? HistoricalDataService()
+        self.historicalService = resolvedHistorical
 
-        // Skip data loading and monitoring if unit testing to avoid interference
-        if NSClassFromString("XCTestCase") == nil {
+        // Wire back-reference so HistoricalDataService.saveHistoricalData()
+        // always delegates to the single canonical save path here.
+        if let concrete = resolvedHistorical as? HistoricalDataService {
+            concrete.mainViewModel = self
+        }
+
+        if !skipDataLoading {
             self.loadData()
             self.setupResetMonitoring()
         }
@@ -117,7 +131,7 @@ class MainViewModel: ObservableObject {
         }
     }
 
-    private func checkAndResetIfNewDay() {
+    func checkAndResetIfNewDay() {
         let calendar = Calendar.current
         if !calendar.isDateInToday(self.lastResetDate) {
             self.resetDay()
@@ -156,7 +170,7 @@ class MainViewModel: ObservableObject {
         self.meals[index].items = items
         self.meals[index].healthScore = healthScore
         self.saveData()
-        print("📝 Local healthScore set to: \(healthScore)")
+        vmLogger.debug("Local healthScore set to \(healthScore, privacy: .public)")
 
         // Play personalized haptic feedback based on health score and user risk level
         if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
@@ -170,9 +184,11 @@ class MainViewModel: ObservableObject {
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
-        // Trigger async AI analysis for refined scoring
-        Task {
+        // Trigger async AI analysis for refined scoring — cancel any in-flight task for this meal
+        self.aiTasks[mealId]?.cancel()
+        self.aiTasks[mealId] = Task {
             await self.performDeepAnalysis(for: mealId, items: items)
+            self.aiTasks[mealId] = nil
         }
     }
 
@@ -199,9 +215,11 @@ class MainViewModel: ObservableObject {
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
-        // Trigger async AI analysis
-        Task {
+        // Trigger async AI analysis — cancel any in-flight task for this meal
+        self.aiTasks[mealId]?.cancel()
+        self.aiTasks[mealId] = Task {
             await self.performDeepAnalysis(for: mealId, items: items)
+            self.aiTasks[mealId] = nil
         }
     }
 
@@ -243,10 +261,10 @@ class MainViewModel: ObservableObject {
         if withFeedback {
             // Check user preferences before playing feedback
             // Default to true if not explicitly set
-            let hapticsEnabled = UserDefaults.standard.object(forKey: "haptics_enabled") as? Bool ?? true
+            let hapticsEnabled = UserDefaults.standard.object(forKey: StorageKeys.hapticsEnabled) as? Bool ?? true
 
             if hapticsEnabled {
-                SensoryService.shared.playNudge(style: healthScore < 0.4 ? .heavy : .light)
+                SensoryService.shared.playNudge(style: healthScore < ScoringThresholds.unhealthy ? .heavy : .light)
             }
             // Sound feedback removed - was irritating during text input
         }
@@ -523,179 +541,6 @@ class MainViewModel: ObservableObject {
         if self.pendingMealCreation {
             self.pendingMealCreation = false
             self.createNewMeal()
-        }
-    }
-
-    // MARK: - Day Navigation Methods (Phase 4)
-
-    /// Returns true if the selected date is today.
-    var isViewingToday: Bool {
-        Calendar.current.isDateInToday(self.selectedDate)
-    }
-
-    /// Returns true if the user can navigate to the previous day (within maxDaysBack limit).
-    var canNavigateToPreviousDay: Bool {
-        self.selectedDayIndex < Self.maxDaysBack
-    }
-
-    /// Returns true if the user can navigate to the next day (not beyond today).
-    var canNavigateToNextDay: Bool {
-        !self.isViewingToday
-    }
-
-    /// Returns the number of days between the selected date and today (0 = today).
-    var selectedDayIndex: Int {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let selected = calendar.startOfDay(for: self.selectedDate)
-        let components = calendar.dateComponents([.day], from: selected, to: today)
-        return max(0, components.day ?? 0)
-    }
-
-    /// Formatted string for the selected date (e.g., "Monday, 5 Jan 2026").
-    var formattedSelectedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, d MMM yyyy"
-        return formatter.string(from: self.selectedDate)
-    }
-
-    /// Navigates to a specific date. Future dates are clamped to today.
-    /// - Parameter date: The date to navigate to
-    func navigateToDate(_ date: Date) {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let targetDay = calendar.startOfDay(for: date)
-
-        // Clamp to today if trying to navigate to future
-        if targetDay > today {
-            self.selectedDate = today
-        } else {
-            self.selectedDate = targetDay
-        }
-    }
-
-    /// Navigates to the previous day.
-    func navigateToPreviousDay() {
-        guard self.canNavigateToPreviousDay else { return }
-        let calendar = Calendar.current
-        if let previousDay = calendar.date(byAdding: .day, value: -1, to: self.selectedDate) {
-            self.navigateToDate(previousDay)
-        }
-    }
-
-    /// Navigates to the next day (towards today).
-    func navigateToNextDay() {
-        guard self.canNavigateToNextDay else { return }
-        let calendar = Calendar.current
-        if let nextDay = calendar.date(byAdding: .day, value: 1, to: self.selectedDate) {
-            self.navigateToDate(nextDay)
-        }
-    }
-
-    /// Navigates back to today.
-    func navigateToToday() {
-        self.selectedDate = Calendar.current.startOfDay(for: Date())
-    }
-
-    /// Navigates to a day by index (0 = today, 1 = yesterday, etc.).
-    /// - Parameter index: The number of days back from today
-    func navigateToIndex(_ index: Int) {
-        let calendar = Calendar.current
-        let clampedIndex = max(0, min(index, Self.maxDaysBack))
-        let today = calendar.startOfDay(for: Date())
-        if let targetDate = calendar.date(byAdding: .day, value: -clampedIndex, to: today) {
-            self.selectedDate = targetDate
-        }
-    }
-
-    /// Returns the meals for the currently selected date.
-    /// For today, returns current meals. For past days, returns historical meals.
-    func mealsForSelectedDate() -> [Meal] {
-        if self.isViewingToday {
-            self.meals
-        } else {
-            self.snapshotForSelectedDate()?.meals ?? []
-        }
-    }
-
-    /// Returns the snapshot for the currently selected date, if available.
-    func snapshotForSelectedDate() -> DailySmileySnapshot? {
-        self.historicalService.getSnapshot(for: self.selectedDate)
-    }
-
-    // MARK: - Recent Meals & Copy Meal (Repeat Meal Feature)
-
-    /// Returns unique meals from the past 3 days for quick-add suggestions.
-    /// Deduplicates by normalized items content (lowercased, sorted).
-    /// Returns max 8 meals, most recent first.
-    func getRecentUniqueMeals() -> [Meal] {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-
-        var allMeals: [Meal] = []
-
-        // Collect meals from past 3 days
-        for daysAgo in 1...3 {
-            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: today) else { continue }
-            if let snapshot = self.historicalService.getSnapshot(for: date) {
-                allMeals.append(contentsOf: snapshot.meals)
-            }
-        }
-
-        // Deduplicate by normalized items (lowercased, sorted, joined)
-        var seenKeys = Set<String>()
-        var uniqueMeals: [Meal] = []
-
-        // Sort by timestamp descending (most recent first)
-        let sortedMeals = allMeals.sorted { $0.timestamp > $1.timestamp }
-
-        for meal in sortedMeals {
-            // Skip empty meals
-            guard !meal.items.isEmpty else { continue }
-
-            // Create normalized key for deduplication
-            let normalizedKey = meal.items
-                .map { $0.lowercased().trimmingCharacters(in: .whitespaces) }
-                .sorted()
-                .joined(separator: "|")
-
-            if !seenKeys.contains(normalizedKey) {
-                seenKeys.insert(normalizedKey)
-                uniqueMeals.append(meal)
-            }
-
-            // Limit to 8 meals
-            if uniqueMeals.count >= 8 {
-                break
-            }
-        }
-
-        return uniqueMeals
-    }
-
-    /// Copies a historical meal to today with a fresh ID and current timestamp.
-    /// Preserves meal type and items from the original meal.
-    /// - Parameter meal: The historical meal to copy
-    func copyMealToToday(_ meal: Meal) {
-        self.checkAndResetIfNewDay()
-
-        let newMeal = Meal(
-            id: UUID(),
-            timestamp: Date(),
-            mealType: meal.mealType,
-            items: meal.items,
-            healthScore: meal.healthScore,
-            isAIAnalyzed: false // Will be re-analyzed
-        )
-
-        withAnimation(.spring()) {
-            self.meals.append(newMeal)
-        }
-        self.saveData()
-
-        // Trigger AI analysis for the copied meal
-        Task {
-            await self.performDeepAnalysis(for: newMeal.id, items: newMeal.items)
         }
     }
 }

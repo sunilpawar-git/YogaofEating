@@ -56,15 +56,6 @@ protocol HealthProfileServiceProtocol {
 class HealthProfileService: HealthProfileServiceProtocol {
     // MARK: - Constants
 
-    // UserDefaults keys (matching existing SettingsView)
-    private enum UserDefaultsKey {
-        static let height = "user_height"
-        static let weight = "user_weight"
-        static let age = "user_age"
-        static let gender = "user_gender"
-        static let unitSystem = "unit_system"
-    }
-
     // BMI thresholds
     private enum BMIThreshold {
         static let underweight: Double = 18.5
@@ -220,9 +211,9 @@ class HealthProfileService: HealthProfileServiceProtocol {
 
     func getUserHealthProfile() -> UserHealthProfile? {
         // Read user data from UserDefaults
-        guard let heightString = userDefaults.string(forKey: UserDefaultsKey.height),
-              let weightString = userDefaults.string(forKey: UserDefaultsKey.weight),
-              let ageString = userDefaults.string(forKey: UserDefaultsKey.age),
+        guard let heightString = userDefaults.string(forKey: StorageKeys.userHeight),
+              let weightString = userDefaults.string(forKey: StorageKeys.userWeight),
+              let ageString = userDefaults.string(forKey: StorageKeys.userAge),
               let height = Double(heightString),
               let weight = Double(weightString),
               let age = Int(ageString),
@@ -231,8 +222,8 @@ class HealthProfileService: HealthProfileServiceProtocol {
             return nil
         }
 
-        let genderRaw = self.userDefaults.integer(forKey: UserDefaultsKey.gender)
-        let unitSystemRaw = self.userDefaults.integer(forKey: UserDefaultsKey.unitSystem)
+        let genderRaw = self.userDefaults.integer(forKey: StorageKeys.userGender)
+        let unitSystemRaw = self.userDefaults.integer(forKey: StorageKeys.unitSystem)
 
         let gender = Gender(rawValue: genderRaw) ?? .unspecified
         let unitSystem = UnitSystem(rawValue: unitSystemRaw) ?? .metric

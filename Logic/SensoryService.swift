@@ -105,7 +105,7 @@ class SensoryService: SensoryServiceProtocol {
     /// Plays a system sound based on AI suggestions
     func playSound(named soundName: String) {
         // Check if sounds are enabled in user settings
-        let isSoundEnabled = UserDefaults.standard.object(forKey: "sound_enabled") as? Bool ?? true
+        let isSoundEnabled = UserDefaults.standard.object(forKey: StorageKeys.soundEnabled) as? Bool ?? true
         guard isSoundEnabled else { return }
 
         let systemSoundID: SystemSoundID = switch soundName.lowercased() {
@@ -126,7 +126,7 @@ class SensoryService: SensoryServiceProtocol {
     /// Legacy method for scale-based sounds
     func playSound(for scale: Double) {
         // Check if sounds are enabled in user settings
-        let isSoundEnabled = UserDefaults.standard.object(forKey: "sound_enabled") as? Bool ?? true
+        let isSoundEnabled = UserDefaults.standard.object(forKey: StorageKeys.soundEnabled) as? Bool ?? true
         guard isSoundEnabled else { return }
 
         let soundName = scale > 1.0 ? "thump" : "tink"
@@ -148,7 +148,7 @@ class SensoryService: SensoryServiceProtocol {
         let defaults = userDefaults ?? UserDefaults.standard
 
         // Check if haptics are enabled in user settings
-        let areHapticsEnabled = defaults.object(forKey: "haptics_enabled") as? Bool ?? true
+        let areHapticsEnabled = defaults.object(forKey: StorageKeys.hapticsEnabled) as? Bool ?? true
         guard areHapticsEnabled else { return }
 
         // Determine appropriate feedback style
@@ -164,13 +164,11 @@ class SensoryService: SensoryServiceProtocol {
     ///   - riskLevel: User's health risk level
     /// - Returns: Feedback style (soft/light/medium/heavy)
     func getFeedbackStyle(for healthScore: Double, riskLevel: HealthRiskLevel) -> FeedbackStyle {
-        // Healthy meals (score > 0.65): Celebrate with soft haptic
-        if healthScore > 0.65 {
+        if healthScore > ScoringThresholds.healthy {
             return .soft
         }
 
-        // Neutral meals (0.35 - 0.65): Light feedback
-        if healthScore >= 0.35 {
+        if healthScore >= ScoringThresholds.unhealthy {
             return .light
         }
 

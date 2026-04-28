@@ -3,7 +3,6 @@ import SwiftUI
 /// A minimalist, tappable tag for displaying the meal type.
 struct MealTypeTag: View {
     let mealType: MealType
-    let isSelected: Bool
 
     // Minimalist pastel colors
     private var typeColor: Color {
@@ -58,6 +57,6 @@ struct MealTypeTag: View {
 }
 
 #Preview {
-    MealTypeTag(mealType: .dinner, isSelected: true)
+    MealTypeTag(mealType: .dinner)
         .padding()
 }

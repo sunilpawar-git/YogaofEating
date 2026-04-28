@@ -30,4 +30,3 @@ enum MealItemsMerger {
         item.lowercased().trimmingCharacters(in: .whitespaces)
     }
 }
-

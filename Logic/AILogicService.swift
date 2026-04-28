@@ -1,6 +1,9 @@
 import FirebaseCore
 import FirebaseFunctions
 import Foundation
+import OSLog
+
+private let aiServiceLogger = Logger(subsystem: "com.yogaofeating", category: "AILogicService")
 
 /// Service to interact with the server-side AI logic via Firebase Cloud Functions.
 class AILogicService: AIAnalysisProvider {
@@ -37,10 +40,10 @@ class AILogicService: AIAnalysisProvider {
         // For consistency, let's use a helper or duplicate the simple logic.
         var nextState = currentState
 
-        if healthScore > 0.6 {
+        if healthScore > ScoringThresholds.healthy {
             nextState.scale = max(0.5, currentState.scale - 0.1)
             nextState.mood = .serene
-        } else if healthScore < 0.4 {
+        } else if healthScore < ScoringThresholds.unhealthy {
             nextState.scale = min(2.5, currentState.scale + 0.2)
             nextState.mood = .overwhelmed
         } else {
@@ -59,18 +62,16 @@ class AILogicService: AIAnalysisProvider {
     /// Calls the 'analyzeMeal' Firebase Cloud Function.
     func analyzeMealQuality(description: String) async throws -> (score: Double, mood: SmileyMood, sound: String) {
         guard let functions = self.functions else {
-            print("⚠️ Firebase Functions not available, returning default values")
+            aiServiceLogger.warning("Firebase Functions not available — returning defaults")
             return (0.5, .neutral, "tink")
         }
 
-        print("📡 Calling Firebase Cloud Function 'analyzeMeal' with description: '\(description)'")
+        aiServiceLogger.debug("Calling Firebase Cloud Function 'analyzeMeal'")
 
         let result = try await functions.httpsCallable("analyzeMeal").call(["description": description])
 
-        print("📥 Received response from Cloud Function")
-
         guard let data = result.data as? [String: Any] else {
-            print("⚠️ Invalid response format from Cloud Function")
+            aiServiceLogger.error("Invalid response format from Cloud Function")
             throw NSError(
                 domain: "AILogicService",
                 code: 0,
@@ -84,7 +85,8 @@ class AILogicService: AIAnalysisProvider {
 
         let mood = SmileyMood(rawValue: moodString) ?? .neutral
 
-        print("📋 Parsed response - healthScore: \(score), mood: \(moodString), sound: \(sound)")
+        aiServiceLogger
+            .debug("Parsed response — score: \(score, privacy: .public), mood: \(moodString, privacy: .public)")
 
         return (score, mood, sound)
     }

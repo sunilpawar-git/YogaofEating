@@ -6,7 +6,6 @@ import SwiftUI
 @MainActor
 struct MainScreenView: View {
     @EnvironmentObject var viewModel: MainViewModel
-    @State private var breathingMeals: Set<UUID> = []
     @State private var showingSettings = false
 
     var body: some View {

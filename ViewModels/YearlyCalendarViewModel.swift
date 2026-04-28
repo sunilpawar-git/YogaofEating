@@ -59,7 +59,6 @@ class YearlyCalendarViewModel: ObservableObject {
     @Published private(set) var layoutConfig: HeatmapLayoutConfiguration
 
     private let historicalService: any HistoricalDataServiceProtocol
-    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
 
@@ -143,9 +142,12 @@ class YearlyCalendarViewModel: ObservableObject {
 
         for month in 1...12 {
             if let firstOfMonth = calendar.date(from: DateComponents(year: self.selectedYear, month: month, day: 1)) {
-                // Calculate how many weeks this date is from the start of the year
-                let components = calendar.dateComponents([.weekOfYear], from: startOfYear, to: firstOfMonth)
-                let weekOffset = components.weekOfYear ?? 0
+                // Derive week offset from cell index so it always aligns with the grid,
+                // regardless of locale or ISO-week-year boundaries.
+                let dayOfYear = calendar.ordinality(of: .day, in: .year, for: firstOfMonth) ?? 1
+                // Add the Monday-based placeholder offset so the column matches the grid.
+                let cellIndex = mondayBasedOffset + dayOfYear - 1
+                let weekOffset = cellIndex / 7
                 labels.append(MonthLabel(name: monthSymbols[month - 1], weekOffset: weekOffset))
             }
         }
