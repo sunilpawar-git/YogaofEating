@@ -277,7 +277,7 @@ struct YearlyCalendarView: View {
             smileyState: SmileyState(scale: 0.5, mood: .neutral),
             meals: [],
             mealCount: 0,
-            averageHealthScore: 0
+            averageHealthScore: 0.5
         )
     }
 }

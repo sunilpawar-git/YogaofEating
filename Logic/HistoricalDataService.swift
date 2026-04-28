@@ -29,10 +29,10 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
     private let authService: any AuthServiceProtocol
     private let syncService: any CloudSyncServiceProtocol
 
-    // Cache for saving entire AppData structure
-    private var lastKnownMeals: [Meal] = []
-    private var lastKnownState: SmileyState = .neutral
-    private var lastKnownResetDate: Date = .init()
+    // Weak back-reference to MainViewModel so saveHistoricalData() always uses
+    // the authoritative meals / state / resetDate rather than stale caches.
+    // Set by MainViewModel immediately after init.
+    weak var mainViewModel: MainViewModel?
 
     // MARK: - Initialization
 
@@ -49,9 +49,6 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         // Load existing historical data from persistence
         if let savedData = resolvedPersistence.load() {
             self.historicalData = savedData.historicalData
-            self.lastKnownMeals = savedData.meals
-            self.lastKnownState = savedData.smileyState
-            self.lastKnownResetDate = savedData.lastResetDate
         } else {
             self.historicalData = HistoricalData()
         }
@@ -65,10 +62,6 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         let calendar = Calendar.current
         let normalizedDate = calendar.startOfDay(for: date)
 
-        // Update caches for persistence
-        self.lastKnownMeals = meals
-        self.lastKnownState = state
-
         // Calculate average health score
         let averageScore: Double
         if meals.isEmpty {
@@ -78,12 +71,17 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             averageScore = totalScore / Double(meals.count)
         }
 
-        // Preserve existing reflection if snapshot already exists for this day
-        let existingReflection = self.historicalData.snapshot(for: normalizedDate)?.reflection
+        // Preserve existing reflection and id if snapshot already exists for this day
+        let existing = self.historicalData.snapshot(for: normalizedDate)
+        let existingReflection = existing?.reflection
+        // Re-use the existing snapshot ID so cloud sync can identify the same day.
+        // Fall back to a stable UUID derived from the ISO date string so new days
+        // also get a consistent identity across calls.
+        let stableId = existing?.id ?? UUID(uuidString: Self.stableUUIDString(for: normalizedDate)) ?? UUID()
 
         // Create snapshot with preserved reflection
         let snapshot = DailySmileySnapshot(
-            id: UUID(),
+            id: stableId,
             date: normalizedDate,
             smileyState: state,
             meals: meals,
@@ -162,15 +160,25 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
 
     // MARK: - Persistence Methods
 
-    /// Saves historical data to persistent storage.
-    /// This is called automatically after archiving, but can be called manually if needed.
+    /// Saves historical data to persistent storage by delegating to the canonical
+    /// save path in MainViewModel (which holds the authoritative meals/state/resetDate).
+    /// Falls back to a history-only save when MainViewModel is not wired up yet.
     func saveHistoricalData() {
-        self.persistenceService.save(
-            meals: self.lastKnownMeals,
-            smileyState: self.lastKnownState,
-            lastResetDate: self.lastKnownResetDate,
-            historicalData: self.historicalData
-        )
+        if let vm = mainViewModel {
+            vm.saveData()
+        } else {
+            // Fallback path: called before MainViewModel wires itself (e.g. during init)
+            // or in unit tests where no MainViewModel exists.
+            // Read current persisted state for meals/smiley; fall back to empty defaults
+            // so historical data is always persisted even when load() returns nil.
+            let existing = self.persistenceService.load()
+            self.persistenceService.save(
+                meals: existing?.meals ?? [],
+                smileyState: existing?.smileyState ?? .neutral,
+                lastResetDate: existing?.lastResetDate ?? Date(),
+                historicalData: self.historicalData
+            )
+        }
     }
 
     /// Loads historical data from persistent storage.
@@ -207,8 +215,21 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
     /// Clears all historical data. Used for factory reset.
     func clearAllData() {
         self.historicalData = HistoricalData()
-        self.lastKnownMeals = []
-        self.lastKnownState = .neutral
-        self.lastKnownResetDate = Date()
+    }
+
+    // MARK: - Private Helpers
+
+    /// Produces a deterministic UUID-shaped string from an ISO date string so that
+    /// the same calendar day always maps to the same snapshot UUID, enabling
+    /// idempotent cloud uploads and deduplication.
+    private static func stableUUIDString(for date: Date) -> String {
+        let iso = ISO8601DateFormatter().string(from: date)
+        // Simple 32-char hex derived from string hash to form a valid UUID
+        var hash = iso.utf8.reduce(UInt64(14_695_981_039_346_656_037)) { acc, byte in
+            (acc ^ UInt64(byte)) &* 1_099_511_628_211
+        }
+        let hex = String(format: "%016llx", hash) + String(format: "%016llx", hash &+ 1)
+        let u = Array(hex)
+        return "\(String(u[0..<8]))-\(String(u[8..<12]))-4\(String(u[13..<16]))-8\(String(u[17..<20]))-\(String(u[20..<32]))"
     }
 }

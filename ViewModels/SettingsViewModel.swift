@@ -1,6 +1,9 @@
 import Combine
 import Foundation
 import HealthKit
+import OSLog
+
+private let settingsLogger = Logger(subsystem: "com.yogaofeating", category: "Settings")
 #if canImport(UIKit)
     import UIKit
 #endif
@@ -53,7 +56,14 @@ class SettingsViewModel: ObservableObject {
     }
 
     @Published var areMealRemindersEnabled: Bool {
-        didSet { self.userDefaults.set(self.areMealRemindersEnabled, forKey: StorageKeys.mealRemindersEnabled) }
+        didSet {
+            self.userDefaults.set(self.areMealRemindersEnabled, forKey: StorageKeys.mealRemindersEnabled)
+            if self.areMealRemindersEnabled {
+                NotificationManager.shared.scheduleDefaultMealReminders()
+            } else {
+                NotificationManager.shared.cancelMealReminders()
+            }
+        }
     }
 
     // MARK: - Sensory Published Properties
@@ -183,9 +193,9 @@ class SettingsViewModel: ObservableObject {
                     self.gender = hkGender
                 }
 
-                print("✅ HealthKit sync successful")
+                settingsLogger.info("HealthKit sync successful")
             } catch {
-                print("❌ HealthKit sync failed: \(error.localizedDescription)")
+                settingsLogger.error("HealthKit sync failed: \(error.localizedDescription, privacy: .public)")
                 self.isHealthSyncEnabled = false
             }
         }
@@ -279,7 +289,7 @@ class SettingsViewModel: ObservableObject {
         if enabled {
             NotificationManager.shared.scheduleMorningNudge()
         } else {
-            NotificationManager.shared.cancelAllNotifications()
+            NotificationManager.shared.cancelMorningNudge()
         }
     }
 

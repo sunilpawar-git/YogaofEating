@@ -25,11 +25,24 @@ class HealthKitService {
             )
         }
 
+        guard
+            let bodyMassType = HKObjectType.quantityType(forIdentifier: .bodyMass),
+            let heightType = HKObjectType.quantityType(forIdentifier: .height),
+            let dateOfBirthType = HKObjectType.characteristicType(forIdentifier: .dateOfBirth),
+            let biologicalSexType = HKObjectType.characteristicType(forIdentifier: .biologicalSex)
+        else {
+            throw NSError(
+                domain: "HealthKitService",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "One or more required HealthKit types are unavailable"]
+            )
+        }
+
         let typesToRead: Set<HKObjectType> = [
-            HKObjectType.quantityType(forIdentifier: .bodyMass)!,
-            HKObjectType.quantityType(forIdentifier: .height)!,
-            HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!,
-            HKObjectType.characteristicType(forIdentifier: .biologicalSex)!
+            bodyMassType,
+            heightType,
+            dateOfBirthType,
+            biologicalSexType
         ]
 
         try await healthStore.requestAuthorization(toShare: [], read: typesToRead)

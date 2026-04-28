@@ -1,4 +1,5 @@
 import HealthKit
+import StoreKit
 import SwiftUI
 #if canImport(UIKit)
     import UIKit
@@ -199,7 +200,15 @@ struct SettingsView: View {
             } label: {
                 Label("Terms of Service", systemImage: "doc.text")
             }
-            Button { /* Rate app */ } label: {
+            Button {
+                #if canImport(UIKit)
+                    if let scene = UIApplication.shared.connectedScenes
+                        .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
+                    {
+                        SKStoreReviewController.requestReview(in: scene)
+                    }
+                #endif
+            } label: {
                 Label("Rate Yoga of Eating", systemImage: "star")
             }
         } header: {
@@ -207,7 +216,7 @@ struct SettingsView: View {
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Yoga of Eating v\(self.appVersion) (\(self.appBuild))")
-                Text("© 2025 Sunil")
+                Text("© \(Calendar.current.component(.year, from: Date())) Sunil")
             }
             .padding(.top, 8)
         }

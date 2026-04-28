@@ -1,5 +1,9 @@
+import FirebaseCore
 import FirebaseFirestore
 import Foundation
+import OSLog
+
+private let syncLogger = Logger(subsystem: "com.yogaofeating", category: "CloudSync")
 
 /// Protocol for cloud synchronization service
 protocol CloudSyncServiceProtocol {
@@ -9,11 +13,10 @@ protocol CloudSyncServiceProtocol {
 
 /// Service for interacting with Firebase Firestore to sync heatmap data.
 class CloudSyncService: CloudSyncServiceProtocol {
-    // Lazy initialization to prevent crash when Firebase isn't configured (e.g., unit tests)
+    // Only initialise Firestore when Firebase is actually configured.
+    // In tests, inject MockCloudSyncService — never rely on runtime class-name detection here.
     private lazy var db: Firestore? = {
-        if NSClassFromString("XCTestCase") != nil {
-            return nil
-        }
+        guard FirebaseApp.app() != nil else { return nil }
         return Firestore.firestore()
     }()
 
@@ -22,14 +25,9 @@ class CloudSyncService: CloudSyncServiceProtocol {
     /// Uploads a single snapshot to Firestore.
     /// Uses the normalized date string as the document ID to prevent duplicates.
     func upload(snapshot: DailySmileySnapshot, userId: String) async throws {
-        guard let db = self.db else {
-            // Skip during unit tests
-            print("☁️ CloudSync: Skipping upload (no db - likely unit test)")
-            return
-        }
+        guard let db = self.db else { return }
         let dateString = self.dateFormatter.string(from: snapshot.date)
-        let docPath = "users/\(userId)/\(self.collectionName)/\(dateString)"
-        print("☁️ CloudSync: Uploading to \(docPath)")
+        syncLogger.debug("Uploading snapshot for \(dateString, privacy: .public)")
 
         let docRef = db.collection("users").document(userId)
             .collection(self.collectionName).document(dateString)
@@ -38,11 +36,12 @@ class CloudSyncService: CloudSyncServiceProtocol {
 
         do {
             try await docRef.setData(data)
-            print("☁️ CloudSync: Successfully uploaded \(dateString)")
+            syncLogger.debug("Upload succeeded for \(dateString, privacy: .public)")
         } catch {
-            print("☁️ CloudSync: Upload FAILED for \(dateString)")
-            print("☁️ CloudSync: Error type: \(type(of: error))")
-            print("☁️ CloudSync: Error: \(error)")
+            syncLogger
+                .error(
+                    "Upload failed for \(dateString, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                )
             throw error
         }
     }

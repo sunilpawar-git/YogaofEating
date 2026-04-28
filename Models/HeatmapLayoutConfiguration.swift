@@ -147,8 +147,10 @@ struct HeatmapLayoutConfiguration {
 
 extension HeatmapLayoutConfiguration {
     /// Creates an array of GridItems for use with LazyVGrid (portrait) or LazyHGrid (landscape).
+    /// Portrait: 7 columns (one per day-of-week) for a vertical scrolling grid.
+    /// Landscape: 53 columns (one per week-of-year) for a horizontal scrolling grid.
     var gridItems: [GridItem] {
-        let count = self.isPortrait ? self.daysPerWeek : self.daysPerWeek
+        let count = self.isPortrait ? self.daysPerWeek : self.weeksPerYear
         return Array(
             repeating: GridItem(.fixed(self.cellSize), spacing: self.spacing),
             count: count

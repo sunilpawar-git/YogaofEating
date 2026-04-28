@@ -55,10 +55,6 @@ struct DayTimelineView: View {
     /// Recent meals from past 3 days for quick-add feature (only for today)
     var recentMeals: [Meal] = []
 
-    // MARK: - State
-
-    @State private var breathingMeals: Set<UUID> = []
-
     // MARK: - Body
 
     var body: some View {
@@ -121,7 +117,7 @@ struct DayTimelineView: View {
         if self.isToday {
             JournalBlockView(
                 meal: meal,
-                isBreathing: self.breathingMeals.contains(meal.id),
+                isBreathing: false,
                 onUpdate: { mealType, newItems in
                     self.onUpdateMeal?(meal.id, mealType, newItems)
                 },
@@ -380,7 +376,7 @@ struct ReadOnlyMealCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                MealTypeTag(mealType: self.meal.mealType, isSelected: true)
+                MealTypeTag(mealType: self.meal.mealType)
 
                 Spacer()
 

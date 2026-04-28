@@ -33,6 +33,10 @@ enum StorageKeys {
 
     // MARK: - All Keys (for bulk operations like deleteAll)
 
+    //
+    // MAINTENANCE: When adding a new key constant above, you MUST also add it here.
+    // Failing to do so will leave orphan UserDefaults entries after a factory reset.
+
     static let allKeys: [String] = [
         userName,
         userHeight,
