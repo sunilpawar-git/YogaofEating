@@ -60,10 +60,15 @@ class AILogicService: AIAnalysisProvider {
     // MARK: - Async Cloud Function Call
 
     /// Calls the 'analyzeMeal' Firebase Cloud Function.
-    func analyzeMealQuality(description: String) async throws -> (score: Double, mood: SmileyMood, sound: String) {
+    func analyzeMealQuality(description: String) async throws -> (
+        score: Double,
+        mood: SmileyMood,
+        sound: String,
+        insight: String?
+    ) {
         guard let functions = self.functions else {
             aiServiceLogger.warning("Firebase Functions not available — returning defaults")
-            return (0.5, .neutral, "tink")
+            return (0.5, .neutral, "tink", nil)
         }
 
         aiServiceLogger.debug("Calling Firebase Cloud Function 'analyzeMeal'")
@@ -82,13 +87,14 @@ class AILogicService: AIAnalysisProvider {
         let score = data["healthScore"] as? Double ?? 0.5
         let moodString = data["mood"] as? String ?? "neutral"
         let sound = data["sound"] as? String ?? "tink"
+        let insight = data["insight"] as? String
 
         let mood = SmileyMood(rawValue: moodString) ?? .neutral
 
         aiServiceLogger
             .debug("Parsed response — score: \(score, privacy: .public), mood: \(moodString, privacy: .public)")
 
-        return (score, mood, sound)
+        return (score, mood, sound, insight)
     }
 }
 
@@ -104,5 +110,81 @@ extension SmileyMood {
         default:
             return nil
         }
+    }
+}
+
+// MARK: - Detailed Meal Insight
+
+/// Detailed insight response from getMealInsight cloud function
+struct DetailedMealInsight: Codable, Equatable {
+    let summary: String
+    let nutritionHighlights: [String]
+    let tip: String?
+    let category: String
+
+    /// Category as ScoreCategory enum
+    var scoreCategory: ScoreCategory {
+        switch self.category.lowercased() {
+        case "excellent":
+            .excellent
+        case "good":
+            .good
+        case "needs_improvement", "poor":
+            .poor
+        default:
+            .moderate
+        }
+    }
+}
+
+/// Protocol for services that provide detailed meal insights
+protocol MealInsightProvider {
+    func getDetailedInsight(for meal: Meal) async throws -> DetailedMealInsight
+}
+
+extension AILogicService: MealInsightProvider {
+    /// Fetches detailed insight for a specific meal (on-demand)
+    func getDetailedInsight(for meal: Meal) async throws -> DetailedMealInsight {
+        guard let functions = self.functions else {
+            aiServiceLogger.warning("Firebase Functions not available — returning fallback insight")
+            return DetailedMealInsight(
+                summary: "This meal contributes to your daily nutrition.",
+                nutritionHighlights: [],
+                tip: "Keep tracking to see patterns!",
+                category: "moderate"
+            )
+        }
+
+        aiServiceLogger.debug("Calling Firebase Cloud Function 'getMealInsight'")
+
+        let requestData: [String: Any] = [
+            "mealItems": meal.items,
+            "mealType": meal.mealType.rawValue,
+            "healthScore": meal.healthScore
+        ]
+
+        let result = try await functions.httpsCallable("getMealInsight").call(requestData)
+
+        guard let data = result.data as? [String: Any] else {
+            throw NSError(
+                domain: "AILogicService",
+                code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid response format"]
+            )
+        }
+
+        let summary = data["summary"] as? String ?? "A balanced meal choice."
+        let nutritionHighlights = data["nutritionHighlights"] as? [String] ?? []
+        let tip = data["tip"] as? String
+        let category = data["category"] as? String ?? "moderate"
+
+        aiServiceLogger.debug("Received detailed insight — category: \(category, privacy: .public)")
+
+        return DetailedMealInsight(
+            summary: summary,
+            nutritionHighlights: nutritionHighlights,
+            tip: tip,
+            category: category
+        )
     }
 }

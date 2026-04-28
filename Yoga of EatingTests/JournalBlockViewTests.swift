@@ -138,6 +138,137 @@
             XCTAssertEqual(persistedItems, expectedItems, "Persisted items should match expected")
             XCTAssertEqual(inMemoryItems, persistedItems, "In-memory and persisted items should be identical")
         }
+
+        /// Tests that AI analysis updating healthScore doesn't reset meal items.
+        /// This is the specific bug: AI analysis runs async and updates healthScore,
+        /// which triggers a re-render that could reset the text field.
+        func test_aiAnalysisUpdate_doesNotResetMealItems() throws {
+            // Given: A meal with items that user typed
+            self.viewModel.createNewMeal()
+            let mealId = try XCTUnwrap(self.viewModel.meals.first?.id)
+            let typedItems = ["Orange", "Americano"]
+
+            // User updates meal with their typed items
+            self.viewModel.updateMeal(mealId, mealType: .drinks, items: typedItems)
+
+            // Verify items are set
+            var meal = try XCTUnwrap(self.viewModel.meals.first)
+            XCTAssertEqual(meal.items, typedItems)
+            let initialHealthScore = meal.healthScore
+
+            // When: AI analysis completes and updates healthScore (simulating async callback)
+            // This is what happens when AI analysis returns
+            if let index = self.viewModel.meals.firstIndex(where: { $0.id == mealId }) {
+                self.viewModel.meals[index].healthScore = 0.7
+                self.viewModel.meals[index].isAIAnalyzed = true
+            }
+
+            // Then: Meal items should NOT be reset
+            meal = try XCTUnwrap(self.viewModel.meals.first)
+            XCTAssertEqual(meal.items, typedItems, "AI analysis should not reset meal items")
+            XCTAssertEqual(meal.healthScore, 0.7, "Health score should be updated")
+            XCTAssertTrue(meal.isAIAnalyzed, "AI analyzed flag should be set")
+        }
+
+        /// Tests that multiple AI analysis updates don't corrupt meal items.
+        /// Simulates the scenario where user types, AI analyzes, user types more, AI analyzes again.
+        func test_multipleAIAnalyses_preserveMealItems() throws {
+            // Given: A meal being actively edited
+            self.viewModel.createNewMeal()
+            let mealId = try XCTUnwrap(self.viewModel.meals.first?.id)
+
+            // First typing session
+            self.viewModel.updateMeal(mealId, mealType: .drinks, items: ["Orange"])
+
+            // First AI analysis completes
+            if let index = self.viewModel.meals.firstIndex(where: { $0.id == mealId }) {
+                self.viewModel.meals[index].healthScore = 0.7
+                self.viewModel.meals[index].isAIAnalyzed = true
+            }
+
+            // User continues typing
+            self.viewModel.updateMeal(mealId, mealType: .drinks, items: ["Orange", "Americano"])
+
+            // Second AI analysis completes
+            if let index = self.viewModel.meals.firstIndex(where: { $0.id == mealId }) {
+                self.viewModel.meals[index].healthScore = 0.65
+            }
+
+            // Then: Final items should be preserved
+            let meal = try XCTUnwrap(self.viewModel.meals.first)
+            XCTAssertEqual(
+                meal.items,
+                ["Orange", "Americano"],
+                "Items should be preserved through multiple AI analyses"
+            )
+        }
+
+        // MARK: - Phase 6: Local Update Debounce Tests
+
+        /// Tests that the local update debounce is configured to reduce excessive updates.
+        /// 500ms (500_000_000 ns) balances responsiveness with reducing UI thrashing.
+        func test_localUpdateDebounce_isConfiguredForBalancedFeedback() {
+            // Given: The debounce constant in JournalBlockView
+            let expectedDelay: UInt64 = 500_000_000 // 500ms in nanoseconds
+
+            // Then: The constant should be set to 500ms for balanced updates
+            XCTAssertEqual(
+                JournalBlockView.localUpdateDebounceNanoseconds,
+                expectedDelay,
+                "Local update debounce should be 500ms to reduce excessive updates"
+            )
+        }
+
+        /// Tests that local update debounce is reasonable for UX.
+        func test_localUpdateDebounce_isReasonable() {
+            // Given: Acceptable delay range for UX
+            let minDelay: UInt64 = 300_000_000 // 300ms minimum
+            let maxDelay: UInt64 = 1_000_000_000 // 1s maximum
+
+            // Then: The debounce should be within this range
+            XCTAssertGreaterThanOrEqual(
+                JournalBlockView.localUpdateDebounceNanoseconds,
+                minDelay,
+                "Local update debounce should be at least 300ms to reduce UI thrashing"
+            )
+            XCTAssertLessThanOrEqual(
+                JournalBlockView.localUpdateDebounceNanoseconds,
+                maxDelay,
+                "Local update debounce should be at most 1s for reasonable feedback"
+            )
+        }
+
+        // MARK: - Done Button Visibility Configuration Tests
+
+        /// Tests that Done button visibility is configurable at the static level.
+        func test_doneButtonVisibility_isConfigurable() {
+            // Given: Store original value
+            let originalValue = JournalBlockView.doneButtonVisibility
+
+            // When: Change the configuration
+            JournalBlockView.doneButtonVisibility = .whenHasContent
+            XCTAssertEqual(JournalBlockView.doneButtonVisibility, .whenHasContent)
+
+            JournalBlockView.doneButtonVisibility = .never
+            XCTAssertEqual(JournalBlockView.doneButtonVisibility, .never)
+
+            JournalBlockView.doneButtonVisibility = .whenFocused
+            XCTAssertEqual(JournalBlockView.doneButtonVisibility, .whenFocused)
+
+            // Cleanup: Restore original value
+            JournalBlockView.doneButtonVisibility = originalValue
+        }
+
+        /// Tests that the default Done button visibility is .whenFocused for discoverability.
+        func test_doneButtonVisibility_defaultsToWhenFocused() {
+            // The default should be .whenFocused for best discoverability
+            // Note: This test may need updating if we change the default based on UX feedback
+            XCTAssertEqual(
+                JournalBlockView.doneButtonVisibility,
+                .whenFocused,
+                "Default Done button visibility should be .whenFocused for discoverability"
+            )
+        }
     }
 
 #endif
