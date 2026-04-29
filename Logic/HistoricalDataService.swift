@@ -231,7 +231,7 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
     private static func stableUUIDString(for date: Date) -> String {
         let iso = ISO8601DateFormatter().string(from: date)
         // Simple 32-char hex derived from string hash to form a valid UUID
-        var hash = iso.utf8.reduce(UInt64(14_695_981_039_346_656_037)) { acc, byte in
+        let hash = iso.utf8.reduce(UInt64(14_695_981_039_346_656_037)) { acc, byte in
             (acc ^ UInt64(byte)) &* 1_099_511_628_211
         }
         let hex = String(format: "%016llx", hash) + String(format: "%016llx", hash &+ 1)
