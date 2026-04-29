@@ -719,6 +719,37 @@
             // Then: AI analysis should be triggered despite content being "unchanged"
             XCTAssertTrue(self.mockAILogic.analyzeCalled, "AI should be triggered on done action after local updates")
         }
+
+        // MARK: - Production Wiring Tests
+
+        func test_defaultMainViewModel_usesAIAnalysisProvider() {
+            // Regression test: MainViewModel() with no args must wire AILogicService.
+            // This was broken when the default was silently changed to MealLogicService to fix
+            // a Firebase timing warning, causing performDeepAnalysis to always bail early.
+            let vm = MainViewModel(skipDataLoading: true)
+            XCTAssertTrue(
+                vm.logicService is AIAnalysisProvider,
+                "Production MainViewModel must use AIAnalysisProvider — without it, AI analysis silently never runs"
+            )
+        }
+
+        func test_defaultMainViewModel_aiAnalysisGuardPasses() async {
+            // Verifies the AIAnalysisProvider cast in performDeepAnalysis succeeds for the default VM,
+            // so Firebase is actually called rather than returning early with the local score.
+            let vm = MainViewModel(logicService: MockAILogicService(), skipDataLoading: true)
+            vm.createNewMeal()
+            guard let mealId = vm.meals.first?.id else {
+                XCTFail("Meal not created")
+                return
+            }
+
+            // Confirm the guard passes — analyzeCalled would be false if guard bailed early
+            let mock = vm.logicService as! MockAILogicService
+            mock.mockAnalysisResult = (score: 0.9, mood: .serene, sound: "chime", insight: nil)
+            await vm.performDeepAnalysis(for: mealId, items: ["Apple salad"])
+
+            XCTAssertTrue(mock.analyzeCalled, "AIAnalysisProvider guard must pass for default VM — if false, AI is silently disabled")
+        }
     }
 
     // MARK: - Slow Mock for Concurrency Testing

@@ -118,7 +118,7 @@ class MainViewModel: ObservableObject {
         let healthService = healthProfileService ?? HealthProfileService()
         let historicalSvc = historicalService ?? HistoricalDataService()
         self.healthProfileService = healthService
-        self.logicService = logicService ?? MealLogicService(healthProfileService: healthService)
+        self.logicService = logicService ?? AILogicService()
         self.persistenceService = persistenceService ?? PersistenceService.shared
         self.historicalService = historicalSvc
         self.insightService = insightService ?? InsightGenerationService(historicalService: historicalSvc)

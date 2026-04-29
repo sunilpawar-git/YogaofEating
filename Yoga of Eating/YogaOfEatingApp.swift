@@ -14,8 +14,8 @@ struct YogaOfEatingApp: App {
         var delegate: AppDelegate
     #endif
 
-    // Shared state across the app — AILogicService wired here (after Firebase.configure() in init)
-    @StateObject private var viewModel = MainViewModel(logicService: AILogicService())
+    // Shared state across the app
+    @StateObject private var viewModel = MainViewModel()
 
     @AppStorage("app_theme")
     private var theme: Int = 0 // 0: System, 1: Light, 2: Dark
