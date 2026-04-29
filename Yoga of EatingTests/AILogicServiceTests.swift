@@ -153,13 +153,15 @@
         // MARK: - AIAnalysisProvider conformance
 
         func test_aiLogicService_conformsToAIAnalysisProvider() {
-            // Compile-time guarantee, but also asserted at runtime to surface if protocol
-            // conformance is accidentally removed via an extension deletion.
-            XCTAssertTrue(self.sut is AIAnalysisProvider)
+            // Cast through AnyObject to avoid the "always succeeds" warning while still
+            // asserting the conformance at runtime — catches accidental extension deletions.
+            let asAny: AnyObject = self.sut
+            XCTAssertTrue(asAny is any AIAnalysisProvider)
         }
 
         func test_aiLogicService_conformsToMealInsightProvider() {
-            XCTAssertTrue(self.sut is MealInsightProvider)
+            let asAny: AnyObject = self.sut
+            XCTAssertTrue(asAny is any MealInsightProvider)
         }
     }
 #endif
