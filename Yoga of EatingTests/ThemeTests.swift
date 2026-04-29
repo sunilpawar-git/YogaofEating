@@ -124,4 +124,56 @@ final class ThemeTests: XCTestCase {
         XCTAssertNotNil(moderate)
         XCTAssertNotNil(poor)
     }
+
+    // MARK: - Timeline Constants Tests (Phase 1)
+
+    func test_timeline_spineOpacity_isCorrectValue() {
+        // Given / When
+        let opacity = AppTheme.Timeline.spineOpacity
+
+        // Then: Spine must be visible (0.18) — not the old invisible 0.10
+        XCTAssertEqual(opacity, 0.18, accuracy: 0.001)
+    }
+
+    func test_timeline_spineWidth_isCorrectValue() {
+        // Given / When
+        let width = AppTheme.Timeline.spineWidth
+
+        // Then: 1.5pt — crisp without being heavy
+        XCTAssertEqual(width, 1.5, accuracy: 0.01)
+    }
+
+    func test_timeline_spineWidth_isPositive() {
+        XCTAssertGreaterThan(AppTheme.Timeline.spineWidth, 0)
+    }
+
+    func test_timeline_spineOpacity_isInValidRange() {
+        let opacity = AppTheme.Timeline.spineOpacity
+        XCTAssertGreaterThan(opacity, 0.0, "Spine must be visible")
+        XCTAssertLessThan(opacity, 1.0, "Spine must not be fully opaque")
+    }
+
+    func test_timeline_fastingSignificantColor_isDefined() {
+        XCTAssertNotNil(AppTheme.Timeline.fastingSignificantColor)
+    }
+
+    func test_timeline_fastingDefaultColor_isDefined() {
+        XCTAssertNotNil(AppTheme.Timeline.fastingDefaultColor)
+    }
+
+    // MARK: - Background Glow Constants Tests (Phase 5)
+
+    func test_background_glowOpacity_isDefined() {
+        let opacity = AppTheme.Background.glowOpacity
+        XCTAssertGreaterThan(opacity, 0.0)
+        XCTAssertLessThan(opacity, 1.0)
+    }
+
+    func test_background_glowBlurRadius_isDefined() {
+        XCTAssertGreaterThan(AppTheme.Background.glowBlurRadius, 0)
+    }
+
+    func test_background_glowSize_isDefined() {
+        XCTAssertGreaterThan(AppTheme.Background.glowSize, 0)
+    }
 }

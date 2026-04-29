@@ -28,10 +28,18 @@ extension MealType {
 
 // MARK: - Card Background View
 
-/// A reusable card background with material effect and visual feedback overlay.
-/// Used by JournalBlockView for consistent meal card styling.
+/// A reusable card background with material effect, visual feedback overlay,
+/// and a left-edge accent bar coloured by meal type.
+///
+/// The accent bar provides instant meal-type scanning down the left edge of the
+/// timeline without colouring the whole card. The score-based full-border is
+/// intentionally removed — the subtle tint overlay carries score feedback instead.
 struct MealCardBackground: View {
     let feedback: MealCardFeedback
+
+    /// Meal type colour used for the left accent bar.
+    /// Pass `meal.mealType.displayColor` from the containing view.
+    let mealTypeColor: Color
 
     var body: some View {
         RoundedRectangle(cornerRadius: 16)
@@ -41,15 +49,24 @@ struct MealCardBackground: View {
                     .fill(Color.white.opacity(0.4))
             }
             .overlay {
-                // Subtle tint overlay for visual feedback
                 RoundedRectangle(cornerRadius: 16)
                     .fill(self.feedback.tintColor.opacity(self.feedback.tintOpacity))
             }
             .shadow(color: .black.opacity(0.03), radius: 8, y: 4)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(self.feedback.borderColor, lineWidth: self.feedback.borderWidth)
-            )
+            .overlay(alignment: .leading) {
+                self.leftAccentBar
+            }
+    }
+
+    /// 3pt left-edge bar in the meal type's colour.
+    /// Inset from top and bottom edges to float within the card.
+    private var leftAccentBar: some View {
+        RoundedRectangle(cornerRadius: AppTheme.MealCard.accentBarCornerRadius)
+            .fill(self.mealTypeColor)
+            .frame(width: AppTheme.MealCard.accentBarWidth)
+            .padding(.vertical, AppTheme.Spacing.small)
+            .padding(.leading, 0)
+            .accessibilityHidden(true)
     }
 }
 
@@ -89,7 +106,8 @@ struct BreathingContentView: View {
 
 #Preview("Card Background - Healthy") {
     MealCardBackground(
-        feedback: MealCardFeedback(score: 0.8, mealTypeColor: .green)
+        feedback: MealCardFeedback(score: 0.8, mealTypeColor: .green),
+        mealTypeColor: .green
     )
     .frame(width: 300, height: 150)
     .padding()
@@ -97,7 +115,8 @@ struct BreathingContentView: View {
 
 #Preview("Card Background - Unhealthy") {
     MealCardBackground(
-        feedback: MealCardFeedback(score: 0.3, mealTypeColor: .orange)
+        feedback: MealCardFeedback(score: 0.3, mealTypeColor: .orange),
+        mealTypeColor: .orange
     )
     .frame(width: 300, height: 150)
     .padding()

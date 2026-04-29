@@ -162,5 +162,51 @@
             // When/Then: Should still have thin border (no thick border)
             XCTAssertEqual(feedback.borderWidth, 1.0)
         }
+
+        // MARK: - Left Accent Bar Theme Constants (Phase 3)
+
+        func test_mealCard_accentBarWidth_matchesTheme() {
+            // Given / When
+            let width = AppTheme.MealCard.accentBarWidth
+
+            // Then: 3pt left accent bar — visible but not dominant
+            XCTAssertEqual(width, 3.0, accuracy: 0.01)
+        }
+
+        func test_mealCard_accentBarWidth_isPositive() {
+            XCTAssertGreaterThan(AppTheme.MealCard.accentBarWidth, 0)
+        }
+
+        func test_mealCard_accentBarCornerRadius_isPositive() {
+            XCTAssertGreaterThan(AppTheme.MealCard.accentBarCornerRadius, 0)
+        }
+
+        func test_mealCard_accentBarColor_breakfast_isOrange() {
+            // Given: breakfast meal type
+            let color = MealType.breakfast.displayColor
+
+            // Then: orange (breakfast warmth)
+            XCTAssertTrue(self.colorMatches(color, .orange))
+        }
+
+        func test_mealCard_accentBarColor_lunch_isGreen() {
+            let color = MealType.lunch.displayColor
+            XCTAssertTrue(self.colorMatches(color, .green))
+        }
+
+        func test_mealCard_accentBarColor_dinner_isPurple() {
+            let color = MealType.dinner.displayColor
+            XCTAssertTrue(self.colorMatches(color, .purple))
+        }
+
+        func test_mealCard_accentBarColor_snacks_isPink() {
+            let color = MealType.snacks.displayColor
+            XCTAssertTrue(self.colorMatches(color, .pink))
+        }
+
+        func test_mealCard_accentBarColor_drinks_isBlue() {
+            let color = MealType.drinks.displayColor
+            XCTAssertTrue(self.colorMatches(color, .blue))
+        }
     }
 #endif

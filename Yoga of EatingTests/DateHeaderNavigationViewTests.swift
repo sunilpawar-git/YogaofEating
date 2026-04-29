@@ -59,5 +59,48 @@
             )
             XCTAssertNotNil(viewLongDate.body)
         }
+
+        // MARK: - Contextual Subtext Tests (Phase 4)
+
+        func test_component_acceptsOptionalContextSubtext() {
+            // Given: view with subtext provided
+            let view = DateHeaderNavigationView(
+                formattedDate: "Wednesday, 29 Apr 2026",
+                isViewingToday: true,
+                canNavigateToPreviousDay: true,
+                onPreviousDay: {},
+                onNavigateToToday: {},
+                contextSubtext: "Good morning"
+            )
+            // Then: instantiates without error
+            XCTAssertNotNil(view.body)
+        }
+
+        func test_component_acceptsNilContextSubtext() {
+            // Given: view with no subtext (nil — default)
+            let view = DateHeaderNavigationView(
+                formattedDate: "Wednesday, 29 Apr 2026",
+                isViewingToday: true,
+                canNavigateToPreviousDay: true,
+                onPreviousDay: {},
+                onNavigateToToday: {},
+                contextSubtext: nil
+            )
+            // Then: instantiates without error
+            XCTAssertNotNil(view.body)
+        }
+
+        func test_component_contextSubtextDefaultIsNil() {
+            // Given: view without explicit contextSubtext
+            let view = DateHeaderNavigationView(
+                formattedDate: "Wednesday, 29 Apr 2026",
+                isViewingToday: true,
+                canNavigateToPreviousDay: true,
+                onPreviousDay: {},
+                onNavigateToToday: {}
+            )
+            // Then: default parameter is nil (no subtext rendered)
+            XCTAssertNil(view.contextSubtext)
+        }
     }
 #endif

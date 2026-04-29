@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A reusable date header with navigation controls for day-based navigation.
-/// Used in MainScreenView to show the current date and allow navigation to previous days.
+/// Shows an optional one-line contextual subtext below the date for added warmth.
 struct DateHeaderNavigationView: View {
     // MARK: - Properties
 
@@ -10,6 +10,26 @@ struct DateHeaderNavigationView: View {
     let canNavigateToPreviousDay: Bool
     let onPreviousDay: () -> Void
     let onNavigateToToday: () -> Void
+
+    /// Optional one-line context below the date (e.g. "Good morning", "Slept well").
+    /// Computed by the ViewModel via DateContextProvider — nil renders nothing.
+    let contextSubtext: String?
+
+    init(
+        formattedDate: String,
+        isViewingToday: Bool,
+        canNavigateToPreviousDay: Bool,
+        onPreviousDay: @escaping () -> Void,
+        onNavigateToToday: @escaping () -> Void,
+        contextSubtext: String? = nil
+    ) {
+        self.formattedDate = formattedDate
+        self.isViewingToday = isViewingToday
+        self.canNavigateToPreviousDay = canNavigateToPreviousDay
+        self.onPreviousDay = onPreviousDay
+        self.onNavigateToToday = onNavigateToToday
+        self.contextSubtext = contextSubtext
+    }
 
     // MARK: - Body
 
@@ -47,6 +67,14 @@ struct DateHeaderNavigationView: View {
                 .font(.system(.title2, design: .rounded))
                 .fontWeight(.bold)
                 .accessibilityIdentifier("date-header")
+
+            if let subtext = self.contextSubtext {
+                Text(subtext)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .accessibilityIdentifier("date-context-subtext")
+                    .transition(.opacity)
+            }
 
             if !self.isViewingToday {
                 self.backToTodayButton
