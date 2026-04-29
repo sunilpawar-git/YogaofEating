@@ -156,7 +156,7 @@ struct JournalBlockView: View {
                 }
             }
         } label: {
-            MealTypeTag(mealType: self.selectedMealType, isSelected: true)
+            MealTypeTag(mealType: self.selectedMealType)
         }
         .animation(nil, value: self.selectedMealType)
     }

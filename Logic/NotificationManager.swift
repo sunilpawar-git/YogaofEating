@@ -1,5 +1,8 @@
 import Foundation
+import OSLog
 import UserNotifications
+
+private let notifLogger = Logger(subsystem: "com.yogaofeating", category: "Notifications")
 
 /// Protocol to allow mocking of UNUserNotificationCenter
 protocol NotificationCenterProtocol: Sendable {
@@ -25,16 +28,16 @@ class NotificationManager {
     func requestPermissions() {
         self.center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if granted {
-                print("Notification permissions granted.")
+                notifLogger.info("Notification permissions granted")
             } else if let error {
-                print("Notification permissions error: \(error.localizedDescription)")
+                notifLogger.error("Notification permission error: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
 
     /// The "Morning Nudge" to plan the day's meals.
     func scheduleMorningNudge() {
-        guard UserDefaults.standard.object(forKey: "morning_nudge_enabled") as? Bool ?? true else {
+        guard UserDefaults.standard.object(forKey: StorageKeys.morningNudgeEnabled) as? Bool ?? true else {
             return
         }
 
@@ -54,7 +57,7 @@ class NotificationManager {
 
     /// Individual meal reminders.
     func scheduleMealReminder(label: String, hour: Int, minute: Int) {
-        guard UserDefaults.standard.object(forKey: "meal_reminders_enabled") as? Bool ?? true else {
+        guard UserDefaults.standard.object(forKey: StorageKeys.mealRemindersEnabled) as? Bool ?? true else {
             return
         }
 
@@ -79,6 +82,17 @@ class NotificationManager {
         self.scheduleMealReminder(label: "Breakfast", hour: 8, minute: 0)
         self.scheduleMealReminder(label: "Lunch", hour: 13, minute: 0)
         self.scheduleMealReminder(label: "Dinner", hour: 20, minute: 0)
+    }
+
+    /// Cancels only the morning nudge notification, leaving other notifications intact.
+    func cancelMorningNudge() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["morning_nudge"])
+    }
+
+    /// Cancels all meal reminder notifications (Breakfast, Lunch, Dinner).
+    func cancelMealReminders() {
+        let ids = ["meal_reminder_Breakfast", "meal_reminder_Lunch", "meal_reminder_Dinner"]
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
     }
 
     /// Clears all pending notifications.

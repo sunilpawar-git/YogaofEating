@@ -19,7 +19,7 @@ struct FAQView: View {
             Section("AI & Analysis") {
                 FAQItem(
                     question: "How is my food analyzed?",
-                    answer: "We use advanced AI (powered by Google Gemini) to interpret your meal descriptions. It estimates nutritional value and 'sattvic' quality based on your input."
+                    answer: "We use AI to interpret your meal descriptions and estimate their nutritional value and 'sattvic' quality. Analysis runs securely via cloud functions and your meal descriptions are not stored on any external server."
                 )
                 FAQItem(
                     question: "Is the AI advice medical advice?",

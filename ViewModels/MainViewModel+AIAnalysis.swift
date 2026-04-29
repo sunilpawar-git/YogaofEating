@@ -1,5 +1,8 @@
 import Foundation
+import OSLog
 import SwiftUI
+
+private let aiLogger = Logger(subsystem: "com.yogaofeating", category: "AIAnalysis")
 
 // MARK: - AI Analysis Extension
 
@@ -30,52 +33,34 @@ extension MainViewModel {
     func performDeepAnalysis(for mealId: UUID, items: [String]) async {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
-        // Skip if already analyzed - prevents duplicate API calls
-        guard !meals[index].isAIAnalyzed else {
-            print("⏭️ Skipping analysis - meal already analyzed")
-            return
-        }
+        guard !meals[index].isAIAnalyzed else { return }
 
-        // Prevent concurrent duplicate requests for the same meal
-        // This addresses the "GTMSessionFetcher was already running" warning
-        guard !analysisInProgress.contains(mealId) else {
-            print("⏭️ Skipping analysis - request already in progress for this meal")
-            return
-        }
+        guard !analysisInProgress.contains(mealId) else { return }
 
         let description = items.joined(separator: ", ")
 
-        // Skip analysis if content is too short (user still typing)
-        // This reduces unnecessary API calls during incremental typing
-        guard description.count >= Self.minimumContentLength else {
-            print("⏭️ Skipping analysis - content too short (\(description.count) < \(Self.minimumContentLength) chars)")
-            return
-        }
+        guard description.count >= Self.minimumContentLength else { return }
 
-        // Mark this meal as being analyzed
         analysisInProgress.insert(mealId)
         defer { analysisInProgress.remove(mealId) }
 
         // Only proceed if we are using a service that supports AI analysis
         guard let aiService = logicService as? AIAnalysisProvider else {
-            // If strictly local service, just update smiley state with current score
             let currentScore = meals[index].healthScore
             updateSmileyState(with: currentScore)
             return
         }
 
         do {
-            print("🤖 AI Analysis started for meal: \(description)")
+            aiLogger.debug("AI analysis started for meal (item count: \(items.count, privacy: .public))")
             let result = try await aiService.analyzeMealQuality(description: description)
-            print(
-                "✅ AI Analysis successful - Score: \(result.score), "
-                    + "Mood: \(result.mood.rawValue), Sound: \(result.sound)"
-            )
+            aiLogger
+                .debug(
+                    "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
+                )
 
-            // Update the specific meal's health score, AI analyzed flag, and basic insight
-            // NOTE: We create a new array copy to ensure @Published triggers SwiftUI view updates.
-            // Direct in-place mutation (meals[index].property = value) may not reliably trigger
-            // observation in SwiftUI, causing the UI to display stale values.
+            // Update the specific meal's health score, AI analyzed flag, and basic insight.
+            // Array copy ensures @Published triggers SwiftUI observation reliably.
             if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
                 var updatedMeals = meals
                 updatedMeals[verifyIndex].healthScore = result.score
@@ -83,32 +68,22 @@ extension MainViewModel {
                 updatedMeals[verifyIndex].aiInsight = result.insight
                 meals = updatedMeals
                 saveData()
-                print("📊 Updated meal healthScore to: \(result.score), isAIAnalyzed: true")
-                if let insight = result.insight {
-                    print("💡 Basic insight: \(insight.prefix(50))...")
-                }
             }
 
-            // Update overall Smiley state based on new CUMULATIVE health
-            await self.reanalyzeAllMealsForSmileyState()
-            print(
-                "😊 Smiley state updated - Current mood: \(smileyState.mood.rawValue), "
-                    + "Scale: \(smileyState.scale)"
-            )
-
-            // Sound feedback removed - was distracting during typing
-            // Users can still enable sounds in Settings if desired, but sounds won't play automatically
+            // Update overall Smiley state based on new CUMULATIVE health (no haptics — background completion)
+            await self.reanalyzeAllMealsForSmileyState(withFeedback: false)
 
         } catch {
-            print("❌ AI Analysis failed: \(error.localizedDescription)")
-            print("   Error details: \(error)")
-            // Fallback: Ensure smiley state is consistent with local score
-            await self.reanalyzeAllMealsForSmileyState()
+            aiLogger.error("AI analysis failed: \(error.localizedDescription, privacy: .public)")
+            // Fallback: Ensure smiley state is consistent with local score (no haptics)
+            await self.reanalyzeAllMealsForSmileyState(withFeedback: false)
         }
     }
 
     /// Reanalyzes all meals to update the smiley state.
-    func reanalyzeAllMealsForSmileyState() async {
+    /// - Parameter withFeedback: Pass false when called from async AI completion to avoid
+    ///   surprising the user with haptics while they are in a different context.
+    func reanalyzeAllMealsForSmileyState(withFeedback: Bool = false) async {
         guard !meals.isEmpty else {
             withAnimation(.spring()) {
                 smileyState = .neutral
@@ -116,11 +91,10 @@ extension MainViewModel {
             return
         }
 
-        // Calculate average health score from all meals
         let totalScore = meals.map(\.healthScore).reduce(0.0, +)
         let avgScore = totalScore / Double(meals.count)
 
-        updateSmileyState(with: avgScore)
+        updateSmileyState(with: avgScore, withFeedback: withFeedback)
         saveData()
     }
 }

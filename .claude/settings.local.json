@@ -11,7 +11,12 @@
       "Bash(git log:*)",
       "Bash(cat:*)",
       "Bash(xcrun simctl:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(gh pr *)",
+      "Bash(gh run *)",
+      "Bash(gh api *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)"
     ]
   }
 }

@@ -650,7 +650,7 @@ struct ReadOnlyMealCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                MealTypeTag(mealType: self.meal.mealType, isSelected: true)
+                MealTypeTag(mealType: self.meal.mealType)
 
                 Spacer()
 

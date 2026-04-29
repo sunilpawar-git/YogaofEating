@@ -1,4 +1,14 @@
 import Foundation
+import OSLog
+
+private let logger = Logger(subsystem: "com.yogaofeating", category: "Persistence")
+
+/// Serial actor that serializes all disk writes, preventing interleaved saves.
+private actor PersistenceWriter {
+    func write(_ data: Data, to url: URL) throws {
+        try data.write(to: url, options: .atomic)
+    }
+}
 
 /// Handles persistent storage of app data using JSON files.
 /// Saves meals and smiley state to the documents directory.
@@ -6,6 +16,7 @@ class PersistenceService: PersistenceServiceProtocol {
     static let shared = PersistenceService()
 
     private let fileName = "yoga_of_eating_data.json"
+    private let writer = PersistenceWriter()
 
     private var fileURL: URL? {
         FileManager.default
@@ -22,7 +33,8 @@ class PersistenceService: PersistenceServiceProtocol {
         let historicalData: HistoricalData
     }
 
-    /// Saves the current state of the app including historical data
+    /// Saves the current state of the app including historical data.
+    /// Writes are serialized through a background actor to prevent races.
     func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {
         let data = AppData(
             meals: meals,
@@ -31,13 +43,16 @@ class PersistenceService: PersistenceServiceProtocol {
             historicalData: historicalData
         )
 
-        Task(priority: .background) {
-            guard let url = self.fileURL else { return }
+        Task(priority: .utility) {
+            guard let url = self.fileURL else {
+                logger.error("PersistenceService: could not resolve file URL — save skipped")
+                return
+            }
             do {
                 let encoded = try JSONEncoder().encode(data)
-                try encoded.write(to: url, options: .atomic)
+                try await self.writer.write(encoded, to: url)
             } catch {
-                // Silently fail or log to a proper logging service
+                logger.error("PersistenceService: save failed — \(error.localizedDescription, privacy: .public)")
             }
         }
     }

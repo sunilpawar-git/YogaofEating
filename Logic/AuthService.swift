@@ -3,6 +3,9 @@ import FirebaseAuth
 import FirebaseCore
 import Foundation
 import GoogleSignIn
+import OSLog
+
+private let authLogger = Logger(subsystem: "com.yogaofeating", category: "Auth")
 
 #if canImport(UIKit)
     import UIKit
@@ -25,7 +28,7 @@ protocol AuthCoreProvider {
     var currentUser: AuthUser? { get }
     func signInWithGoogle() async throws -> AuthUser
     func signOut() throws
-    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any
+    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any?
     func restorePreviousSignIn() async throws -> AuthUser
 }
 
@@ -94,8 +97,8 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
         GIDSignIn.sharedInstance.signOut()
     }
 
-    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any {
-        guard FirebaseApp.app() != nil else { return "no_firebase_handle" }
+    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any? {
+        guard FirebaseApp.app() != nil else { return nil }
         return Auth.auth().addStateDidChangeListener { _, user in
             listener(user)
         }
@@ -146,7 +149,7 @@ class AuthService: ObservableObject, AuthServiceProtocol {
 
     @Published private(set) var currentUser: AuthUser?
     private let provider: AuthCoreProvider
-    private var authListenerHandle: Any?
+    private var authListenerHandle: Any? // nil when Firebase is not configured
 
     // Task to track pending logout debounce
     private var pendingLogoutTask: Task<Void, Never>?
@@ -176,8 +179,7 @@ class AuthService: ObservableObject, AuthServiceProtocol {
             do {
                 _ = try await self.provider.restorePreviousSignIn()
             } catch {
-                // Not necessarily an error if no previous session exists
-                print("No previous session to restore")
+                authLogger.debug("No previous session to restore: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -187,44 +189,28 @@ class AuthService: ObservableObject, AuthServiceProtocol {
             guard let self else { return }
 
             if let user {
-                // Valid user received - cancel any pending logout and update immediately
-                print("🔐 AuthState: User received - \(user.uid)")
+                authLogger.debug("Auth state: user signed in")
                 self.pendingLogoutTask?.cancel()
                 self.pendingLogoutTask = nil
-                self.isExplicitlySigningOut = false // Reset explicit flag
+                self.isExplicitlySigningOut = false
                 self.currentUser = user
             } else {
-                // Nil user received.
-                print("🔐 AuthState: NIL user received! isExplicitlySigningOut=\(self.isExplicitlySigningOut)")
+                authLogger.debug("Auth state: nil user (explicit=\(self.isExplicitlySigningOut, privacy: .public))")
 
-                // If we are explicitly signing out, accept it immediately.
                 if self.isExplicitlySigningOut {
-                    print("🔐 AuthState: Accepting nil (explicit sign out)")
                     self.pendingLogoutTask?.cancel()
                     self.currentUser = nil
                     return
                 }
 
-                // Otherwise, debounce it!
-                // This protects against ANY transient nil state (token refresh, login flow, sync, etc.)
-                print("🔐 AuthState: Starting 2s debounce for transient nil state...")
-
-                // Cancel any existing pending logout
                 self.pendingLogoutTask?.cancel()
-
-                // Create a new debounce task
                 self.pendingLogoutTask = Task { @MainActor in
-                    // Wait 2000ms (2s) to see if this is a transient nil state
                     try? await Task.sleep(nanoseconds: 2_000_000_000)
-
-                    // If we weren't cancelled, the nil state persisted - accept it
-                    // This handles real session revocations (remote logout)
                     guard !Task.isCancelled else {
-                        print("🔐 AuthState: Debounce cancelled (user recovered)")
+                        authLogger.debug("Auth debounce cancelled (user recovered)")
                         return
                     }
-
-                    print("🔐 AuthState: Debounce completed - accepting nil user (session expired?)")
+                    authLogger.debug("Auth debounce completed — accepting nil user")
                     self.currentUser = nil
                     self.pendingLogoutTask = nil
                 }
@@ -249,8 +235,8 @@ class AuthService: ObservableObject, AuthServiceProtocol {
             try self.provider.signOut()
             self.currentUser = nil
         } catch {
-            print("Error signing out: \(error.localizedDescription)")
-            self.isExplicitlySigningOut = false // Reset if failed
+            authLogger.error("Sign out failed: \(error.localizedDescription, privacy: .public)")
+            self.isExplicitlySigningOut = false
         }
     }
 }

@@ -56,7 +56,7 @@ class MockAuthCoreProvider: AuthCoreProvider {
         self.currentUser = nil
     }
 
-    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any {
+    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any? {
         self.listener = listener
         return "mock_handle"
     }

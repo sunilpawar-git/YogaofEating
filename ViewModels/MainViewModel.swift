@@ -1,6 +1,9 @@
 import Combine
 import Foundation
+import OSLog
 import SwiftUI
+
+private let vmLogger = Logger(subsystem: "com.yogaofeating", category: "MainViewModel")
 
 /// Protocol for persistence operations to enable testing
 @MainActor
@@ -80,6 +83,10 @@ class MainViewModel: ObservableObject {
     /// This addresses the "GTMSessionFetcher was already running" warning.
     var analysisInProgress: Set<UUID> = []
 
+    /// Tracks in-flight AI analysis tasks per meal so that rapid edits
+    /// cancel the previous task and only the most-recent request wins.
+    var aiTasks: [UUID: Task<Void, Never>] = [:]
+
     // MARK: - Day Navigation (Phase 4)
 
     /// The currently selected date for viewing. Defaults to today.
@@ -105,18 +112,24 @@ class MainViewModel: ObservableObject {
         logicService: MealLogicProvider? = nil,
         persistenceService: PersistenceServiceProtocol? = nil,
         historicalService: (any HistoricalDataServiceProtocol)? = nil,
-        insightService: InsightGenerationServiceProtocol? = nil
+        insightService: InsightGenerationServiceProtocol? = nil,
+        skipDataLoading: Bool = false
     ) {
         let healthService = healthProfileService ?? HealthProfileService()
         let historicalSvc = historicalService ?? HistoricalDataService()
         self.healthProfileService = healthService
-        self.logicService = logicService ?? AILogicService()
+        self.logicService = logicService ?? MealLogicService(healthProfileService: healthService)
         self.persistenceService = persistenceService ?? PersistenceService.shared
         self.historicalService = historicalSvc
         self.insightService = insightService ?? InsightGenerationService(historicalService: historicalSvc)
 
-        // Skip data loading and monitoring if unit testing to avoid interference
-        if NSClassFromString("XCTestCase") == nil {
+        // Wire back-reference so HistoricalDataService.saveHistoricalData()
+        // always delegates to the single canonical save path here.
+        if let concrete = historicalSvc as? HistoricalDataService {
+            concrete.mainViewModel = self
+        }
+
+        if !skipDataLoading {
             self.loadData()
             self.setupResetMonitoring()
         }
@@ -149,7 +162,10 @@ class MainViewModel: ObservableObject {
                 if let sleepData = try await HealthKitService.shared.fetchSleepData(for: Date()) {
                     await MainActor.run {
                         self.appleSleepData = sleepData
-                        print("📊 Loaded Apple sleep data for badge: \(sleepData.formattedDuration)")
+                        vmLogger
+                            .debug(
+                                "Loaded Apple sleep data for badge: \(sleepData.formattedDuration, privacy: .public)"
+                            )
                     }
                 }
             } catch {
@@ -178,7 +194,7 @@ class MainViewModel: ObservableObject {
         }
     }
 
-    private func checkAndResetIfNewDay() {
+    func checkAndResetIfNewDay() {
         let calendar = Calendar.current
         if !calendar.isDateInToday(self.lastResetDate) {
             self.resetDay()
@@ -218,7 +234,7 @@ class MainViewModel: ObservableObject {
         // Only update items and recalculate local score if content actually changed
         // This prevents overwriting AI scores with local scores on redundant updates
         guard contentChanged else {
-            print("⏭️ Skipping update - content unchanged after normalization")
+            vmLogger.debug("Skipping update - content unchanged after normalization")
             return
         }
 
@@ -231,7 +247,7 @@ class MainViewModel: ObservableObject {
         self.meals[index].isAIAnalyzed = false
 
         self.saveData()
-        print("📝 Local healthScore set to: \(healthScore)")
+        vmLogger.debug("Local healthScore set to \(healthScore, privacy: .public)")
 
         // Play personalized haptic feedback based on health score and user risk level
         if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
@@ -271,11 +287,11 @@ class MainViewModel: ObservableObject {
         if !self.meals[index].isAIAnalyzed {
             let healthScore = self.logicService.calculateHealthScore(for: items)
             self.meals[index].healthScore = healthScore
-            print("📝 Local-only update: healthScore set to \(healthScore)")
+            vmLogger.debug("Local-only update: healthScore set to \(healthScore, privacy: .public)")
         } else {
             // Mark that content changed since last AI analysis
             self.meals[index].isAIAnalyzed = false
-            print("📝 Local-only update: items changed, AI score invalidated")
+            vmLogger.debug("Local-only update: items changed, AI score invalidated")
         }
 
         self.saveData()
@@ -344,7 +360,7 @@ class MainViewModel: ObservableObject {
         } else if needsAIAnalysis {
             // Content was already updated locally, but AI analysis hasn't run yet
             // This happens when local updates occurred during typing, then user triggers "done"
-            print("🔄 Triggering AI analysis for meal that was updated locally")
+            vmLogger.debug("Triggering AI analysis for meal updated locally")
             Task {
                 await self.triggerAIAnalysisForMeal(mealId)
             }
@@ -389,10 +405,10 @@ class MainViewModel: ObservableObject {
         if withFeedback {
             // Check user preferences before playing feedback
             // Default to true if not explicitly set
-            let hapticsEnabled = UserDefaults.standard.object(forKey: "haptics_enabled") as? Bool ?? true
+            let hapticsEnabled = UserDefaults.standard.object(forKey: StorageKeys.hapticsEnabled) as? Bool ?? true
 
             if hapticsEnabled {
-                SensoryService.shared.playNudge(style: healthScore < 0.4 ? .heavy : .light)
+                SensoryService.shared.playNudge(style: healthScore < ScoringThresholds.unhealthy ? .heavy : .light)
             }
             // Sound feedback removed - was irritating during text input
         }
@@ -619,7 +635,7 @@ class MainViewModel: ObservableObject {
                     self.currentInsight = insight
                 }
             } catch {
-                print("⚠️ Insight generation failed: \(error.localizedDescription)")
+                vmLogger.error("Insight generation failed: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -638,12 +654,10 @@ class MainViewModel: ObservableObject {
             do {
                 if let sleepData = try await HealthKitService.shared.fetchSleepData(for: targetDate) {
                     sleepDataByDate[calendar.startOfDay(for: targetDate)] = sleepData
-                    print(
-                        "📊 Fetched HealthKit sleep data for \(targetDate): score=\(sleepData.sleepScore ?? 0), duration=\(sleepData.formattedDuration)"
-                    )
+                    vmLogger.debug("Fetched HealthKit sleep data")
                 }
             } catch {
-                print("⚠️ Failed to fetch HealthKit sleep data for \(targetDate): \(error.localizedDescription)")
+                vmLogger.error("Failed to fetch HealthKit sleep data: \(error.localizedDescription, privacy: .public)")
                 // Continue with other dates even if one fails
             }
         }
@@ -758,13 +772,11 @@ class MainViewModel: ObservableObject {
                     await MainActor.run {
                         self.appleSleepData = sleepData
                         self.suggestedSleepQuality = sleepData.sleepQuality
-                        print(
-                            "📊 Apple HealthKit sleep data: \(sleepData.formattedDuration), Score: \(sleepData.sleepScore ?? 0)"
-                        )
+                        vmLogger.debug("Loaded Apple sleep data for badge")
                     }
                 }
             } catch {
-                print("⚠️ Failed to fetch Apple sleep data: \(error.localizedDescription)")
+                vmLogger.error("Failed to fetch Apple sleep data: \(error.localizedDescription, privacy: .public)")
                 // Silently fail - user can still manually select sleep quality
             }
         }
@@ -960,9 +972,12 @@ class MainViewModel: ObservableObject {
         }
         self.saveData()
 
-        // Trigger AI analysis for the copied meal
-        Task {
-            await self.performDeepAnalysis(for: newMeal.id, items: newMeal.items)
+        // Trigger AI analysis for the copied meal — cancel any stale task first
+        let copiedId = newMeal.id
+        self.aiTasks[copiedId]?.cancel()
+        self.aiTasks[copiedId] = Task {
+            await self.performDeepAnalysis(for: copiedId, items: newMeal.items)
+            self.aiTasks[copiedId] = nil
         }
     }
 }

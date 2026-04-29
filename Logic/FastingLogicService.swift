@@ -28,6 +28,9 @@ enum FastingLogicService {
             let currentMeal = sortedMeals[index]
             let nextMeal = sortedMeals[index + 1]
 
+            // Skip pairs where timestamps are identical or inverted (duplicate/bad data)
+            guard nextMeal.timestamp > currentMeal.timestamp else { continue }
+
             let period = FastingPeriod(
                 startMealId: currentMeal.id,
                 endMealId: nextMeal.id,
