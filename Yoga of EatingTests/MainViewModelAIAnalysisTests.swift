@@ -748,7 +748,10 @@
             mock.mockAnalysisResult = (score: 0.9, mood: .serene, sound: "chime", insight: nil)
             await vm.performDeepAnalysis(for: mealId, items: ["Apple salad"])
 
-            XCTAssertTrue(mock.analyzeCalled, "AIAnalysisProvider guard must pass for default VM — if false, AI is silently disabled")
+            XCTAssertTrue(
+                mock.analyzeCalled,
+                "AIAnalysisProvider guard must pass for default VM — if false, AI is silently disabled"
+            )
         }
     }
 
