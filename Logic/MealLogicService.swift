@@ -1,5 +1,14 @@
 import Foundation
 
+/// Shared scoring thresholds — single source of truth used by MealLogicService,
+/// AILogicService, and SensoryService so feedback tone and smiley always agree.
+enum ScoringThresholds {
+    /// Scores above this are considered "healthy"
+    static let healthy: Double = 0.65
+    /// Scores below this are considered "unhealthy"
+    static let unhealthy: Double = 0.35
+}
+
 /// Service responsible for the "Yoga of Eating" logic.
 /// Adapts the Smiley's state based on meal choices.
 protocol MealLogicProvider {
@@ -163,13 +172,11 @@ class MealLogicService: MealLogicProvider {
         // Bloat/Shrink logic with sensitivity
         // Healthy (score > 0.6) -> Shrink (to a limit)
         // Unhealthy (score < 0.4) -> Bloat (to a limit)
-        if healthScore > 0.6 {
-            // Apply sensitivity to shrink amount
+        if healthScore > ScoringThresholds.healthy {
             let shrinkAmount = 0.1 * sensitivity
             nextState.scale = max(0.5, currentState.scale - shrinkAmount)
             nextState.mood = .serene
-        } else if healthScore < 0.4 {
-            // Apply sensitivity to bloat amount
+        } else if healthScore < ScoringThresholds.unhealthy {
             let bloatAmount = 0.2 * sensitivity
             nextState.scale = min(2.5, currentState.scale + bloatAmount)
             nextState.mood = .overwhelmed

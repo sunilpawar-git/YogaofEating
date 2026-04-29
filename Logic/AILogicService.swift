@@ -1,6 +1,9 @@
 import FirebaseCore
 import FirebaseFunctions
 import Foundation
+import OSLog
+
+private let aiServiceLogger = Logger(subsystem: "com.yogaofeating", category: "AILogicService")
 
 /// Service to interact with the server-side AI logic via Firebase Cloud Functions.
 class AILogicService: AIAnalysisProvider {
@@ -37,10 +40,10 @@ class AILogicService: AIAnalysisProvider {
         // For consistency, let's use a helper or duplicate the simple logic.
         var nextState = currentState
 
-        if healthScore > 0.6 {
+        if healthScore > ScoringThresholds.healthy {
             nextState.scale = max(0.5, currentState.scale - 0.1)
             nextState.mood = .serene
-        } else if healthScore < 0.4 {
+        } else if healthScore < ScoringThresholds.unhealthy {
             nextState.scale = min(2.5, currentState.scale + 0.2)
             nextState.mood = .overwhelmed
         } else {
@@ -64,18 +67,16 @@ class AILogicService: AIAnalysisProvider {
         insight: String?
     ) {
         guard let functions = self.functions else {
-            print("⚠️ Firebase Functions not available, returning default values")
+            aiServiceLogger.warning("Firebase Functions not available — returning defaults")
             return (0.5, .neutral, "tink", nil)
         }
 
-        print("📡 Calling Firebase Cloud Function 'analyzeMeal' with description: '\(description)'")
+        aiServiceLogger.debug("Calling Firebase Cloud Function 'analyzeMeal'")
 
         let result = try await functions.httpsCallable("analyzeMeal").call(["description": description])
 
-        print("📥 Received response from Cloud Function")
-
         guard let data = result.data as? [String: Any] else {
-            print("⚠️ Invalid response format from Cloud Function")
+            aiServiceLogger.error("Invalid response format from Cloud Function")
             throw NSError(
                 domain: "AILogicService",
                 code: 0,
@@ -90,10 +91,8 @@ class AILogicService: AIAnalysisProvider {
 
         let mood = SmileyMood(rawValue: moodString) ?? .neutral
 
-        print("📋 Parsed response - healthScore: \(score), mood: \(moodString), sound: \(sound)")
-        if let insight {
-            print("💡 Insight received: \(insight.prefix(50))...")
-        }
+        aiServiceLogger
+            .debug("Parsed response — score: \(score, privacy: .public), mood: \(moodString, privacy: .public)")
 
         return (score, mood, sound, insight)
     }
@@ -147,7 +146,7 @@ extension AILogicService: MealInsightProvider {
     /// Fetches detailed insight for a specific meal (on-demand)
     func getDetailedInsight(for meal: Meal) async throws -> DetailedMealInsight {
         guard let functions = self.functions else {
-            print("⚠️ Firebase Functions not available, returning fallback insight")
+            aiServiceLogger.warning("Firebase Functions not available — returning fallback insight")
             return DetailedMealInsight(
                 summary: "This meal contributes to your daily nutrition.",
                 nutritionHighlights: [],
@@ -156,7 +155,7 @@ extension AILogicService: MealInsightProvider {
             )
         }
 
-        print("📡 Calling Firebase Cloud Function 'getMealInsight'")
+        aiServiceLogger.debug("Calling Firebase Cloud Function 'getMealInsight'")
 
         let requestData: [String: Any] = [
             "mealItems": meal.items,
@@ -179,7 +178,7 @@ extension AILogicService: MealInsightProvider {
         let tip = data["tip"] as? String
         let category = data["category"] as? String ?? "moderate"
 
-        print("📋 Received detailed insight - category: \(category)")
+        aiServiceLogger.debug("Received detailed insight — category: \(category, privacy: .public)")
 
         return DetailedMealInsight(
             summary: summary,
