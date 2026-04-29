@@ -25,7 +25,11 @@
             super.setUp()
             self.mockAI = MockAILogicService()
             self.mockPersistence = MockPersistenceService()
-            self.sut = MainViewModel(logicService: self.mockAI, persistenceService: self.mockPersistence, skipDataLoading: true)
+            self.sut = MainViewModel(
+                logicService: self.mockAI,
+                persistenceService: self.mockPersistence,
+                skipDataLoading: true
+            )
         }
 
         override func tearDown() {
@@ -49,16 +53,22 @@
             XCTAssertFalse(self.sut.meals.first?.isAIAnalyzed ?? true, "Not yet AI analyzed")
             XCTAssertFalse(self.mockAI.analyzeCalled, "AI should not be called during typing")
 
-            // Step 3: User hits "done" — content hasn't changed relative to what's stored,
-            // but isAIAnalyzed is false so the needsAIAnalysis branch fires.
+            // Step 3: User hits "done" — use the meal's own type to avoid hitting the
+            // mealTypeChanged branch instead of the needsAIAnalysis branch.
+            let mealType = self.sut.meals.first?.mealType ?? .lunch
             self.mockAI.mockAnalysisResult = (score: 0.85, mood: .serene, sound: "chime", insight: "Great choice!")
-            self.sut.updateMeal(mealId, mealType: .breakfast, items: ["Apple"])
+            self.sut.updateMeal(mealId, mealType: mealType, items: ["Apple"])
 
             try await Task.sleep(nanoseconds: 200_000_000) // 200ms — let the async Task finish
 
             // Step 4: AI score should replace local stub
             XCTAssertTrue(self.mockAI.analyzeCalled, "AI should be called on done action")
-            XCTAssertEqual(self.sut.meals.first?.healthScore ?? 0, 0.85, accuracy: 0.001, "AI score should replace local stub")
+            XCTAssertEqual(
+                self.sut.meals.first?.healthScore ?? 0,
+                0.85,
+                accuracy: 0.001,
+                "AI score should replace local stub"
+            )
             XCTAssertTrue(self.sut.meals.first?.isAIAnalyzed ?? false, "Meal should be marked AI analyzed")
             XCTAssertEqual(self.sut.meals.first?.aiInsight, "Great choice!")
         }
@@ -67,6 +77,8 @@
             self.sut.createNewMeal()
             guard let mealId = self.sut.meals.first?.id else { return XCTFail("No meal") }
 
+            // Items must be set before trigger — performDeepAnalysis guards on description.count >= 5
+            self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple salad"])
             self.mockAI.mockAnalysisResult = (score: 0.75, mood: .serene, sound: "chime", insight: nil)
             await self.sut.triggerAIAnalysisForMeal(mealId)
 
@@ -128,7 +140,7 @@
             XCTAssertEqual(self.sut.meals.count, 3)
 
             // Set AI scores directly (simulating completed analyses)
-            self.sut.meals[0].healthScore = 0.9  // serene territory
+            self.sut.meals[0].healthScore = 0.9 // serene territory
             self.sut.meals[0].isAIAnalyzed = true
             self.sut.meals[1].healthScore = 0.9
             self.sut.meals[1].isAIAnalyzed = true
@@ -144,7 +156,11 @@
             self.sut.meals[2].healthScore = 0.1
 
             await self.sut.reanalyzeAllMealsForSmileyState()
-            XCTAssertEqual(self.sut.smileyState.mood, .overwhelmed, "All unhealthy meals should yield overwhelmed smiley")
+            XCTAssertEqual(
+                self.sut.smileyState.mood,
+                .overwhelmed,
+                "All unhealthy meals should yield overwhelmed smiley"
+            )
         }
 
         func test_singleHighScoreMeal_setsSerenemood() async {
@@ -182,13 +198,9 @@
             async let second: () = self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
             _ = await (first, second)
 
-            // analysisInProgress guard must deduplicate
-            var callCount = 0
-            // MockAILogicService.analyzeCalled is a Bool; use analyzeCallCount from SlowMock pattern
-            // Here we just confirm the score is consistent (not double-applied)
+            // analysisInProgress guard must deduplicate — confirm one run with consistent score
             XCTAssertTrue(self.mockAI.analyzeCalled, "At least one analysis should run")
             XCTAssertEqual(self.sut.meals.first?.healthScore ?? 0, 0.8, accuracy: 0.001)
-            _ = callCount // suppress unused warning
         }
 
         func test_secondDoneAfterAiComplete_doesNotRetrigger_whenContentUnchanged() async throws {
@@ -232,8 +244,12 @@
             self.mockAI.shouldThrowError = true
             await self.sut.performDeepAnalysis(for: mealId, items: ["Apple salad"])
 
-            XCTAssertEqual(self.sut.meals.first?.healthScore ?? 0, localScore, accuracy: 0.001,
-                           "Local score must be preserved on AI failure")
+            XCTAssertEqual(
+                self.sut.meals.first?.healthScore ?? 0,
+                localScore,
+                accuracy: 0.001,
+                "Local score must be preserved on AI failure"
+            )
         }
 
         func test_aiFailure_allowsRetryOnNextDone() async throws {
@@ -275,15 +291,21 @@
             // performDeepAnalysis passes when using the default logicService.
             let mockLogic = MockAILogicService()
             mockLogic.mockAnalysisResult = (score: 0.9, mood: .serene, sound: "chime", insight: nil)
-            let vm = MainViewModel(logicService: mockLogic, persistenceService: self.mockPersistence, skipDataLoading: true)
+            let vm = MainViewModel(
+                logicService: mockLogic,
+                persistenceService: self.mockPersistence,
+                skipDataLoading: true
+            )
 
             vm.createNewMeal()
             guard let mealId = vm.meals.first?.id else { return XCTFail("No meal") }
 
             await vm.performDeepAnalysis(for: mealId, items: ["Apple salad bowl"])
 
-            XCTAssertTrue(mockLogic.analyzeCalled,
-                          "If false, the AIAnalysisProvider guard is failing and Firebase is never called")
+            XCTAssertTrue(
+                mockLogic.analyzeCalled,
+                "If false, the AIAnalysisProvider guard is failing and Firebase is never called"
+            )
         }
     }
 #endif
