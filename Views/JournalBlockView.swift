@@ -91,7 +91,9 @@ struct JournalBlockView: View {
             .frame(minWidth: 200, idealWidth: 300, maxWidth: 340, minHeight: 70, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("meal-block-\(self.meal.id)")
-            .background { MealCardBackground(feedback: self.feedback) }
+            .background {
+                MealCardBackground(feedback: self.feedback, mealTypeColor: self.selectedMealType.displayColor)
+            }
             .scaleEffect(self.isPressed ? 0.96 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: self.isPressed)
             .animation(.easeInOut(duration: 0.5), value: self.meal.healthScore)

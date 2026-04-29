@@ -127,7 +127,7 @@ enum AppTheme {
         static let medium = Color.black.opacity(0.1)
     }
 
-    // MARK: - Meal Card Theme (Score Badge UI)
+    // MARK: - Meal Card Theme
 
     enum MealCard {
         /// Subtle border color for meal cards (adapts to light/dark)
@@ -138,6 +138,13 @@ enum AppTheme {
 
         /// Card background with subtle tint
         static let background = Color(.secondarySystemBackground)
+
+        /// Width of the left-edge accent bar in points (Phase 3).
+        /// 3pt is visible for scanning but does not dominate the card.
+        static let accentBarWidth: CGFloat = 3.0
+
+        /// Corner radius of the left-edge accent bar (Phase 3).
+        static let accentBarCornerRadius: CGFloat = 2.0
     }
 
     // MARK: - Score Badge Theme
@@ -177,6 +184,58 @@ enum AppTheme {
 
         /// Slow animation for emphasis
         static let slow = SwiftUI.Animation.easeInOut(duration: 0.5)
+
+        /// Gentle breathing animation used for the smiley when no meals are logged.
+        /// Repeats indefinitely, autoreverses for a smooth in-out pulse.
+        static let breathingPulse = SwiftUI.Animation
+            .easeInOut(duration: 2.0)
+            .repeatForever(autoreverses: true)
+
+        /// Scale factor applied at peak of the breathing pulse.
+        /// 1.04 is perceptible but not distracting — a subtle ambient invitation.
+        static let breathingScale: CGFloat = 1.04
+    }
+
+    // MARK: - Background (Phase 5)
+
+    /// Constants for the ambient background glow behind the date header.
+    enum Background {
+        /// Opacity of the warm orange glow ellipse.
+        /// 0.08 is perceptible against white/cream — subtle but present.
+        static let glowOpacity: Double = 0.08
+
+        /// Blur radius for the glow ellipse. Tighter than the old 100pt.
+        static let glowBlurRadius: CGFloat = 60
+
+        /// Size of the glow ellipse in points (width and height).
+        static let glowSize: CGFloat = 200
+
+        /// Horizontal offset of the glow (negative = left).
+        static let glowOffsetX: CGFloat = -100
+
+        /// Vertical offset of the glow (negative = up, towards date header).
+        static let glowOffsetY: CGFloat = -150
+    }
+
+    // MARK: - Timeline (Phase 1)
+
+    /// Visual constants for the day timeline spine and fasting connectors.
+    enum Timeline {
+        /// Opacity of the vertical timeline spine line.
+        /// 0.18 ensures legibility on white/cream backgrounds while staying minimal.
+        static let spineOpacity: Double = 0.18
+
+        /// Width of the vertical timeline spine line in points.
+        static let spineWidth: CGFloat = 1.5
+
+        /// Fill opacity for the significant-fasting capsule background (green wash).
+        static let fastingSignificantFillOpacity: Double = 0.08
+
+        /// Text/stroke color for significant fasting badges (12h+).
+        static let fastingSignificantColor: Color = .green
+
+        /// Text/stroke color for default (non-significant) fasting badges.
+        static let fastingDefaultColor: Color = .secondary.opacity(0.8)
     }
 }
 

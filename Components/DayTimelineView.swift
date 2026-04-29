@@ -111,6 +111,7 @@ struct DayTimelineView: View {
 
     @State private var breathingMeals: Set<UUID> = []
     @State private var showInsightCoachmark: Bool = false
+    @State private var isSmileyPulsing: Bool = false
     @AppStorage(StorageKeys.insightCoachmarkSeen) private var insightCoachmarkSeen: Bool = false
 
     // MARK: - Body
@@ -254,14 +255,8 @@ struct DayTimelineView: View {
 
     private var timelineLine: some View {
         Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [.primary.opacity(0.1), .primary.opacity(0.05)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .frame(width: 2)
+            .fill(Color.primary.opacity(AppTheme.Timeline.spineOpacity))
+            .frame(width: AppTheme.Timeline.spineWidth)
             .padding(.top, 20)
     }
 
@@ -328,8 +323,12 @@ struct DayTimelineView: View {
         VStack(spacing: 16) {
             SmileyView(state: self.smileyState)
                 .frame(width: 120, height: 120)
+                .scaleEffect(self.isSmileyPulsing ? AppTheme.Animation.breathingScale : 1.0)
+                .animation(
+                    self.isSmileyPulsing ? AppTheme.Animation.breathingPulse : .default,
+                    value: self.isSmileyPulsing
+                )
                 .overlay(alignment: .topTrailing) {
-                    // Red dot indicator when insight is available
                     if self.hasInsightAvailable {
                         Circle()
                             .fill(Color.red)
@@ -365,27 +364,76 @@ struct DayTimelineView: View {
                     }
                     self.onSmileyLongPress?()
                 }
+                .onAppear {
+                    self.updateSmileyPulse()
+                }
+                .onChange(of: self.meals.count) { _, _ in
+                    self.updateSmileyPulse()
+                }
 
-            // Hint text changes when insight available
-            Text(self.hasInsightAvailable ? "TAP TO LOG · HOLD FOR INSIGHT" : "TAP TO LOG")
+            Text(self.hasInsightAvailable ? Strings.Timeline.tapToLogWithInsight : Strings.Timeline.tapToLog)
                 .font(.system(.caption, design: .monospaced))
                 .fontWeight(.bold)
                 .foregroundColor(.secondary)
                 .kerning(self.hasInsightAvailable ? 1 : 2)
                 .fixedSize()
 
-            Text(QuoteService.getDailyQuote().text)
-                .font(.system(size: 11, design: .serif))
-                .italic()
-                .foregroundColor(.secondary.opacity(0.6))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 280)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityLabel("Daily mindful eating quote")
+            if let summary = self.daySummaryText {
+                Text(summary)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .accessibilityIdentifier("day-summary-line")
+            }
+
+            if TimelineAnimationState.shouldShowEmptyStateGreeting(
+                mealCount: self.meals.count, isToday: self.isToday
+            ) {
+                Text(Strings.Timeline.emptyStateGreeting)
+                    .font(.system(size: 12, design: .default))
+                    .italic()
+                    .foregroundColor(.secondary.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("empty-state-greeting")
+            }
+
+            if TimelineAnimationState.shouldShowQuote(
+                mealCount: self.meals.count, isToday: self.isToday
+            ) {
+                Text(QuoteService.getDailyQuote().text)
+                    .font(.system(size: 11, design: .serif))
+                    .italic()
+                    .foregroundColor(.secondary.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 280)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel(Strings.Timeline.quoteAccessibility)
+            }
         }
         .accessibilityIdentifier("add-meal-button")
-        .accessibilityLabel(self.hasInsightAvailable ? "Add Meal or Hold for Insight" : "Add Meal")
-        .accessibilityHint(self.hasInsightAvailable ? "Tap to log meal, hold to view insight" : "Tap to log a new meal")
+        .accessibilityLabel(self.hasInsightAvailable ? Strings.Accessibility.addMealWithInsight : Strings.Accessibility
+            .addMealButton)
+        .accessibilityHint(self.hasInsightAvailable ? Strings.Accessibility.addMealWithInsightHint : Strings
+            .Accessibility.addMealHint)
+    }
+
+    /// Updates the smiley pulse state based on current meal count and day context.
+    /// Called on appear and whenever meal count changes.
+    private func updateSmileyPulse() {
+        let shouldPulse = TimelineAnimationState.shouldPulse(
+            mealCount: self.meals.count, isToday: self.isToday
+        )
+        if self.isSmileyPulsing != shouldPulse {
+            self.isSmileyPulsing = shouldPulse
+        }
+    }
+
+    /// One-line ambient summary shown above the smiley when 2+ meals have been logged today.
+    /// Returns nil when conditions are not met (no meals, <2 meals, or historical day).
+    private var daySummaryText: String? {
+        guard self.isToday, self.meals.count >= 2 else { return nil }
+        let total = self.meals.reduce(0.0) { $0 + $1.healthScore }
+        let avg = total / Double(self.meals.count)
+        return Strings.Timeline.daySummary(avgScore: Int(avg * 100), mealCount: self.meals.count)
     }
 
     // MARK: - Historical Day Summary

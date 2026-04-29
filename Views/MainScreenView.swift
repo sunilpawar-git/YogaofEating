@@ -143,7 +143,8 @@ struct MainScreenView: View {
             isViewingToday: self.viewModel.isViewingToday,
             canNavigateToPreviousDay: self.viewModel.canNavigateToPreviousDay,
             onPreviousDay: { self.viewModel.navigateToPreviousDay() },
-            onNavigateToToday: { self.viewModel.navigateToToday() }
+            onNavigateToToday: { self.viewModel.navigateToToday() },
+            contextSubtext: self.viewModel.dateContextSubtext
         )
     }
 
@@ -332,21 +333,17 @@ struct MainScreenView: View {
                 Color(uiColor: .systemBackground)
             #endif
 
-            LinearGradient(
-                colors: [
-                    Color.orange.opacity(0.05),
-                    Color.purple.opacity(0.05),
-                    Color.blue.opacity(0.03)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
             Circle()
-                .fill(Color.orange.opacity(0.1))
-                .frame(width: 400, height: 400)
-                .blur(radius: 100)
-                .offset(x: -150, y: -200)
+                .fill(Color.orange.opacity(AppTheme.Background.glowOpacity))
+                .frame(
+                    width: AppTheme.Background.glowSize,
+                    height: AppTheme.Background.glowSize
+                )
+                .blur(radius: AppTheme.Background.glowBlurRadius)
+                .offset(
+                    x: AppTheme.Background.glowOffsetX,
+                    y: AppTheme.Background.glowOffsetY
+                )
         }
     }
 }

@@ -92,7 +92,15 @@ enum Strings {
     enum Timeline {
         static let endOfDay = "End of Day"
         static let tapToLog = "TAP TO LOG"
+        static let tapToLogWithInsight = "TAP TO LOG · HOLD FOR INSIGHT"
         static let noMealsLogged = "No meals logged"
+
+        /// Shown above the smiley when no meals have been logged today.
+        /// Replaces the static quote in empty state to give contextual warmth.
+        static let emptyStateGreeting = "Start your day's journal"
+
+        /// Accessibility label for the daily quote text.
+        static let quoteAccessibility = "Daily mindful eating quote"
 
         static func mealsLogged(_ count: Int) -> String {
             "\(count) meal\(count == 1 ? "" : "s") logged"
@@ -100,6 +108,12 @@ enum Strings {
 
         static func itemsCount(_ count: Int) -> String {
             "\(count) item\(count == 1 ? "" : "s")"
+        }
+
+        /// Shown above the smiley when 2+ meals are logged.
+        /// Gives a quick ambient overview of the day without requiring interaction.
+        static func daySummary(avgScore: Int, mealCount: Int) -> String {
+            "Avg. \(avgScore)% · \(mealCount) meal\(mealCount == 1 ? "" : "s")"
         }
     }
 
@@ -125,6 +139,28 @@ enum Strings {
         }
     }
 
+    // MARK: - Date Header (Phase 4)
+
+    enum DateHeader {
+        /// Shown before 10am when no sleep has been logged yet.
+        static let goodMorning = "Good morning"
+
+        /// Shown when sleep quality has been logged. Pass quality display name lowercased.
+        static func sleptQuality(_ quality: String) -> String {
+            "Slept \(quality)"
+        }
+
+        /// Shown when 1+ meals have been logged and no sleep-based context is active.
+        static func mealsSoFar(_ count: Int) -> String {
+            "\(count) meal\(count == 1 ? "" : "s") so far"
+        }
+
+        /// Shown when viewing a historical day. Pass the number of days ago.
+        static func daysAgo(_ count: Int) -> String {
+            "\(count) day\(count == 1 ? "" : "s") ago"
+        }
+    }
+
     // MARK: - Common
 
     enum Common {
@@ -141,6 +177,9 @@ enum Strings {
 
     enum Accessibility {
         static let addMealButton = "Add Meal"
+        static let addMealHint = "Tap to log a new meal"
+        static let addMealWithInsight = "Add Meal or Hold for Insight"
+        static let addMealWithInsightHint = "Tap to log meal, hold to view insight"
         static let settingsButton = "Settings"
         static let mindCheckComplete = "Mind check complete"
 
