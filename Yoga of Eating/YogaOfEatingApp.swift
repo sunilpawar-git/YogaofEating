@@ -75,7 +75,7 @@ struct YogaOfEatingApp: App {
                 // Show placeholder during unit tests to avoid SwiftUI issues
                 Text("Unit Testing...")
             } else {
-                MainScreenView()
+                RootTabView()
                     .environmentObject(self.viewModel)
                     .preferredColorScheme(self.colorScheme)
                     .onOpenURL { url in
