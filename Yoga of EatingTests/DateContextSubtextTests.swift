@@ -38,6 +38,14 @@
             XCTAssertFalse(Strings.DateHeader.goodMorning.isEmpty)
         }
 
+        func test_dateHeaderStrings_backToToday_isNotEmpty() {
+            XCTAssertFalse(Strings.DateHeader.backToToday.isEmpty)
+        }
+
+        func test_dateHeaderStrings_backToToday_matchesExpected() {
+            XCTAssertEqual(Strings.DateHeader.backToToday, "Back to Today")
+        }
+
         func test_dateHeaderStrings_sleptQuality_includesQuality() {
             let result = Strings.DateHeader.sleptQuality("well")
             XCTAssertTrue(result.contains("well"))
@@ -99,25 +107,28 @@
         // MARK: - dateContextSubtext — historical day
 
         func test_dateContextSubtext_historicalDay_returnsDaysAgo() {
-            // Navigate to a historical day
+            // Navigate to a historical day (selectedDayIndex becomes 1 → "1 day ago")
             self.sut.navigateToPreviousDay()
             let subtext = self.sut.dateContextSubtext
 
-            // Then: subtext for a past day includes "ago"
-            if let text = subtext {
-                XCTAssertTrue(text.contains("ago"), "Historical subtext should contain 'ago', got: \(text)")
-            }
-            // Note: subtext may be nil if selectedDayIndex == 0 unexpectedly; the nav call
-            // sets it to 1 which should produce "1 day ago"
+            // Then: subtext must be non-nil and contain "ago"
+            XCTAssertNotNil(subtext, "Historical day subtext must not be nil after navigateToPreviousDay()")
+            XCTAssertTrue(
+                subtext?.contains("ago") ?? false,
+                "Historical subtext should contain 'ago', got: \(subtext ?? "nil")"
+            )
         }
 
-        func test_dateContextSubtext_todayWithNoConditionsMet_returnsNilOrContextString() {
-            // For today with no sleep logged and no meals, result depends on current time.
-            // We simply verify the property is accessible and returns Optional<String>.
+        func test_dateContextSubtext_todayWithNoConditionsMet_typeIsOptionalString() {
+            // For today with no sleep and no meals, result depends on current time.
+            // The key invariant is that the return type is Optional<String> — not a crash.
+            // Logic is tested exhaustively via DateContextProvider unit tests above.
             let subtext: String? = self.sut.dateContextSubtext
-            // No assertion on value — this is a runtime-clock-dependent property.
-            // The compiler-level check (return type String?) is sufficient here.
-            _ = subtext
+            // Verify the property returns without crashing regardless of clock state.
+            XCTAssertTrue(
+                subtext == nil || !(subtext?.isEmpty ?? true),
+                "If subtext is non-nil it must not be empty"
+            )
         }
 
         // MARK: - dateContextSubtext — today, with meals
@@ -155,7 +166,7 @@
                 mealCount: 0,
                 daysAgo: 0
             )
-            XCTAssertEqual(result, Strings.DateHeader.sleptQuality(SleepQuality.good.displayName.lowercased()))
+            XCTAssertEqual(result, Strings.DateHeader.sleptQualityFormatted(quality: .good))
         }
 
         func test_dateContextProvider_afterTenAM_noSleep_withMeals_returnsMealsSoFar() {
@@ -189,6 +200,30 @@
                 daysAgo: 2
             )
             XCTAssertEqual(result, Strings.DateHeader.daysAgo(2))
+        }
+
+        func test_dateContextProvider_exactlyAtMorningThreshold_noMeals_returnsNil() {
+            // At exactly the threshold hour (10) — morning greeting should NOT show
+            let result = DateContextProvider.subtext(
+                isViewingToday: true,
+                currentHour: AppTheme.DateContext.morningHourThreshold,
+                sleepQuality: nil,
+                mealCount: 0,
+                daysAgo: 0
+            )
+            XCTAssertNil(result, "At threshold hour with no meals, no context applies")
+        }
+
+        func test_dateContextProvider_oneBeforeMorningThreshold_noMeals_returnsGoodMorning() {
+            // One hour before threshold — morning greeting should show
+            let result = DateContextProvider.subtext(
+                isViewingToday: true,
+                currentHour: AppTheme.DateContext.morningHourThreshold - 1,
+                sleepQuality: nil,
+                mealCount: 0,
+                daysAgo: 0
+            )
+            XCTAssertEqual(result, Strings.DateHeader.goodMorning)
         }
 
         func test_dateContextProvider_historicalDay_zeroDaysAgo_returnsNil() {

@@ -176,6 +176,10 @@ enum AppTheme {
     // MARK: - Animation
 
     enum Animation {
+        /// Standard easeInOut duration (0.3s) shared by navigation transitions, gesture
+        /// callbacks, and scroll animations. Use `easeInOut(duration: standardDuration)`.
+        static let standardDuration: Double = 0.3
+
         /// Standard spring animation
         static let standard = SwiftUI.Animation.spring(response: 0.3, dampingFraction: 0.7)
 

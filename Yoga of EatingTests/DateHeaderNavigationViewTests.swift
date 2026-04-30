@@ -24,8 +24,8 @@
             XCTAssertFalse(callbackCalled, "Callback should not be called on init")
         }
 
-        func test_component_acceptsAllRequiredParameters() {
-            // Verify the component can be instantiated with all parameters
+        func test_component_storesFormattedDate() {
+            // Verify the component stores the formatted date string correctly
             let view = DateHeaderNavigationView(
                 formattedDate: "Monday, 6 Jan 2026",
                 isViewingToday: false,
@@ -33,36 +33,54 @@
                 onPreviousDay: {},
                 onNavigateToToday: {}
             )
-
-            // Component instantiates without error
-            XCTAssertNotNil(view.body)
+            XCTAssertEqual(view.formattedDate, "Monday, 6 Jan 2026")
         }
 
-        func test_component_handlesEdgeCases() {
-            // Empty date string
-            let viewEmptyDate = DateHeaderNavigationView(
-                formattedDate: "",
+        func test_component_storesIsViewingToday_true() {
+            let view = DateHeaderNavigationView(
+                formattedDate: "Today",
                 isViewingToday: true,
-                canNavigateToPreviousDay: false,
+                canNavigateToPreviousDay: true,
                 onPreviousDay: {},
                 onNavigateToToday: {}
             )
-            XCTAssertNotNil(viewEmptyDate.body)
+            XCTAssertTrue(view.isViewingToday)
+        }
 
-            // Long date string
-            let viewLongDate = DateHeaderNavigationView(
-                formattedDate: "Wednesday, 31 December 2026",
+        func test_component_storesIsViewingToday_false() {
+            let view = DateHeaderNavigationView(
+                formattedDate: "Past Day",
                 isViewingToday: false,
                 canNavigateToPreviousDay: true,
                 onPreviousDay: {},
                 onNavigateToToday: {}
             )
-            XCTAssertNotNil(viewLongDate.body)
+            XCTAssertFalse(view.isViewingToday)
+        }
+
+        func test_component_storesCanNavigateToPreviousDay() {
+            let enabled = DateHeaderNavigationView(
+                formattedDate: "Today",
+                isViewingToday: true,
+                canNavigateToPreviousDay: true,
+                onPreviousDay: {},
+                onNavigateToToday: {}
+            )
+            XCTAssertTrue(enabled.canNavigateToPreviousDay)
+
+            let disabled = DateHeaderNavigationView(
+                formattedDate: "Day 0",
+                isViewingToday: true,
+                canNavigateToPreviousDay: false,
+                onPreviousDay: {},
+                onNavigateToToday: {}
+            )
+            XCTAssertFalse(disabled.canNavigateToPreviousDay)
         }
 
         // MARK: - Contextual Subtext Tests (Phase 4)
 
-        func test_component_acceptsOptionalContextSubtext() {
+        func test_component_contextSubtextStoredCorrectly() {
             // Given: view with subtext provided
             let view = DateHeaderNavigationView(
                 formattedDate: "Wednesday, 29 Apr 2026",
@@ -72,12 +90,12 @@
                 onNavigateToToday: {},
                 contextSubtext: "Good morning"
             )
-            // Then: instantiates without error
-            XCTAssertNotNil(view.body)
+            // Then: contextSubtext is stored and accessible
+            XCTAssertEqual(view.contextSubtext, "Good morning")
         }
 
-        func test_component_acceptsNilContextSubtext() {
-            // Given: view with no subtext (nil — default)
+        func test_component_contextSubtextNil_storedAsNil() {
+            // Given: view with explicit nil subtext
             let view = DateHeaderNavigationView(
                 formattedDate: "Wednesday, 29 Apr 2026",
                 isViewingToday: true,
@@ -86,8 +104,7 @@
                 onNavigateToToday: {},
                 contextSubtext: nil
             )
-            // Then: instantiates without error
-            XCTAssertNotNil(view.body)
+            XCTAssertNil(view.contextSubtext)
         }
 
         func test_component_contextSubtextDefaultIsNil() {
@@ -101,6 +118,11 @@
             )
             // Then: default parameter is nil (no subtext rendered)
             XCTAssertNil(view.contextSubtext)
+        }
+
+        func test_component_backToTodayString_usesSSOT() {
+            // Verify the "Back to Today" string is sourced from Strings SSOT
+            XCTAssertEqual(Strings.DateHeader.backToToday, "Back to Today")
         }
     }
 #endif

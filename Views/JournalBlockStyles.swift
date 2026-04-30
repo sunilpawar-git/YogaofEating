@@ -70,32 +70,12 @@ struct MealCardBackground: View {
     }
 }
 
-// MARK: - AI Sparkle Indicator (Deprecated)
-
-/// Sparkle indicator shown when AI analysis completes
-/// - Note: Replaced by `MealScoreBadge` which shows the actual score percentage
-@available(*, deprecated, message: "Use MealScoreBadge instead for displaying meal health scores")
-struct AISparkleIndicator: View {
-    let isAnalyzed: Bool
-
-    var body: some View {
-        if self.isAnalyzed {
-            Text("✨")
-                .font(.system(size: 14))
-                .transition(.opacity.combined(with: .scale))
-                .animation(.easeIn(duration: 0.3), value: self.isAnalyzed)
-                .accessibilityLabel("AI analyzed")
-                .accessibilityHint("This meal has been analyzed by AI")
-        }
-    }
-}
-
 // MARK: - Breathing Content View
 
 /// A breathing animation placeholder shown while waiting
 struct BreathingContentView: View {
     var body: some View {
-        Text("Breathe...")
+        Text(Strings.Components.breathe)
             .font(.system(.subheadline, design: .serif))
             .italic()
             .foregroundColor(.secondary)
@@ -143,5 +123,7 @@ struct RecentMealsAddButton: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Strings.Accessibility.addMealFromRecent)
+        .accessibilityHint(Strings.Accessibility.addMealFromRecentHint)
     }
 }

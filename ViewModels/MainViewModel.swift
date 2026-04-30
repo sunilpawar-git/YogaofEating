@@ -24,8 +24,9 @@ class MainViewModel: ObservableObject {
 
     @Published var lastResetDate: Date = .init()
 
-    /// Meals sorted by timestamp (computed once per change, not per render)
-    @Published private(set) var sortedMeals: [Meal] = []
+    /// Meals sorted by timestamp (computed once per change, not per render).
+    /// Internal only — no SwiftUI view binds to this; views receive sorted meals via `meals` or `fastingPeriods`.
+    private var sortedMeals: [Meal] = []
 
     /// Cached fasting periods between consecutive meals
     @Published private(set) var fastingPeriods: [FastingPeriod] = []
@@ -106,6 +107,14 @@ class MainViewModel: ObservableObject {
     let historicalService: any HistoricalDataServiceProtocol
     let healthProfileService: HealthProfileServiceProtocol
     let insightService: InsightGenerationServiceProtocol
+
+    /// Cached formatter for the selected date display. Allocated once per VM instance
+    /// rather than on every call to `formattedSelectedDate`.
+    private let selectedDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, d MMM yyyy"
+        return f
+    }()
 
     init(
         healthProfileService: HealthProfileServiceProtocol? = nil,
@@ -832,10 +841,9 @@ class MainViewModel: ObservableObject {
     }
 
     /// Formatted string for the selected date (e.g., "Monday, 5 Jan 2026").
+    /// Uses the cached `selectedDateFormatter` to avoid allocating a new formatter per call.
     var formattedSelectedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, d MMM yyyy"
-        return formatter.string(from: self.selectedDate)
+        self.selectedDateFormatter.string(from: self.selectedDate)
     }
 
     /// Navigates to a specific date. Future dates are clamped to today.

@@ -176,4 +176,62 @@ final class ThemeTests: XCTestCase {
     func test_background_glowSize_isDefined() {
         XCTAssertGreaterThan(AppTheme.Background.glowSize, 0)
     }
+
+    // MARK: - Layout Constants Tests (Phase 2)
+
+    func test_layout_headerTopPadding_isPositive() {
+        XCTAssertGreaterThan(AppTheme.Layout.headerTopPadding, 0)
+    }
+
+    func test_layout_headerBottomPadding_isPositive() {
+        XCTAssertGreaterThan(AppTheme.Layout.headerBottomPadding, 0)
+    }
+
+    func test_layout_bottomScrollBuffer_isPositive() {
+        XCTAssertGreaterThan(AppTheme.Layout.bottomScrollBuffer, 0)
+    }
+
+    func test_layout_dragThreshold_isPositive() {
+        XCTAssertGreaterThan(AppTheme.Layout.dragThreshold, 0)
+    }
+
+    func test_layout_inputSheetHeight_isPositive() {
+        XCTAssertGreaterThan(AppTheme.Layout.inputSheetHeight, 0)
+    }
+
+    func test_layout_feelingSheetHeight_isPositive() {
+        XCTAssertGreaterThan(AppTheme.Layout.feelingSheetHeight, 0)
+    }
+
+    // MARK: - Fasting Domain Constants Tests (Phase 2)
+
+    func test_fasting_significanceHoursThreshold_isTwelve() {
+        XCTAssertEqual(AppTheme.Fasting.significanceHoursThreshold, 12.0, accuracy: 0.001)
+    }
+
+    func test_fasting_secondsPerHour_isCorrect() {
+        XCTAssertEqual(AppTheme.Fasting.secondsPerHour, 3600, accuracy: 0.001)
+    }
+
+    func test_fasting_secondsPerMinute_isCorrect() {
+        XCTAssertEqual(AppTheme.Fasting.secondsPerMinute, 60, accuracy: 0.001)
+    }
+
+    // MARK: - DateContext Constants Tests (Phase 2)
+
+    func test_dateContext_morningHourThreshold_isTen() {
+        XCTAssertEqual(AppTheme.DateContext.morningHourThreshold, 10)
+    }
+
+    // MARK: - Animation Standard Duration Tests (Phase 2)
+
+    func test_animation_standardDuration_isPositive() {
+        XCTAssertGreaterThan(AppTheme.Animation.standardDuration, 0)
+    }
+
+    func test_animation_standardDuration_isReasonable() {
+        // Should be between 0.1s and 1.0s for a UI transition
+        XCTAssertGreaterThan(AppTheme.Animation.standardDuration, 0.1)
+        XCTAssertLessThan(AppTheme.Animation.standardDuration, 1.0)
+    }
 }
