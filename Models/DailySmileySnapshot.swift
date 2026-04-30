@@ -24,6 +24,12 @@ struct DailySmileySnapshot: Codable, Identifiable {
     /// Added in Phase 2 - Mind Check feature.
     let eveningMindCheck: [MindCheckEntry]?
 
+    /// Highlight tab data (sleep, todos, morning thoughts). Added in Tab Redesign.
+    let highlightData: HighlightData?
+
+    /// Reflect tab data (journal, feeling). Added in Tab Redesign.
+    let reflectData: ReflectData?
+
     // MARK: - Initialization
 
     /// Creates a new daily snapshot with all properties including optional reflection and mind checks.
@@ -36,7 +42,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
         averageHealthScore: Double,
         reflection: DailyReflection? = nil,
         morningMindCheck: [MindCheckEntry]? = nil,
-        eveningMindCheck: [MindCheckEntry]? = nil
+        eveningMindCheck: [MindCheckEntry]? = nil,
+        highlightData: HighlightData? = nil,
+        reflectData: ReflectData? = nil
     ) {
         self.id = id
         self.date = Calendar(identifier: .gregorian).startOfDay(for: date) // Normalize to midnight
@@ -47,6 +55,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.reflection = reflection
         self.morningMindCheck = morningMindCheck
         self.eveningMindCheck = eveningMindCheck
+        self.highlightData = highlightData
+        self.reflectData = reflectData
     }
 
     // MARK: - Codable (Backward Compatible)
@@ -61,6 +71,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         case reflection
         case morningMindCheck
         case eveningMindCheck
+        case highlightData
+        case reflectData
     }
 
     init(from decoder: Decoder) throws {
@@ -77,6 +89,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.reflection = try container.decodeIfPresent(DailyReflection.self, forKey: .reflection)
         self.morningMindCheck = try container.decodeIfPresent([MindCheckEntry].self, forKey: .morningMindCheck)
         self.eveningMindCheck = try container.decodeIfPresent([MindCheckEntry].self, forKey: .eveningMindCheck)
+        self.highlightData = try container.decodeIfPresent(HighlightData.self, forKey: .highlightData)
+        self.reflectData = try container.decodeIfPresent(ReflectData.self, forKey: .reflectData)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -90,6 +104,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         try container.encodeIfPresent(self.reflection, forKey: .reflection)
         try container.encodeIfPresent(self.morningMindCheck, forKey: .morningMindCheck)
         try container.encodeIfPresent(self.eveningMindCheck, forKey: .eveningMindCheck)
+        try container.encodeIfPresent(self.highlightData, forKey: .highlightData)
+        try container.encodeIfPresent(self.reflectData, forKey: .reflectData)
     }
 
     // MARK: - Computed Properties
@@ -143,7 +159,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
         meals: [Meal],
         reflection: DailyReflection? = nil,
         morningMindCheck: [MindCheckEntry]? = nil,
-        eveningMindCheck: [MindCheckEntry]? = nil
+        eveningMindCheck: [MindCheckEntry]? = nil,
+        highlightData: HighlightData? = nil,
+        reflectData: ReflectData? = nil
     ) -> DailySmileySnapshot {
         let mealCount = meals.count
         let averageHealthScore = meals.isEmpty
@@ -159,7 +177,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
             averageHealthScore: averageHealthScore,
             reflection: reflection,
             morningMindCheck: morningMindCheck,
-            eveningMindCheck: eveningMindCheck
+            eveningMindCheck: eveningMindCheck,
+            highlightData: highlightData,
+            reflectData: reflectData
         )
     }
 
@@ -182,12 +202,13 @@ struct DailySmileySnapshot: Codable, Identifiable {
             averageHealthScore: self.averageHealthScore,
             reflection: self.reflection,
             morningMindCheck: morningMindCheck ?? self.morningMindCheck,
-            eveningMindCheck: eveningMindCheck ?? self.eveningMindCheck
+            eveningMindCheck: eveningMindCheck ?? self.eveningMindCheck,
+            highlightData: self.highlightData,
+            reflectData: self.reflectData
         )
     }
 
     /// Creates a copy of this snapshot with updated reflection.
-    /// Useful for adding reflection data to an existing snapshot.
     /// - Parameter reflection: The new reflection data
     /// - Returns: A new snapshot with updated reflection
     func withReflection(_ reflection: DailyReflection) -> DailySmileySnapshot {
@@ -200,7 +221,43 @@ struct DailySmileySnapshot: Codable, Identifiable {
             averageHealthScore: self.averageHealthScore,
             reflection: reflection,
             morningMindCheck: self.morningMindCheck,
-            eveningMindCheck: self.eveningMindCheck
+            eveningMindCheck: self.eveningMindCheck,
+            highlightData: self.highlightData,
+            reflectData: self.reflectData
+        )
+    }
+
+    /// Creates a copy with updated highlight data.
+    func withHighlightData(_ highlightData: HighlightData) -> DailySmileySnapshot {
+        DailySmileySnapshot(
+            id: self.id,
+            date: self.date,
+            smileyState: self.smileyState,
+            meals: self.meals,
+            mealCount: self.mealCount,
+            averageHealthScore: self.averageHealthScore,
+            reflection: self.reflection,
+            morningMindCheck: self.morningMindCheck,
+            eveningMindCheck: self.eveningMindCheck,
+            highlightData: highlightData,
+            reflectData: self.reflectData
+        )
+    }
+
+    /// Creates a copy with updated reflect data.
+    func withReflectData(_ reflectData: ReflectData) -> DailySmileySnapshot {
+        DailySmileySnapshot(
+            id: self.id,
+            date: self.date,
+            smileyState: self.smileyState,
+            meals: self.meals,
+            mealCount: self.mealCount,
+            averageHealthScore: self.averageHealthScore,
+            reflection: self.reflection,
+            morningMindCheck: self.morningMindCheck,
+            eveningMindCheck: self.eveningMindCheck,
+            highlightData: self.highlightData,
+            reflectData: reflectData
         )
     }
 }

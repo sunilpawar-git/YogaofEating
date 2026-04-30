@@ -31,35 +31,7 @@ class MainViewModel: ObservableObject {
     /// Cached fasting periods between consecutive meals
     @Published private(set) var fastingPeriods: [FastingPeriod] = []
 
-    // MARK: - End-of-Day Reflection (Phase 3)
-
-    /// Controls visibility of the end-of-day reflection sheet
-    @Published var showReflectionSheet: Bool = false
-
-    /// The hour (24h format) after which reflection prompt should appear. Default: 8 PM (20:00)
-    static let reflectionPromptHour: Int = 20
-
-    // MARK: - User-Initiated Reflections (Phase 4 - Redesign)
-
-    /// Controls visibility of the sleep quality input sheet (morning context)
-    @Published var showSleepQualitySheet: Bool = false
-
-    /// Controls visibility of the overall feeling input sheet (evening context)
-    @Published var showOverallFeelingSheet: Bool = false
-
-    /// Pending action to execute after reflection input is complete
-    private var pendingMealCreation: Bool = false
-
     // MARK: - Mind Check (Phase 3 - Mind Check Feature)
-
-    /// Controls visibility of the morning mind check input sheet
-    @Published var showMorningMindCheckSheet: Bool = false
-
-    /// Controls visibility of the evening mind check input sheet
-    @Published var showEveningMindCheckSheet: Bool = false
-
-    /// Whether evening review is being shown from End-of-Day pill (includes feeling selection)
-    @Published var isEndOfDayFlow: Bool = false
 
     /// Entries being edited (nil when creating new entries)
     @Published var editingMorningEntries: [MindCheckEntry]?
@@ -108,6 +80,9 @@ class MainViewModel: ObservableObject {
     let healthProfileService: HealthProfileServiceProtocol
     let insightService: InsightGenerationServiceProtocol
 
+    /// Combine subscriptions held for the lifetime of the ViewModel.
+    private var cancellables = Set<AnyCancellable>()
+
     /// Cached formatter for the selected date display. Allocated once per VM instance
     /// rather than on every call to `formattedSelectedDate`.
     private let selectedDateFormatter: DateFormatter = {
@@ -136,6 +111,15 @@ class MainViewModel: ObservableObject {
         // always delegates to the single canonical save path here.
         if let concrete = historicalSvc as? HistoricalDataService {
             concrete.mainViewModel = self
+        }
+
+        // Forward historicalService mutations to MainViewModel.objectWillChange so that
+        // computed view contracts (highlightViewData, reflectViewData) trigger SwiftUI
+        // re-renders even when no @Published property on MainViewModel changes directly.
+        if let concrete = historicalSvc as? HistoricalDataService {
+            concrete.objectWillChange
+                .sink { [weak self] _ in self?.objectWillChange.send() }
+                .store(in: &self.cancellables)
         }
 
         if !skipDataLoading {
@@ -490,54 +474,6 @@ class MainViewModel: ObservableObject {
         NotificationManager.shared.cancelAllNotifications()
     }
 
-    // MARK: - End-of-Day Reflection Methods (Legacy - Deprecated)
-
-    /// Determines if the user should be prompted for an end-of-day reflection.
-    /// Returns true if: it's after the prompt hour, user has logged meals, and no reflection exists for today.
-    /// - Parameter date: The current date/time to check against (defaults to now)
-    /// - Returns: Whether to show the reflection prompt
-    /// - Note: Deprecated - Use `isMorningSleepContext()` and `isEveningFeelingContext()` instead
-    @available(*, deprecated, message: "Use isMorningSleepContext() and isEveningFeelingContext() instead")
-    func shouldPromptReflection(at date: Date = Date()) -> Bool {
-        let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: date)
-
-        // Must be after the configured prompt hour (default 8 PM)
-        guard hour >= Self.reflectionPromptHour else { return false }
-
-        // Must have at least one meal logged today
-        guard !self.meals.isEmpty else { return false }
-
-        // Must not already have a reflection for today
-        guard self.todaysReflection == nil else { return false }
-
-        return true
-    }
-
-    /// Saves the user's end-of-day reflection and dismisses the sheet.
-    /// - Parameter reflection: The reflection to save
-    func saveReflection(_ reflection: DailyReflection) {
-        let today = Date()
-        self.historicalService.updateReflection(for: today, reflection: reflection)
-        self.showReflectionSheet = false
-    }
-
-    /// Dismisses the reflection sheet without saving.
-    func skipReflection() {
-        self.showReflectionSheet = false
-    }
-
-    /// Triggers the reflection prompt if conditions are met.
-    /// Call this when the view appears to check if reflection should be shown.
-    /// - Parameter date: The current date/time to check against (defaults to now)
-    /// - Note: Deprecated - Use `handleSmileyTap()` for user-initiated reflections instead
-    @available(*, deprecated, message: "Use handleSmileyTap() for user-initiated reflections instead")
-    func triggerReflectionPromptIfNeeded(at date: Date = Date()) {
-        if self.shouldPromptReflection(at: date) {
-            self.showReflectionSheet = true
-        }
-    }
-
     /// Returns today's reflection if one has been saved.
     var todaysReflection: DailyReflection? {
         let today = Date()
@@ -552,46 +488,6 @@ class MainViewModel: ObservableObject {
     /// Returns today's overall feeling if logged.
     var todaysFeeling: ReflectionFeeling? {
         self.todaysReflection?.feeling
-    }
-
-    // MARK: - Context Detection (Phase 2 - User-Initiated Reflections)
-
-    /// The hour before which sleep context is valid (noon = 12)
-    static let morningCutoffHour: Int = 12
-
-    /// Determines if the current smiley tap should show the sleep quality prompt.
-    /// Returns true if: it's before noon, no meals logged yet (first tap), and no sleep logged today.
-    /// - Parameter date: The current date/time to check against (defaults to now)
-    /// - Returns: Whether to show the sleep quality prompt
-    func isMorningSleepContext(at date: Date = Date()) -> Bool {
-        let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: date)
-
-        // Must be before noon
-        guard hour < Self.morningCutoffHour else { return false }
-
-        // Must be first tap of the day (no meals yet)
-        guard self.meals.isEmpty else { return false }
-
-        // Must not have sleep quality logged today
-        guard self.todaysSleepQuality == nil else { return false }
-
-        return true
-    }
-
-    /// Determines if the current smiley tap should show the overall feeling prompt.
-    /// Returns true if: user has logged at least one meal and no feeling logged today.
-    /// - Returns: Whether to show the overall feeling prompt
-    /// - Note: Deprecated - End-of-Day feeling is now captured via permanent pill, use `showEndOfDayPill` instead
-    @available(*, deprecated, message: "Use showEndOfDayPill computed property instead")
-    func isEveningFeelingContext() -> Bool {
-        // Must have at least one meal logged
-        guard !self.meals.isEmpty else { return false }
-
-        // Must not have feeling logged today
-        guard self.todaysFeeling == nil else { return false }
-
-        return true
     }
 
     /// Saves sleep quality for today, merging with existing reflection if present.
@@ -690,131 +586,7 @@ class MainViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Smiley Tap Flow (Phase 4 - User-Initiated Reflections)
-
-    /// Returns true if running UI tests. Used to bypass reflection flows during testing.
-    private var isUITesting: Bool {
-        CommandLine.arguments.contains("--uitesting")
-    }
-
-    /// Handles the smiley tap action, checking for morning sleep context only.
-    /// Flow:
-    /// 1. If morning sleep context → Show sleep quality sheet → Then create meal
-    /// 2. Otherwise → Create meal directly
-    /// Note: End-of-Day feeling is now captured via a permanent pill on the timeline, not via smiley tap
-    /// During UI testing, skips all reflection checks and creates meals directly.
-    func handleSmileyTap() {
-        // Skip reflection flows during UI testing for simpler test scenarios
-        if self.isUITesting {
-            self.createNewMeal()
-            return
-        }
-
-        if self.isMorningSleepContext() {
-            self.pendingMealCreation = true
-            self.showSleepQualitySheet = true
-            // Fetch Apple HealthKit sleep data if available
-            self.fetchAppleSleepData()
-        } else {
-            self.createNewMeal()
-        }
-    }
-
-    /// Returns true if the End-of-Day pill should be shown on the timeline.
-    /// Shows when: user has logged at least one meal AND has not logged overall feeling yet.
-    var showEndOfDayPill: Bool {
-        !self.meals.isEmpty && self.todaysFeeling == nil
-    }
-
-    /// Handles tap on the End-of-Day pill to show the appropriate sheet.
-    /// Phase 3: If morning todos exist, shows EveningReviewView (holistic mindset capture).
-    /// Otherwise, shows the feeling input directly.
-    func handleEndOfDayPillTap() {
-        self.pendingMealCreation = false // No meal creation after this
-
-        // Check if morning todos exist - if so, show holistic evening review
-        if let morningEntries = self.todaysMorningMindCheck, !morningEntries.isEmpty {
-            self.isEndOfDayFlow = true // Enable feeling selection in EveningReviewView
-            self.showEveningMindCheckSheet = true
-        } else {
-            // No todos, just ask for feeling
-            self.showOverallFeelingSheet = true
-        }
-    }
-
-    /// Completes the sleep quality input and proceeds with meal creation if pending.
-    /// - Parameter quality: The selected sleep quality
-    func completeSleepQualityInput(_ quality: SleepQuality) {
-        self.saveSleepQuality(quality)
-        self.showSleepQualitySheet = false
-
-        if self.pendingMealCreation {
-            self.pendingMealCreation = false
-            self.createNewMeal()
-        }
-    }
-
-    /// Dismisses the sleep quality sheet without saving.
-    func dismissSleepQualityInput() {
-        self.showSleepQualitySheet = false
-        // Clear suggested sleep data when dismissed
-        self.suggestedSleepQuality = nil
-        self.appleSleepData = nil
-
-        // Still create the meal even if user skips
-        if self.pendingMealCreation {
-            self.pendingMealCreation = false
-            self.createNewMeal()
-        }
-    }
-
-    /// Fetches sleep data from Apple HealthKit and suggests a sleep quality.
-    /// This runs asynchronously and updates suggestedSleepQuality if data is available.
-    private func fetchAppleSleepData() {
-        Task {
-            do {
-                // Request authorization first
-                _ = try await HealthKitService.shared.requestAuthorization()
-
-                // Fetch sleep data for today
-                if let sleepData = try await HealthKitService.shared.fetchSleepData(for: Date()) {
-                    await MainActor.run {
-                        self.appleSleepData = sleepData
-                        self.suggestedSleepQuality = sleepData.sleepQuality
-                        vmLogger.debug("Loaded Apple sleep data for badge")
-                    }
-                }
-            } catch {
-                vmLogger.error("Failed to fetch Apple sleep data: \(error.localizedDescription, privacy: .public)")
-                // Silently fail - user can still manually select sleep quality
-            }
-        }
-    }
-
-    /// Completes the overall feeling input and proceeds with meal creation if pending.
-    /// - Parameter feeling: The selected feeling
-    func completeOverallFeelingInput(_ feeling: ReflectionFeeling) {
-        self.saveOverallFeeling(feeling)
-        self.showOverallFeelingSheet = false
-
-        if self.pendingMealCreation {
-            self.pendingMealCreation = false
-            self.createNewMeal()
-        }
-    }
-
-    /// Dismisses the overall feeling sheet without saving.
-    func dismissOverallFeelingInput() {
-        self.showOverallFeelingSheet = false
-
-        // Still create the meal even if user skips
-        if self.pendingMealCreation {
-            self.pendingMealCreation = false
-            self.createNewMeal()
-        }
-    }
-
-    // MARK: - Day Navigation Methods (Phase 4)
+    // MARK: - Day Navigation Methods
 
     /// Returns true if the selected date is today.
     var isViewingToday: Bool {
@@ -848,29 +620,43 @@ class MainViewModel: ObservableObject {
 
     // MARK: - Minimal Data Contracts for Tab Views
 
-    /// Minimal data for HighlightView — only exposes what highlight view needs.
-    /// Returns nil if no meals logged today.
-    var highlightData: (smileyState: SmileyState, mealsCount: Int, averageScore: Double, sleepQuality: SleepQuality?)? {
-        guard self.isViewingToday else { return nil }
-        guard !self.meals.isEmpty else { return nil }
+    /// Returns the current HighlightData for the selected date from the snapshot.
+    var currentHighlightData: HighlightData? {
+        self.historicalService.getSnapshot(for: self.selectedDate)?.highlightData
+    }
 
-        let avgScore = self.meals.map(\.healthScore).reduce(0, +) / Double(self.meals.count)
-        return (
-            smileyState: self.smileyState,
-            mealsCount: self.meals.count,
-            averageScore: avgScore,
-            sleepQuality: self.suggestedSleepQuality
+    /// Returns the current ReflectData for the selected date from the snapshot.
+    var currentReflectData: ReflectData? {
+        self.historicalService.getSnapshot(for: self.selectedDate)?.reflectData
+    }
+
+    /// Minimal data contract for HighlightView.
+    /// Includes highlight content + HealthKit sleep data. No meals, no smiley state.
+    var highlightViewData: HighlightViewContract {
+        let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
+        let data = snapshot?.highlightData
+        return HighlightViewContract(
+            sleepQuality: data?.sleepQuality,
+            sleepNotes: data?.sleepNotes,
+            todos: data?.todos ?? [],
+            morningThoughts: data?.morningThoughts,
+            healthKitSleepData: self.isViewingToday ? self.appleSleepData : nil,
+            isToday: self.isViewingToday
         )
     }
 
-    /// Minimal data for ReflectView — only exposes what reflect view needs.
-    /// Returns nil if no meals logged today.
-    var reflectData: (mealsCount: Int, averageScore: Double)? {
-        guard self.isViewingToday else { return nil }
-        guard !self.meals.isEmpty else { return nil }
-
-        let avgScore = self.meals.map(\.healthScore).reduce(0, +) / Double(self.meals.count)
-        return (mealsCount: self.meals.count, averageScore: avgScore)
+    /// Minimal data contract for ReflectView.
+    /// Includes reflect content + morning todos for review. No meals, no sleep data.
+    var reflectViewData: ReflectViewContract {
+        let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
+        let data = snapshot?.reflectData
+        let highlightTodos = snapshot?.highlightData?.todos ?? []
+        return ReflectViewContract(
+            journalText: data?.journalText,
+            feeling: data?.feeling,
+            morningTodos: highlightTodos,
+            isToday: self.isViewingToday
+        )
     }
 
     /// Navigates to a specific date. Future dates are clamped to today.

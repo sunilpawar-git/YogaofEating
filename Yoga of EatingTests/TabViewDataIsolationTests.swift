@@ -3,187 +3,110 @@ import XCTest
 
 /// Unit tests verifying that tab views receive only minimal required data
 /// and cannot access sensitive user information.
-/// These tests enforce the Principle of Least Privilege for tab implementations.
 @MainActor
 final class TabViewDataIsolationTests: XCTestCase {
     var viewModel: MainViewModel!
+    var mockHistorical: MockHistoricalDataService!
 
     override func setUp() {
         super.setUp()
-        self.viewModel = MainViewModel(skipDataLoading: true)
-    }
-
-    // MARK: - HighlightView Data Isolation Tests
-
-    func test_highlightView_receivesMinimalData() {
-        // HighlightView should receive only: smileyState, mealsCount, averageScore, sleepQuality
-        let data = self.viewModel.highlightData
-        XCTAssertNil(data, "No data until meals are logged")
-
-        // Add meals
-        self.viewModel.meals = [
-            Meal(
-                id: UUID(),
-                timestamp: Date(),
-                mealType: .breakfast,
-                items: ["Eggs", "Toast"],
-                healthScore: 0.8,
-                isAIAnalyzed: false
-            ),
-            Meal(
-                id: UUID(),
-                timestamp: Date().addingTimeInterval(3600),
-                mealType: .lunch,
-                items: ["Salad", "Chicken"],
-                healthScore: 0.75,
-                isAIAnalyzed: false
-            )
-        ]
-
-        let highlightData = self.viewModel.highlightData
-        XCTAssertNotNil(highlightData, "Data should be available when meals exist")
-        XCTAssertEqual(highlightData?.mealsCount, 2)
-        if let avg = highlightData?.averageScore {
-            XCTAssertEqual(avg, 0.775, accuracy: 0.001)
-        } else {
-            XCTFail("Average score should not be nil")
-        }
-    }
-
-    func test_highlightView_dataIsNilWhenViewingPastDate() {
-        // HighlightView data should only be available when viewing today
-        self.viewModel.meals = [
-            Meal(
-                id: UUID(),
-                timestamp: Date(),
-                mealType: .breakfast,
-                items: ["Test"],
-                healthScore: 0.8,
-                isAIAnalyzed: false
-            )
-        ]
-
-        let todayData = self.viewModel.highlightData
-        XCTAssertNotNil(todayData, "Data available for today")
-
-        // Navigate to yesterday
-        let calendar = Calendar.current
-        if let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) {
-            self.viewModel.selectedDate = yesterday
-            let pastData = self.viewModel.highlightData
-            XCTAssertNil(pastData, "Data should be nil when viewing past dates")
-        }
-    }
-
-    func test_highlightView_dataIsNilWhenNoMeals() {
-        // HighlightView data should be nil if no meals logged
-        self.viewModel.meals = []
-        XCTAssertNil(self.viewModel.highlightData, "Data should be nil when no meals logged")
-    }
-
-    func test_highlightView_cannotAccessIndividualMeals() {
-        // HighlightView receives only aggregated data, not individual meal details
-        let mealWithSensitiveItems = Meal(
-            id: UUID(),
-            timestamp: Date(),
-            mealType: .breakfast,
-            items: ["Medication", "Private health supplement"],
-            healthScore: 0.5,
-            isAIAnalyzed: false
+        self.mockHistorical = MockHistoricalDataService()
+        self.viewModel = MainViewModel(
+            historicalService: self.mockHistorical,
+            skipDataLoading: true
         )
-        self.viewModel.meals = [mealWithSensitiveItems]
-
-        // HighlightView data doesn't contain individual meal items
-        guard let data = self.viewModel.highlightData else {
-            XCTFail("Data should be available")
-            return
-        }
-
-        // Verify we can access only aggregated values, not individual meals
-        XCTAssertEqual(data.mealsCount, 1, "Can access meal count")
-        XCTAssertEqual(data.averageScore, 0.5, "Can access average score")
-        // But NOT the actual meal items or mealTypes
-        // This is verified by the parameter type itself: (mealsCount, averageScore, ...)
     }
 
-    func test_highlightView_cannotAccessAllMeals() {
-        // HighlightView should not have access to the full meals array
-        let numberOfMeals = 5
-        self.viewModel.meals = (0..<numberOfMeals).map { i in
-            Meal(
-                id: UUID(),
-                timestamp: Date().addingTimeInterval(Double(i) * 3600),
-                mealType: .breakfast,
-                items: ["Item \(i)"],
-                healthScore: Double(i) / Double(numberOfMeals),
-                isAIAnalyzed: false
-            )
-        }
+    // MARK: - HighlightViewContract Data Isolation Tests
 
-        // HighlightView data contains mealsCount, but not the array itself
-        guard let data = self.viewModel.highlightData else {
-            XCTFail("Data should be available")
-            return
-        }
-
-        XCTAssertEqual(data.mealsCount, numberOfMeals, "Can access count")
-        // Cannot access individual meal objects or their properties
-        // This is enforced by the tuple type signature
+    func test_highlightViewData_defaultsToEmpty() {
+        let data = self.viewModel.highlightViewData
+        XCTAssertNil(data.sleepQuality)
+        XCTAssertNil(data.sleepNotes)
+        XCTAssertTrue(data.todos.isEmpty)
+        XCTAssertNil(data.morningThoughts)
+        XCTAssertTrue(data.isToday)
     }
 
-    // MARK: - ReflectView Data Isolation Tests
+    func test_highlightViewData_reflectsSavedHighlightData() {
+        let highlight = HighlightData(
+            sleepQuality: .good,
+            sleepNotes: "Slept well",
+            todos: [MindCheckEntry(category: .todo, text: "Buy eggs", context: .morning)],
+            morningThoughts: "Feeling rested"
+        )
+        self.mockHistorical.updateHighlightData(for: Date(), data: highlight)
 
-    func test_reflectView_receivesMinimalData() {
-        // ReflectView should receive only: mealsCount, averageScore
-        let data = self.viewModel.reflectData
-        XCTAssertNil(data, "No data until meals are logged")
+        let data = self.viewModel.highlightViewData
+        XCTAssertEqual(data.sleepQuality, .good)
+        XCTAssertEqual(data.sleepNotes, "Slept well")
+        XCTAssertEqual(data.todos.count, 1)
+        XCTAssertEqual(data.morningThoughts, "Feeling rested")
+    }
 
-        // Add meals
+    func test_highlightViewData_cannotAccessMeals() {
         self.viewModel.meals = [
             Meal(
                 id: UUID(),
                 timestamp: Date(),
                 mealType: .breakfast,
-                items: ["Oatmeal"],
-                healthScore: 0.7,
+                items: ["Medication", "Private health supplement"],
+                healthScore: 0.5,
                 isAIAnalyzed: false
             )
         ]
 
-        let reflectData = self.viewModel.reflectData
-        XCTAssertNotNil(reflectData, "Data should be available when meals exist")
-        XCTAssertEqual(reflectData?.mealsCount, 1)
-        XCTAssertEqual(reflectData?.averageScore, 0.7)
+        let data = self.viewModel.highlightViewData
+        XCTAssertTrue(data.isToday)
     }
 
-    func test_reflectView_dataIsNilWhenViewingPastDate() {
-        // ReflectView data should only be available when viewing today
-        self.viewModel.meals = [
-            Meal(
-                id: UUID(),
-                timestamp: Date(),
-                mealType: .breakfast,
-                items: ["Test"],
-                healthScore: 0.8,
-                isAIAnalyzed: false
-            )
-        ]
-
-        let todayData = self.viewModel.reflectData
-        XCTAssertNotNil(todayData, "Data available for today")
-
-        // Navigate to yesterday
-        let calendar = Calendar.current
-        if let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) {
-            self.viewModel.selectedDate = yesterday
-            let pastData = self.viewModel.reflectData
-            XCTAssertNil(pastData, "Data should be nil when viewing past dates")
-        }
-    }
-
-    func test_reflectView_cannotAccessSmileyState() {
-        // ReflectView should not have access to smiley state
+    func test_highlightViewData_cannotAccessSmileyState() {
         self.viewModel.smileyState = SmileyState(scale: 2.0, mood: .serene)
+        let data = self.viewModel.highlightViewData
+        XCTAssertTrue(data.isToday)
+    }
+
+    func test_highlightViewData_showsHistoricalData() {
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        let highlight = HighlightData(sleepQuality: .poor, morningThoughts: "Tired day")
+        self.mockHistorical.updateHighlightData(for: yesterday, data: highlight)
+
+        self.viewModel.selectedDate = yesterday
+        let data = self.viewModel.highlightViewData
+        XCTAssertEqual(data.sleepQuality, .poor)
+        XCTAssertFalse(data.isToday)
+    }
+
+    // MARK: - ReflectViewContract Data Isolation Tests
+
+    func test_reflectViewData_defaultsToEmpty() {
+        let data = self.viewModel.reflectViewData
+        XCTAssertNil(data.journalText)
+        XCTAssertNil(data.feeling)
+        XCTAssertTrue(data.morningTodos.isEmpty)
+        XCTAssertTrue(data.isToday)
+    }
+
+    func test_reflectViewData_reflectsSavedReflectData() {
+        let reflect = ReflectData(journalText: "Great day", feeling: .calm)
+        self.mockHistorical.updateReflectData(for: Date(), data: reflect)
+
+        let data = self.viewModel.reflectViewData
+        XCTAssertEqual(data.journalText, "Great day")
+        XCTAssertEqual(data.feeling, .calm)
+    }
+
+    func test_reflectViewData_includesMorningTodosFromHighlight() {
+        let todo = MindCheckEntry(category: .todo, text: "Exercise", context: .morning)
+        let highlight = HighlightData(todos: [todo])
+        self.mockHistorical.updateHighlightData(for: Date(), data: highlight)
+
+        let data = self.viewModel.reflectViewData
+        XCTAssertEqual(data.morningTodos.count, 1)
+        XCTAssertEqual(data.morningTodos.first?.text, "Exercise")
+    }
+
+    func test_reflectViewData_cannotAccessMeals() {
         self.viewModel.meals = [
             Meal(
                 id: UUID(),
@@ -195,134 +118,34 @@ final class TabViewDataIsolationTests: XCTestCase {
             )
         ]
 
-        guard let data = self.viewModel.reflectData else {
-            XCTFail("Data should be available")
-            return
-        }
-
-        // ReflectView only receives mealsCount and averageScore
-        // Cannot access smileyState - verified by tuple type signature
-        XCTAssertEqual(data.mealsCount, 1)
-        XCTAssertEqual(data.averageScore, 0.8)
-        // smileyState is explicitly NOT in the tuple
+        let data = self.viewModel.reflectViewData
+        XCTAssertTrue(data.isToday)
     }
 
-    func test_reflectView_cannotAccessSleepQuality() {
-        // ReflectView should not have access to sleep quality
-        self.viewModel.suggestedSleepQuality = .good
-        self.viewModel.meals = [
-            Meal(
-                id: UUID(),
-                timestamp: Date(),
-                mealType: .breakfast,
-                items: ["Test"],
-                healthScore: 0.8,
-                isAIAnalyzed: false
-            )
-        ]
-
-        guard let data = self.viewModel.reflectData else {
-            XCTFail("Data should be available")
-            return
-        }
-
-        // ReflectView only receives mealsCount and averageScore
-        // Cannot access sleepQuality - verified by tuple type signature
-        // This is different from HighlightView which CAN access sleep quality
-        XCTAssertEqual(data.mealsCount, 1)
-        XCTAssertEqual(data.averageScore, 0.8)
+    func test_reflectViewData_cannotAccessSmileyState() {
+        self.viewModel.smileyState = SmileyState(scale: 2.0, mood: .serene)
+        let data = self.viewModel.reflectViewData
+        XCTAssertTrue(data.isToday)
     }
 
-    func test_reflectView_cannotAccessFullMealsArray() {
-        // ReflectView should not have direct access to meals array
-        self.viewModel.meals = (0..<3).map { i in
-            Meal(
-                id: UUID(),
-                timestamp: Date().addingTimeInterval(Double(i) * 3600),
-                mealType: .breakfast,
-                items: ["Item \(i)"],
-                healthScore: 0.7,
-                isAIAnalyzed: false
-            )
-        }
+    // MARK: - Date Sync Tests
 
-        guard let data = self.viewModel.reflectData else {
-            XCTFail("Data should be available")
-            return
-        }
+    func test_tabData_syncWithSelectedDate() {
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
 
-        // ReflectView gets aggregated count, not individual meal objects
-        XCTAssertEqual(data.mealsCount, 3, "Can access count")
-        // Cannot access individual meals or their details
-    }
+        let highlightYesterday = HighlightData(sleepQuality: .terrible)
+        self.mockHistorical.updateHighlightData(for: yesterday, data: highlightYesterday)
 
-    // MARK: - Shared Data Isolation Tests
+        let reflectYesterday = ReflectData(feeling: .heavy)
+        self.mockHistorical.updateReflectData(for: yesterday, data: reflectYesterday)
 
-    func test_tabDataComputed_onDemand() {
-        // highlightData and reflectData should be computed on-demand, not cached
-        self.viewModel.meals = [
-            Meal(
-                id: UUID(),
-                timestamp: Date(),
-                mealType: .breakfast,
-                items: ["Test"],
-                healthScore: 0.8,
-                isAIAnalyzed: false
-            )
-        ]
+        // Today — no data
+        XCTAssertNil(self.viewModel.highlightViewData.sleepQuality)
+        XCTAssertNil(self.viewModel.reflectViewData.feeling)
 
-        let firstCheck = self.viewModel.highlightData
-        XCTAssertEqual(firstCheck?.mealsCount, 1)
-
-        // Add another meal
-        self.viewModel.meals.append(
-            Meal(
-                id: UUID(),
-                timestamp: Date().addingTimeInterval(3600),
-                mealType: .lunch,
-                items: ["Test2"],
-                healthScore: 0.75,
-                isAIAnalyzed: false
-            )
-        )
-
-        let secondCheck = self.viewModel.highlightData
-        XCTAssertEqual(secondCheck?.mealsCount, 2, "Data should be recomputed with new meals")
-    }
-
-    func test_emptyMealsList_returnsNilData() {
-        // Both tab data should be nil when meals array is empty
-        self.viewModel.meals = []
-        XCTAssertNil(self.viewModel.highlightData, "HighlightView data should be nil")
-        XCTAssertNil(self.viewModel.reflectData, "ReflectView data should be nil")
-    }
-
-    func test_averageScoreCalculation_accurate() {
-        // Verify accurate score calculation in both data contracts
-        let scores: [Double] = [0.5, 0.7, 0.9]
-        self.viewModel.meals = scores.enumerated().map { i, score in
-            Meal(
-                id: UUID(),
-                timestamp: Date().addingTimeInterval(Double(i) * 3600),
-                mealType: .breakfast,
-                items: ["Test"],
-                healthScore: score,
-                isAIAnalyzed: false
-            )
-        }
-
-        let expectedAverage = (0.5 + 0.7 + 0.9) / 3.0 // ~0.7
-
-        if let highlightAvg = self.viewModel.highlightData?.averageScore {
-            XCTAssertEqual(highlightAvg, expectedAverage, accuracy: 0.001)
-        } else {
-            XCTFail("HighlightView average score should not be nil")
-        }
-
-        if let reflectAvg = self.viewModel.reflectData?.averageScore {
-            XCTAssertEqual(reflectAvg, expectedAverage, accuracy: 0.001)
-        } else {
-            XCTFail("ReflectView average score should not be nil")
-        }
+        // Switch to yesterday
+        self.viewModel.selectedDate = yesterday
+        XCTAssertEqual(self.viewModel.highlightViewData.sleepQuality, .terrible)
+        XCTAssertEqual(self.viewModel.reflectViewData.feeling, .heavy)
     }
 }

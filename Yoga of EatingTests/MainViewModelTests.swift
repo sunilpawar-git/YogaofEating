@@ -425,31 +425,6 @@
 
         // MARK: - Tests: Mind Check (Phase 3)
 
-        func test_showMorningMindCheckPill_trueAfterSleepLogged() {
-            // Arrange: Log sleep quality
-            self.sut.saveSleepQuality(.good)
-
-            // Assert: Morning mind check pill should show
-            XCTAssertTrue(self.sut.showMorningMindCheckPill)
-        }
-
-        func test_showMorningMindCheckPill_falseBeforeSleepLogged() {
-            // Assert: No sleep logged, pill should not show
-            XCTAssertFalse(self.sut.showMorningMindCheckPill)
-        }
-
-        func test_showMorningMindCheckPill_falseAfterMindCheckLogged() {
-            // Arrange: Log sleep and mind check
-            self.sut.saveSleepQuality(.good)
-            let entries = [
-                MindCheckEntry(category: .todo, text: "Task", timestamp: Date(), context: .morning)
-            ]
-            self.sut.saveMorningMindCheck(entries)
-
-            // Assert: Mind check already logged, pill should not show
-            XCTAssertFalse(self.sut.showMorningMindCheckPill)
-        }
-
         func test_saveMorningMindCheck_updatesHistoricalData() {
             // Arrange
             let entries = [
