@@ -112,7 +112,7 @@ class MainViewModel: ObservableObject {
     /// rather than on every call to `formattedSelectedDate`.
     private let selectedDateFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "EEEE, d MMM yyyy"
+        f.dateFormat = "eee, d MMM yyyy"
         return f
     }()
 

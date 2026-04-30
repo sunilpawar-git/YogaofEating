@@ -10,7 +10,7 @@ extension AppTheme {
     /// Screen-level layout constants extracted from views to avoid magic numbers.
     enum Layout {
         /// Top padding applied to the date header within the main content VStack.
-        static let headerTopPadding: CGFloat = 60
+        static let headerTopPadding: CGFloat = 20
 
         /// Bottom padding applied below the date header (separates header from timeline).
         static let headerBottomPadding: CGFloat = 20
