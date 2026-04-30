@@ -126,7 +126,7 @@ struct DateHeaderNavigationView: View {
 
 #Preview("Viewing Today") {
     DateHeaderNavigationView(
-        formattedDate: "Tuesday, 7 Jan 2026",
+        formattedDate: "Tue, 7 Jan 2026",
         isViewingToday: true,
         canNavigateToPreviousDay: true,
         onPreviousDay: {},
@@ -136,7 +136,7 @@ struct DateHeaderNavigationView: View {
 
 #Preview("Viewing Past Day") {
     DateHeaderNavigationView(
-        formattedDate: "Monday, 6 Jan 2026",
+        formattedDate: "Mon, 6 Jan 2026",
         isViewingToday: false,
         canNavigateToPreviousDay: true,
         onPreviousDay: {},
