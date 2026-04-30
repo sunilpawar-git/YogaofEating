@@ -1,18 +1,19 @@
 import SwiftUI
 
 struct RootTabView: View {
+    @EnvironmentObject var viewModel: MainViewModel
     @State private var selectedTab = 1
 
     var body: some View {
         TabView(selection: self.$selectedTab) {
             Tab("Highlight", systemImage: "star.fill", value: 0) {
-                HighlightView()
+                HighlightView(data: self.viewModel.highlightData)
             }
             Tab("Energise", systemImage: "flame.fill", value: 1) {
                 MainScreenView()
             }
             Tab("Reflect", systemImage: "moon.stars.fill", value: 2) {
-                ReflectView()
+                ReflectView(data: self.viewModel.reflectData)
             }
         }
     }
@@ -20,5 +21,5 @@ struct RootTabView: View {
 
 #Preview {
     RootTabView()
-        .environmentObject(MainViewModel())
+        .environmentObject(MainViewModel(skipDataLoading: true))
 }

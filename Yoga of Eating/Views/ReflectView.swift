@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ReflectView: View {
+    let data: (mealsCount: Int, averageScore: Double)?
+
     var body: some View {
         ContentUnavailableView(
             "Reflect",
@@ -11,5 +13,7 @@ struct ReflectView: View {
 }
 
 #Preview {
-    ReflectView()
+    ReflectView(
+        data: (mealsCount: 3, averageScore: 0.72)
+    )
 }
