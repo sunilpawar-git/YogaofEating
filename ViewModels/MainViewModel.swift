@@ -846,6 +846,33 @@ class MainViewModel: ObservableObject {
         self.selectedDateFormatter.string(from: self.selectedDate)
     }
 
+    // MARK: - Minimal Data Contracts for Tab Views
+
+    /// Minimal data for HighlightView — only exposes what highlight view needs.
+    /// Returns nil if no meals logged today.
+    var highlightData: (smileyState: SmileyState, mealsCount: Int, averageScore: Double, sleepQuality: SleepQuality?)? {
+        guard self.isViewingToday else { return nil }
+        guard !self.meals.isEmpty else { return nil }
+
+        let avgScore = self.meals.map(\.healthScore).reduce(0, +) / Double(self.meals.count)
+        return (
+            smileyState: self.smileyState,
+            mealsCount: self.meals.count,
+            averageScore: avgScore,
+            sleepQuality: self.suggestedSleepQuality
+        )
+    }
+
+    /// Minimal data for ReflectView — only exposes what reflect view needs.
+    /// Returns nil if no meals logged today.
+    var reflectData: (mealsCount: Int, averageScore: Double)? {
+        guard self.isViewingToday else { return nil }
+        guard !self.meals.isEmpty else { return nil }
+
+        let avgScore = self.meals.map(\.healthScore).reduce(0, +) / Double(self.meals.count)
+        return (mealsCount: self.meals.count, averageScore: avgScore)
+    }
+
     /// Navigates to a specific date. Future dates are clamped to today.
     /// - Parameter date: The date to navigate to
     func navigateToDate(_ date: Date) {

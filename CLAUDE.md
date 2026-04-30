@@ -127,6 +127,65 @@ Do not duplicate these thresholds. Always import from `ScoringThresholds`.
 - **`isAIAnalyzed` is reset by `updateMealItemsLocalOnly` when content changes** — this is intentional; tests that check score after local updates must account for it.
 - **OSLog `.debug` messages do not appear in the Xcode console by default** — use `.info` for messages you need to see during debugging sessions.
 
+## Tab Implementation Guidelines
+
+When implementing a new tab view (e.g., Highlight, Reflect), follow this secure pattern to prevent data leakage:
+
+### DO ✅
+- **Accept data via parameters, never @EnvironmentObject**
+  ```swift
+  struct MyTabView: View {
+      let data: (mealsCount: Int, averageScore: Double)?
+      // Only receives what it needs
+  }
+  ```
+- **Define minimal data contracts in MainViewModel via computed properties**
+  ```swift
+  var myTabData: (mealsCount: Int, averageScore: Double)? {
+      guard self.isViewingToday else { return nil }
+      guard !self.meals.isEmpty else { return nil }
+      let avg = self.meals.map { $0.healthScore }.reduce(0, +) / Double(self.meals.count)
+      return (mealsCount: self.meals.count, averageScore: avg)
+  }
+  ```
+- **Use mock data in previews**
+  ```swift
+  #Preview {
+      MyTabView(data: (mealsCount: 3, averageScore: 0.75))
+  }
+  ```
+- **Write data isolation unit tests**
+  ```swift
+  func test_myTabView_cannotAccessMeals() { ... }
+  func test_myTabView_cannotAccessSleepData() { ... }
+  ```
+
+### DON'T ❌
+- **Never use @EnvironmentObject to access MainViewModel in tab views**
+  ```swift
+  // WRONG ❌
+  struct MyTabView: View {
+      @EnvironmentObject var viewModel: MainViewModel
+      // Now has access to ALL user data
+  }
+  ```
+- **Never hardcode mock data in non-preview code**
+- **Never access global state without explicit parameters**
+- **Never skip data isolation tests**
+
+### Security Principle: Principle of Least Privilege
+Each tab view receives ONLY the data it needs. This prevents:
+- Accidental data leakage through UI bugs
+- Malicious code access to sensitive user information
+- Future developers making mistakes with data access
+
+### Code Review Checklist for Tab PRs
+- ✓ Tab view accepts data via parameters, not @EnvironmentObject
+- ✓ No direct references to `MainViewModel` in tab view code
+- ✓ Previews use mock data, not `MainViewModel()`
+- ✓ Computed properties on MainViewModel are minimal and documented
+- ✓ Unit tests verify data isolation (tab cannot access unintended data)
+
 ## Build warnings policy
 
 Zero warnings on merge to `main`. Current known clean state:
