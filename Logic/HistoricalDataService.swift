@@ -22,6 +22,12 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
 
     /// Updates or adds evening mind check entries for a specific date.
     func updateEveningMindCheck(for date: Date, entries: [MindCheckEntry])
+
+    /// Updates or adds highlight data for a specific date.
+    func updateHighlightData(for date: Date, data: HighlightData)
+
+    /// Updates or adds reflect data for a specific date.
+    func updateReflectData(for date: Date, data: ReflectData)
 }
 
 /// Service for managing historical meal data and daily snapshots.
@@ -77,7 +83,7 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             averageScore = totalScore / Double(meals.count)
         }
 
-        // Preserve existing reflection and id if snapshot already exists for this day
+        // Preserve existing data if snapshot already exists for this day
         let existing = self.historicalData.snapshot(for: normalizedDate)
         let existingReflection = existing?.reflection
         // Re-use the existing snapshot ID so cloud sync can identify the same day.
@@ -85,7 +91,7 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         // also get a consistent identity across calls.
         let stableId = existing?.id ?? UUID(uuidString: Self.stableUUIDString(for: normalizedDate)) ?? UUID()
 
-        // Create snapshot with preserved reflection
+        // Create snapshot preserving all per-day user data
         let snapshot = DailySmileySnapshot(
             id: stableId,
             date: normalizedDate,
@@ -93,7 +99,11 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             meals: meals,
             mealCount: meals.count,
             averageHealthScore: averageScore,
-            reflection: existingReflection
+            reflection: existingReflection,
+            morningMindCheck: existing?.morningMindCheck,
+            eveningMindCheck: existing?.eveningMindCheck,
+            highlightData: existing?.highlightData,
+            reflectData: existing?.reflectData
         )
 
         // Add or update in historical data
@@ -112,16 +122,7 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
 
         // Check if snapshot already exists
         if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            // Update existing snapshot with new reflection
-            let updatedSnapshot = DailySmileySnapshot(
-                id: existingSnapshot.id,
-                date: existingSnapshot.date,
-                smileyState: existingSnapshot.smileyState,
-                meals: existingSnapshot.meals,
-                mealCount: existingSnapshot.mealCount,
-                averageHealthScore: existingSnapshot.averageHealthScore,
-                reflection: reflection
-            )
+            let updatedSnapshot = existingSnapshot.withReflection(reflection)
             self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
         } else {
             // Create new snapshot with reflection but empty meals
@@ -286,6 +287,54 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
                 mealCount: 0,
                 averageHealthScore: 0.5,
                 eveningMindCheck: entries
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+
+        self.saveHistoricalData()
+    }
+
+    // MARK: - Highlight & Reflect Data Methods
+
+    func updateHighlightData(for date: Date, data: HighlightData) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withHighlightData(data)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                highlightData: data
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+
+        self.saveHistoricalData()
+    }
+
+    func updateReflectData(for date: Date, data: ReflectData) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withReflectData(data)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                reflectData: data
             )
             self.historicalData.addOrUpdate(snapshot: newSnapshot)
         }

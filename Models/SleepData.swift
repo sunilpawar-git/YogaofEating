@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Sleep Data Model
 
 /// Represents sleep data fetched from HealthKit
-struct SleepData {
+struct SleepData: Equatable {
     /// Total time spent sleeping (in seconds)
     let sleepDuration: TimeInterval
 

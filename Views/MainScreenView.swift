@@ -27,33 +27,7 @@ struct MainScreenView: View {
 
     private var mainContent: some View {
         VStack(spacing: 0) {
-            // Date header with navigation
-            self.dateHeaderWithNavigation
-                .padding(.top, AppTheme.Layout.headerTopPadding)
-                .padding(.bottom, AppTheme.Layout.headerBottomPadding)
-
-            // Day page content with gesture-based navigation
-            // Note: Using plain view with drag gesture instead of TabView to control
-            // navigation direction - only allow swiping to previous days, not forward
             self.dayPage(for: self.viewModel.selectedDayIndex)
-                .gesture(
-                    DragGesture(minimumDistance: AppTheme.Layout.dragThreshold, coordinateSpace: .local)
-                        .onEnded { value in
-                            let horizontalDrag = value.translation.width
-                            let isSwipeLeft = horizontalDrag < -AppTheme.Layout.dragThreshold
-                            let isSwipeRight = horizontalDrag > AppTheme.Layout.dragThreshold
-
-                            withAnimation(.easeInOut(duration: AppTheme.Animation.standardDuration)) {
-                                if isSwipeLeft, self.viewModel.canNavigateToPreviousDay {
-                                    // Swipe left = go to previous day (higher index)
-                                    self.viewModel.navigateToPreviousDay()
-                                } else if isSwipeRight, self.viewModel.canNavigateToNextDay {
-                                    // Swipe right = go towards today (lower index)
-                                    self.viewModel.navigateToNextDay()
-                                }
-                            }
-                        }
-                )
                 .animation(
                     .easeInOut(duration: AppTheme.Animation.standardDuration),
                     value: self.viewModel.selectedDayIndex
@@ -63,19 +37,6 @@ struct MainScreenView: View {
         #if canImport(UIKit)
             .onTapGesture { self.dismissKeyboard() }
         #endif
-    }
-
-    // MARK: - Date Header with Navigation
-
-    private var dateHeaderWithNavigation: some View {
-        DateHeaderNavigationView(
-            formattedDate: self.viewModel.formattedSelectedDate,
-            isViewingToday: self.viewModel.isViewingToday,
-            canNavigateToPreviousDay: self.viewModel.canNavigateToPreviousDay,
-            onPreviousDay: { self.viewModel.navigateToPreviousDay() },
-            onNavigateToToday: { self.viewModel.navigateToToday() },
-            contextSubtext: self.viewModel.dateContextSubtext
-        )
     }
 
     // MARK: - Day Page Content
@@ -116,38 +77,12 @@ struct MainScreenView: View {
             smileyState: self.viewModel.smileyState,
             snapshot: nil,
             onSmileyTap: {
-                // Use context-aware smiley tap handling (morning sleep only)
-                self.viewModel.handleSmileyTap()
+                self.viewModel.createNewMeal()
             },
             onSmileyLongPress: {
-                // Show insight if available
                 self.viewModel.handleSmileyLongPress()
             },
             hasInsightAvailable: self.viewModel.hasInsightAvailable,
-            reflectionData: TodayReflectionData(
-                sleepQuality: self.viewModel.todaysSleepQuality,
-                appleSleepData: self.viewModel.appleSleepData,
-                feeling: self.viewModel.todaysFeeling,
-                showEndOfDayPill: self.viewModel.showEndOfDayPill,
-                showMorningMindCheckPill: self.viewModel.showMorningMindCheckPill,
-                morningMindCheck: self.viewModel.todaysMorningMindCheck,
-                onEditSleep: {
-                    self.viewModel.showSleepQualitySheet = true
-                },
-                onEditFeeling: {
-                    self.viewModel.showOverallFeelingSheet = true
-                },
-                onEndOfDayTap: {
-                    self.viewModel.handleEndOfDayPillTap()
-                },
-                onMorningMindCheckTap: {
-                    if let existingEntries = self.viewModel.todaysMorningMindCheck, !existingEntries.isEmpty {
-                        self.viewModel.editMorningMindCheck(existingEntries)
-                    } else {
-                        self.viewModel.showMorningMindCheckSheet = true
-                    }
-                }
-            ),
             mealActions: MealUpdateActions(
                 onUpdate: { mealId, mealType, items in
                     // Full update - triggers AI analysis (called on "done" actions)
