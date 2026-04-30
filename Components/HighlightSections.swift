@@ -54,6 +54,8 @@ struct HighlightSleepSection: View {
     var onQualityChanged: ((SleepQuality?) -> Void)?
     var onNotesChanged: ((String) -> Void)?
 
+    @FocusState private var isSleepNotesFocused: Bool
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label("Sleep", systemImage: "moon.zzz.fill")
@@ -70,6 +72,7 @@ struct HighlightSleepSection: View {
             TextField("How was your sleep?", text: self.$sleepNotesText, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(2...4)
+                .focused(self.$isSleepNotesFocused)
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
@@ -82,6 +85,15 @@ struct HighlightSleepSection: View {
                 .padding(.horizontal)
                 .onChange(of: self.sleepNotesText) { _, newValue in
                     self.onNotesChanged?(newValue)
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            self.isSleepNotesFocused = false
+                        }
+                        .fontWeight(.semibold)
+                    }
                 }
         }
     }
@@ -125,6 +137,8 @@ struct HighlightTodoSection: View {
     var onAddTodo: ((String) -> Void)?
     var onRemoveTodo: ((UUID) -> Void)?
 
+    @FocusState private var isTodoFieldFocused: Bool
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("To-Do", systemImage: "checklist")
@@ -161,6 +175,8 @@ struct HighlightTodoSection: View {
 
                 TextField("Add a to-do", text: self.$newTodoText)
                     .textFieldStyle(.plain)
+                    .focused(self.$isTodoFieldFocused)
+                    .submitLabel(.done)
                     .onSubmit { self.submitTodo() }
             }
             .padding(12)
@@ -169,18 +185,33 @@ struct HighlightTodoSection: View {
                     .fill(Color.accentColor.opacity(0.05))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.accentColor.opacity(0.15), lineWidth: 1)
+                            .strokeBorder(Color.accentColor.opacity(self.isTodoFieldFocused ? 0.4 : 0.15), lineWidth: 1)
                     )
             )
             .padding(.horizontal)
+            .animation(.easeInOut(duration: 0.15), value: self.isTodoFieldFocused)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    self.isTodoFieldFocused = false
+                }
+                .fontWeight(.semibold)
+            }
         }
     }
 
     private func submitTodo() {
         let trimmed = self.newTodoText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        self.onAddTodo?(trimmed)
+        guard !trimmed.isEmpty else {
+            self.isTodoFieldFocused = false
+            return
+        }
+        // Clear text first so the field empties instantly before the list re-renders
         self.newTodoText = ""
+        self.isTodoFieldFocused = false
+        self.onAddTodo?(trimmed)
     }
 }
 
@@ -189,6 +220,8 @@ struct HighlightTodoSection: View {
 struct HighlightThoughtsSection: View {
     @Binding var text: String
     var onChanged: ((String) -> Void)?
+
+    @FocusState private var isThoughtsFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -199,6 +232,7 @@ struct HighlightThoughtsSection: View {
             TextEditor(text: self.$text)
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
+                .focused(self.$isThoughtsFocused)
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
@@ -220,6 +254,15 @@ struct HighlightThoughtsSection: View {
                 .padding(.horizontal)
                 .onChange(of: self.text) { _, newValue in
                     self.onChanged?(newValue)
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            self.isThoughtsFocused = false
+                        }
+                        .fontWeight(.semibold)
+                    }
                 }
         }
     }

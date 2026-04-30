@@ -50,6 +50,11 @@ struct HighlightView: View {
             }
             .padding(.top, 16)
         }
+        // Tap anywhere outside a text field to dismiss the keyboard
+        .scrollDismissesKeyboard(.interactively)
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .onAppear {
             self.sleepNotesText = self.data.sleepNotes ?? ""
             self.morningThoughtsText = self.data.morningThoughts ?? ""
