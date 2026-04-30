@@ -181,22 +181,25 @@
             XCTAssertGreaterThanOrEqual(meal2Timestamp, meal1Timestamp)
         }
 
-        // MARK: - Tech Debt: Sorted Meals & Fasting Period Caching Tests
+        // MARK: - Meal Sorting & Fasting Period Caching Tests
 
-        func test_sortedMeals_isSortedByTimestamp() {
-            // Given: Create meals with specific timestamps (out of order)
-            let date1 = Date(timeIntervalSince1970: 1_704_110_400) // Later
-            let date2 = Date(timeIntervalSince1970: 1_704_067_200) // Earlier
+        func test_mealsAreSortedCorrectly_viaFastingPeriods() {
+            // Given: meals added out of chronological order
+            let date1 = Date(timeIntervalSince1970: 1_704_110_400) // Later (dinner)
+            let date2 = Date(timeIntervalSince1970: 1_704_067_200) // Earlier (breakfast)
 
             self.sut.meals = [
                 Meal(timestamp: date1, mealType: .dinner, items: ["Dinner"]),
                 Meal(timestamp: date2, mealType: .breakfast, items: ["Breakfast"])
             ]
 
-            // Then: sortedMeals should be in chronological order
-            XCTAssertEqual(self.sut.sortedMeals.count, 2)
-            XCTAssertEqual(self.sut.sortedMeals.first?.mealType, .breakfast)
-            XCTAssertEqual(self.sut.sortedMeals.last?.mealType, .dinner)
+            // Then: fastingPeriods are computed from sorted meals —
+            // the start meal should be the earlier one (breakfast → dinner direction)
+            XCTAssertEqual(self.sut.fastingPeriods.count, 1)
+            let period = self.sut.fastingPeriods.first
+            XCTAssertNotNil(period)
+            // The fasting period duration equals the gap between breakfast and dinner
+            XCTAssertEqual(period?.durationInHours ?? 0, 12.0, accuracy: 0.1)
         }
 
         func test_fastingPeriods_isCachedCorrectly() {
@@ -214,15 +217,15 @@
             XCTAssertEqual(self.sut.fastingPeriods.first?.durationInHours ?? 0, 12.0, accuracy: 0.1)
         }
 
-        func test_sortedMeals_updatesWhenMealsChange() {
-            // Given: Empty meals
-            XCTAssertTrue(self.sut.sortedMeals.isEmpty)
+        func test_meals_updatesWhenMealCreated() {
+            // Given: No meals
+            XCTAssertTrue(self.sut.meals.isEmpty)
 
             // When: Add a meal
             self.sut.createNewMeal()
 
-            // Then: sortedMeals should update
-            XCTAssertEqual(self.sut.sortedMeals.count, 1)
+            // Then: meals count updates
+            XCTAssertEqual(self.sut.meals.count, 1)
         }
 
         func test_fastingPeriods_emptyForSingleMeal() {

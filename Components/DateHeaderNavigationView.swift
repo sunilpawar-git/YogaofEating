@@ -46,7 +46,7 @@ struct DateHeaderNavigationView: View {
 
     private var previousDayButton: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.3)) {
+            withAnimation(.easeInOut(duration: AppTheme.Animation.standardDuration)) {
                 self.onPreviousDay()
             }
         } label: {
@@ -63,18 +63,23 @@ struct DateHeaderNavigationView: View {
 
     private var dateDisplayStack: some View {
         VStack(spacing: 4) {
-            Text(self.formattedDate)
-                .font(.system(.title2, design: .rounded))
-                .fontWeight(.bold)
-                .accessibilityIdentifier("date-header")
+            // Date + subtext are grouped as one accessibility element so VoiceOver
+            // reads them together (e.g. "Wednesday, 7 Jan 2026, Good morning").
+            VStack(spacing: 2) {
+                Text(self.formattedDate)
+                    .font(.system(.title2, design: .rounded))
+                    .fontWeight(.bold)
+                    .accessibilityIdentifier("date-header")
 
-            if let subtext = self.contextSubtext {
-                Text(subtext)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .accessibilityIdentifier("date-context-subtext")
-                    .transition(.opacity)
+                if let subtext = self.contextSubtext {
+                    Text(subtext)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .accessibilityIdentifier("date-context-subtext")
+                        .transition(.opacity)
+                }
             }
+            .accessibilityElement(children: .combine)
 
             if !self.isViewingToday {
                 self.backToTodayButton
@@ -85,12 +90,12 @@ struct DateHeaderNavigationView: View {
 
     private var backToTodayButton: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.3)) {
+            withAnimation(.easeInOut(duration: AppTheme.Animation.standardDuration)) {
                 self.onNavigateToToday()
             }
         } label: {
             HStack(spacing: 4) {
-                Text("Back to Today")
+                Text(Strings.DateHeader.backToToday)
                     .font(.caption)
                     .fontWeight(.semibold)
                 Image(systemName: "arrow.right")
@@ -106,14 +111,16 @@ struct DateHeaderNavigationView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("today-button")
-        .accessibilityLabel("Back to Today")
+        .accessibilityLabel(Strings.DateHeader.backToToday)
         .accessibilityHint("Return to today's view")
     }
 
-    /// Spacer to balance the left arrow (right arrow removed - users navigate backward only)
+    /// Spacer to balance the left arrow (right arrow removed — users navigate backward only).
+    /// Hidden from accessibility to prevent VoiceOver from landing on an invisible element.
     private var trailingSpacerView: some View {
         Color.clear
             .frame(width: 44, height: 44)
+            .accessibilityHidden(true)
     }
 }
 

@@ -159,6 +159,40 @@ enum Strings {
         static func daysAgo(_ count: Int) -> String {
             "\(count) day\(count == 1 ? "" : "s") ago"
         }
+
+        /// Label for the "Back to Today" navigation button shown on historical days.
+        static let backToToday = "Back to Today"
+
+        /// Formats the sleep quality display name for use in the context subtext.
+        /// Centralizes lowercasing so `DateContextProvider` does not mix display-string
+        /// transformation with formatting logic.
+        static func sleptQualityFormatted(quality: SleepQuality) -> String {
+            self.sleptQuality(quality.displayName.lowercased())
+        }
+    }
+
+    // MARK: - Journal Block
+
+    enum Journal {
+        /// Placeholder text for the meal text field.
+        static let placeholder = "What are you eating?"
+
+        /// Delete confirmation alert title.
+        static let deleteAlertTitle = "Delete this meal?"
+
+        /// Delete confirmation alert body message.
+        static let deleteAlertMessage = "This action cannot be undone."
+
+        /// Accessibility label for the done (confirm) button on a meal entry.
+        static let doneButtonLabel = "Done"
+
+        /// Accessibility hint for the done button.
+        static let doneButtonHint = "Confirm meal entry and analyze"
+
+        /// Formats item count for display in meal card footer (singular/plural).
+        static func itemCount(_ count: Int) -> String {
+            "\(count) item\(count == 1 ? "" : "s")"
+        }
     }
 
     // MARK: - Common
@@ -173,6 +207,13 @@ enum Strings {
         static let yesterday = "Yesterday"
     }
 
+    // MARK: - Components
+
+    enum Components {
+        /// Placeholder text shown in BreathingContentView while processing.
+        static let breathe = "Breathe..."
+    }
+
     // MARK: - Accessibility
 
     enum Accessibility {
@@ -182,6 +223,12 @@ enum Strings {
         static let addMealWithInsightHint = "Tap to log meal, hold to view insight"
         static let settingsButton = "Settings"
         static let mindCheckComplete = "Mind check complete"
+
+        /// Label for the small "+" button that opens the recent meals sheet.
+        static let addMealFromRecent = "Add from recent meals"
+
+        /// Hint explaining what the recent meals button does.
+        static let addMealFromRecentHint = "Shows meals from the past 3 days"
 
         static func mindCheckEntries(_ count: Int) -> String {
             "\(count) entries"

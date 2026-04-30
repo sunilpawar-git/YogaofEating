@@ -11,68 +11,39 @@
             color.description == expected.description
         }
 
-        // MARK: - Uniform Border Tests (Minimal UI)
+        // MARK: - MealCardBackground: Accent Bar Wiring (Phase 3)
 
-        func test_mealCardFeedback_borderWidth_alwaysReturnsStandard() {
-            // Given: Various health scores
-            let highScore = MealCardFeedback(score: 0.9, mealTypeColor: .blue)
-            let mediumScore = MealCardFeedback(score: 0.5, mealTypeColor: .green)
-            let lowScore = MealCardFeedback(score: 0.2, mealTypeColor: .orange)
+        // Note: MealCardBackground no longer renders a score-based stroke border.
+        // The left accent bar is driven by MealType.displayColor (passed from JournalBlockView).
+        // The score-based tint overlay is handled via MealCardFeedback.tintColor / tintOpacity.
+        // Tests for borderWidth/borderColor on MealCardFeedback are omitted because
+        // those model fields are not rendered by MealCardBackground.
 
-            // When/Then: All should return standard thin border (1.0)
-            XCTAssertEqual(highScore.borderWidth, 1.0, "High score should have thin border")
-            XCTAssertEqual(mediumScore.borderWidth, 1.0, "Medium score should have thin border")
-            XCTAssertEqual(lowScore.borderWidth, 1.0, "Low score should have thin border")
+        func test_mealCardBackground_accentBarUsesDisplayColor_breakfast() {
+            // Given: breakfast meal type
+            let color = MealType.breakfast.displayColor
+            // Then: orange — passed as mealTypeColor into MealCardBackground
+            XCTAssertTrue(self.colorMatches(color, .orange))
         }
 
-        func test_mealCardFeedback_borderColor_usesSubtleMealTypeColor() {
-            // Given: Different meal type colors
-            let blueFeedback = MealCardFeedback(score: 0.8, mealTypeColor: .blue)
-            let greenFeedback = MealCardFeedback(score: 0.5, mealTypeColor: .green)
-            let orangeFeedback = MealCardFeedback(score: 0.2, mealTypeColor: .orange)
-
-            // When/Then: Border color should be based on meal type, not score
-            // We check that the color description contains the base color
-            XCTAssertFalse(
-                self.colorMatches(blueFeedback.borderColor, .mealFeedbackPositive),
-                "Border should not be green feedback color"
-            )
-            XCTAssertFalse(
-                self.colorMatches(greenFeedback.borderColor, .mealFeedbackWarning),
-                "Border should not be orange warning color"
-            )
-            XCTAssertFalse(
-                self.colorMatches(orangeFeedback.borderColor, .mealFeedbackWarning),
-                "Border should not be orange warning color for low score"
-            )
+        func test_mealCardBackground_accentBarUsesDisplayColor_lunch() {
+            let color = MealType.lunch.displayColor
+            XCTAssertTrue(self.colorMatches(color, .green))
         }
 
-        func test_mealCardFeedback_highScore_noBorderWidthChange() {
-            // Given: Score above healthy threshold
-            let feedback = MealCardFeedback(score: 0.95, mealTypeColor: .purple)
-
-            // When
-            let width = feedback.borderWidth
-
-            // Then: Should still return standard thin border (no thick border for high scores)
-            XCTAssertEqual(width, 1.0, "High score should NOT get thick border")
+        func test_mealCardBackground_accentBarUsesDisplayColor_dinner() {
+            let color = MealType.dinner.displayColor
+            XCTAssertTrue(self.colorMatches(color, .purple))
         }
 
-        func test_mealCardFeedback_borderWidth_consistentAcrossAllScores() {
-            // Given: Range of scores from 0 to 1
-            let scores: [Double] = [0.0, 0.25, 0.35, 0.5, 0.65, 0.75, 1.0]
+        func test_mealCardBackground_accentBarUsesDisplayColor_snacks() {
+            let color = MealType.snacks.displayColor
+            XCTAssertTrue(self.colorMatches(color, .pink))
+        }
 
-            for score in scores {
-                // When
-                let feedback = MealCardFeedback(score: score, mealTypeColor: .blue)
-
-                // Then: All should have same thin border
-                XCTAssertEqual(
-                    feedback.borderWidth,
-                    1.0,
-                    "Score \(score) should have thin border"
-                )
-            }
+        func test_mealCardBackground_accentBarUsesDisplayColor_drinks() {
+            let color = MealType.drinks.displayColor
+            XCTAssertTrue(self.colorMatches(color, .blue))
         }
 
         // MARK: - Tint Opacity Tests (Keep subtle tints for feedback)
@@ -145,68 +116,30 @@
             XCTAssertTrue(self.colorMatches(tintColor, .clear))
         }
 
-        // MARK: - Edge Cases
+        // MARK: - Edge Cases (Tint Boundary Scores)
 
-        func test_feedback_zeroScore_hasThinBorder() {
-            // Given: Zero score
+        func test_feedback_zeroScore_hasOrangeTint() {
+            // Given: Zero score — minimum health
             let feedback = MealCardFeedback(score: 0.0, mealTypeColor: .blue)
-
-            // When/Then: Should have thin border
-            XCTAssertEqual(feedback.borderWidth, 1.0)
+            // Then: warning tint (not green)
+            XCTAssertTrue(self.colorMatches(feedback.tintColor, .mealFeedbackWarning))
         }
 
-        func test_feedback_perfectScore_hasThinBorder() {
+        func test_feedback_perfectScore_hasGreenTint() {
             // Given: Perfect score (1.0)
             let feedback = MealCardFeedback(score: 1.0, mealTypeColor: .blue)
-
-            // When/Then: Should still have thin border (no thick border)
-            XCTAssertEqual(feedback.borderWidth, 1.0)
+            // Then: positive tint
+            XCTAssertTrue(self.colorMatches(feedback.tintColor, .mealFeedbackPositive))
         }
 
         // MARK: - Left Accent Bar Theme Constants (Phase 3)
 
         func test_mealCard_accentBarWidth_matchesTheme() {
-            // Given / When
-            let width = AppTheme.MealCard.accentBarWidth
-
-            // Then: 3pt left accent bar — visible but not dominant
-            XCTAssertEqual(width, 3.0, accuracy: 0.01)
-        }
-
-        func test_mealCard_accentBarWidth_isPositive() {
-            XCTAssertGreaterThan(AppTheme.MealCard.accentBarWidth, 0)
+            XCTAssertEqual(AppTheme.MealCard.accentBarWidth, 3.0, accuracy: 0.01)
         }
 
         func test_mealCard_accentBarCornerRadius_isPositive() {
             XCTAssertGreaterThan(AppTheme.MealCard.accentBarCornerRadius, 0)
-        }
-
-        func test_mealCard_accentBarColor_breakfast_isOrange() {
-            // Given: breakfast meal type
-            let color = MealType.breakfast.displayColor
-
-            // Then: orange (breakfast warmth)
-            XCTAssertTrue(self.colorMatches(color, .orange))
-        }
-
-        func test_mealCard_accentBarColor_lunch_isGreen() {
-            let color = MealType.lunch.displayColor
-            XCTAssertTrue(self.colorMatches(color, .green))
-        }
-
-        func test_mealCard_accentBarColor_dinner_isPurple() {
-            let color = MealType.dinner.displayColor
-            XCTAssertTrue(self.colorMatches(color, .purple))
-        }
-
-        func test_mealCard_accentBarColor_snacks_isPink() {
-            let color = MealType.snacks.displayColor
-            XCTAssertTrue(self.colorMatches(color, .pink))
-        }
-
-        func test_mealCard_accentBarColor_drinks_isBlue() {
-            let color = MealType.drinks.displayColor
-            XCTAssertTrue(self.colorMatches(color, .blue))
         }
     }
 #endif

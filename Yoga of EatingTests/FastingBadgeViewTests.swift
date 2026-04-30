@@ -156,4 +156,57 @@ final class FastingBadgeViewTests: XCTestCase {
         // Then: no glow for non-significant periods
         XCTAssertEqual(view.fastingPeriod.glowIntensity, 0.0)
     }
+
+    // MARK: - Invalid Range Guard (Phase 3)
+
+    func test_fastingPeriod_endBeforeStart_durationIsZero() {
+        // Given: corrupt data with endTime before startTime
+        let base = Date(timeIntervalSince1970: 1_704_067_200)
+        let period = FastingPeriod(
+            startMealId: UUID(),
+            endMealId: UUID(),
+            startTime: base.addingTimeInterval(3600), // 1 hour after
+            endTime: base // 1 hour before startTime
+        )
+        // Then: duration is 0 (not negative) — guarded via max(0, ...)
+        XCTAssertEqual(period.duration, 0)
+        XCTAssertEqual(period.durationInHours, 0)
+    }
+
+    func test_fastingPeriod_endBeforeStart_formattedDurationIsZeroMinutes() {
+        let base = Date(timeIntervalSince1970: 1_704_067_200)
+        let period = FastingPeriod(
+            startMealId: UUID(),
+            endMealId: UUID(),
+            startTime: base.addingTimeInterval(7200),
+            endTime: base
+        )
+        XCTAssertEqual(period.formattedDuration, "0m")
+    }
+
+    func test_fastingPeriod_endBeforeStart_isNotSignificant() {
+        let base = Date(timeIntervalSince1970: 1_704_067_200)
+        let period = FastingPeriod(
+            startMealId: UUID(),
+            endMealId: UUID(),
+            startTime: base.addingTimeInterval(48 * 3600), // 48h ahead
+            endTime: base
+        )
+        XCTAssertFalse(period.isSignificant)
+        XCTAssertEqual(period.glowIntensity, 0.0)
+    }
+
+    func test_fastingPeriod_zeroDuration_hasZeroGlow() {
+        let base = Date(timeIntervalSince1970: 1_704_067_200)
+        // Same start and end (edge case: consecutive meals logged at same timestamp)
+        let period = FastingPeriod(
+            startMealId: UUID(),
+            endMealId: UUID(),
+            startTime: base,
+            endTime: base
+        )
+        XCTAssertEqual(period.duration, 0)
+        XCTAssertEqual(period.glowIntensity, 0.0)
+        XCTAssertFalse(period.isSignificant)
+    }
 }

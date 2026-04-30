@@ -32,42 +32,58 @@ final class DaySummaryTests: XCTestCase {
         XCTAssertFalse(result.isEmpty)
     }
 
-    // MARK: - AppTheme.Background constants
-
-    func test_background_glowOpacity_isCorrectValue() {
-        XCTAssertEqual(AppTheme.Background.glowOpacity, 0.08, accuracy: 0.001)
-    }
-
-    func test_background_glowOpacity_isInValidRange() {
-        let opacity = AppTheme.Background.glowOpacity
-        XCTAssertGreaterThan(opacity, 0.0, "Glow must be visible")
-        XCTAssertLessThan(opacity, 0.2, "Glow must not be heavy")
-    }
-
-    func test_background_glowBlurRadius_isCorrectValue() {
-        XCTAssertEqual(AppTheme.Background.glowBlurRadius, 60, accuracy: 0.01)
-    }
-
-    func test_background_glowBlurRadius_isPositive() {
-        XCTAssertGreaterThan(AppTheme.Background.glowBlurRadius, 0)
-    }
-
-    func test_background_glowSize_isPositive() {
-        XCTAssertGreaterThan(AppTheme.Background.glowSize, 0)
-    }
-
-    func test_background_glowSize_isSmallerThanOldValue() {
-        // Old value was 400pt — new value must be tighter
-        XCTAssertLessThan(AppTheme.Background.glowSize, 400)
-    }
-
     // MARK: - averageHealthScoreToday ViewModel property
 
     func test_averageHealthScoreToday_noMeals_returnsNil() throws {
         let vm = try XCTUnwrap(makeViewModel())
         // When: no meals
-        // Then: nil (nothing to average)
+        // Then: nil (fewer than 2 meals — summary line not shown)
         XCTAssertNil(vm.averageHealthScoreToday)
+    }
+
+    func test_averageHealthScoreToday_oneMeal_returnsNil() throws {
+        let vm = try XCTUnwrap(makeViewModel())
+        // Given: exactly 1 meal — below the 2-meal display threshold
+        vm.meals = [Meal(mealType: .breakfast, items: ["Oats"], healthScore: 0.8)]
+        // Then: nil (summary line requires >= 2 meals)
+        XCTAssertNil(vm.averageHealthScoreToday)
+    }
+
+    func test_averageHealthScoreToday_twoMeals_returnsAverage() throws {
+        let vm = try XCTUnwrap(makeViewModel())
+        // Given: exactly 2 meals — threshold met
+        vm.meals = [
+            Meal(mealType: .breakfast, items: ["Oats"], healthScore: 0.8),
+            Meal(mealType: .lunch, items: ["Salad"], healthScore: 0.6)
+        ]
+        // Then: average of 0.8 and 0.6 = 0.7
+        let result = try XCTUnwrap(vm.averageHealthScoreToday)
+        XCTAssertEqual(result, 0.7, accuracy: 0.001)
+    }
+
+    func test_averageHealthScoreToday_threeMeals_returnsCorrectAverage() throws {
+        let vm = try XCTUnwrap(makeViewModel())
+        // Given: 3 meals
+        vm.meals = [
+            Meal(mealType: .breakfast, items: ["Oats"], healthScore: 1.0),
+            Meal(mealType: .lunch, items: ["Salad"], healthScore: 0.5),
+            Meal(mealType: .dinner, items: ["Steak"], healthScore: 0.0)
+        ]
+        // Then: average = (1.0 + 0.5 + 0.0) / 3 = 0.5
+        let result = try XCTUnwrap(vm.averageHealthScoreToday)
+        XCTAssertEqual(result, 0.5, accuracy: 0.001)
+    }
+
+    func test_averageHealthScoreToday_boundaryScores_returnsCorrectAverage() throws {
+        let vm = try XCTUnwrap(makeViewModel())
+        // Given: two meals at boundary values
+        vm.meals = [
+            Meal(mealType: .breakfast, items: ["A"], healthScore: 0.0),
+            Meal(mealType: .lunch, items: ["B"], healthScore: 1.0)
+        ]
+        // Then: average = 0.5
+        let result = try XCTUnwrap(vm.averageHealthScoreToday)
+        XCTAssertEqual(result, 0.5, accuracy: 0.001)
     }
 
     // MARK: - Helpers

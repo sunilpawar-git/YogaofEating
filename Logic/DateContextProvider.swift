@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Pure, clock-injectable logic for computing the date header contextual subtext.
 ///
@@ -12,7 +13,7 @@ enum DateContextProvider {
     /// Priority order (first match wins):
     /// 1. Historical day → "X days ago"
     /// 2. Sleep logged → "Slept {quality}"
-    /// 3. Before 10am, no sleep, no meals → "Good morning"
+    /// 3. Before `AppTheme.DateContext.morningHourThreshold`, no sleep, no meals → "Good morning"
     /// 4. Any time, no sleep, has meals → "X meals so far"
     /// 5. Otherwise → nil
     static func subtext(
@@ -27,10 +28,10 @@ enum DateContextProvider {
         }
 
         if let sleep = sleepQuality {
-            return Strings.DateHeader.sleptQuality(sleep.displayName.lowercased())
+            return Strings.DateHeader.sleptQualityFormatted(quality: sleep)
         }
 
-        if currentHour < 10, mealCount == 0 {
+        if currentHour < AppTheme.DateContext.morningHourThreshold, mealCount == 0 {
             return Strings.DateHeader.goodMorning
         }
 

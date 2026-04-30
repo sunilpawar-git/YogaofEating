@@ -79,6 +79,11 @@ struct DayTimelineView: View {
     /// Recent meals from past 3 days for quick-add feature (only for today)
     var recentMeals: [Meal] = []
 
+    /// Pre-computed average health score for the day summary line (today only, >= 2 meals).
+    /// Provided by the ViewModel to avoid duplicating averaging logic inside the view.
+    /// Nil means the summary line is not shown.
+    var averageHealthScore: Double?
+
     // MARK: - Legacy Parameter Support (Deprecated)
 
     // These are kept for backward compatibility but internally map to reflectionData
@@ -427,12 +432,10 @@ struct DayTimelineView: View {
         }
     }
 
-    /// One-line ambient summary shown above the smiley when 2+ meals have been logged today.
-    /// Returns nil when conditions are not met (no meals, <2 meals, or historical day).
+    /// One-line ambient summary shown above the smiley when the ViewModel provides an average score.
+    /// Uses the pre-computed `averageHealthScore` parameter to keep averaging logic in one place (SSOT).
     private var daySummaryText: String? {
-        guard self.isToday, self.meals.count >= 2 else { return nil }
-        let total = self.meals.reduce(0.0) { $0 + $1.healthScore }
-        let avg = total / Double(self.meals.count)
+        guard self.isToday, let avg = self.averageHealthScore, self.meals.count >= 2 else { return nil }
         return Strings.Timeline.daySummary(avgScore: Int(avg * 100), mealCount: self.meals.count)
     }
 
