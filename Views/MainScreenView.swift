@@ -34,9 +34,6 @@ struct MainScreenView: View {
                 )
         }
         .contentShape(Rectangle())
-        #if canImport(UIKit)
-            .onTapGesture { self.dismissKeyboard() }
-        #endif
     }
 
     // MARK: - Day Page Content
@@ -156,10 +153,6 @@ struct MainScreenView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 self.settingsButton
             }
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                self.keyboardDoneButton
-            }
         #elseif canImport(AppKit)
             ToolbarItem(placement: .automatic) {
                 self.settingsButton
@@ -178,24 +171,6 @@ struct MainScreenView: View {
         .accessibilityIdentifier("settings-button")
     }
 
-    #if canImport(UIKit)
-        private var keyboardDoneButton: some View {
-            Button(Strings.Common.done) {
-                self.dismissKeyboard()
-            }
-            .fontWeight(.semibold)
-            .accessibilityIdentifier("keyboard-done-button")
-        }
-
-        private func dismissKeyboard() {
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil,
-                from: nil,
-                for: nil
-            )
-        }
-    #endif
 
     // MARK: - Background
 
