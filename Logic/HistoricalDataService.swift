@@ -224,12 +224,24 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         }
 
         // Take a snapshot of the data to sync to avoid issues if data changes mid-sync
-        let snapshotsToSync = self.historicalData.dailySnapshots
+        let allSnapshots = self.historicalData.dailySnapshots
 
-        // Sequential sync of all local snapshots to cloud
-        for snapshot in snapshotsToSync {
-            try await self.syncService.upload(snapshot: snapshot, userId: userId)
+        // Filter snapshots by lastSyncDate for delta sync: only upload recent changes
+        let snapshotsToSync: [DailySmileySnapshot]
+        if let lastSyncDate = self.historicalData.lastSyncDate {
+            let cutoffDate = Calendar.current.startOfDay(for: lastSyncDate)
+            snapshotsToSync = allSnapshots.filter { $0.date >= cutoffDate }
+        } else {
+            // First sync: upload all snapshots
+            snapshotsToSync = allSnapshots
         }
+
+        // Batch upload all snapshots to cloud
+        try await self.syncService.uploadBatch(snapshots: snapshotsToSync, userId: userId)
+
+        // Update lastSyncDate after successful sync
+        self.historicalData.lastSyncDate = Date()
+        self.saveHistoricalData()
     }
 
     /// Clears all historical data. Used for factory reset.
