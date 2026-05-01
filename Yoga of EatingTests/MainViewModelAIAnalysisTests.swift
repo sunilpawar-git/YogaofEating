@@ -285,6 +285,37 @@
             XCTAssertEqual(slowMock.analyzeCallCount, 1, "Should only call analyze once for concurrent requests")
         }
 
+        func test_performDeepAnalysis_usesAtomicInsertionForRaceConditionPrevention() async {
+            // REGRESSION TEST: Verifies that concurrent rapid calls cannot bypass the analysisInProgress guard
+            // due to race condition between separate contains() and insert() calls.
+            // Using Set.insert().inserted ensures atomicity.
+
+            self.sut.createNewMeal()
+            guard let mealId = self.sut.meals.first?.id else {
+                XCTFail("Meal not created")
+                return
+            }
+
+            let slowMock = SlowMockAILogicService()
+            self.sut = MainViewModel(logicService: slowMock, persistenceService: self.mockPersistence)
+            self.sut.createNewMeal()
+            guard let newMealId = self.sut.meals.first?.id else {
+                XCTFail("Meal not created")
+                return
+            }
+
+            // Fire 3 concurrent analysis requests to stress-test the atomic guard
+            async let first: () = self.sut.performDeepAnalysis(for: newMealId, items: ["Apple"])
+            async let second: () = self.sut.performDeepAnalysis(for: newMealId, items: ["Apple"])
+            async let third: () = self.sut.performDeepAnalysis(for: newMealId, items: ["Apple"])
+
+            _ = await (first, second, third)
+
+            // CRITICAL: Only ONE request should reach the AI service
+            // This catches the bug where separate contains() + insert() calls allow multiple requests through
+            XCTAssertEqual(slowMock.analyzeCallCount, 1, "Atomic insertion must prevent concurrent duplicates")
+        }
+
         func test_performDeepAnalysis_allowsSequentialRequestsAfterCompletion() async {
             // Given: Create a meal
             self.sut.createNewMeal()

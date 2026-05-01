@@ -17,6 +17,8 @@ enum CorrelationCategory: String, Codable, CaseIterable {
     case foodToMood
     case focusToFeeling
     case timingPattern
+    /// Two consecutive days of low-quality eating — inflammation and cravings may be elevated.
+    case foodDebt
 
     var icon: String {
         switch self {
@@ -28,6 +30,8 @@ enum CorrelationCategory: String, Codable, CaseIterable {
             "brain.head.profile"
         case .timingPattern:
             "clock.arrow.2.circlepath"
+        case .foodDebt:
+            "flame.fill"
         }
     }
 
@@ -41,6 +45,8 @@ enum CorrelationCategory: String, Codable, CaseIterable {
             "Focus & Feeling"
         case .timingPattern:
             "Timing Pattern"
+        case .foodDebt:
+            "Food & Momentum"
         }
     }
 }

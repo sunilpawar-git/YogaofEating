@@ -78,7 +78,7 @@ struct DayCell: View {
         switch snapshot.smileyState.mood {
         case .serene:
             return Color.green.opacity(baseOpacity + (score * opacityRange))
-        case .neutral:
+        case .neutral, .concerned:
             return Color.blue.opacity(baseOpacity + (score * opacityRange))
         case .overwhelmed:
             return Color.orange.opacity(baseOpacity + (score * opacityRange))

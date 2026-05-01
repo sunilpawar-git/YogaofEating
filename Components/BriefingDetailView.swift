@@ -226,6 +226,7 @@ struct BriefingDetailView: View {
         case .foodToMood: .green
         case .focusToFeeling: .purple
         case .timingPattern: .orange
+        case .foodDebt: .red
         }
     }
 

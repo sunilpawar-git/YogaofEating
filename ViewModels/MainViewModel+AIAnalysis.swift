@@ -35,13 +35,12 @@ extension MainViewModel {
 
         guard !meals[index].isAIAnalyzed else { return }
 
-        guard !analysisInProgress.contains(mealId) else { return }
-
         let description = items.joined(separator: ", ")
 
         guard description.count >= Self.minimumContentLength else { return }
 
-        analysisInProgress.insert(mealId)
+        let wasInserted = analysisInProgress.insert(mealId).inserted
+        guard wasInserted else { return }
         defer { analysisInProgress.remove(mealId) }
 
         // Only proceed if we are using a service that supports AI analysis

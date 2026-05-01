@@ -27,11 +27,12 @@
 
         func test_correlationCategory_hasExpectedCases() {
             let allCases = CorrelationCategory.allCases
-            XCTAssertEqual(allCases.count, 4)
+            XCTAssertEqual(allCases.count, 5)
             XCTAssertTrue(allCases.contains(.foodToSleep))
             XCTAssertTrue(allCases.contains(.foodToMood))
             XCTAssertTrue(allCases.contains(.focusToFeeling))
             XCTAssertTrue(allCases.contains(.timingPattern))
+            XCTAssertTrue(allCases.contains(.foodDebt))
         }
 
         func test_correlationCategory_rawValues_areStable() {
