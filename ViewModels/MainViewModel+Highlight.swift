@@ -33,8 +33,9 @@ extension MainViewModel {
     /// Updates sleep notes in Highlight and persists.
     func updateHighlightSleepNotes(_ notes: String) {
         guard self.isViewingToday else { return }
+        let clamped = Self.clampText(notes)
         var data = self.currentOrNewHighlightData()
-        data.sleepNotes = notes.isEmpty ? nil : notes
+        data.sleepNotes = clamped.isEmpty ? nil : clamped
         data.lastModified = Date()
         self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
     }
@@ -75,8 +76,9 @@ extension MainViewModel {
     /// Updates morning thoughts free-form text and persists.
     func updateHighlightMorningThoughts(_ thoughts: String) {
         guard self.isViewingToday else { return }
+        let clamped = Self.clampText(thoughts)
         var data = self.currentOrNewHighlightData()
-        data.morningThoughts = thoughts.isEmpty ? nil : thoughts
+        data.morningThoughts = clamped.isEmpty ? nil : clamped
         data.lastModified = Date()
         self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
     }
@@ -106,6 +108,17 @@ extension MainViewModel {
             )
             self.historicalService.updateReflection(for: date, reflection: cleared)
         }
+    }
+
+    // MARK: - Shared Text Utility
+
+    /// Truncates text to the app-wide character limit (AppTheme.TextEntry.maxCharacters).
+    /// Placing this on the ViewModel (not the View) enforces the limit at the persistence
+    /// boundary regardless of which UI field the text came from.
+    static func clampText(_ text: String) -> String {
+        text.count > AppTheme.TextEntry.maxCharacters
+            ? String(text.prefix(AppTheme.TextEntry.maxCharacters))
+            : text
     }
 
     // MARK: - HealthKit

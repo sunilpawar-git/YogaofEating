@@ -51,10 +51,13 @@ struct HighlightHealthKitCard: View {
 struct HighlightSleepSection: View {
     let selectedQuality: SleepQuality?
     @Binding var sleepNotesText: String
+    /// Bound to the parent's @FocusState so the parent can detect active edits
+    /// and skip mid-keystroke data resets when navigating dates.
+    var focusedField: FocusState<HighlightFocusField?>.Binding
     var onQualityChanged: ((SleepQuality?) -> Void)?
     var onNotesChanged: ((String) -> Void)?
 
-    @FocusState private var isSleepNotesFocused: Bool
+    @State private var sleepNotesDebounce: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -72,7 +75,7 @@ struct HighlightSleepSection: View {
             TextField("How was your sleep?", text: self.$sleepNotesText, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(2...4)
-                .focused(self.$isSleepNotesFocused)
+                .focused(self.focusedField, equals: .sleepNotes)
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
@@ -84,13 +87,22 @@ struct HighlightSleepSection: View {
                 )
                 .padding(.horizontal)
                 .onChange(of: self.sleepNotesText) { _, newValue in
-                    self.onNotesChanged?(newValue)
+                    if newValue.count > AppTheme.TextEntry.maxCharacters {
+                        self.sleepNotesText = String(newValue.prefix(AppTheme.TextEntry.maxCharacters))
+                        return
+                    }
+                    self.sleepNotesDebounce?.cancel()
+                    self.sleepNotesDebounce = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: AppTheme.TextEntry.debounceNanoseconds)
+                        guard !Task.isCancelled else { return }
+                        self.onNotesChanged?(newValue)
+                    }
                 }
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
                         Button("Done") {
-                            self.isSleepNotesFocused = false
+                            self.focusedField.wrappedValue = nil
                         }
                         .fontWeight(.semibold)
                     }
@@ -219,9 +231,11 @@ struct HighlightTodoSection: View {
 
 struct HighlightThoughtsSection: View {
     @Binding var text: String
+    /// Bound to the parent's @FocusState so the parent can detect active edits.
+    var focusedField: FocusState<HighlightFocusField?>.Binding
     var onChanged: ((String) -> Void)?
 
-    @FocusState private var isThoughtsFocused: Bool
+    @State private var thoughtsDebounce: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -232,7 +246,7 @@ struct HighlightThoughtsSection: View {
             TextEditor(text: self.$text)
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
-                .focused(self.$isThoughtsFocused)
+                .focused(self.focusedField, equals: .morningThoughts)
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
@@ -253,13 +267,22 @@ struct HighlightThoughtsSection: View {
                 }
                 .padding(.horizontal)
                 .onChange(of: self.text) { _, newValue in
-                    self.onChanged?(newValue)
+                    if newValue.count > AppTheme.TextEntry.maxCharacters {
+                        self.text = String(newValue.prefix(AppTheme.TextEntry.maxCharacters))
+                        return
+                    }
+                    self.thoughtsDebounce?.cancel()
+                    self.thoughtsDebounce = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: AppTheme.TextEntry.debounceNanoseconds)
+                        guard !Task.isCancelled else { return }
+                        self.onChanged?(newValue)
+                    }
                 }
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
                         Button("Done") {
-                            self.isThoughtsFocused = false
+                            self.focusedField.wrappedValue = nil
                         }
                         .fontWeight(.semibold)
                     }
