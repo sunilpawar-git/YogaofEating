@@ -8,14 +8,16 @@ extension JournalBlockView {
     // MARK: - Text Input Section
 
     var textInputSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let hasContent = !self.rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+        return VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
                 self.mealTextField
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Done button visibility is configurable via doneButtonVisibility
-                if self.shouldShowDoneButton {
-                    self.doneButton
+                // Green checkmark icon only (no "Done" label) - shown when focused with content
+                if self.isFocused, hasContent {
+                    self.checkmarkButton
                         .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
@@ -25,34 +27,23 @@ extension JournalBlockView {
         .animation(.easeInOut(duration: 0.2), value: self.isFocused)
     }
 
-    /// Determines if Done button should be shown based on configuration
-    var shouldShowDoneButton: Bool {
-        switch Self.doneButtonVisibility {
-        case .whenFocused:
-            self.isFocused
-        case .whenHasContent:
-            self.isFocused && !self.rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .never:
-            false
-        }
-    }
-
-    /// Done button to explicitly confirm entry and trigger AI analysis
-    var doneButton: some View {
+    /// Green checkmark icon to submit meal entry (implicit affordance)
+    /// Submission also occurs via Return key or focus loss
+    var checkmarkButton: some View {
         Button {
-            self.handleDoneButtonTap()
+            self.handleCheckmarkTap()
         } label: {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 24))
                 .foregroundColor(.green)
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("done-button-\(self.meal.id)")
-        .accessibilityLabel(Strings.Journal.doneButtonLabel)
-        .accessibilityHint(Strings.Journal.doneButtonHint)
+        .accessibilityIdentifier("checkmark-button-\(self.meal.id)")
+        .accessibilityLabel("Submit meal entry")
+        .accessibilityHint("Tap to save and analyze this meal")
     }
 
-    func handleDoneButtonTap() {
+    func handleCheckmarkTap() {
         // Set flag to prevent handleFocusChange from also triggering AI
         self.skipNextFocusLoss = true
         // Dismiss keyboard (this will trigger handleFocusChange, but we skip it)
@@ -117,16 +108,20 @@ extension JournalBlockView {
     @ViewBuilder
     var itemCountFooter: some View {
         HStack {
-            if !self.recentMeals.isEmpty {
+            // Show recent meals button only when unfocused + has recents
+            if !self.isFocused, !self.recentMeals.isEmpty {
                 self.recentMealsButton
             }
 
-            if !self.parsedItems.isEmpty {
+            // Item count (shown when not focused and has content)
+            if !self.isFocused, !self.parsedItems.isEmpty {
                 Text(Strings.Journal.itemCount(self.parsedItems.count))
                     .font(.system(size: 11, design: .rounded))
                     .foregroundColor(.secondary.opacity(0.8))
             }
             Spacer()
+
+            // Timestamp always shown (critical for user awareness)
             self.timestampButton
         }
         .padding(.top, 4)

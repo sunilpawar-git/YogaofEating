@@ -1,19 +1,12 @@
 import SwiftUI
 
-// MARK: - Done Button Visibility Configuration
+// MARK: - Submission Methods
 
-/// Controls when the Done button appears in JournalBlockView.
-/// This allows easy adjustment based on UX feedback without code changes.
-enum DoneButtonVisibility {
-    /// Always show when text field is focused (default, most discoverable)
-    case whenFocused
-
-    /// Show only when there's content in the text field
-    case whenHasContent
-
-    /// Never show (rely on focus loss and return key only)
-    case never
-}
+/// Green checkmark icon is shown when focused + has content.
+/// Submission occurs via:
+/// 1. Checkmark tap
+/// 2. Return key (from keyboard)
+/// 3. Focus loss (implicit)
 
 struct JournalBlockView: View {
     let meal: Meal
@@ -31,9 +24,6 @@ struct JournalBlockView: View {
 
     /// Recent meals from past 3 days for quick-add feature
     var recentMeals: [Meal] = []
-
-    /// Controls when the Done button is visible. Configurable for UX refinement.
-    static var doneButtonVisibility: DoneButtonVisibility = .whenFocused
 
     /// Maximum characters enforced by the limitedTextBinding.
     /// Sourced from AppTheme.TextEntry — single source of truth across the app.
