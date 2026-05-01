@@ -12,7 +12,9 @@
 
         func test_average_singleElement_returnsElement() {
             let single = [0.75]
-            XCTAssertEqual(single.average(), 0.75, accuracy: 0.0001)
+            let result = single.average()
+            XCTAssertNotNil(result)
+            XCTAssertEqual(result!, 0.75, accuracy: 0.0001)
         }
 
         func test_average_multipleElements_returnsCorrectMean() {
