@@ -44,6 +44,8 @@ struct SmileyView: View {
             .frame(width: 140, height: 140)
         SmileyView(state: SmileyState(scale: 1.0, mood: .neutral))
             .frame(width: 140, height: 140)
+        SmileyView(state: SmileyState(scale: 1.1, mood: .concerned))
+            .frame(width: 140, height: 140)
         SmileyView(state: SmileyState(scale: 1.0, mood: .overwhelmed))
             .frame(width: 140, height: 140)
     }

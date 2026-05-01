@@ -172,6 +172,9 @@ struct HighlightTodoSection: View {
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Capsule().fill(Color.secondary.opacity(0.12)))
+                            .accessibilityLabel(
+                                "\(todo.carriedOverCount) \(todo.carriedOverCount == 1 ? "day" : "days") overdue"
+                            )
                     }
                     Spacer()
                     Button { self.onRemoveTodo?(todo.id) } label: {

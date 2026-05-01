@@ -172,23 +172,19 @@
 
         func test_resetDay_populatesTodaySnapshotWithCarriedTodos() {
             let mockHistorical = MockHistoricalDataService()
+            let today = Calendar.current.startOfDay(for: Date())
+            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
 
-            // Seed yesterday's snapshot with an incomplete todo
-            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-            let todo = MindCheckEntry(category: .todo, text: "Carry me", context: .morning)
-            let highlight = HighlightData(todos: [todo])
-            mockHistorical.updateHighlightData(for: yesterday, data: highlight)
+            // Stub the carried todos — MockHistoricalDataService returns stubbedCarriedTodos
+            // from incompleteTodosForCarryOver, so we don't need to seed historical data here.
+            let carried = MindCheckEntry(category: .todo, text: "Carry me", context: .morning)
+                .withCarriedOverCount(1)
+            mockHistorical.stubbedCarriedTodos = [carried]
 
-            let vm = MainViewModel(
-                historicalService: mockHistorical,
-                skipDataLoading: true
-            )
+            let vm = MainViewModel(historicalService: mockHistorical, skipDataLoading: true)
             vm.lastResetDate = yesterday
-
             vm.resetDay()
 
-            // Today's snapshot should now have the carried todo
-            let today = Calendar.current.startOfDay(for: Date())
             let todayHighlight = mockHistorical.getSnapshot(for: today)?.highlightData
             XCTAssertNotNil(todayHighlight, "Today's snapshot should have highlight data after carry-over")
             XCTAssertEqual(todayHighlight?.todos.count, 1)
@@ -198,22 +194,45 @@
 
         func test_resetDay_doesNotCreateHighlightDataWhenNoIncompleteTodos() {
             let mockHistorical = MockHistoricalDataService()
+            let today = Calendar.current.startOfDay(for: Date())
+            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
 
-            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-            // All todos are completed
-            let done = MindCheckEntry(category: .todo, text: "Done", context: .morning, isAccomplished: true)
-            mockHistorical.updateHighlightData(for: yesterday, data: HighlightData(todos: [done]))
+            // stubbedCarriedTodos defaults to [] — simulates no incomplete todos
+            let vm = MainViewModel(historicalService: mockHistorical, skipDataLoading: true)
+            vm.lastResetDate = yesterday
+            vm.resetDay()
+
+            let todayHighlight = mockHistorical.getSnapshot(for: today)?.highlightData
+            let todoCount = todayHighlight?.todos.count ?? 0
+            XCTAssertEqual(todoCount, 0, "No incomplete todos means today should have none")
+        }
+
+        func test_resetDay_mergesCarriedTodosWithExistingHighlightData() {
+            let mockHistorical = MockHistoricalDataService()
+            let today = Calendar.current.startOfDay(for: Date())
+            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+
+            // Seed yesterday with an incomplete todo to carry
+            let todo = MindCheckEntry(category: .todo, text: "Carry me", context: .morning)
+            mockHistorical.updateHighlightData(for: yesterday, data: HighlightData(todos: [todo]))
+
+            // Seed today with existing sleep quality (e.g., logged just before midnight)
+            mockHistorical.updateHighlightData(
+                for: today,
+                data: HighlightData(sleepQuality: .great, todos: [])
+            )
+
+            // Stub carried todos so the mock's incompleteTodosForCarryOver returns them
+            mockHistorical.stubbedCarriedTodos = [todo.withCarriedOverCount(1)]
 
             let vm = MainViewModel(historicalService: mockHistorical, skipDataLoading: true)
             vm.lastResetDate = yesterday
-
             vm.resetDay()
 
-            let today = Calendar.current.startOfDay(for: Date())
             let todayHighlight = mockHistorical.getSnapshot(for: today)?.highlightData
-            // Either nil or empty todos — no incomplete carry
-            let todoCount = todayHighlight?.todos.count ?? 0
-            XCTAssertEqual(todoCount, 0, "No incomplete todos means today should have none")
+            XCTAssertEqual(todayHighlight?.sleepQuality, .great, "Sleep quality must not be overwritten by carry-over")
+            XCTAssertEqual(todayHighlight?.todos.count, 1, "Carried todo should appear in today's list")
+            XCTAssertEqual(todayHighlight?.todos.first?.text, "Carry me")
         }
 
         // MARK: - Helpers

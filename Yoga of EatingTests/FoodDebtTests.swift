@@ -109,16 +109,19 @@
 
         func test_resetDay_twoBadDays_smileyConcerned() {
             let mockHistorical = MockHistoricalDataService()
-
-            // Seed 2 bad days
-            let d1 = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-            let d2 = Calendar.current.date(byAdding: .day, value: -2, to: Date())!
+            // Normalize to start-of-day before arithmetic to prevent midnight/timezone flakiness
+            let today = Calendar.current.startOfDay(for: Date())
+            let d1 = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+            let d2 = Calendar.current.date(byAdding: .day, value: -2, to: today)!
             mockHistorical.historicalData.addOrUpdate(snapshot: self.makeSnapshot(on: d1, score: 0.25, mealCount: 2))
             mockHistorical.historicalData.addOrUpdate(snapshot: self.makeSnapshot(on: d2, score: 0.30, mealCount: 2))
 
+            // The mock's stubbedFoodDebtState drives resetDay() — set it to reflect what the real
+            // service would compute given the 2 bad days above.
+            mockHistorical.stubbedFoodDebtState = .concerned
+
             let vm = MainViewModel(historicalService: mockHistorical, skipDataLoading: true)
-            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-            vm.lastResetDate = yesterday
+            vm.lastResetDate = d1
 
             vm.resetDay()
 
@@ -131,19 +134,15 @@
 
         func test_resetDay_oneBadDay_smileyNeutral() {
             let mockHistorical = MockHistoricalDataService()
-
-            let d1 = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-            let d2 = Calendar.current.date(byAdding: .day, value: -2, to: Date())!
+            let today = Calendar.current.startOfDay(for: Date())
+            let d1 = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+            let d2 = Calendar.current.date(byAdding: .day, value: -2, to: today)!
             mockHistorical.historicalData.addOrUpdate(snapshot: self.makeSnapshot(on: d1, score: 0.25, mealCount: 2))
-            mockHistorical.historicalData.addOrUpdate(snapshot: self.makeSnapshot(
-                on: d2,
-                score: 0.85,
-                mealCount: 2
-            )) // good
+            mockHistorical.historicalData.addOrUpdate(snapshot: self.makeSnapshot(on: d2, score: 0.85, mealCount: 2))
 
+            // stubbedFoodDebtState defaults to .neutral — one bad day is not enough
             let vm = MainViewModel(historicalService: mockHistorical, skipDataLoading: true)
-            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-            vm.lastResetDate = yesterday
+            vm.lastResetDate = d1
 
             vm.resetDay()
 
@@ -187,6 +186,19 @@
             XCTAssertTrue(cards.isEmpty, "Day with no meals should not count toward food debt")
         }
 
+        func test_patternAnalyzer_foodDebt_cardNotGeneratedForNonConsecutiveDays() {
+            // Days 1 and 5 ago — a gap of 4 calendar days between them
+            let snapshots = [
+                makeSnapshot(daysAgo: 1, score: 0.25, mealCount: 2),
+                makeSnapshot(daysAgo: 5, score: 0.30, mealCount: 2)
+            ]
+            let cards = self.analyzer.analyzeFoodDebt(from: snapshots)
+            XCTAssertTrue(
+                cards.isEmpty,
+                "Non-consecutive bad days (gap of 4 days) must not trigger a food debt card"
+            )
+        }
+
         func test_patternAnalyzer_foodDebt_confidenceScalesWithSeverity() {
             // Very low scores → higher confidence
             let badSnapshots = [
@@ -212,6 +224,11 @@
                 badConf, borderlineConf,
                 "Very bad scores should produce higher confidence than borderline scores"
             )
+            // Confidence must always be within [0, 1]
+            XCTAssertGreaterThanOrEqual(badConf, 0.0, "Confidence must be >= 0")
+            XCTAssertLessThanOrEqual(badConf, 1.0, "Confidence must be <= 1")
+            XCTAssertGreaterThanOrEqual(borderlineConf, 0.0, "Confidence must be >= 0")
+            XCTAssertLessThanOrEqual(borderlineConf, 1.0, "Confidence must be <= 1")
         }
 
         func test_patternAnalyzer_generateCorrelationCards_includesFoodDebtWhenTriggered() {
@@ -231,7 +248,8 @@
         // MARK: - Helpers
 
         private func seedSnapshot(daysAgo: Int, averageScore: Double, mealCount: Int) {
-            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!
+            let today = Calendar.current.startOfDay(for: Date())
+            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: today)!
             self.sut.historicalData.addOrUpdate(snapshot: self.makeSnapshot(
                 on: date,
                 score: averageScore,
@@ -254,7 +272,8 @@
         }
 
         private func makeSnapshot(daysAgo: Int, score: Double, mealCount: Int) -> DailySmileySnapshot {
-            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!
+            let today = Calendar.current.startOfDay(for: Date())
+            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: today)!
             return self.makeSnapshot(on: date, score: score, mealCount: mealCount)
         }
     }

@@ -284,16 +284,25 @@ class PatternAnalyzer {
     /// CorrelationCard warning that inflammation and cravings may be elevated today.
     /// Basis: Esposito et al. (2002) — inflammatory markers after consecutive poor-eating days.
     func analyzeFoodDebt(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
-        let recent = snapshots
-            .sorted { $0.date > $1.date }
-            .filter { $0.mealCount > 0 }
-            .prefix(2)
-        guard recent.count == 2,
+        let recent = Array(
+            snapshots
+                .sorted { $0.date > $1.date }
+                .filter { $0.mealCount > 0 }
+                .prefix(2)
+        )
+        guard recent.count == 2 else { return [] }
+
+        // Require the 2 snapshots to be consecutive calendar days — prevents false positives
+        // from sporadic loggers whose most recent 2 entries are weeks apart.
+        let daysBetween = Calendar.current.dateComponents(
+            [.day], from: recent[1].date, to: recent[0].date
+        ).day ?? Int.max
+        guard daysBetween == 1,
               recent.allSatisfy({ $0.averageHealthScore < ScoringThresholds.foodDebtBadDay })
         else { return [] }
 
         let avgScore = recent.map(\.averageHealthScore).reduce(0, +) / 2.0
-        let confidence = min(1.0, (ScoringThresholds.foodDebtBadDay - avgScore) * 5.0)
+        let confidence = max(0.0, min(1.0, (ScoringThresholds.foodDebtBadDay - avgScore) * 5.0))
         let refs = recent.map {
             InsightReference(date: $0.date, description: "Low-quality eating day", category: .food)
         }
