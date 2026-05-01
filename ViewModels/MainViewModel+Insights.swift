@@ -7,11 +7,9 @@ import SwiftUI
 extension MainViewModel {
     // MARK: - Computed Properties
 
-    /// Returns today's generated insight if available.
+    /// Returns today's generated insight if available, loaded from the persisted snapshot.
     var todaysInsight: DailyInsight? {
-        // For now, insights are not persisted - will be added in future
-        // This will be populated when insight generation is triggered
-        nil
+        self.historicalService.getSnapshot(for: Date())?.insight
     }
 
     /// Returns true if the insight card should be shown.

@@ -171,7 +171,6 @@ struct MainScreenView: View {
         .accessibilityIdentifier("settings-button")
     }
 
-
     // MARK: - Background
 
     private var backgroundGradient: some View {

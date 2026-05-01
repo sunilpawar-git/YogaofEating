@@ -5,22 +5,19 @@ enum BriefingThresholds {
     static let timingConsistencyStdDev: Double = 5.5
     static let scoreDifferenceSignificant: Double = 0.15
     static let minimumScoreDelta: Double = 0.1
+    /// Minimum snapshots required before pattern detection runs (replaces private minimumDataPoints)
+    static let minimumDataPoints: Int = 3
+    /// Confidence threshold for surfacing a detected pattern (replaces private confidenceThreshold)
+    static let confidenceThreshold: Double = 0.6
+    /// Hour after which dinner is considered "late" (replaces private lateDinnerHour)
+    static let lateDinnerHour: Int = 21
+    /// Maximum insight references shown per card (replaces scattered prefix(3) calls)
+    static let maximumInsightReferences: Int = 3
 }
 
 /// Analyzes user data to detect patterns between food, sleep, todos, and mood.
 /// Used by InsightGenerationService to create rich, date-referenced insights.
 class PatternAnalyzer {
-    // MARK: - Configuration
-
-    /// Minimum number of data points required to detect patterns
-    private let minimumDataPoints = 3
-
-    /// Hour after which dinner is considered "late" (9 PM)
-    private let lateDinnerHour = 21
-
-    /// Confidence threshold for pattern detection
-    private let confidenceThreshold = 0.6
-
     // MARK: - Main Analysis
 
     /// Analyzes all available patterns from the given snapshots.
@@ -33,7 +30,7 @@ class PatternAnalyzer {
     /// - Parameter snapshots: Historical daily snapshots to analyze
     /// - Returns: Array of detected patterns, sorted by confidence
     func analyzePatterns(from snapshots: [DailySmileySnapshot]) -> [InsightPattern] {
-        guard snapshots.count >= self.minimumDataPoints else {
+        guard snapshots.count >= BriefingThresholds.minimumDataPoints else {
             return []
         }
 
@@ -71,7 +68,7 @@ class PatternAnalyzer {
         if !overlappingDays.isEmpty {
             let confidence = Double(overlappingDays.count) / Double(max(lateDinnerDays.count, 1))
 
-            if confidence >= self.confidenceThreshold {
+            if confidence >= BriefingThresholds.confidenceThreshold {
                 let references = overlappingDays.map { day -> InsightReference in
                     let lateMeal = day.meals.first { self.isLateDinner($0) }
                     let mealDescription = lateMeal
@@ -128,18 +125,19 @@ class PatternAnalyzer {
         if overlappingDays.count >= 2 {
             let confidence = Double(overlappingDays.count) / Double(max(completedTodoDays.count, 1))
 
-            if confidence >= self.confidenceThreshold {
-                let references = overlappingDays.prefix(3).map { day -> InsightReference in
-                    let completedCount = day.morningMindCheck?
-                        .count(where: { $0.category == .todo && $0.isAccomplished == true })
-                        ?? 0
+            if confidence >= BriefingThresholds.confidenceThreshold {
+                let references = overlappingDays.prefix(BriefingThresholds.maximumInsightReferences)
+                    .map { day -> InsightReference in
+                        let completedCount = day.morningMindCheck?
+                            .count(where: { $0.category == .todo && $0.isAccomplished == true })
+                            ?? 0
 
-                    return InsightReference(
-                        date: day.date,
-                        description: "\(completedCount) todo\(completedCount == 1 ? "" : "s") completed",
-                        category: .todo
-                    )
-                }
+                        return InsightReference(
+                            date: day.date,
+                            description: "\(completedCount) todo\(completedCount == 1 ? "" : "s") completed",
+                            category: .todo
+                        )
+                    }
 
                 patterns.append(
                     InsightPattern(
@@ -185,14 +183,15 @@ class PatternAnalyzer {
         if overlappingDays.count >= 2, gratitudeDays.count >= 2 {
             let confidence = Double(overlappingDays.count) / Double(gratitudeDays.count)
 
-            if confidence >= self.confidenceThreshold {
-                let references = overlappingDays.prefix(3).map { day -> InsightReference in
-                    InsightReference(
-                        date: day.date,
-                        description: "Gratitude practiced",
-                        category: .feeling
-                    )
-                }
+            if confidence >= BriefingThresholds.confidenceThreshold {
+                let references = overlappingDays.prefix(BriefingThresholds.maximumInsightReferences)
+                    .map { day -> InsightReference in
+                        InsightReference(
+                            date: day.date,
+                            description: "Gratitude practiced",
+                            category: .feeling
+                        )
+                    }
 
                 patterns.append(
                     InsightPattern(
@@ -238,14 +237,15 @@ class PatternAnalyzer {
         if overlappingEarly.count >= 2 {
             let confidence = Double(overlappingEarly.count) / Double(max(earlyEatingDays.count, 1))
 
-            if confidence >= self.confidenceThreshold {
-                let references = overlappingEarly.prefix(3).map { day -> InsightReference in
-                    InsightReference(
-                        date: day.date,
-                        description: "Finished eating early",
-                        category: .food
-                    )
-                }
+            if confidence >= BriefingThresholds.confidenceThreshold {
+                let references = overlappingEarly.prefix(BriefingThresholds.maximumInsightReferences)
+                    .map { day -> InsightReference in
+                        InsightReference(
+                            date: day.date,
+                            description: "Finished eating early",
+                            category: .food
+                        )
+                    }
 
                 patterns.append(
                     InsightPattern(
@@ -267,7 +267,7 @@ class PatternAnalyzer {
 
     /// Produces CorrelationCards from all analyzers, sorted by confidence descending.
     func generateCorrelationCards(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
-        guard snapshots.count >= self.minimumDataPoints else { return [] }
+        guard snapshots.count >= BriefingThresholds.minimumDataPoints else { return [] }
 
         var cards: [CorrelationCard] = []
         cards.append(contentsOf: self.analyzeFoodToFeeling(from: snapshots))
@@ -301,7 +301,7 @@ class PatternAnalyzer {
               recent.allSatisfy({ $0.averageHealthScore < ScoringThresholds.foodDebtBadDay })
         else { return [] }
 
-        let avgScore = recent.map(\.averageHealthScore).reduce(0, +) / 2.0
+        let avgScore = recent.map(\.averageHealthScore).average() ?? ScoringThresholds.neutral
         let confidence = max(0.0, min(1.0, (ScoringThresholds.foodDebtBadDay - avgScore) * 5.0))
         let refs = recent.map {
             InsightReference(date: $0.date, description: "Low-quality eating day", category: .food)
@@ -323,30 +323,30 @@ class PatternAnalyzer {
         let paired: [(score: Double, isGoodMood: Bool)] = snapshots.compactMap { snap in
             guard !snap.meals.isEmpty,
                   let feeling = snap.reflection?.feeling else { return nil }
-            let avgScore = snap.meals.map(\.healthScore).reduce(0, +) / Double(snap.meals.count)
+            let avgScore = snap.meals.map(\.healthScore).average() ?? ScoringThresholds.neutral
             let good = feeling == .great || feeling == .calm
             return (avgScore, good)
         }
 
-        guard paired.count >= self.minimumDataPoints else { return [] }
+        guard paired.count >= BriefingThresholds.minimumDataPoints else { return [] }
 
         let goodDays = paired.filter(\.isGoodMood)
         let badDays = paired.filter { !$0.isGoodMood }
 
         guard !goodDays.isEmpty, !badDays.isEmpty else { return [] }
 
-        let avgGood = goodDays.map(\.score).reduce(0, +) / Double(goodDays.count)
-        let avgBad = badDays.map(\.score).reduce(0, +) / Double(badDays.count)
+        let avgGood = goodDays.map(\.score).average() ?? ScoringThresholds.neutral
+        let avgBad = badDays.map(\.score).average() ?? ScoringThresholds.neutral
         let gap = avgGood - avgBad
 
         guard gap > BriefingThresholds.scoreDifferenceSignificant else { return [] }
 
         let confidence = min(1.0, gap * 2.0)
-        guard confidence >= self.confidenceThreshold else { return [] }
+        guard confidence >= BriefingThresholds.confidenceThreshold else { return [] }
 
         let references = snapshots
             .filter { !$0.meals.isEmpty && ($0.reflection?.feeling == .great || $0.reflection?.feeling == .calm) }
-            .prefix(3)
+            .prefix(BriefingThresholds.maximumInsightReferences)
             .map { InsightReference(date: $0.date, description: "Healthy meals on this day", category: .food) }
 
         return [
@@ -373,7 +373,7 @@ class PatternAnalyzer {
             return (snap.date, variance.squareRoot())
         }
 
-        guard timed.count >= self.minimumDataPoints else { return [] }
+        guard timed.count >= BriefingThresholds.minimumDataPoints else { return [] }
 
         let consistentDays = timed.filter { $0.stdDev < BriefingThresholds.timingConsistencyStdDev }
         let inconsistentDays = timed.filter { $0.stdDev >= BriefingThresholds.timingConsistencyStdDev }
@@ -389,9 +389,9 @@ class PatternAnalyzer {
         }
 
         let ratio = Double(consistentGoodSleep.count) / Double(consistentDays.count)
-        guard ratio >= self.confidenceThreshold else { return [] }
+        guard ratio >= BriefingThresholds.confidenceThreshold else { return [] }
 
-        let refs = consistentGoodSleep.prefix(3).map {
+        let refs = consistentGoodSleep.prefix(BriefingThresholds.maximumInsightReferences).map {
             InsightReference(date: $0.date, description: "Consistent meal timing", category: .food)
         }
 
@@ -415,25 +415,25 @@ class PatternAnalyzer {
                   !snap.meals.isEmpty else { return nil }
             let completed = Double(todos.count(where: { $0.isAccomplished == true }))
             let rate = completed / Double(todos.count)
-            let avgScore = snap.meals.map(\.healthScore).reduce(0, +) / Double(snap.meals.count)
+            let avgScore = snap.meals.map(\.healthScore).average() ?? ScoringThresholds.neutral
             return (rate, avgScore)
         }
 
-        guard paired.count >= self.minimumDataPoints else { return [] }
+        guard paired.count >= BriefingThresholds.minimumDataPoints else { return [] }
 
         let productive = paired.filter { $0.completionRate > 0.5 }
         let unproductive = paired.filter { $0.completionRate <= 0.5 }
 
         guard !productive.isEmpty, !unproductive.isEmpty else { return [] }
 
-        let avgFoodProductive = productive.map(\.avgFoodScore).reduce(0, +) / Double(productive.count)
-        let avgFoodUnproductive = unproductive.map(\.avgFoodScore).reduce(0, +) / Double(unproductive.count)
+        let avgFoodProductive = productive.map(\.avgFoodScore).average() ?? ScoringThresholds.neutral
+        let avgFoodUnproductive = unproductive.map(\.avgFoodScore).average() ?? ScoringThresholds.neutral
         let gap = avgFoodProductive - avgFoodUnproductive
 
         guard gap > BriefingThresholds.minimumScoreDelta else { return [] }
 
         let confidence = min(1.0, gap * 2.5)
-        guard confidence >= self.confidenceThreshold else { return [] }
+        guard confidence >= BriefingThresholds.confidenceThreshold else { return [] }
 
         let refs = snapshots
             .filter { snap in
@@ -441,7 +441,7 @@ class PatternAnalyzer {
                       !todos.isEmpty else { return false }
                 return Double(todos.count(where: { $0.isAccomplished == true })) / Double(todos.count) > 0.5
             }
-            .prefix(3)
+            .prefix(BriefingThresholds.maximumInsightReferences)
             .map { InsightReference(date: $0.date, description: "Productive day with healthy meals", category: .todo) }
 
         return [
@@ -464,7 +464,7 @@ class PatternAnalyzer {
 
     private func isLateDinner(_ meal: Meal) -> Bool {
         let hour = Calendar.current.component(.hour, from: meal.timestamp)
-        return hour >= self.lateDinnerHour
+        return hour >= BriefingThresholds.lateDinnerHour
     }
 
     private func findPoorSleepDays(from snapshots: [DailySmileySnapshot]) -> [DailySmileySnapshot] {

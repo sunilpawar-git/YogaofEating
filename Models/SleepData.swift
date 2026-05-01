@@ -71,11 +71,28 @@ struct SleepSampleData {
 }
 
 /// Sleep stages from HealthKit
-enum SleepStage {
+enum SleepStage: CustomStringConvertible {
     case inBed
     case asleepUnspecified
     case asleepCore
     case asleepDeep
     case asleepREM
     case awake
+
+    var description: String {
+        switch self {
+        case .inBed:
+            "In Bed"
+        case .asleepUnspecified:
+            "Asleep (Unspecified)"
+        case .asleepCore:
+            "Asleep (Core)"
+        case .asleepDeep:
+            "Asleep (Deep)"
+        case .asleepREM:
+            "Asleep (REM)"
+        case .awake:
+            "Awake"
+        }
+    }
 }

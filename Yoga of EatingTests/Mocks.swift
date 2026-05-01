@@ -297,6 +297,37 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
             self.historicalData.addOrUpdate(snapshot: newSnapshot)
         }
     }
+
+    // MARK: - Insight spy
+
+    var updateInsightCalled = false
+    var lastUpdatedInsight: DailyInsight?
+    var lastInsightDate: Date?
+
+    func updateInsight(for date: Date, insight: DailyInsight) {
+        self.updateInsightCalled = true
+        self.lastUpdatedInsight = insight
+        self.lastInsightDate = date
+
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withInsight(insight)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                insight: insight
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+    }
 }
 
 @MainActor

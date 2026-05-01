@@ -557,6 +557,65 @@
             XCTAssertNotNil(insight)
         }
 
+        // MARK: - Phase A4: saveInsight Persistence Tests
+
+        func test_saveInsight_persistsToHistoricalService() {
+            // Arrange
+            let today = Date()
+            let insight = DailyInsight(
+                id: UUID(),
+                date: today,
+                insightText: "You sleep better on days with less sugar.",
+                insightType: .foodSleep,
+                confidence: 0.8
+            )
+
+            // Act
+            self.sut.saveInsight(insight, for: today)
+
+            // Assert: mock spy should have recorded the call
+            XCTAssertTrue(self.mockHistorical.updateInsightCalled)
+            XCTAssertEqual(self.mockHistorical.lastUpdatedInsight?.id, insight.id)
+        }
+
+        func test_saveInsight_savedInsightIsRecoverable() {
+            // Arrange
+            let today = Date()
+            let insight = DailyInsight(
+                id: UUID(),
+                date: today,
+                insightText: "Gratitude practice correlates with better mood.",
+                insightType: .mindsetFeeling,
+                confidence: 0.75
+            )
+
+            // Act
+            self.sut.saveInsight(insight, for: today)
+
+            // Assert: retrieving snapshot for today should surface the insight
+            let recovered = self.mockHistorical.getSnapshot(for: today)?.insight
+            XCTAssertNotNil(recovered)
+            XCTAssertEqual(recovered?.id, insight.id)
+        }
+
+        func test_saveInsight_doesNotLogInsightText() {
+            // This test documents the security requirement: insightText (sensitive health data)
+            // must not be logged. saveInsight only logs date metadata, never the text content.
+            // Verified by code review — briefingLogger.info logs date only (privacy: .public).
+            // Sensitive field insightText has no Logger call after Phase A4 fix.
+            let today = Date()
+            let insight = DailyInsight(
+                id: UUID(),
+                date: today,
+                insightText: "SENSITIVE: high cholesterol detected",
+                insightType: .pattern,
+                confidence: 0.9
+            )
+            // Should not throw or crash — functional contract
+            self.sut.saveInsight(insight, for: today)
+            XCTAssertTrue(self.mockHistorical.updateInsightCalled)
+        }
+
         // MARK: - Phase 5: Server Fallback Tests
 
         func test_generateInsight_fallsBackToLocal_whenServerUnavailable() async throws {

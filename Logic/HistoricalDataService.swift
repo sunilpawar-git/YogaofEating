@@ -32,6 +32,9 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// Updates or adds a morning briefing for a specific date.
     func updateBriefing(for date: Date, briefing: DailyBriefing)
 
+    /// Updates or adds a daily insight for a specific date.
+    func updateInsight(for date: Date, insight: DailyInsight)
+
     /// Returns incomplete .todo entries from the given date's snapshot, each with
     /// carriedOverCount incremented by 1. Used by resetDay() to seed the next day's todos.
     func incompleteTodosForCarryOver(from date: Date) -> [MindCheckEntry]
@@ -383,6 +386,29 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
                 mealCount: 0,
                 averageHealthScore: 0.5,
                 briefing: briefing
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+
+        self.saveHistoricalData()
+    }
+
+    func updateInsight(for date: Date, insight: DailyInsight) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withInsight(insight)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                insight: insight
             )
             self.historicalData.addOrUpdate(snapshot: newSnapshot)
         }

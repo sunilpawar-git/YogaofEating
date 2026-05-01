@@ -33,6 +33,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
     /// Morning briefing generated from yesterday's data. Added in Briefing Engine.
     let briefing: DailyBriefing?
 
+    /// AI-generated daily insight for this date. Added in Tech Debt Phase A4.
+    let insight: DailyInsight?
+
     // MARK: - Initialization
 
     /// Creates a new daily snapshot with all properties including optional reflection and mind checks.
@@ -48,7 +51,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         eveningMindCheck: [MindCheckEntry]? = nil,
         highlightData: HighlightData? = nil,
         reflectData: ReflectData? = nil,
-        briefing: DailyBriefing? = nil
+        briefing: DailyBriefing? = nil,
+        insight: DailyInsight? = nil
     ) {
         self.id = id
         self.date = Calendar(identifier: .gregorian).startOfDay(for: date) // Normalize to midnight
@@ -62,6 +66,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.highlightData = highlightData
         self.reflectData = reflectData
         self.briefing = briefing
+        self.insight = insight
     }
 
     // MARK: - Codable (Backward Compatible)
@@ -79,6 +84,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
         case highlightData
         case reflectData
         case briefing
+        case insight
     }
 
     init(from decoder: Decoder) throws {
@@ -98,6 +104,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.highlightData = try container.decodeIfPresent(HighlightData.self, forKey: .highlightData)
         self.reflectData = try container.decodeIfPresent(ReflectData.self, forKey: .reflectData)
         self.briefing = try container.decodeIfPresent(DailyBriefing.self, forKey: .briefing)
+        self.insight = try container.decodeIfPresent(DailyInsight.self, forKey: .insight)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -114,6 +121,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
         try container.encodeIfPresent(self.highlightData, forKey: .highlightData)
         try container.encodeIfPresent(self.reflectData, forKey: .reflectData)
         try container.encodeIfPresent(self.briefing, forKey: .briefing)
+        try container.encodeIfPresent(self.insight, forKey: .insight)
     }
 
     // MARK: - Computed Properties
@@ -152,6 +160,11 @@ struct DailySmileySnapshot: Codable, Identifiable {
     /// Returns true if a morning briefing has been generated for this day
     var hasBriefing: Bool {
         self.briefing != nil
+    }
+
+    /// Returns true if a daily insight has been generated for this day
+    var hasInsight: Bool {
+        self.insight != nil
     }
 
     // MARK: - Factory Methods
@@ -220,7 +233,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
             eveningMindCheck: eveningMindCheck ?? self.eveningMindCheck,
             highlightData: self.highlightData,
             reflectData: self.reflectData,
-            briefing: self.briefing
+            briefing: self.briefing,
+            insight: self.insight
         )
     }
 
@@ -240,7 +254,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
             eveningMindCheck: self.eveningMindCheck,
             highlightData: self.highlightData,
             reflectData: self.reflectData,
-            briefing: self.briefing
+            briefing: self.briefing,
+            insight: self.insight
         )
     }
 
@@ -258,7 +273,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
             eveningMindCheck: self.eveningMindCheck,
             highlightData: highlightData,
             reflectData: self.reflectData,
-            briefing: self.briefing
+            briefing: self.briefing,
+            insight: self.insight
         )
     }
 
@@ -276,7 +292,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
             eveningMindCheck: self.eveningMindCheck,
             highlightData: self.highlightData,
             reflectData: reflectData,
-            briefing: self.briefing
+            briefing: self.briefing,
+            insight: self.insight
         )
     }
 
@@ -294,7 +311,27 @@ struct DailySmileySnapshot: Codable, Identifiable {
             eveningMindCheck: self.eveningMindCheck,
             highlightData: self.highlightData,
             reflectData: self.reflectData,
-            briefing: briefing
+            briefing: briefing,
+            insight: self.insight
+        )
+    }
+
+    /// Creates a copy with a persisted daily insight.
+    func withInsight(_ insight: DailyInsight) -> DailySmileySnapshot {
+        DailySmileySnapshot(
+            id: self.id,
+            date: self.date,
+            smileyState: self.smileyState,
+            meals: self.meals,
+            mealCount: self.mealCount,
+            averageHealthScore: self.averageHealthScore,
+            reflection: self.reflection,
+            morningMindCheck: self.morningMindCheck,
+            eveningMindCheck: self.eveningMindCheck,
+            highlightData: self.highlightData,
+            reflectData: self.reflectData,
+            briefing: self.briefing,
+            insight: insight
         )
     }
 }

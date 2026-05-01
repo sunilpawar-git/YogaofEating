@@ -210,4 +210,30 @@ final class PatternAnalyzerTests: XCTestCase {
             eveningMindCheck: nil
         )
     }
+
+    // MARK: - Phase B1: BriefingThresholds SSOT Tests
+
+    func test_analyzePatterns_withTwoSnapshots_returnsEmpty() {
+        // Given: exactly 2 snapshots — below BriefingThresholds.minimumDataPoints (3)
+        let snapshots = [
+            self.createSnapshot(daysAgo: 0),
+            self.createSnapshot(daysAgo: 1)
+        ]
+
+        // When
+        let patterns = self.analyzer.analyzePatterns(from: snapshots)
+
+        // Then: minimum is 3, not 2 — should return empty
+        XCTAssertTrue(
+            patterns.isEmpty,
+            "Expected empty patterns with only 2 snapshots (minimum is \(BriefingThresholds.minimumDataPoints))"
+        )
+    }
+
+    func test_briefingThresholds_confidenceThreshold_isAccessible() {
+        // Verifies BriefingThresholds.confidenceThreshold is internal (not private) — accessible in tests.
+        // If this compiles, the constant is correctly exposed (Phase B1 SSOT fix).
+        let threshold = BriefingThresholds.confidenceThreshold
+        XCTAssertEqual(threshold, 0.6, accuracy: 0.0001)
+    }
 }

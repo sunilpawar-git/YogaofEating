@@ -8,8 +8,8 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var mainViewModel: MainViewModel
+    @EnvironmentObject private var authService: AuthService
     @StateObject private var viewModel: SettingsViewModel
-    @ObservedObject private var authService = AuthService.shared
     @State private var showingClearConfirmation = false
 
     init(mainViewModel: MainViewModel) {
