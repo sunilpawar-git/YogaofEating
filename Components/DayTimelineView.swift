@@ -369,6 +369,13 @@ struct DayTimelineView: View {
 
 /// A simplified, non-editable meal card for historical views.
 struct ReadOnlyMealCardView: View {
+    // MARK: - Constants
+
+    /// Base fill color — uses semantically adaptive background for light/dark mode
+    static let cardFillColor: Color = AppTheme.MealCard.background
+
+    // MARK: - Properties
+
     let meal: Meal
 
     /// Callback when user taps the copy button to duplicate meal to today
@@ -434,17 +441,11 @@ struct ReadOnlyMealCardView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
-        .background(
-            // White overlay for consistency with today's cards (works in both light/dark mode)
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.4))
-        )
-        .background(
-            // Subtle tint overlay based on health score
-            RoundedRectangle(cornerRadius: 16)
-                .fill(self.cardBackground)
+                .fill(Self.cardFillColor)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(self.cardBackground)
+                }
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
