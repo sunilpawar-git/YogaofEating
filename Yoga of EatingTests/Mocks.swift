@@ -82,9 +82,9 @@ class MockAuthCoreProvider: AuthCoreProvider {
 @MainActor
 class MockCloudSyncService: CloudSyncServiceProtocol {
     var uploadedSnapshots: [DailySmileySnapshot] = []
-    var fetchResult: [DailySmileySnapshot] = []
     var uploadCalled = false
-    var fetchCalled = false
+    var batchUploadedSnapshots: [[DailySmileySnapshot]] = []
+    var batchUploadCalled = false
     var shouldFail = false
 
     func upload(snapshot: DailySmileySnapshot, userId _: String) async throws {
@@ -95,12 +95,19 @@ class MockCloudSyncService: CloudSyncServiceProtocol {
         self.uploadedSnapshots.append(snapshot)
     }
 
-    func fetchAll(userId _: String) async throws -> [DailySmileySnapshot] {
-        self.fetchCalled = true
+    func uploadBatch(snapshots: [DailySmileySnapshot], userId _: String) async throws {
+        self.batchUploadCalled = true
         if self.shouldFail {
-            throw NSError(domain: "CloudSync", code: 2, userInfo: [NSLocalizedDescriptionKey: "Fetch failed"])
+            throw NSError(domain: "CloudSync", code: 3, userInfo: [NSLocalizedDescriptionKey: "Batch upload failed"])
         }
-        return self.fetchResult
+        // Mirror the real implementation's chunking behavior
+        let batchSize = 500
+        let chunks = stride(from: 0, to: snapshots.count, by: batchSize).map { startIndex in
+            Array(snapshots[startIndex..<min(startIndex + batchSize, snapshots.count)])
+        }
+        for chunk in chunks {
+            self.batchUploadedSnapshots.append(chunk)
+        }
     }
 }
 

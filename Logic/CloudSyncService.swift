@@ -8,7 +8,7 @@ private let syncLogger = Logger(subsystem: "com.yogaofeating", category: "CloudS
 /// Protocol for cloud synchronization service
 protocol CloudSyncServiceProtocol {
     func upload(snapshot: DailySmileySnapshot, userId: String) async throws
-    func fetchAll(userId: String) async throws -> [DailySmileySnapshot]
+    func uploadBatch(snapshots: [DailySmileySnapshot], userId: String) async throws
 }
 
 /// Service for interacting with Firebase Firestore to sync heatmap data.
@@ -46,18 +46,34 @@ class CloudSyncService: CloudSyncServiceProtocol {
         }
     }
 
-    /// Fetches all snapshots for a given user from Firestore.
-    func fetchAll(userId: String) async throws -> [DailySmileySnapshot] {
-        guard let db = self.db else {
-            // Return empty during unit tests
-            return []
-        }
-        let querySnapshot = try await db.collection("users").document(userId)
-            .collection(self.collectionName)
-            .getDocuments()
+    /// Uploads multiple snapshots to Firestore in batches.
+    /// Splits large uploads into chunks of 500 to respect Firestore batch limits.
+    func uploadBatch(snapshots: [DailySmileySnapshot], userId: String) async throws {
+        guard let db = self.db else { return }
 
-        return try querySnapshot.documents.compactMap { document in
-            try self.decode(document.data())
+        let batchSize = 500
+        let chunks = stride(from: 0, to: snapshots.count, by: batchSize).map { startIndex in
+            Array(snapshots[startIndex..<min(startIndex + batchSize, snapshots.count)])
+        }
+
+        for (index, chunk) in chunks.enumerated() {
+            let batch = db.batch()
+
+            for snapshot in chunk {
+                let dateString = self.dateFormatter.string(from: snapshot.date)
+                let docRef = db.collection("users").document(userId)
+                    .collection(self.collectionName).document(dateString)
+                let data = try self.encode(snapshot)
+                batch.setData(data, forDocument: docRef)
+            }
+
+            do {
+                try await batch.commit()
+                syncLogger.debug("Batch \(index + 1) committed successfully with \(chunk.count) snapshots")
+            } catch {
+                syncLogger.error("Batch \(index + 1) commit failed: \(error.localizedDescription, privacy: .public)")
+                throw error
+            }
         }
     }
 
