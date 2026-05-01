@@ -35,12 +35,13 @@ struct JournalBlockView: View {
     /// Controls when the Done button is visible. Configurable for UX refinement.
     static var doneButtonVisibility: DoneButtonVisibility = .whenFocused
 
-    let maxCharacterLimit: Int = 1000
+    /// Maximum characters enforced by the limitedTextBinding.
+    /// Sourced from AppTheme.TextEntry — single source of truth across the app.
+    static let maxCharacterLimit: Int = AppTheme.TextEntry.maxCharacters
 
-    /// Debounce delay in nanoseconds for local updates during typing.
-    /// 500ms (500_000_000 ns) balances responsiveness with reducing excessive updates.
-    /// Note: This is for LOCAL updates only - AI analysis is triggered on "done" actions.
-    static let localUpdateDebounceNanoseconds: UInt64 = 500_000_000
+    /// Debounce delay for local updates during typing.
+    /// Sourced from AppTheme.TextEntry — single source of truth across the app.
+    static let localUpdateDebounceNanoseconds: UInt64 = AppTheme.TextEntry.debounceNanoseconds
 
     static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()

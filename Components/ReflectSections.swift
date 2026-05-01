@@ -67,7 +67,12 @@ struct ReflectTodoReviewSection: View {
 
 struct ReflectJournalSection: View {
     @Binding var text: String
+    /// Bound to the parent's @FocusState so the parent can detect active edits
+    /// and skip mid-keystroke data resets when navigating dates.
+    var isJournalFocused: FocusState<Bool>.Binding
     var onChanged: ((String) -> Void)?
+
+    @State private var journalDebounce: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -78,6 +83,7 @@ struct ReflectJournalSection: View {
             TextEditor(text: self.$text)
                 .frame(minHeight: 150)
                 .scrollContentBackground(.hidden)
+                .focused(self.isJournalFocused)
                 .padding(12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
@@ -98,7 +104,25 @@ struct ReflectJournalSection: View {
                 }
                 .padding(.horizontal)
                 .onChange(of: self.text) { _, newValue in
-                    self.onChanged?(newValue)
+                    if newValue.count > AppTheme.TextEntry.maxCharacters {
+                        self.text = String(newValue.prefix(AppTheme.TextEntry.maxCharacters))
+                        return
+                    }
+                    self.journalDebounce?.cancel()
+                    self.journalDebounce = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: AppTheme.TextEntry.debounceNanoseconds)
+                        guard !Task.isCancelled else { return }
+                        self.onChanged?(newValue)
+                    }
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            self.isJournalFocused.wrappedValue = false
+                        }
+                        .fontWeight(.semibold)
+                    }
                 }
         }
     }

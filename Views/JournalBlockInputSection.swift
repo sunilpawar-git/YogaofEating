@@ -103,8 +103,8 @@ extension JournalBlockView {
         Binding(
             get: { self.rawText },
             set: { newValue in
-                if newValue.count > self.maxCharacterLimit {
-                    self.rawText = String(newValue.prefix(self.maxCharacterLimit))
+                if newValue.count > Self.maxCharacterLimit {
+                    self.rawText = String(newValue.prefix(Self.maxCharacterLimit))
                 } else {
                     self.rawText = newValue
                 }

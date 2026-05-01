@@ -241,6 +241,20 @@ enum AppTheme {
         /// Text/stroke color for default (non-significant) fasting badges.
         static let fastingDefaultColor: Color = .secondary.opacity(0.8)
     }
+
+    // MARK: - Text Entry
+
+    /// Single source of truth for free-text input limits and debounce behaviour.
+    /// Apply these values to every TextEditor / TextField in the app that auto-saves.
+    enum TextEntry {
+        /// Maximum number of characters allowed in any free-text field (sleep notes,
+        /// morning thoughts, evening journal, meal items).
+        static let maxCharacters: Int = 1000
+
+        /// Debounce delay before a free-text change is persisted (nanoseconds).
+        /// 500 ms balances keystroke responsiveness with reducing unnecessary writes.
+        static let debounceNanoseconds: UInt64 = 500_000_000
+    }
 }
 
 // MARK: - View Extensions

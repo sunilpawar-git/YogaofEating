@@ -15,8 +15,9 @@ extension MainViewModel {
     /// Updates the journal text in Reflect and persists.
     func updateReflectJournalText(_ text: String) {
         guard self.isViewingToday else { return }
+        let clamped = Self.clampText(text)
         var data = self.currentOrNewReflectData()
-        data.journalText = text.isEmpty ? nil : text
+        data.journalText = clamped.isEmpty ? nil : clamped
         data.lastModified = Date()
         self.historicalService.updateReflectData(for: self.selectedDate, data: data)
     }
