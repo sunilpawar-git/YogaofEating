@@ -334,4 +334,12 @@ class MockInsightGenerationService: InsightGenerationServiceProtocol {
         self.generateWeeklyInsightCalled = true
         return self.mockWeeklyInsight
     }
+
+    var generateBriefingCalled = false
+    var mockBriefing: DailyBriefing?
+
+    func generateBriefing(for _: Date, healthKitSleepData _: [Date: SleepData]) async -> DailyBriefing? {
+        self.generateBriefingCalled = true
+        return self.mockBriefing
+    }
 }

@@ -31,6 +31,12 @@ struct DayTimelineView: View {
     /// Whether an insight is available (for showing red dot indicator)
     var hasInsightAvailable: Bool = false
 
+    /// Data-contract tuple for the morning briefing card (nil hides it).
+    var briefingCardData: (headline: String, topCorrelation: String?, nudge: String, isViewed: Bool)?
+
+    /// Callback when user taps the briefing card
+    var onBriefingTap: (() -> Void)?
+
     /// Grouped meal update actions (reduces callback proliferation)
     var mealActions: MealUpdateActions = .empty
 
@@ -53,6 +59,18 @@ struct DayTimelineView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if self.isToday, let data = self.briefingCardData {
+                MorningBriefingCard(
+                    headline: data.headline,
+                    topCorrelation: data.topCorrelation,
+                    nudge: data.nudge,
+                    isViewed: data.isViewed,
+                    onTap: self.onBriefingTap
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+            }
+
             let sortedMeals = self.meals.sorted { $0.timestamp < $1.timestamp }
 
             ForEach(Array(sortedMeals.enumerated()), id: \.element.id) { index, meal in
@@ -167,13 +185,13 @@ struct DayTimelineView: View {
                     value: self.isSmileyPulsing
                 )
                 .overlay(alignment: .topTrailing) {
-                    if self.hasInsightAvailable {
+                    if self.hasInsightAvailable, self.briefingCardData == nil {
                         Circle()
-                            .fill(Color.red)
-                            .frame(width: 14, height: 14)
+                            .fill(Color.orange)
+                            .frame(width: 10, height: 10)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.white, lineWidth: 2)
+                                    .stroke(Color.white, lineWidth: 1.5)
                             )
                             .offset(x: 4, y: -4)
                     }

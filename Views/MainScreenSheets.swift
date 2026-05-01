@@ -28,6 +28,21 @@ private struct MainScreenSheetsModifier: ViewModifier {
                         .onAppear { self.viewModel.showInsightSheet = false }
                 }
             }
+            .sheet(isPresented: self.$viewModel.showBriefingSheet) {
+                if let briefing = self.viewModel.currentBriefing {
+                    BriefingDetailView(
+                        briefing: briefing,
+                        onDismiss: {
+                            self.viewModel.showBriefingSheet = false
+                        }
+                    )
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                } else {
+                    Color.clear
+                        .onAppear { self.viewModel.showBriefingSheet = false }
+                }
+            }
     }
 }
 

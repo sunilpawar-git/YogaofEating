@@ -44,6 +44,12 @@ class MainViewModel: ObservableObject {
     /// The current insight to display (generated when sleep is logged)
     @Published var currentInsight: DailyInsight?
 
+    /// The current morning briefing for today
+    @Published var currentBriefing: DailyBriefing?
+
+    /// Whether the briefing detail sheet is shown
+    @Published var showBriefingSheet: Bool = false
+
     /// Suggested sleep quality from Apple HealthKit (if available)
     @Published var suggestedSleepQuality: SleepQuality?
 
@@ -143,6 +149,13 @@ class MainViewModel: ObservableObject {
             if self.todaysSleepQuality != nil {
                 self.fetchAppleSleepDataForBadge()
             }
+        }
+
+        // Hydrate today's briefing from persisted snapshot (independent of persistence load)
+        if self.currentBriefing == nil,
+           let todayBriefing = self.historicalService.getSnapshot(for: Date())?.briefing
+        {
+            self.currentBriefing = todayBriefing
         }
     }
 
@@ -442,8 +455,9 @@ class MainViewModel: ObservableObject {
             self.meals = []
         }
 
-        // 3. Clear current insight (new day, new insight)
+        // 3. Clear current insight and briefing (new day, new generation)
         self.currentInsight = nil
+        self.currentBriefing = nil
 
         // 4. Save both current and historical data
         self.saveData()
@@ -513,6 +527,9 @@ class MainViewModel: ObservableObject {
 
         // Trigger insight generation after sleep is logged (Phase 2-4)
         self.triggerInsightGenerationIfNeeded(for: date)
+
+        // Trigger daily briefing generation
+        self.triggerBriefingGeneration()
     }
 
     /// Triggers insight generation if conditions are met.
@@ -548,7 +565,7 @@ class MainViewModel: ObservableObject {
     /// Fetches HealthKit sleep data for the last N days for insight generation.
     /// - Parameter date: The reference date (typically today)
     /// - Returns: Dictionary mapping dates to their HealthKit sleep data
-    private func fetchHealthKitSleepDataForInsights(relativeTo date: Date) async -> [Date: SleepData] {
+    func fetchHealthKitSleepDataForInsights(relativeTo date: Date) async -> [Date: SleepData] {
         var sleepDataByDate: [Date: SleepData] = [:]
         let calendar = Calendar.current
 
