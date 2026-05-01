@@ -98,22 +98,7 @@ class AILogicService: AIAnalysisProvider {
     }
 }
 
-extension SmileyMood {
-    init?(rawValue: String) {
-        switch rawValue.lowercased() {
-        case "serene":
-            self = .serene
-        case "neutral":
-            self = .neutral
-        case "concerned":
-            self = .concerned
-        case "overwhelmed":
-            self = .overwhelmed
-        default:
-            return nil
-        }
-    }
-}
+// SmileyMood.init?(rawValue:) case-insensitive extension lives in Models/SmileyState.swift.
 
 // MARK: - Detailed Meal Insight
 

@@ -250,26 +250,18 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
         }
     }
 
-    func incompleteTodosForCarryOver(from date: Date) -> [MindCheckEntry] {
-        guard let todos = self.historicalData.snapshot(for: date)?.highlightData?.todos else { return [] }
-        return todos
-            .filter { $0.category == .todo && $0.isAccomplished != true }
-            .map { $0.withCarriedOverCount($0.carriedOverCount + 1) }
+    // Stubs for carry-over and food-debt — tests set these to control ViewModel behaviour.
+    // Service-layer tests (TodoCarryOverTests, FoodDebtTests) use real HistoricalDataService
+    // so they don't rely on these stubs at all.
+    var stubbedCarriedTodos: [MindCheckEntry] = []
+    var stubbedFoodDebtState: SmileyState = .neutral
+
+    func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] {
+        self.stubbedCarriedTodos
     }
 
-    func foodDebtStartingState(relativeTo date: Date) -> SmileyState {
-        let calendar = Calendar.current
-        guard
-            let d1 = calendar.date(byAdding: .day, value: -1, to: date),
-            let d2 = calendar.date(byAdding: .day, value: -2, to: date),
-            let s1 = self.historicalData.snapshot(for: d1),
-            s1.mealCount > 0,
-            s1.averageHealthScore < ScoringThresholds.foodDebtBadDay,
-            let s2 = self.historicalData.snapshot(for: d2),
-            s2.mealCount > 0,
-            s2.averageHealthScore < ScoringThresholds.foodDebtBadDay
-        else { return .neutral }
-        return .concerned
+    func foodDebtStartingState(relativeTo _: Date) -> SmileyState {
+        self.stubbedFoodDebtState
     }
 
     var updateBriefingCalled = false

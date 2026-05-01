@@ -449,13 +449,19 @@ class MainViewModel: ObservableObject {
             date: self.lastResetDate
         )
 
-        // 2. Carry incomplete todos from the archived day into the new day
+        // 2. Carry incomplete todos from the archived day into the new day,
+        //    merging with any HighlightData already written for today (e.g., sleep quality
+        //    logged just before midnight) so no user data is overwritten.
         let carried = self.historicalService.incompleteTodosForCarryOver(from: self.lastResetDate)
         if !carried.isEmpty {
-            self.historicalService.updateHighlightData(
-                for: Date(),
-                data: HighlightData(todos: carried)
+            let existing = self.historicalService.getSnapshot(for: Date())?.highlightData
+            let merged = HighlightData(
+                sleepQuality: existing?.sleepQuality,
+                sleepNotes: existing?.sleepNotes,
+                todos: carried + (existing?.todos.filter { $0.carriedOverCount == 0 } ?? []),
+                morningThoughts: existing?.morningThoughts
             )
+            self.historicalService.updateHighlightData(for: Date(), data: merged)
         }
 
         // 3. Reset for new day — smiley starts concerned if 2+ consecutive bad eating days
