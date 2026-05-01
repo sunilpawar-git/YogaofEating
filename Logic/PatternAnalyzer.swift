@@ -1,5 +1,12 @@
 import Foundation
 
+/// Named thresholds for briefing correlation analysis (SSOT for PatternAnalyzer magic numbers).
+enum BriefingThresholds {
+    static let timingConsistencyStdDev: Double = 5.5
+    static let scoreDifferenceSignificant: Double = 0.15
+    static let minimumScoreDelta: Double = 0.1
+}
+
 /// Analyzes user data to detect patterns between food, sleep, todos, and mood.
 /// Used by InsightGenerationService to create rich, date-referenced insights.
 class PatternAnalyzer {
@@ -17,6 +24,12 @@ class PatternAnalyzer {
     // MARK: - Main Analysis
 
     /// Analyzes all available patterns from the given snapshots.
+    // MARK: - Legacy Insight Pipeline
+
+    // `analyzePatterns` feeds the legacy `DailyInsight` text pipeline.
+    // `generateCorrelationCards` (below) feeds the new `DailyBriefing` cards pipeline.
+    // They are intentionally separate until the insight pipeline is consolidated.
+
     /// - Parameter snapshots: Historical daily snapshots to analyze
     /// - Returns: Array of detected patterns, sorted by confidence
     func analyzePatterns(from snapshots: [DailySmileySnapshot]) -> [InsightPattern] {
@@ -50,9 +63,8 @@ class PatternAnalyzer {
 
         // Check overlap
         let overlappingDays = lateDinnerDays.filter { lateDinner in
-            // Check if next day had poor sleep
             let calendar = Calendar.current
-            let nextDay = calendar.date(byAdding: .day, value: 1, to: lateDinner.date)!
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: lateDinner.date) else { return false }
             return poorSleepDays.contains { calendar.isDate($0.date, inSameDayAs: nextDay) }
         }
 
@@ -219,7 +231,7 @@ class PatternAnalyzer {
 
         let overlappingEarly = earlyEatingDays.filter { early in
             let calendar = Calendar.current
-            let nextDay = calendar.date(byAdding: .day, value: 1, to: early.date)!
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: early.date) else { return false }
             return goodSleepDays.contains { calendar.isDate($0.date, inSameDayAs: nextDay) }
         }
 
@@ -247,6 +259,160 @@ class PatternAnalyzer {
         }
 
         return patterns
+    }
+
+    // MARK: - Correlation Card Generation
+
+    // MARK: - New Briefing Cards Pipeline
+
+    /// Produces CorrelationCards from all analyzers, sorted by confidence descending.
+    func generateCorrelationCards(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        guard snapshots.count >= self.minimumDataPoints else { return [] }
+
+        var cards: [CorrelationCard] = []
+        cards.append(contentsOf: self.analyzeFoodToFeeling(from: snapshots))
+        cards.append(contentsOf: self.analyzeTimingConsistency(from: snapshots))
+        cards.append(contentsOf: self.analyzeTodoProductivity(from: snapshots))
+
+        return cards.sorted { $0.confidence > $1.confidence }
+    }
+
+    // MARK: - Food-to-Feeling
+
+    /// Correlates average daily meal healthScore with the user's end-of-day feeling.
+    func analyzeFoodToFeeling(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        let paired: [(score: Double, isGoodMood: Bool)] = snapshots.compactMap { snap in
+            guard !snap.meals.isEmpty,
+                  let feeling = snap.reflection?.feeling else { return nil }
+            let avgScore = snap.meals.map(\.healthScore).reduce(0, +) / Double(snap.meals.count)
+            let good = feeling == .great || feeling == .calm
+            return (avgScore, good)
+        }
+
+        guard paired.count >= self.minimumDataPoints else { return [] }
+
+        let goodDays = paired.filter(\.isGoodMood)
+        let badDays = paired.filter { !$0.isGoodMood }
+
+        guard !goodDays.isEmpty, !badDays.isEmpty else { return [] }
+
+        let avgGood = goodDays.map(\.score).reduce(0, +) / Double(goodDays.count)
+        let avgBad = badDays.map(\.score).reduce(0, +) / Double(badDays.count)
+        let gap = avgGood - avgBad
+
+        guard gap > BriefingThresholds.scoreDifferenceSignificant else { return [] }
+
+        let confidence = min(1.0, gap * 2.0)
+        guard confidence >= self.confidenceThreshold else { return [] }
+
+        let references = snapshots
+            .filter { !$0.meals.isEmpty && ($0.reflection?.feeling == .great || $0.reflection?.feeling == .calm) }
+            .prefix(3)
+            .map { InsightReference(date: $0.date, description: "Healthy meals on this day", category: .food) }
+
+        return [
+            CorrelationCard(
+                category: .foodToMood,
+                observation: "Days with healthier meals tend to end with a better mood",
+                confidence: confidence,
+                dataPoints: Array(references)
+            )
+        ]
+    }
+
+    // MARK: - Timing Consistency
+
+    /// Compares standard-deviation of meal hours with next-day sleep quality.
+    func analyzeTimingConsistency(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        let calendar = Calendar.current
+
+        let timed: [(date: Date, stdDev: Double)] = snapshots.compactMap { snap in
+            guard snap.meals.count >= 2 else { return nil }
+            let hours = snap.meals.map { Double(calendar.component(.hour, from: $0.timestamp)) }
+            let mean = hours.reduce(0, +) / Double(hours.count)
+            let variance = hours.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(hours.count)
+            return (snap.date, variance.squareRoot())
+        }
+
+        guard timed.count >= self.minimumDataPoints else { return [] }
+
+        let consistentDays = timed.filter { $0.stdDev < BriefingThresholds.timingConsistencyStdDev }
+        let inconsistentDays = timed.filter { $0.stdDev >= BriefingThresholds.timingConsistencyStdDev }
+
+        guard !consistentDays.isEmpty, !inconsistentDays.isEmpty else { return [] }
+
+        let consistentGoodSleep = consistentDays.filter { day in
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: day.date) else { return false }
+            return snapshots.contains { snap in
+                calendar.isDate(snap.date, inSameDayAs: nextDay) &&
+                    (snap.reflection?.sleepQuality == .great || snap.reflection?.sleepQuality == .good)
+            }
+        }
+
+        let ratio = Double(consistentGoodSleep.count) / Double(consistentDays.count)
+        guard ratio >= self.confidenceThreshold else { return [] }
+
+        let refs = consistentGoodSleep.prefix(3).map {
+            InsightReference(date: $0.date, description: "Consistent meal timing", category: .food)
+        }
+
+        return [
+            CorrelationCard(
+                category: .timingPattern,
+                observation: "Regular meal timing is linked to better sleep quality",
+                confidence: ratio,
+                dataPoints: Array(refs)
+            )
+        ]
+    }
+
+    // MARK: - Todo Productivity
+
+    /// Correlates todo completion rate with daily meal quality.
+    func analyzeTodoProductivity(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        let paired: [(completionRate: Double, avgFoodScore: Double)] = snapshots.compactMap { snap in
+            guard let todos = snap.morningMindCheck?.filter({ $0.category == .todo }),
+                  !todos.isEmpty,
+                  !snap.meals.isEmpty else { return nil }
+            let completed = Double(todos.count(where: { $0.isAccomplished == true }))
+            let rate = completed / Double(todos.count)
+            let avgScore = snap.meals.map(\.healthScore).reduce(0, +) / Double(snap.meals.count)
+            return (rate, avgScore)
+        }
+
+        guard paired.count >= self.minimumDataPoints else { return [] }
+
+        let productive = paired.filter { $0.completionRate > 0.5 }
+        let unproductive = paired.filter { $0.completionRate <= 0.5 }
+
+        guard !productive.isEmpty, !unproductive.isEmpty else { return [] }
+
+        let avgFoodProductive = productive.map(\.avgFoodScore).reduce(0, +) / Double(productive.count)
+        let avgFoodUnproductive = unproductive.map(\.avgFoodScore).reduce(0, +) / Double(unproductive.count)
+        let gap = avgFoodProductive - avgFoodUnproductive
+
+        guard gap > BriefingThresholds.minimumScoreDelta else { return [] }
+
+        let confidence = min(1.0, gap * 2.5)
+        guard confidence >= self.confidenceThreshold else { return [] }
+
+        let refs = snapshots
+            .filter { snap in
+                guard let todos = snap.morningMindCheck?.filter({ $0.category == .todo }),
+                      !todos.isEmpty else { return false }
+                return Double(todos.count(where: { $0.isAccomplished == true })) / Double(todos.count) > 0.5
+            }
+            .prefix(3)
+            .map { InsightReference(date: $0.date, description: "Productive day with healthy meals", category: .todo) }
+
+        return [
+            CorrelationCard(
+                category: .focusToFeeling,
+                observation: "Higher task completion days correlate with healthier food choices",
+                confidence: confidence,
+                dataPoints: Array(refs)
+            )
+        ]
     }
 
     // MARK: - Helper Methods

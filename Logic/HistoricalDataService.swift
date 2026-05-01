@@ -28,6 +28,9 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
 
     /// Updates or adds reflect data for a specific date.
     func updateReflectData(for date: Date, data: ReflectData)
+
+    /// Updates or adds a morning briefing for a specific date.
+    func updateBriefing(for date: Date, briefing: DailyBriefing)
 }
 
 /// Service for managing historical meal data and daily snapshots.
@@ -103,7 +106,8 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             morningMindCheck: existing?.morningMindCheck,
             eveningMindCheck: existing?.eveningMindCheck,
             highlightData: existing?.highlightData,
-            reflectData: existing?.reflectData
+            reflectData: existing?.reflectData,
+            briefing: existing?.briefing
         )
 
         // Add or update in historical data
@@ -335,6 +339,29 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
                 mealCount: 0,
                 averageHealthScore: 0.5,
                 reflectData: data
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+
+        self.saveHistoricalData()
+    }
+
+    func updateBriefing(for date: Date, briefing: DailyBriefing) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withBriefing(briefing)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                briefing: briefing
             )
             self.historicalData.addOrUpdate(snapshot: newSnapshot)
         }

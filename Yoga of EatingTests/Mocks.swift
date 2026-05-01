@@ -249,6 +249,33 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
             self.historicalData.addOrUpdate(snapshot: newSnapshot)
         }
     }
+
+    var updateBriefingCalled = false
+    var lastUpdatedBriefing: DailyBriefing?
+
+    func updateBriefing(for date: Date, briefing: DailyBriefing) {
+        self.updateBriefingCalled = true
+        self.lastUpdatedBriefing = briefing
+
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withBriefing(briefing)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                briefing: briefing
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+    }
 }
 
 @MainActor

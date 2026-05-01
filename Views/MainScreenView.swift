@@ -83,6 +83,11 @@ struct MainScreenView: View {
                 self.viewModel.handleSmileyLongPress()
             },
             hasInsightAvailable: self.viewModel.hasInsightAvailable,
+            briefingCardData: self.viewModel.briefingCardData,
+            onBriefingTap: {
+                self.viewModel.markBriefingViewed()
+                self.viewModel.showBriefingSheet = true
+            },
             mealActions: MealUpdateActions(
                 onUpdate: { mealId, mealType, items in
                     // Full update - triggers AI analysis (called on "done" actions)
