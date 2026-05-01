@@ -72,6 +72,47 @@
 
             XCTAssertEqual(newState.mood, .neutral)
         }
+
+        // MARK: - Phase B4: SmileyScaleConstants Tests
+
+        func test_calculateNextState_healthyScore_shrinksScale() {
+            // Arrange: scale starts above floor
+            let initialState = SmileyState(scale: 1.5, mood: .neutral)
+            let healthyScore = ScoringThresholds.healthy + 0.1 // above threshold
+
+            // Act
+            let nextState = self.sut.calculateNextState(from: initialState, healthScore: healthyScore)
+
+            // Assert: scale should have shrunk
+            XCTAssertLessThan(nextState.scale, initialState.scale)
+            XCTAssertEqual(nextState.mood, .serene)
+        }
+
+        func test_calculateNextState_unhealthyScore_growsScale() {
+            // Arrange
+            let initialState = SmileyState(scale: 1.0, mood: .neutral)
+            let unhealthyScore = ScoringThresholds.unhealthy - 0.1 // below threshold
+
+            // Act
+            let nextState = self.sut.calculateNextState(from: initialState, healthScore: unhealthyScore)
+
+            // Assert: scale should have grown
+            XCTAssertGreaterThan(nextState.scale, initialState.scale)
+            XCTAssertEqual(nextState.mood, .overwhelmed)
+        }
+
+        func test_calculateNextState_neutralScore_driftsToward1() {
+            // Arrange: scale above 1.0 with neutral score should drift down
+            let initialState = SmileyState(scale: 1.3, mood: .overwhelmed)
+            let neutralScore = ScoringThresholds.neutral // exactly 0.5
+
+            // Act
+            let nextState = self.sut.calculateNextState(from: initialState, healthScore: neutralScore)
+
+            // Assert: scale drifts toward 1.0 (decreases when above 1.0)
+            XCTAssertLessThan(nextState.scale, initialState.scale)
+            XCTAssertEqual(nextState.mood, .neutral)
+        }
     }
 
 #endif

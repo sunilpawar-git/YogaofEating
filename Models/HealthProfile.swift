@@ -85,15 +85,7 @@ extension Color {
 
 /// Calculates visual feedback properties for meal cards based on health scores
 struct MealCardFeedback {
-    // MARK: - Constants
-
-    private enum Threshold {
-        /// Score above this is considered healthy (positive feedback)
-        static let healthy: Double = 0.65
-
-        /// Score below this is considered unhealthy (warning feedback)
-        static let unhealthy: Double = 0.35
-    }
+    // MARK: - Constants (use ScoringThresholds as SSOT — see Logic/MealLogicService.swift)
 
     private enum BorderWidth {
         /// Standard thin border for all meals (uniform, minimal UI)
@@ -133,9 +125,9 @@ struct MealCardFeedback {
     /// Tint opacity for background overlay
     /// - Returns: Opacity value for subtle color tint based on score
     var tintOpacity: Double {
-        if self.score > Threshold.healthy {
+        if self.score > ScoringThresholds.healthy {
             TintOpacity.positive
-        } else if self.score < Threshold.unhealthy {
+        } else if self.score < ScoringThresholds.unhealthy {
             TintOpacity.warning
         } else {
             TintOpacity.none
@@ -145,9 +137,9 @@ struct MealCardFeedback {
     /// Tint color for background overlay
     /// - Returns: Color to use for tinting the card background
     var tintColor: Color {
-        if self.score > Threshold.healthy {
+        if self.score > ScoringThresholds.healthy {
             .mealFeedbackPositive
-        } else if self.score < Threshold.unhealthy {
+        } else if self.score < ScoringThresholds.unhealthy {
             .mealFeedbackWarning
         } else {
             .clear

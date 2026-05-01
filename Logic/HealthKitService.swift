@@ -1,5 +1,8 @@
 import Foundation
 import HealthKit
+import OSLog
+
+private let healthKitLogger = Logger(subsystem: "com.yogaofeating", category: "HealthKit")
 
 /// Service to handle HealthKit interactions for reading body metrics.
 class HealthKitService {
@@ -117,7 +120,10 @@ class HealthKitService {
         if self.enableSleepLogging {
             let formatter = DateFormatter()
             formatter.dateFormat = "MMM d, HH:mm"
-            print("🛏️ Query window: \(formatter.string(from: windowStart)) to \(formatter.string(from: windowEnd))")
+            healthKitLogger
+                .debug(
+                    "Sleep query window: \(formatter.string(from: windowStart), privacy: .public) to \(formatter.string(from: windowEnd), privacy: .public)"
+                )
         }
 
         let predicate = HKQuery.predicateForSamples(
@@ -140,7 +146,7 @@ class HealthKitService {
 
                 guard let samples = samples as? [HKCategorySample], !samples.isEmpty else {
                     if self?.enableSleepLogging == true {
-                        print("🛏️ No sleep samples found in window")
+                        healthKitLogger.debug("No sleep samples found in window")
                     }
                     continuation.resume(returning: nil)
                     return
@@ -162,9 +168,13 @@ class HealthKitService {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
 
-        // 6 PM previous day to noon today
-        let windowStart = calendar.date(byAdding: .hour, value: -6, to: startOfDay)!
-        let windowEnd = calendar.date(byAdding: .hour, value: 12, to: startOfDay)!
+        // 6 PM previous day to noon today — use safe fallbacks if calendar arithmetic fails
+        guard let windowStart = calendar.date(byAdding: .hour, value: -6, to: startOfDay),
+              let windowEnd = calendar.date(byAdding: .hour, value: 12, to: startOfDay)
+        else {
+            healthKitLogger.error("Failed to compute sleep query window — using fallback (startOfDay ± 0)")
+            return (startOfDay, startOfDay)
+        }
 
         return (windowStart, windowEnd)
     }
@@ -172,7 +182,7 @@ class HealthKitService {
     /// Processes HKCategorySamples into SleepData.
     private func processSamples(_ samples: [HKCategorySample]) -> SleepData? {
         if self.enableSleepLogging {
-            print("🛏️ Found \(samples.count) total sleep samples")
+            healthKitLogger.debug("Found \(samples.count, privacy: .public) total sleep samples")
         }
 
         // Group by source and select preferred
@@ -181,7 +191,7 @@ class HealthKitService {
         }
 
         if self.enableSleepLogging {
-            print("🛏️ Sources found: \(samplesBySource.keys.joined(separator: ", "))")
+            healthKitLogger.debug("Sources found: \(samplesBySource.keys.joined(separator: ", "), privacy: .public)")
         }
 
         guard let preferredSource = SleepDataProcessor.selectPreferredSource(from: Array(samplesBySource.keys)) else {
@@ -189,13 +199,13 @@ class HealthKitService {
         }
 
         if self.enableSleepLogging {
-            print("🛏️ Using preferred source: \(preferredSource)")
+            healthKitLogger.debug("Using preferred source: \(preferredSource, privacy: .public)")
         }
 
         let sourceSamples = samplesBySource[preferredSource] ?? samples
 
         if self.enableSleepLogging {
-            print("🛏️ Processing \(sourceSamples.count) samples from preferred source")
+            healthKitLogger.debug("Processing \(sourceSamples.count, privacy: .public) samples from preferred source")
         }
 
         // Convert HKCategorySamples to SleepSampleData

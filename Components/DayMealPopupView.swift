@@ -83,8 +83,8 @@ struct DayMealPopupView: View {
     }
 
     private func scoreColor(_ score: Double) -> Color {
-        if score >= 0.8 { return .green }
-        if score >= 0.5 { return .blue }
+        if score >= ScoringThresholds.healthy { return .green }
+        if score >= ScoringThresholds.neutral { return .blue }
         return .orange
     }
 

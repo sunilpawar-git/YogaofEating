@@ -326,8 +326,8 @@ struct DayTimelineView: View {
     }
 
     private func scoreColor(_ score: Double) -> Color {
-        if score >= 0.8 { return .green }
-        if score >= 0.5 { return .blue }
+        if score >= ScoringThresholds.healthy { return .green }
+        if score >= ScoringThresholds.neutral { return .blue }
         return .orange
     }
 
@@ -461,15 +461,15 @@ struct ReadOnlyMealCardView: View {
     }
 
     private var scoreColor: Color {
-        if self.meal.healthScore >= 0.8 { return .green }
-        if self.meal.healthScore >= 0.5 { return .blue }
+        if self.meal.healthScore >= ScoringThresholds.healthy { return .green }
+        if self.meal.healthScore >= ScoringThresholds.neutral { return .blue }
         return .orange
     }
 
     private var cardBackground: Color {
-        if self.meal.healthScore >= 0.7 {
+        if self.meal.healthScore >= ScoringThresholds.high {
             Color.green.opacity(0.08)
-        } else if self.meal.healthScore >= 0.4 {
+        } else if self.meal.healthScore >= ScoringThresholds.unhealthy {
             Color.blue.opacity(0.05)
         } else {
             Color.orange.opacity(0.08)
@@ -477,9 +477,9 @@ struct ReadOnlyMealCardView: View {
     }
 
     private var borderColor: Color {
-        if self.meal.healthScore >= 0.7 {
+        if self.meal.healthScore >= ScoringThresholds.high {
             Color.green.opacity(0.3)
-        } else if self.meal.healthScore >= 0.4 {
+        } else if self.meal.healthScore >= ScoringThresholds.unhealthy {
             Color.blue.opacity(0.2)
         } else {
             Color.orange.opacity(0.3)

@@ -5,6 +5,12 @@ import OSLog
 
 private let briefingLogger = Logger(subsystem: "com.yogaofeating", category: "Briefing")
 
+/// Payload-shaping constants for the insight data sent to the server.
+enum InsightPayloadConstants {
+    /// Maximum number of meal items included per daily snapshot in the server payload.
+    static let maxMealItemsPerSnapshot: Int = 5
+}
+
 /// Protocol for insight generation to enable testing.
 @MainActor
 protocol InsightGenerationServiceProtocol {
@@ -98,7 +104,8 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
             // Meals
             if !snapshot.meals.isEmpty {
-                let mealItems = snapshot.meals.flatMap(\.items).prefix(5).joined(separator: ", ")
+                let mealItems = snapshot.meals.flatMap(\.items).prefix(InsightPayloadConstants.maxMealItemsPerSnapshot)
+                    .joined(separator: ", ")
                 dayData.append("  Food: \(mealItems)")
                 dayData.append("  Health Score: \(String(format: "%.0f%%", snapshot.averageHealthScore * 100))")
             }
@@ -154,10 +161,9 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     /// - Parameters:
     ///   - insight: The insight to save
     ///   - date: The date to associate the insight with
-    func saveInsight(_ insight: DailyInsight, for _: Date) {
-        // TODO: Implement storage - will be added in future phase
-        // For now, insights are ephemeral
-        print("📊 Insight generated: \(insight.insightText)")
+    func saveInsight(_ insight: DailyInsight, for date: Date) {
+        self.historicalService.updateInsight(for: date, insight: insight)
+        briefingLogger.info("Insight saved for date \(date, privacy: .public)")
     }
 
     // MARK: - Check Methods
@@ -178,7 +184,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
         // Must have some historical data to analyze
         let data = self.gatherDataForInsight()
-        guard data.count >= 2 else {
+        guard data.count >= BriefingThresholds.minimumDataPoints else {
             return false
         }
 
@@ -207,13 +213,13 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             date: date,
             healthKitSleepData: healthKitSleepData
         ) {
-            print("✨ Using server-generated insight from Gemini")
+            briefingLogger.info("Using server-generated insight from Gemini")
             self.saveInsight(serverInsight, for: date)
             return serverInsight
         }
 
         // Fallback to local PatternAnalyzer
-        print("📊 Using local PatternAnalyzer for insight generation")
+        briefingLogger.info("Using local PatternAnalyzer for insight generation")
         let patterns = self.patternAnalyzer.analyzePatterns(from: snapshots)
 
         // Generate insight based on detected patterns or fallback to generic
@@ -248,7 +254,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         healthKitSleepData: [Date: SleepData] = [:]
     ) async -> DailyInsight? {
         guard let functions = self.functions else {
-            print("⚠️ Firebase Functions not available for insight generation")
+            briefingLogger.info("Firebase Functions not available — skipping server insight")
             return nil
         }
 
@@ -337,7 +343,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         }
 
         do {
-            print("📡 Calling Firebase Cloud Function 'generateInsight'")
+            briefingLogger.info("Calling Firebase Cloud Function 'generateInsight'")
             // Pass the insight date so server knows which day is "today"
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "EEEE, MMMM d"
@@ -349,7 +355,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             ])
 
             guard let responseData = result.data as? [String: Any] else {
-                print("⚠️ Invalid response format from generateInsight")
+                briefingLogger.warning("Invalid response format from generateInsight")
                 return nil
             }
 
@@ -357,7 +363,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
                   let insightTypeString = responseData["insightType"] as? String,
                   let confidence = responseData["confidence"] as? Double
             else {
-                print("⚠️ Missing required fields in generateInsight response")
+                briefingLogger.warning("Missing required fields in generateInsight response")
                 return nil
             }
 
@@ -369,7 +375,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             default: .encouragement
             }
 
-            print("✅ Received insight from server: \(insightText.prefix(50))...")
+            briefingLogger.info("Received insight from server")
 
             return DailyInsight(
                 date: date,
@@ -379,7 +385,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             )
 
         } catch {
-            print("❌ Server insight generation failed: \(error.localizedDescription)")
+            briefingLogger.error("Server insight generation failed: \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }
@@ -391,7 +397,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         patterns: [InsightPattern]
     ) -> (text: String, type: InsightType, references: [InsightReference], confidence: Double) {
         // If we have high-confidence patterns, use them
-        if let topPattern = patterns.first, topPattern.confidence >= 0.6 {
+        if let topPattern = patterns.first, topPattern.confidence >= BriefingThresholds.confidenceThreshold {
             let text = self.formatPatternAsInsight(topPattern)
             return (text, topPattern.type, topPattern.references, topPattern.confidence)
         }
@@ -399,6 +405,16 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         // Otherwise, generate a generic insight based on data
         let (text, type) = self.generateLocalInsight(from: snapshots)
         return (text, type, [], 0.5)
+    }
+
+    /// Serialises a single MindCheckEntry to a server payload dictionary.
+    /// Both morning and evening entries use the same shape (DRY — replaces duplicated inline closures).
+    /// Includes `isAccomplished` for `.todo` entries so the server receives consistent data
+    /// regardless of which check (morning vs. evening) the entry belongs to.
+    private func mindCheckEntryPayload(_ entry: MindCheckEntry) -> [String: Any] {
+        var d: [String: Any] = ["text": entry.text, "category": entry.category.displayName]
+        if entry.category == .todo { d["isAccomplished"] = entry.isAccomplished ?? false }
+        return d
     }
 
     private func formatPatternAsInsight(_ pattern: InsightPattern) -> String {
@@ -443,12 +459,12 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             return ("Keep logging your meals and sleep to discover patterns in your wellbeing.", .encouragement)
         }
 
-        let avgScore = snapshots.map(\.averageHealthScore).reduce(0, +) / Double(snapshots.count)
+        let avgScore = snapshots.map(\.averageHealthScore).average() ?? ScoringThresholds.neutral
         let insightType = self.determineInsightType(from: snapshots)
 
-        let text = if avgScore > 0.7 {
+        let text = if avgScore > ScoringThresholds.high {
             "Great job! Your healthy eating choices over the past week are likely contributing to better energy and sleep. Keep it up!"
-        } else if avgScore > 0.5 {
+        } else if avgScore > ScoringThresholds.neutral {
             "You're on the right track. Try adding more vegetables to your evening meals - they may help improve your sleep quality."
         } else {
             "Consider lighter, more balanced meals - heavy or processed foods late in the day can affect how you feel the next morning."
@@ -558,26 +574,18 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             }
 
             if let morning = snapshot.morningMindCheck, !morning.isEmpty {
-                data["morningMindCheck"] = morning.map { entry in
-                    var d: [String: Any] = ["text": entry.text, "category": entry.category.displayName]
-                    if entry.category == .todo { d["isAccomplished"] = entry.isAccomplished ?? false }
-                    return d
-                }
+                data["morningMindCheck"] = morning.map { self.mindCheckEntryPayload($0) }
             }
 
             if let evening = snapshot.eveningMindCheck, !evening.isEmpty {
-                data["eveningMindCheck"] = evening.map { entry in
-                    ["text": entry.text, "category": entry.category.displayName] as [String: Any]
-                }
+                data["eveningMindCheck"] = evening.map { self.mindCheckEntryPayload($0) }
             }
 
             return data
         }
 
         do {
-            let result = try await functions.httpsCallable("generateDailyBriefing").call([
-                "userData": userData
-            ])
+            let result = try await functions.httpsCallable("generateDailyBriefing").call(["userData": userData])
 
             guard let resp = result.data as? [String: Any],
                   let headline = resp["headline"] as? String,
@@ -634,10 +642,10 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         formatter.dateFormat = "EEEE"
         let dayName = formatter.string(from: date)
 
-        let avgScore = snapshots.map(\.averageHealthScore).reduce(0, +) / Double(snapshots.count)
-        let headline = if avgScore > 0.7 {
+        let avgScore = snapshots.map(\.averageHealthScore).average() ?? ScoringThresholds.neutral
+        let headline = if avgScore > ScoringThresholds.high {
             "Great week! Your \(dayName) starts on a high note"
-        } else if avgScore > 0.5 {
+        } else if avgScore > ScoringThresholds.neutral {
             "Steady progress — here's your \(dayName) snapshot"
         } else {
             "Small shifts matter — your \(dayName) briefing"
@@ -718,7 +726,10 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
         let calendar = Calendar.current
         let today = Date()
-        let weekStart = calendar.date(byAdding: .day, value: -6, to: today)!
+        guard let weekStart = calendar.date(byAdding: .day, value: -6, to: today) else {
+            briefingLogger.error("Failed to compute weekStart — skipping weekly insight")
+            return nil
+        }
 
         // Analyze patterns across the week
         let patterns = self.patternAnalyzer.analyzePatterns(from: snapshots)
@@ -733,7 +744,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
             weekStartDate: weekStart,
             weekEndDate: today,
             summaryText: summaryText,
-            topPatterns: Array(patterns.prefix(3)),
+            topPatterns: Array(patterns.prefix(BriefingThresholds.maximumInsightReferences)),
             dailyInsights: [],
             improvementAreas: improvements,
             wins: wins
@@ -748,17 +759,17 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         var improvements: [String] = []
 
         // Analyze the week's data
-        let avgHealthScore = snapshots.map(\.averageHealthScore).reduce(0, +) / Double(snapshots.count)
+        let avgHealthScore = snapshots.map(\.averageHealthScore).average() ?? ScoringThresholds.neutral
         let daysLogged = snapshots.count
         let hasGoodSleep = snapshots
             .contains { $0.reflection?.sleepQuality == .great || $0.reflection?.sleepQuality == .good }
         let hasMindCheck = snapshots.contains { $0.hasMorningMindCheck || $0.hasEveningMindCheck }
 
         // Determine wins
-        if daysLogged >= 5 {
+        if daysLogged >= ScoringThresholds.minimumConsistentDays {
             wins.append("\(daysLogged) days of consistent logging")
         }
-        if avgHealthScore > 0.7 {
+        if avgHealthScore > ScoringThresholds.high {
             wins.append("Healthy eating choices")
         }
         if hasGoodSleep {
@@ -769,7 +780,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         }
 
         // Determine improvements
-        if avgHealthScore < 0.5 {
+        if avgHealthScore < ScoringThresholds.neutral {
             improvements.append("Consider healthier meal choices")
         }
         if let topPattern = patterns.first, topPattern.type == .foodSleep {

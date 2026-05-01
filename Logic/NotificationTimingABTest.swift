@@ -240,7 +240,10 @@ enum WakeTimePredictor {
 
         if let stored = userDefaults.string(forKey: key) {
             let parts = stored.split(separator: ":").compactMap { Int($0) }
-            if parts.count == 2 {
+            if parts.count == 2,
+               (0...23).contains(parts[0]),
+               (0...59).contains(parts[1])
+            {
                 return (parts[0], parts[1])
             }
         }

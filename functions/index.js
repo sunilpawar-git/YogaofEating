@@ -25,6 +25,28 @@ function sanitizeInput(input, maxLength = MAX_INPUT_LENGTH) {
 }
 
 /**
+ * Shared auth guard — throws HttpsError('unauthenticated') if request has no auth.
+ * Reuse in every onCall handler that requires a signed-in user (DRY, SRP).
+ */
+function requireAuth(request) {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Authentication required');
+    }
+}
+
+/**
+ * Admin claim guard — throws HttpsError('permission-denied') unless the caller
+ * has a custom admin claim. Uses the pre-decoded token on request.auth.token
+ * (already verified by the onCall SDK; no need to re-verify the raw JWT).
+ */
+function requireAdmin(request) {
+    requireAuth(request);
+    if (request.auth.token.admin !== true) {
+        throw new HttpsError('permission-denied', 'Admin access required');
+    }
+}
+
+/**
  * Analyzes a single meal description and provides a basic insight
  */
 exports.analyzeMeal = onCall({ secrets: [geminiApiKey] }, async (request) => {
@@ -174,7 +196,10 @@ Example Response:
  * Uses Gemini AI to analyze patterns in meals, sleep, feelings, and mind checks
  */
 exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) => {
-    // 1. Validate Input
+    // 1. Auth guard — prevents unauthenticated Gemini quota abuse
+    requireAuth(request);
+
+    // 2. Validate Input
     const userData = request.data.userData;
     if (!userData || !Array.isArray(userData) || userData.length === 0) {
         throw new HttpsError('invalid-argument', 'The function must be called with a "userData" array containing daily snapshots.');
@@ -359,10 +384,7 @@ Example Response:
  * Intended to be called once per day after the user logs sleep quality.
  */
 exports.generateDailyBriefing = onCall({ secrets: [geminiApiKey] }, async (request) => {
-    if (!request.auth) {
-        throw new HttpsError('unauthenticated',
-            'Authentication required to generate briefings');
-    }
+    requireAuth(request);
     const userId = request.auth.uid;
     await BriefingPerformanceMetrics.logGenerationStart(userId);
     
@@ -544,13 +566,7 @@ ${dataSummary}
  * Call: firebase.functions().httpsCallable('getBriefingMetrics')({ daysBack: 7 })
  */
 exports.getBriefingMetrics = onCall(async (request) => {
-    if (!request.auth) {
-        throw new HttpsError('unauthenticated', 'User must be authenticated');
-    }
-    const decoded = await admin.auth().verifyIdToken(request.auth.token);
-    if (decoded.admin !== true) {
-        throw new HttpsError('permission-denied', 'Admin access required');
-    }
+    requireAdmin(request);
 
     const daysBack = request.data.daysBack || 7;
     if (daysBack < 1 || daysBack > 90) {
