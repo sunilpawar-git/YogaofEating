@@ -30,10 +30,14 @@ struct SmileyState: Codable {
     }
 
     nonisolated static let neutral = SmileyState(scale: 1.0, mood: .neutral)
+    /// Slightly elevated starting state when the user has eaten poorly for 2+ consecutive days.
+    /// Resets to normal as the user logs meals today. Scale 1.1 = mildly bloated.
+    nonisolated static let concerned = SmileyState(scale: 1.1, mood: .concerned)
 }
 
 enum SmileyMood: String, Codable {
     case serene // 🙂
     case neutral // 😐
+    case concerned // 😟 — food-debt starting state; not a meal-quality state
     case overwhelmed // 😮
 }

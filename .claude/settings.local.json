@@ -17,7 +17,8 @@
       "Bash(gh api *)",
       "Bash(git checkout *)",
       "Bash(git pull *)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(swift build *)"
     ]
   }
 }

@@ -105,6 +105,8 @@ extension SmileyMood {
             self = .serene
         case "neutral":
             self = .neutral
+        case "concerned":
+            self = .concerned
         case "overwhelmed":
             self = .overwhelmed
         default:

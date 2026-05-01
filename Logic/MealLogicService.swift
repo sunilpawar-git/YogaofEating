@@ -1,12 +1,16 @@
 import Foundation
 
 /// Shared scoring thresholds — single source of truth used by MealLogicService,
-/// AILogicService, and SensoryService so feedback tone and smiley always agree.
+/// AILogicService, SensoryService, and PatternAnalyzer so feedback tone and smiley always agree.
 enum ScoringThresholds {
     /// Scores above this are considered "healthy"
     static let healthy: Double = 0.65
     /// Scores below this are considered "unhealthy"
     static let unhealthy: Double = 0.35
+    /// Two consecutive days with averageHealthScore below this trigger the food-debt
+    /// smiley starting state and a CorrelationCard in the morning briefing.
+    /// Basis: Esposito et al. (2002) — inflammatory markers after 2 poor-eating days.
+    static let foodDebtBadDay: Double = 0.45
 }
 
 /// Service responsible for the "Yoga of Eating" logic.

@@ -273,8 +273,38 @@ class PatternAnalyzer {
         cards.append(contentsOf: self.analyzeFoodToFeeling(from: snapshots))
         cards.append(contentsOf: self.analyzeTimingConsistency(from: snapshots))
         cards.append(contentsOf: self.analyzeTodoProductivity(from: snapshots))
+        cards.append(contentsOf: self.analyzeFoodDebt(from: snapshots))
 
         return cards.sorted { $0.confidence > $1.confidence }
+    }
+
+    // MARK: - Food Debt
+
+    /// Detects 2 consecutive recent days with poor average food scores and generates a
+    /// CorrelationCard warning that inflammation and cravings may be elevated today.
+    /// Basis: Esposito et al. (2002) — inflammatory markers after consecutive poor-eating days.
+    func analyzeFoodDebt(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        let recent = snapshots
+            .sorted { $0.date > $1.date }
+            .filter { $0.mealCount > 0 }
+            .prefix(2)
+        guard recent.count == 2,
+              recent.allSatisfy({ $0.averageHealthScore < ScoringThresholds.foodDebtBadDay })
+        else { return [] }
+
+        let avgScore = recent.map(\.averageHealthScore).reduce(0, +) / 2.0
+        let confidence = min(1.0, (ScoringThresholds.foodDebtBadDay - avgScore) * 5.0)
+        let refs = recent.map {
+            InsightReference(date: $0.date, description: "Low-quality eating day", category: .food)
+        }
+        return [
+            CorrelationCard(
+                category: .foodDebt,
+                observation: "2 days of low-quality eating — inflammation and cravings may be elevated today",
+                confidence: confidence,
+                dataPoints: Array(refs)
+            )
+        ]
     }
 
     // MARK: - Food-to-Feeling

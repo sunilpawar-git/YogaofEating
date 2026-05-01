@@ -164,6 +164,15 @@ struct HighlightTodoSection: View {
                     Text(todo.text)
                         .font(.body)
                         .lineLimit(2)
+                    if todo.carriedOverCount > 0 {
+                        Text("\(todo.carriedOverCount)d")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.secondary.opacity(0.12)))
+                    }
                     Spacer()
                     Button { self.onRemoveTodo?(todo.id) } label: {
                         Image(systemName: "xmark.circle.fill")

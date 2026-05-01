@@ -449,17 +449,27 @@ class MainViewModel: ObservableObject {
             date: self.lastResetDate
         )
 
-        // 2. Reset for new day
+        // 2. Carry incomplete todos from the archived day into the new day
+        let carried = self.historicalService.incompleteTodosForCarryOver(from: self.lastResetDate)
+        if !carried.isEmpty {
+            self.historicalService.updateHighlightData(
+                for: Date(),
+                data: HighlightData(todos: carried)
+            )
+        }
+
+        // 3. Reset for new day — smiley starts concerned if 2+ consecutive bad eating days
+        let startingState = self.historicalService.foodDebtStartingState(relativeTo: Date())
         withAnimation(.easeOut) {
-            self.smileyState = .neutral
+            self.smileyState = startingState
             self.meals = []
         }
 
-        // 3. Clear current insight and briefing (new day, new generation)
+        // 4. Clear current insight and briefing (new day, new generation)
         self.currentInsight = nil
         self.currentBriefing = nil
 
-        // 4. Save both current and historical data
+        // 5. Save both current and historical data
         self.saveData()
     }
 

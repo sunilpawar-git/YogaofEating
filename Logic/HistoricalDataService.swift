@@ -31,6 +31,15 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
 
     /// Updates or adds a morning briefing for a specific date.
     func updateBriefing(for date: Date, briefing: DailyBriefing)
+
+    /// Returns incomplete .todo entries from the given date's snapshot, each with
+    /// carriedOverCount incremented by 1. Used by resetDay() to seed the next day's todos.
+    func incompleteTodosForCarryOver(from date: Date) -> [MindCheckEntry]
+
+    /// Returns .concerned if the two most recent days with meals both scored below
+    /// ScoringThresholds.foodDebtBadDay; otherwise returns .neutral.
+    /// Used by resetDay() to set the smiley's starting state.
+    func foodDebtStartingState(relativeTo date: Date) -> SmileyState
 }
 
 /// Service for managing historical meal data and daily snapshots.
@@ -367,5 +376,31 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         }
 
         self.saveHistoricalData()
+    }
+
+    // MARK: - Todo Carry-Over
+
+    func incompleteTodosForCarryOver(from date: Date) -> [MindCheckEntry] {
+        guard let todos = self.getSnapshot(for: date)?.highlightData?.todos else { return [] }
+        return todos
+            .filter { $0.category == .todo && $0.isAccomplished != true }
+            .map { $0.withCarriedOverCount($0.carriedOverCount + 1) }
+    }
+
+    // MARK: - Food Debt Starting State
+
+    func foodDebtStartingState(relativeTo date: Date) -> SmileyState {
+        let calendar = Calendar.current
+        guard
+            let d1 = calendar.date(byAdding: .day, value: -1, to: date),
+            let d2 = calendar.date(byAdding: .day, value: -2, to: date),
+            let s1 = self.getSnapshot(for: d1),
+            s1.mealCount > 0,
+            s1.averageHealthScore < ScoringThresholds.foodDebtBadDay,
+            let s2 = self.getSnapshot(for: d2),
+            s2.mealCount > 0,
+            s2.averageHealthScore < ScoringThresholds.foodDebtBadDay
+        else { return .neutral }
+        return .concerned
     }
 }
