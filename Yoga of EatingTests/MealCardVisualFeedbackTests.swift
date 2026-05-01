@@ -141,5 +141,23 @@
         func test_mealCard_accentBarCornerRadius_isPositive() {
             XCTAssertGreaterThan(AppTheme.MealCard.accentBarCornerRadius, 0)
         }
+
+        // MARK: - Light Mode Visibility Fix: Semantic Background Color
+
+        func test_mealCardBackground_cardFillColor_isSemanticBackground() {
+            // Given: MealCardBackground should use semantic adaptive background
+            // When: We check the fill color constant
+            let fillColor = MealCardBackground.cardFillColor
+            // Then: It should match AppTheme.MealCard.background (secondarySystemBackground)
+            XCTAssertTrue(self.colorMatches(fillColor, AppTheme.MealCard.background))
+        }
+
+        func test_readOnlyMealCard_fillColor_isSemanticBackground() {
+            // Given: ReadOnlyMealCardView should use the same semantic background
+            // When: We check the fill color constant
+            let fillColor = ReadOnlyMealCardView.cardFillColor
+            // Then: It should match AppTheme.MealCard.background (secondarySystemBackground)
+            XCTAssertTrue(self.colorMatches(fillColor, AppTheme.MealCard.background))
+        }
     }
 #endif

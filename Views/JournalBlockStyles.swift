@@ -35,6 +35,13 @@ extension MealType {
 /// timeline without colouring the whole card. The score-based full-border is
 /// intentionally removed — the subtle tint overlay carries score feedback instead.
 struct MealCardBackground: View {
+    // MARK: - Constants
+
+    /// Base fill color — uses semantically adaptive background for light/dark mode
+    static let cardFillColor: Color = AppTheme.MealCard.background
+
+    // MARK: - Properties
+
     let feedback: MealCardFeedback
 
     /// Meal type colour used for the left accent bar.
@@ -43,11 +50,7 @@ struct MealCardBackground: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 16)
-            .fill(.ultraThinMaterial)
-            .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white.opacity(0.4))
-            }
+            .fill(Self.cardFillColor)
             .overlay {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(self.feedback.tintColor.opacity(self.feedback.tintOpacity))
