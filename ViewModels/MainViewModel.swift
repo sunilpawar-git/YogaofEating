@@ -74,6 +74,10 @@ class MainViewModel: ObservableObject {
     /// cancel the previous task and only the most-recent request wins.
     var aiTasks: [UUID: Task<Void, Never>] = [:]
 
+    /// Prevents concurrent briefing generation calls from triggering duplicate Firebase requests.
+    /// Guards `triggerBriefingGeneration()` to ensure only one async briefing generation runs at a time.
+    var isBriefingGenerationInProgress: Bool = false
+
     // MARK: - Day Navigation (Phase 4)
 
     /// The currently selected date for viewing. Defaults to today.
