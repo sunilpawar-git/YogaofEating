@@ -25,6 +25,226 @@ YogaOfEatingApp (entry point)
 
 **Default logicService must be `AILogicService`** (not `MealLogicService`). See regression below.
 
+## MainViewModel Organization
+
+`MainViewModel` is split across extension files for clarity and to respect the 250-line file limit:
+
+| File | Responsibility |
+|------|---|
+| `MainViewModel.swift` | Core state, date navigation, meal CRUD, smiley logic |
+| `MainViewModel+AIAnalysis.swift` | AI analysis pipeline, scoring guards, async analysis flow |
+| `MainViewModel+Insights.swift` | Daily briefing generation, insight notifications |
+| `MainViewModel+Highlight.swift` | Highlight data aggregation (stats, patterns) |
+| `MainViewModel+Reflect.swift` | Reflection/journal logic (evening review, mood tracking) |
+| `MainViewModel+MindCheck.swift` | Mind check (morning intentions, evening accountability) |
+| `MainViewModel+DaySummary.swift` | Daily summary aggregation (stats, insights) |
+
+All extensions are logically part of the same class but split for readability and code organization.
+
+## Centralized Resources & Theming
+
+### String Resources (Logic/Strings.swift)
+
+**RULE**: Never hardcode user-facing strings. All text must live in `Strings.swift`.
+
+```swift
+// ✅ CORRECT
+Text(Strings.Timeline.tapToLog)
+
+// ❌ WRONG
+Text("TAP TO LOG")
+```
+
+The `Strings` enum is organized by feature area:
+- `Strings.MindCheck.*` — Morning intentions, evening review
+- `Strings.Insight.*` — Daily insights, patterns
+- `Strings.Timeline.*` — Meal logging, empty states
+- Domain-specific enums for localization readiness
+
+**When adding new UI text**:
+1. Add the string to the appropriate enum in `Strings.swift`
+2. Use it in your view: `Text(Strings.MyFeature.myString)`
+3. This enables future localization without code changes
+
+### Font System (Logic/FontTheme.swift)
+
+**RULE**: Never hardcode fonts. All fonts use SF Rounded (`.rounded` design) via `FontTheme`.
+
+```swift
+// ✅ CORRECT
+TextField("Meal", text: $text)
+    .font(FontTheme.mealEntry)
+
+Text("Score")
+    .font(FontTheme.sectionHeader)
+
+// ❌ WRONG
+Text("Score").font(.system(size: 18, weight: .semibold, design: .rounded))
+```
+
+Available fonts:
+- `FontTheme.mealEntry` — 17pt Regular (large TextField input)
+- `FontTheme.textEntry` — 16pt Regular (standard TextEditor/TextField)
+- `FontTheme.sectionHeader` — 18pt Semibold (display headlines)
+- `FontTheme.body` — 16pt Regular (body copy)
+- `FontTheme.caption` — 12pt Regular (helper text, metadata)
+
+Custom sizes: `FontTheme.textEntry(size: 14, weight: .semibold)`
+
+**Design principle**: Changing fonts app-wide requires edits in ONE file. Never search/replace fonts across views.
+
+### Colors & Theming (Future Expansion)
+
+If color theming becomes centralized (e.g., `ColorTheme.swift`), follow the same pattern:
+- All SwiftUI `.foregroundColor()` calls reference `ColorTheme.*`
+- All `.backgroundColor()` calls reference `ColorTheme.*`
+- Never hardcode `Color.blue`, `Color.gray`, etc.
+
+This ensures consistent styling and enables dark mode / accessibility themes without code changes.
+
+## Commands
+
+### Build (Debug)
+```bash
+xcodebuild clean build \
+  -project "Yoga of Eating.xcodeproj" \
+  -scheme "Yoga of Eating" \
+  -destination "platform=iOS Simulator,name=iPhone 16"
+```
+
+### Run All Tests
+```bash
+xcodebuild clean test \
+  -project "Yoga of Eating.xcodeproj" \
+  -scheme "Yoga of Eating" \
+  -destination "platform=iOS Simulator,name=iPhone 16" \
+  -only-testing:"Yoga of EatingTests" \
+  -configuration Debug
+```
+
+### Run a Single Test File
+```bash
+xcodebuild test \
+  -project "Yoga of Eating.xcodeproj" \
+  -scheme "Yoga of Eating" \
+  -destination "platform=iOS Simulator,name=iPhone 16" \
+  -only-testing:"Yoga of EatingTests/AIAnalysisIntegrationTests"
+```
+
+### Run a Single Test Method
+```bash
+xcodebuild test \
+  -project "Yoga of Eating.xcodeproj" \
+  -scheme "Yoga of Eating" \
+  -destination "platform=iOS Simulator,name=iPhone 16" \
+  -only-testing:"Yoga of EatingTests/AIAnalysisIntegrationTests/test_defaultInit_logicServiceIsAIAnalysisProvider"
+```
+
+### Code Quality
+
+**SwiftLint** — Identify code style violations
+```bash
+brew install swiftlint
+swiftlint lint "Yoga of Eating"
+```
+
+**SwiftFormat** — Auto-format code
+```bash
+brew install swiftformat
+swiftformat "Yoga of Eating" --config .swiftformat
+```
+
+### Code Quality Tools & Rules
+
+**SwiftLint (.swiftlint.yml settings)**
+- `force_unwrapping` — **error** (use optional chaining or guard)
+- `force_cast` — **error** (use `as?` with guard)
+- File length — max 300 lines (warn 250)
+- Function body — max 50 lines (warn 40)
+- Line length — 120 chars max
+- Cyclomatic complexity — max 10 (warn 7)
+- Nesting depth — max 3 levels
+- Identifier length — 3–40 chars
+
+**SwiftFormat (.swiftformat settings)**
+- Headers stripped from files
+- Imports grouped alphabetically (`--importgrouping alpha`)
+- 4-space indentation
+- Line breaks: LF (Unix style)
+- Max 120 char width
+- Arguments/parameters wrapped before-first
+- No semicolons
+- Self insertion (`self.` explicit where helpful)
+
+Run both before committing:
+```bash
+swiftlint lint "Yoga of Eating" && swiftformat "Yoga of Eating" --config .swiftformat
+```
+
+## A/B Testing Pattern (Feature Experiments)
+
+For A/B testing feature variants (e.g., notification timing, UI layout):
+
+**Pattern: `NotificationTimingABTest` (Logic/NotificationTimingABTest.swift)**
+
+1. **Variant enum** — Define all variants
+   ```swift
+   enum NotificationVariant: String {
+       case fixed_730am = "fixed_730am"
+       case adaptive_wakeTime = "adaptive_wakeTime"
+       case smartDelay_2min = "smartDelay_2min"
+   }
+   ```
+
+2. **Deterministic assignment per user** — Cache in UserDefaults
+   ```swift
+   static func getCurrentVariant(for userId: String) -> NotificationVariant {
+       let key = "variant_\(userId)"
+       if let cached = UserDefaults.standard.string(forKey: key) {
+           return NotificationVariant(rawValue: cached) ?? .fixed_730am
+       }
+       let variant = assignVariant() // 50/25/25 distribution
+       UserDefaults.standard.set(variant.rawValue, forKey: key)
+       return variant
+   }
+   ```
+
+3. **Log events to Firestore** — For analysis
+   ```swift
+   static func logEvent(userId: String, variant: NotificationVariant, ...) {
+       let event: [String: Any] = [
+           "event": "notification_tapped",
+           "userId": userId,
+           "variant": variant.rawValue,
+           "timestamp": ISO8601DateFormatter().string(from: Date()),
+           "delaySeconds": delaySeconds
+       ]
+       db.collection("notification_events").addDocument(data: event)
+   }
+   ```
+
+4. **Usage in production code**
+   ```swift
+   let userId = Auth.auth().currentUser?.uid ?? "unknown"
+   let variant = NotificationTimingABTest.getCurrentVariant(for: userId)
+   NotificationManager.shared.scheduleBriefingNotification(..., variant: variant)
+   ```
+
+See `QUICK_REFERENCE.md` for production example and monitoring KPIs.
+
+## Firestore Collections Reference
+
+**Key collections for backend integration:**
+
+| Collection | Purpose | Writer |
+|---|---|---|
+| `briefing_metrics/` | Generation start/complete/error events | Cloud Functions |
+| `notification_events/` | User engagement (taps, scheduling) | iOS app |
+| `{userId}/daily/{mealId}` | Meal data per user | iOS app + Cloud Functions |
+| `{userId}/daily/{date}/insights` | Daily insights | Cloud Functions |
+
+See `QUICK_REFERENCE.md` for detailed schema, monitoring, and troubleshooting.
+
 ## TDD rules — non-negotiable
 
 ### TDD-Driven Development Workflow (Mandatory)
@@ -404,6 +624,8 @@ Do not duplicate these thresholds. Always import from `ScoringThresholds`.
 - **OSLog `.debug` messages do not appear in the Xcode console by default** — use `.info` for messages you need to see during debugging sessions.
 - **TDD Violation: "I'll test it after"** — You won't. Tests written after are always incomplete. Write tests FIRST.
 - **Hardcoded constants in multiple files** — All reusable constants must live in `Constants.swift` or domain-specific files (`ScoringThresholds.swift`, etc.). Search before hardcoding.
+- **Hardcoded strings in views** — All user-facing text must use `Strings.swift`. Never hardcode `Text("...")` strings. Violates SSOT and blocks localization.
+- **Hardcoded fonts** — Never use `.system(size: 18, weight: .semibold)` in views. Use `FontTheme.*` so app-wide font changes require one edit, not dozens.
 - **Test passing on first run** — If your test passes without any production code changes, the test is too loose. Tighten it until it fails.
 - **Over-mocking** — Mock at boundaries (Firebase, filesystem, network). Never mock the code under test. Mock internal dependencies in integration tests.
 - **Skipping security tests** — Assume every user-facing feature needs an auth guard, input validation, and encryption. Test them.
@@ -514,6 +736,13 @@ Every PR must satisfy all of these before merge:
 - [ ] `Constants.swift` contains all shared constants
 - [ ] No duplicate code; extracted into helpers or services
 - [ ] Search results for constant values (e.g., `0.65`) appear only in constants files
+
+### ✅ Centralized Resources & Theming
+- [ ] All user-facing strings defined in `Strings.swift` (never hardcoded in views)
+- [ ] All fonts use `FontTheme.*` (never hardcoded `.system(...)` or `.serif`)
+- [ ] No hardcoded `Color` values (ready for future `ColorTheme.swift`)
+- [ ] String enums organized by feature area for localization readiness
+- [ ] FontTheme changes don't require view edits (SSOT principle)
 
 ### ✅ Cybersecurity
 - [ ] All user data access guarded by authentication checks

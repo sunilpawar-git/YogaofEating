@@ -26,8 +26,8 @@ struct JournalBlockView: View {
     var recentMeals: [Meal] = []
 
     /// Maximum characters enforced by the limitedTextBinding.
-    /// Sourced from AppTheme.TextEntry — single source of truth across the app.
-    static let maxCharacterLimit: Int = AppTheme.TextEntry.maxCharacters
+    /// Sourced from InputValidator for consistent security validation.
+    static let maxCharacterLimit: Int = InputValidator.mealDescriptionMaxLength
 
     /// Debounce delay for local updates during typing.
     /// Sourced from AppTheme.TextEntry — single source of truth across the app.

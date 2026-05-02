@@ -88,8 +88,9 @@ struct HighlightSleepSection: View {
                 )
                 .padding(.horizontal)
                 .onChange(of: self.sleepNotesText) { _, newValue in
-                    if newValue.count > AppTheme.TextEntry.maxCharacters {
-                        self.sleepNotesText = String(newValue.prefix(AppTheme.TextEntry.maxCharacters))
+                    // Enforce max length based on InputValidator constraints
+                    if newValue.count > InputValidator.sleepNotesMaxLength {
+                        self.sleepNotesText = String(newValue.prefix(InputValidator.sleepNotesMaxLength))
                         return
                     }
                     self.sleepNotesDebounce?.cancel()
@@ -203,6 +204,12 @@ struct HighlightTodoSection: View {
                     .focused(self.$isTodoFieldFocused)
                     .submitLabel(.done)
                     .onSubmit { self.submitTodo() }
+                    .onChange(of: self.newTodoText) { _, newValue in
+                        // Enforce max length based on InputValidator constraints
+                        if newValue.count > InputValidator.todoItemMaxLength {
+                            self.newTodoText = String(newValue.prefix(InputValidator.todoItemMaxLength))
+                        }
+                    }
             }
             .padding(12)
             .background(
@@ -281,8 +288,9 @@ struct HighlightThoughtsSection: View {
                 }
                 .padding(.horizontal)
                 .onChange(of: self.text) { _, newValue in
-                    if newValue.count > AppTheme.TextEntry.maxCharacters {
-                        self.text = String(newValue.prefix(AppTheme.TextEntry.maxCharacters))
+                    // Enforce max length based on InputValidator constraints
+                    if newValue.count > InputValidator.morningThoughtsMaxLength {
+                        self.text = String(newValue.prefix(InputValidator.morningThoughtsMaxLength))
                         return
                     }
                     self.thoughtsDebounce?.cancel()
