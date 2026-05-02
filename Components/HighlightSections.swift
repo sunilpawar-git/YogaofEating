@@ -73,6 +73,7 @@ struct HighlightSleepSection: View {
             .padding(.horizontal)
 
             TextField("How was your sleep?", text: self.$sleepNotesText, axis: .vertical)
+                .font(FontTheme.textEntry)
                 .textFieldStyle(.plain)
                 .lineLimit(2...4)
                 .focused(self.focusedField, equals: .sleepNotes)
@@ -256,6 +257,7 @@ struct HighlightThoughtsSection: View {
                 .padding(.horizontal)
 
             TextEditor(text: self.$text)
+                .font(FontTheme.textEntry)
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
                 .focused(self.focusedField, equals: .morningThoughts)
