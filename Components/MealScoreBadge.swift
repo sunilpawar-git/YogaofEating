@@ -33,21 +33,21 @@ struct MealScoreBadge: View {
         return "\(Int(score * 100))%"
     }
 
-    /// Badge color based on score value
-    /// - Excellent (>0.75): Green
-    /// - Good (0.55-0.75): Teal
-    /// - Moderate (0.35-0.55): Orange
-    /// - Low (<0.35): Red
+    /// Badge color based on score value — uses muted, minimalist palette
+    /// - Excellent (>0.75): Muted sage green
+    /// - Good (0.55-0.75): Muted slate blue
+    /// - Moderate (0.35-0.55): Muted warm grey
+    /// - Low (<0.35): Muted stone grey
     var badgeColor: Color {
         guard let score else { return .secondary }
         if score > 0.75 {
-            return .green
+            return Color(red: 0.5, green: 0.65, blue: 0.55)  // Sage green
         } else if score >= 0.55 {
-            return .teal
+            return Color(red: 0.5, green: 0.6, blue: 0.7)    // Slate blue
         } else if score >= 0.35 {
-            return .orange
+            return Color(red: 0.65, green: 0.6, blue: 0.55)  // Warm grey
         } else {
-            return .red
+            return Color(red: 0.55, green: 0.55, blue: 0.55) // Stone grey
         }
     }
 
@@ -63,26 +63,24 @@ struct MealScoreBadge: View {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(Color(.systemBackground))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
                     Capsule()
-                        .fill(self.badgeColor.opacity(0.85))
+                        .fill(self.badgeColor)
                 )
                 .overlay(
                     Capsule()
-                        .strokeBorder(self.badgeColor, lineWidth: 1.2)
+                        .strokeBorder(self.badgeColor.opacity(0.7), lineWidth: 1.2)
                 )
             }
             .buttonStyle(.plain)
             .scaleEffect(self.isPressed ? 0.92 : 1.0)
             .animation(.spring(response: 0.2, dampingFraction: 0.6), value: self.isPressed)
-            .onLongPressGesture(minimumDuration: 0.01) { pressing in
+            .onLongPressGesture(minimumDuration: 0.01, perform: {}, onPressingChanged: { pressing in
                 self.isPressed = pressing
-            } onPressingChanged: { pressing in
-                self.isPressed = pressing
-            }
+            })
             .accessibilityLabel("Health score: \(self.formattedScore)")
             .accessibilityHint("Tap to see detailed score breakdown and nutrition analysis")
         }
