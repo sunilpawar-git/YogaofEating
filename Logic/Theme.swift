@@ -150,11 +150,31 @@ enum AppTheme {
     // MARK: - Score Badge Theme
 
     enum ScoreBadge {
-        /// Background color for the score badge
+        /// Background color for the score badge (deprecated — now uses dynamic color)
         static let background = Color(.secondarySystemBackground)
 
-        /// Text color for the score badge
+        /// Text color for the score badge (deprecated — now uses white on colored background)
         static let textColor = Color.secondary
+
+        /// Border width for score badge visibility
+        static let borderWidth: CGFloat = 1.2
+
+        /// Score-based color mapping:
+        /// - Excellent (>0.75): Green
+        /// - Good (0.55-0.75): Teal
+        /// - Moderate (0.35-0.55): Orange
+        /// - Low (<0.35): Red
+        static func colorForScore(_ score: Double) -> Color {
+            if score > 0.75 {
+                .green
+            } else if score >= 0.55 {
+                .teal
+            } else if score >= 0.35 {
+                .orange
+            } else {
+                .red
+            }
+        }
     }
 
     // MARK: - Score Category Colors
