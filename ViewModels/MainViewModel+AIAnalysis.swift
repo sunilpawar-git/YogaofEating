@@ -39,43 +39,55 @@ extension MainViewModel {
 
         guard description.count >= Self.minimumContentLength else { return }
 
-        let wasInserted = analysisInProgress.insert(mealId).inserted
-        guard wasInserted else { return }
-        defer { analysisInProgress.remove(mealId) }
-
-        // Only proceed if we are using a service that supports AI analysis
-        guard let aiService = logicService as? AIAnalysisProvider else {
-            let currentScore = meals[index].healthScore
-            updateSmileyState(with: currentScore)
+        // Validate description before sending to Firebase
+        switch InputValidator.validateMealDescription(description) {
+        case let .failure(error):
+            await MainActor.run {
+                self.lastValidationError = error
+                self.showValidationErrorAlert = true
+            }
             return
-        }
+        case let .success(sanitized):
+            // Use sanitized description for analysis
+            let validatedDescription = sanitized
+            let wasInserted = analysisInProgress.insert(mealId).inserted
+            guard wasInserted else { return }
+            defer { analysisInProgress.remove(mealId) }
 
-        do {
-            aiLogger.debug("AI analysis started for meal (item count: \(items.count, privacy: .public))")
-            let result = try await aiService.analyzeMealQuality(description: description)
-            aiLogger
-                .debug(
-                    "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
-                )
-
-            // Update the specific meal's health score, AI analyzed flag, and basic insight.
-            // Array copy ensures @Published triggers SwiftUI observation reliably.
-            if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
-                var updatedMeals = meals
-                updatedMeals[verifyIndex].healthScore = result.score
-                updatedMeals[verifyIndex].isAIAnalyzed = true
-                updatedMeals[verifyIndex].aiInsight = result.insight
-                meals = updatedMeals
-                saveData()
+            // Only proceed if we are using a service that supports AI analysis
+            guard let aiService = logicService as? AIAnalysisProvider else {
+                let currentScore = meals[index].healthScore
+                updateSmileyState(with: currentScore)
+                return
             }
 
-            // Update overall Smiley state based on new CUMULATIVE health (no haptics — background completion)
-            await self.reanalyzeAllMealsForSmileyState(withFeedback: false)
+            do {
+                aiLogger.debug("AI analysis started for meal (item count: \(items.count, privacy: .public))")
+                let result = try await aiService.analyzeMealQuality(description: validatedDescription)
+                aiLogger
+                    .debug(
+                        "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
+                    )
 
-        } catch {
-            aiLogger.error("AI analysis failed: \(error.localizedDescription, privacy: .public)")
-            // Fallback: Ensure smiley state is consistent with local score (no haptics)
-            await self.reanalyzeAllMealsForSmileyState(withFeedback: false)
+                // Update the specific meal's health score, AI analyzed flag, and basic insight.
+                // Array copy ensures @Published triggers SwiftUI observation reliably.
+                if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
+                    var updatedMeals = meals
+                    updatedMeals[verifyIndex].healthScore = result.score
+                    updatedMeals[verifyIndex].isAIAnalyzed = true
+                    updatedMeals[verifyIndex].aiInsight = result.insight
+                    meals = updatedMeals
+                    saveData()
+                }
+
+                // Update overall Smiley state based on new CUMULATIVE health (no haptics — background completion)
+                await self.reanalyzeAllMealsForSmileyState(withFeedback: false)
+
+            } catch {
+                aiLogger.error("AI analysis failed: \(error.localizedDescription, privacy: .public)")
+                // Fallback: Ensure smiley state is consistent with local score (no haptics)
+                await self.reanalyzeAllMealsForSmileyState(withFeedback: false)
+            }
         }
     }
 

@@ -24,10 +24,27 @@ enum InputValidator {
     ]
 
     private static let xssPatterns = [
-        "<", ">", // Basic HTML/script detection
-        "JAVASCRIPT",
+        // Dangerous HTML tags that could execute code
+        "<SCRIPT",
+        "</SCRIPT",
+        "<IMG",
+        "<IFRAME",
+        "<EMBED",
+        "<OBJECT",
+        "<SVG",
+        "<LINK",
+        "<STYLE",
+        // JavaScript protocol and event handlers
+        "JAVASCRIPT:",
         "ONERROR=",
-        "ONLOAD="
+        "ONLOAD=",
+        "ONCLICK=",
+        "ONMOUSEOVER=",
+        "ONFOCUS=",
+        "ONBLUR=",
+        "ONCHANGE=",
+        "ONSUBMIT=",
+        "ONDBLCLICK="
     ]
 
     private static let codeExecutionPatterns = [

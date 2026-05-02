@@ -297,6 +297,56 @@
             }
         }
 
+        // MARK: - XSS Pattern Refinement (Phase 3)
+
+        func test_comparisonOperatorLessThanWithNumber() {
+            let input = "< 100g"
+            let result = InputValidator.validateMealDescription(input)
+            XCTAssertEqual(try result.get(), input)
+        }
+
+        func test_comparisonOperatorGreaterThanWithNumber() {
+            let input = "> 5 servings"
+            let result = InputValidator.validateMealDescription(input)
+            XCTAssertEqual(try result.get(), input)
+        }
+
+        func test_comparisonOperatorInContext() {
+            let input = "Protein > fat, < 100g total"
+            let result = InputValidator.validateMealDescription(input)
+            XCTAssertEqual(try result.get(), input)
+        }
+
+        func test_htmlScriptTagIsStillDetected() {
+            let input = "<script>alert('xss')</script>"
+            let result = InputValidator.validateMealDescription(input)
+            XCTAssertThrowsError(try result.get())
+        }
+
+        func test_htmlImgTagIsDetected() {
+            let input = "Food <img src=x onerror=alert('xss')>"
+            let result = InputValidator.validateMealDescription(input)
+            XCTAssertThrowsError(try result.get())
+        }
+
+        func test_htmlIframeTagIsDetected() {
+            let input = "<iframe src='malicious'></iframe>"
+            let result = InputValidator.validateMealDescription(input)
+            XCTAssertThrowsError(try result.get())
+        }
+
+        func test_onclickEventHandlerIsDetected() {
+            let input = "Click me onclick=alert('xss')"
+            let result = InputValidator.validateMealDescription(input)
+            XCTAssertThrowsError(try result.get())
+        }
+
+        func test_onmouseoverEventHandlerIsDetected() {
+            let input = "Hover here onmouseover=maliciousFunction()"
+            let result = InputValidator.validateMealDescription(input)
+            XCTAssertThrowsError(try result.get())
+        }
+
         // MARK: - Edge Cases
 
         func test_validInputWithNumbers() {

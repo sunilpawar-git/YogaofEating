@@ -61,6 +61,18 @@ struct RootTabView: View {
                 self.selectedTab = target
             }
         }
+        .alert(
+            Strings.Validation.errorTitle,
+            isPresented: self.$viewModel.showValidationErrorAlert,
+            presenting: self.viewModel.lastValidationError
+        ) { _ in
+            Button(Strings.Validation.dismissButton) {
+                self.viewModel.showValidationErrorAlert = false
+                self.viewModel.lastValidationError = nil
+            }
+        } message: { error in
+            Text(error.localizedDescription)
+        }
     }
 }
 

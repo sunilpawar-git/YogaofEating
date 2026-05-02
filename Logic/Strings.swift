@@ -214,6 +214,42 @@ enum Strings {
         static let breathe = "Breathe..."
     }
 
+    // MARK: - Validation Errors (Phase 4)
+
+    enum Validation {
+        static let errorTitle = "Invalid Input"
+        static let dismissButton = "OK"
+
+        // Field-specific error messages
+        enum MealDescription {
+            static let empty = "Please enter what you ate"
+            static let tooLong = "Meal description is too long (max 500 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+
+        enum JournalEntry {
+            static let empty = "Please write something"
+            static let tooLong = "Journal entry is too long (max 2,000 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+
+        enum SleepNotes {
+            static let tooLong = "Sleep notes are too long (max 300 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+
+        enum MorningThoughts {
+            static let tooLong = "Morning thoughts are too long (max 500 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+
+        enum TodoItem {
+            static let empty = "Please enter your to-do"
+            static let tooLong = "To-do item is too long (max 150 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+    }
+
     // MARK: - Accessibility
 
     enum Accessibility {
