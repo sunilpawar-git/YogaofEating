@@ -232,9 +232,21 @@
         // MARK: - Tests: Check If Insight Needed
 
         func test_shouldGenerateInsight_returnsTrueForNewDay() {
-            // Arrange: Need at least 2 days of data plus today with sleep logged
+            // Arrange: Need minimum 3 days of data per BriefingThresholds.minimumDataPoints
             let calendar = Calendar.current
             let today = Date()
+
+            // Add 2 days ago
+            let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: today)!
+            let twoDaysSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: twoDaysAgo,
+                smileyState: .neutral,
+                meals: [Meal(mealType: .lunch, items: ["Salad"], healthScore: 0.7)],
+                mealCount: 1,
+                averageHealthScore: 0.7
+            )
+            self.mockHistorical.historicalData.addOrUpdate(snapshot: twoDaysSnapshot)
 
             // Add yesterday's data
             let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
@@ -268,7 +280,7 @@
             // Act
             let shouldGenerate = self.sut.shouldGenerateInsight(for: today)
 
-            // Assert - Should be true when sleep just logged and have historical data
+            // Assert - Should be true when sleep logged with minimum historical data
             XCTAssertTrue(shouldGenerate)
         }
 
@@ -295,9 +307,21 @@
         // MARK: - Tests: Rich Insight Generation (Phase 5)
 
         func test_generateInsight_includesDateReferences() async throws {
-            // Arrange: Create data with late dinner
+            // Arrange: Create data with late dinner (need minimum 3 days per BriefingThresholds)
             let calendar = Calendar.current
             let today = Date()
+
+            // 2 days ago baseline
+            let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: today)!
+            let twoDaysSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: twoDaysAgo,
+                smileyState: .neutral,
+                meals: [Meal(mealType: .lunch, items: ["Chicken"], healthScore: 0.7)],
+                mealCount: 1,
+                averageHealthScore: 0.7
+            )
+            self.mockHistorical.historicalData.addOrUpdate(snapshot: twoDaysSnapshot)
 
             // Yesterday with late dinner
             let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
@@ -332,7 +356,7 @@
             // Act
             let insight = try await self.sut.generateInsight(for: today)
 
-            // Assert - Insight should exist (with or without references depending on pattern detection)
+            // Assert - Insight should exist with minimum data threshold met
             XCTAssertNotNil(insight)
         }
 
