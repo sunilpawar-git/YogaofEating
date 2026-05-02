@@ -58,10 +58,10 @@ struct MealScoreBadge: View {
             Button(action: self.onTap) {
                 HStack(spacing: 3) {
                     Text(self.formattedScore)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(FontTheme.textEntry(size: 12, weight: .semibold))
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(FontTheme.textEntry(size: 9, weight: .semibold))
                 }
                 .foregroundStyle(Color(.systemBackground))
                 .padding(.horizontal, 8)

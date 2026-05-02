@@ -56,6 +56,14 @@ class MainViewModel: ObservableObject {
     /// Sleep data from Apple HealthKit (for display)
     @Published var appleSleepData: SleepData?
 
+    // MARK: - Input Validation (Phase 2)
+
+    /// Last validation error encountered; cleared after user dismisses alert
+    @Published var lastValidationError: ValidationError?
+
+    /// Whether to show validation error alert to user
+    @Published var showValidationErrorAlert: Bool = false
+
     // MARK: - AI Analysis Tracking
 
     /// Tracks meal IDs currently being analyzed to prevent concurrent duplicate requests.
@@ -284,6 +292,19 @@ class MainViewModel: ObservableObject {
 
         // Only update if content actually changed
         guard contentChanged else { return }
+
+        // Validate joined description to catch malicious input early
+        let joinedDescription = items.joined(separator: ", ")
+        if !joinedDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            switch InputValidator.validateMealDescription(joinedDescription) {
+            case let .failure(error):
+                self.lastValidationError = error
+                self.showValidationErrorAlert = true
+                return
+            case .success:
+                break
+            }
+        }
 
         // Update items
         self.meals[index].items = items

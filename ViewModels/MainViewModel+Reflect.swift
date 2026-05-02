@@ -15,11 +15,28 @@ extension MainViewModel {
     /// Updates the journal text in Reflect and persists.
     func updateReflectJournalText(_ text: String) {
         guard self.isViewingToday else { return }
-        let clamped = Self.clampText(text)
-        var data = self.currentOrNewReflectData()
-        data.journalText = clamped.isEmpty ? nil : clamped
-        data.lastModified = Date()
-        self.historicalService.updateReflectData(for: self.selectedDate, data: data)
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Allow empty for optional field
+        if trimmed.isEmpty {
+            var data = self.currentOrNewReflectData()
+            data.journalText = nil
+            data.lastModified = Date()
+            self.historicalService.updateReflectData(for: self.selectedDate, data: data)
+            return
+        }
+
+        // Validate non-empty journal text
+        switch InputValidator.validateJournalEntry(trimmed) {
+        case let .success(sanitized):
+            var data = self.currentOrNewReflectData()
+            data.journalText = sanitized
+            data.lastModified = Date()
+            self.historicalService.updateReflectData(for: self.selectedDate, data: data)
+        case let .failure(error):
+            self.lastValidationError = error
+            self.showValidationErrorAlert = true
+        }
     }
 
     /// Updates the feeling emoji in Reflect and persists.

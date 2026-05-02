@@ -33,11 +33,28 @@ extension MainViewModel {
     /// Updates sleep notes in Highlight and persists.
     func updateHighlightSleepNotes(_ notes: String) {
         guard self.isViewingToday else { return }
-        let clamped = Self.clampText(notes)
-        var data = self.currentOrNewHighlightData()
-        data.sleepNotes = clamped.isEmpty ? nil : clamped
-        data.lastModified = Date()
-        self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
+        let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Allow empty for optional field
+        if trimmed.isEmpty {
+            var data = self.currentOrNewHighlightData()
+            data.sleepNotes = nil
+            data.lastModified = Date()
+            self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
+            return
+        }
+
+        // Validate non-empty notes
+        switch InputValidator.validateSleepNotes(trimmed) {
+        case let .success(sanitized):
+            var data = self.currentOrNewHighlightData()
+            data.sleepNotes = sanitized
+            data.lastModified = Date()
+            self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
+        case let .failure(error):
+            self.lastValidationError = error
+            self.showValidationErrorAlert = true
+        }
     }
 
     /// Updates the full to-do list in Highlight and persists.
@@ -52,16 +69,25 @@ extension MainViewModel {
     /// Adds a new to-do item and persists.
     func addHighlightTodo(_ text: String) {
         guard self.isViewingToday else { return }
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        var data = self.currentOrNewHighlightData()
-        let entry = MindCheckEntry(
-            category: .todo,
-            text: text.trimmingCharacters(in: .whitespacesAndNewlines),
-            context: .morning
-        )
-        data.todos.append(entry)
-        data.lastModified = Date()
-        self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        // Validate todo item
+        switch InputValidator.validateTodoItem(trimmed) {
+        case let .success(sanitized):
+            var data = self.currentOrNewHighlightData()
+            let entry = MindCheckEntry(
+                category: .todo,
+                text: sanitized,
+                context: .morning
+            )
+            data.todos.append(entry)
+            data.lastModified = Date()
+            self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
+        case let .failure(error):
+            self.lastValidationError = error
+            self.showValidationErrorAlert = true
+        }
     }
 
     /// Removes a to-do item by ID and persists.
@@ -76,11 +102,28 @@ extension MainViewModel {
     /// Updates morning thoughts free-form text and persists.
     func updateHighlightMorningThoughts(_ thoughts: String) {
         guard self.isViewingToday else { return }
-        let clamped = Self.clampText(thoughts)
-        var data = self.currentOrNewHighlightData()
-        data.morningThoughts = clamped.isEmpty ? nil : clamped
-        data.lastModified = Date()
-        self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
+        let trimmed = thoughts.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Allow empty for optional field
+        if trimmed.isEmpty {
+            var data = self.currentOrNewHighlightData()
+            data.morningThoughts = nil
+            data.lastModified = Date()
+            self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
+            return
+        }
+
+        // Validate non-empty thoughts
+        switch InputValidator.validateMorningThoughts(trimmed) {
+        case let .success(sanitized):
+            var data = self.currentOrNewHighlightData()
+            data.morningThoughts = sanitized
+            data.lastModified = Date()
+            self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
+        case let .failure(error):
+            self.lastValidationError = error
+            self.showValidationErrorAlert = true
+        }
     }
 
     // MARK: - Private Helpers
