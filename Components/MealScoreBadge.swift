@@ -1,7 +1,11 @@
 import SwiftUI
 
 /// A tappable badge displaying a meal's health score as a percentage.
-/// Replaces the sparkle indicator with actionable score information.
+/// Features:
+/// - Score-based coloring for visual feedback (excellent/good/moderate/low)
+/// - Visible border for clarity and tappability affordance
+/// - Subtle press animation to indicate interactivity
+/// - Icon hint (→) to signal tappable action
 struct MealScoreBadge: View {
     // MARK: - Properties
 
@@ -10,6 +14,10 @@ struct MealScoreBadge: View {
 
     /// Callback when badge is tapped (shows score breakdown sheet)
     let onTap: () -> Void
+
+    // MARK: - Local State
+
+    @State private var isPressed: Bool = false
 
     // MARK: - Computed Properties
 
@@ -25,24 +33,58 @@ struct MealScoreBadge: View {
         return "\(Int(score * 100))%"
     }
 
+    /// Badge color based on score value
+    /// - Excellent (>0.75): Green
+    /// - Good (0.55-0.75): Teal
+    /// - Moderate (0.35-0.55): Orange
+    /// - Low (<0.35): Red
+    var badgeColor: Color {
+        guard let score else { return .secondary }
+        if score > 0.75 {
+            return .green
+        } else if score >= 0.55 {
+            return .teal
+        } else if score >= 0.35 {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+
     // MARK: - Body
 
     var body: some View {
         if self.shouldDisplay {
             Button(action: self.onTap) {
-                Text(self.formattedScore)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(AppTheme.ScoreBadge.textColor)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(AppTheme.ScoreBadge.background)
-                    )
+                HStack(spacing: 3) {
+                    Text(self.formattedScore)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(self.badgeColor.opacity(0.85))
+                )
+                .overlay(
+                    Capsule()
+                        .strokeBorder(self.badgeColor, lineWidth: 1.2)
+                )
             }
             .buttonStyle(.plain)
+            .scaleEffect(self.isPressed ? 0.92 : 1.0)
+            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: self.isPressed)
+            .onLongPressGesture(minimumDuration: 0.01) { pressing in
+                self.isPressed = pressing
+            } onPressingChanged: { pressing in
+                self.isPressed = pressing
+            }
             .accessibilityLabel("Health score: \(self.formattedScore)")
-            .accessibilityHint("Tap to see score breakdown")
+            .accessibilityHint("Tap to see detailed score breakdown and nutrition analysis")
         }
     }
 }
