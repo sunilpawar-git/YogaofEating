@@ -77,11 +77,27 @@ final class FastingBadgeViewTests: XCTestCase {
     }
 
     func test_fastingPeriod_formattedDuration_belowThirtyMinutes_omitsMinutes() {
-        // Given: 6h 15m
+        // Given: 6h 15m (multi-hour, < 30 min remainder)
         let period = self.makePeriod(hours: 6.25)
 
-        // Then: 15 < 30, omit minutes — shows "6h"
+        // Then: 15 < 30 and hours > 0, omit minutes — shows "6h"
         XCTAssertEqual(period.formattedDuration, "6h")
+    }
+
+    func test_fastingPeriod_formattedDuration_subHour_showsMinutesOnly() {
+        // Given: 32 minutes (sub-hour gap, e.g. consecutive evening snacks)
+        let period = self.makePeriod(hours: 32.0 / 60.0)
+
+        // Then: hours == 0, show minutes only — "32m"
+        XCTAssertEqual(period.formattedDuration, "32m")
+    }
+
+    func test_fastingPeriod_formattedDuration_subHour_21min() {
+        // Given: 21 minutes
+        let period = self.makePeriod(hours: 21.0 / 60.0)
+
+        // Then: "21m"
+        XCTAssertEqual(period.formattedDuration, "21m")
     }
 
     // MARK: - glowIntensity
