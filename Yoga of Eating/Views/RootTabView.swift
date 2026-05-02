@@ -25,27 +25,35 @@ struct RootTabView: View {
             )
 
             TabView(selection: self.$selectedTab) {
-                Tab("Highlight", systemImage: "star.fill", value: 0) {
-                    HighlightView(
-                        data: self.viewModel.highlightViewData,
-                        onSleepQualityChanged: { self.viewModel.updateHighlightSleepQuality($0) },
-                        onSleepNotesChanged: { self.viewModel.updateHighlightSleepNotes($0) },
-                        onAddTodo: { self.viewModel.addHighlightTodo($0) },
-                        onRemoveTodo: { self.viewModel.removeHighlightTodo($0) },
-                        onMorningThoughtsChanged: { self.viewModel.updateHighlightMorningThoughts($0) }
-                    )
+                HighlightView(
+                    data: self.viewModel.highlightViewData,
+                    onSleepQualityChanged: { self.viewModel.updateHighlightSleepQuality($0) },
+                    onSleepNotesChanged: { self.viewModel.updateHighlightSleepNotes($0) },
+                    onAddTodo: { self.viewModel.addHighlightTodo($0) },
+                    onRemoveTodo: { self.viewModel.removeHighlightTodo($0) },
+                    onMorningThoughtsChanged: { self.viewModel.updateHighlightMorningThoughts($0) }
+                )
+                .tabItem {
+                    Label("Highlight", systemImage: "star.fill")
                 }
-                Tab("Energise", systemImage: "flame.fill", value: 1) {
-                    MainScreenView()
+                .tag(0)
+
+                MainScreenView()
+                    .tabItem {
+                        Label("Energise", systemImage: "flame.fill")
+                    }
+                    .tag(1)
+
+                ReflectView(
+                    data: self.viewModel.reflectViewData,
+                    onJournalTextChanged: { self.viewModel.updateReflectJournalText($0) },
+                    onFeelingChanged: { self.viewModel.updateReflectFeeling($0) },
+                    onTodoToggled: { self.viewModel.toggleTodoAccomplished($0) }
+                )
+                .tabItem {
+                    Label("Reflect", systemImage: "moon.stars.fill")
                 }
-                Tab("Reflect", systemImage: "moon.stars.fill", value: 2) {
-                    ReflectView(
-                        data: self.viewModel.reflectViewData,
-                        onJournalTextChanged: { self.viewModel.updateReflectJournalText($0) },
-                        onFeelingChanged: { self.viewModel.updateReflectFeeling($0) },
-                        onTodoToggled: { self.viewModel.toggleTodoAccomplished($0) }
-                    )
-                }
+                .tag(2)
             }
         }
         .onAppear {
