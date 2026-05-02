@@ -12,15 +12,15 @@ enum ValidationLimits {
 
     /// Maximum characters for journal entries (evening reflection).
     /// Used by: ReflectSections, InputValidator, MainViewModel
-    static let journalEntry = 2000
+    static let journalEntry = 1000
 
     /// Maximum characters for sleep notes (optional field).
     /// Used by: HighlightSections, InputValidator, MainViewModel
-    static let sleepNotes = 300
+    static let sleepNotes = 1000
 
     /// Maximum characters for morning thoughts (optional field).
     /// Used by: HighlightSections, InputValidator, MainViewModel
-    static let morningThoughts = 500
+    static let morningThoughts = 1000
 
     /// Maximum characters for to-do items.
     /// Used by: HighlightSections, InputValidator, MainViewModel
@@ -28,14 +28,10 @@ enum ValidationLimits {
 
     // MARK: - Universal Limit (Fallback)
 
-    /// Universal character limit used as fallback for any text entry.
-    /// This is the largest of all field-specific limits.
-    /// Used by: AppTheme.TextEntry.maxCharacters
-    static let universal = max(
-        mealDescription,
-        journalEntry,
-        sleepNotes,
-        morningThoughts,
-        todoItem
-    )
+    /// Universal character limit used as the app-wide UI truncation ceiling.
+    /// All free-text fields are clamped to this value at the ViewModel boundary
+    /// (AppTheme.TextEntry.maxCharacters) before field-specific validation runs.
+    /// Individual field limits (sleepNotes, morningThoughts, etc.) may be lower
+    /// and are enforced by InputValidator after clamping.
+    static let universal = 1000
 }

@@ -190,7 +190,7 @@ class SettingsViewModel: ObservableObject {
                 }
 
                 if let hkGender = try HealthKitService.shared.fetchGender() {
-                    self.gender = hkGender
+                    self.applyHealthKitGender(hkGender)
                 }
 
                 settingsLogger.info("HealthKit sync successful")
@@ -199,6 +199,17 @@ class SettingsViewModel: ObservableObject {
                 self.isHealthSyncEnabled = false
             }
         }
+    }
+
+    /// Applies a HealthKit gender rawValue to the `gender` property.
+    ///
+    /// HKBiologicalSex rawValues: notSet=0, female=1, male=2, other=3.
+    /// Values outside 0–3 have no matching Picker `.tag()` and emit a
+    /// "variant selector cell index number could not be found" warning on every
+    /// render. Clamping prevents that spam if HealthKit ever returns a future
+    /// enum case.
+    func applyHealthKitGender(_ rawValue: Int) {
+        self.gender = min(max(rawValue, 0), 3)
     }
 
     // MARK: - Cloud Sync

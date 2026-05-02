@@ -15,7 +15,7 @@ extension MainViewModel {
     /// Updates the journal text in Reflect and persists.
     func updateReflectJournalText(_ text: String) {
         guard self.isViewingToday else { return }
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = Self.clampText(text).trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Allow empty for optional field
         if trimmed.isEmpty {
