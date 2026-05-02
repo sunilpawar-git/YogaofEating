@@ -91,28 +91,40 @@
 
         // MARK: - Length Limit Tests
 
-        func test_sleepNotes_exceedingMaxLength_isRejected() {
-            let tooLong = String(repeating: "x", count: 301) // 300 is max
+        func test_sleepNotes_exceedingMaxLength_isTruncated() {
+            // ViewModel clamps text to AppTheme.TextEntry.maxCharacters (1000) before validation
+            let tooLong = String(repeating: "x", count: ValidationLimits.sleepNotes + 50)
             self.viewModel.updateHighlightSleepNotes(tooLong)
 
-            XCTAssertTrue(self.viewModel.showValidationErrorAlert)
-            XCTAssertNotNil(self.viewModel.lastValidationError)
+            XCTAssertFalse(
+                self.viewModel.showValidationErrorAlert,
+                "Over-limit sleep notes must be silently truncated, not rejected"
+            )
+            let saved = self.viewModel.currentHighlightData?.sleepNotes
+            XCTAssertNotNil(saved)
+            XCTAssertLessThanOrEqual(saved!.count, AppTheme.TextEntry.maxCharacters)
         }
 
         func test_morningThoughts_atMaxLength_isPersisted() {
-            let maxLength = String(repeating: "x", count: 500) // 500 is max
+            let maxLength = String(repeating: "x", count: AppTheme.TextEntry.maxCharacters) // 1000 is max
             self.viewModel.updateHighlightMorningThoughts(maxLength)
 
             XCTAssertEqual(self.viewModel.currentHighlightData?.morningThoughts, maxLength)
             XCTAssertFalse(self.viewModel.showValidationErrorAlert)
         }
 
-        func test_journalEntry_exceedingMaxLength_isRejected() {
-            let tooLong = String(repeating: "y", count: 2001) // 2000 is max
+        func test_journalEntry_exceedingMaxLength_isTruncated() {
+            // ViewModel clamps text to AppTheme.TextEntry.maxCharacters (1000) before validation
+            let tooLong = String(repeating: "y", count: ValidationLimits.journalEntry + 50)
             self.viewModel.updateReflectJournalText(tooLong)
 
-            XCTAssertTrue(self.viewModel.showValidationErrorAlert)
-            XCTAssertNotNil(self.viewModel.lastValidationError)
+            XCTAssertFalse(
+                self.viewModel.showValidationErrorAlert,
+                "Over-limit journal text must be silently truncated, not rejected"
+            )
+            let saved = self.viewModel.currentReflectData?.journalText
+            XCTAssertNotNil(saved)
+            XCTAssertLessThanOrEqual(saved!.count, AppTheme.TextEntry.maxCharacters)
         }
 
         func test_todoItem_exceedingMaxLength_isRejected() {

@@ -33,7 +33,7 @@ extension MainViewModel {
     /// Updates sleep notes in Highlight and persists.
     func updateHighlightSleepNotes(_ notes: String) {
         guard self.isViewingToday else { return }
-        let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = Self.clampText(notes).trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Allow empty for optional field
         if trimmed.isEmpty {
@@ -102,7 +102,7 @@ extension MainViewModel {
     /// Updates morning thoughts free-form text and persists.
     func updateHighlightMorningThoughts(_ thoughts: String) {
         guard self.isViewingToday else { return }
-        let trimmed = thoughts.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = Self.clampText(thoughts).trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Allow empty for optional field
         if trimmed.isEmpty {

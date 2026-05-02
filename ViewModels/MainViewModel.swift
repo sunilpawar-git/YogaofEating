@@ -275,9 +275,11 @@ class MainViewModel: ObservableObject {
         // Immediately update smiley state with current meal scores
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
-        // Trigger AI analysis for new items
-        Task {
+        // Trigger AI analysis for new items — cancel any stale in-flight task first
+        self.aiTasks[mealId]?.cancel()
+        self.aiTasks[mealId] = Task {
             await self.performDeepAnalysis(for: mealId, items: items)
+            self.aiTasks[mealId] = nil
         }
     }
 
@@ -377,9 +379,11 @@ class MainViewModel: ObservableObject {
             // Immediately update smiley state with current meal scores
             self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
 
-            // Trigger AI analysis for new items
-            Task {
+            // Trigger AI analysis for new items — cancel any stale in-flight task first
+            self.aiTasks[mealId]?.cancel()
+            self.aiTasks[mealId] = Task {
                 await self.performDeepAnalysis(for: mealId, items: items)
+                self.aiTasks[mealId] = nil
             }
         } else if mealTypeChanged {
             // Only meal type changed, just save
@@ -388,8 +392,10 @@ class MainViewModel: ObservableObject {
             // Content was already updated locally, but AI analysis hasn't run yet
             // This happens when local updates occurred during typing, then user triggers "done"
             vmLogger.debug("Triggering AI analysis for meal updated locally")
-            Task {
+            self.aiTasks[mealId]?.cancel()
+            self.aiTasks[mealId] = Task {
                 await self.triggerAIAnalysisForMeal(mealId)
+                self.aiTasks[mealId] = nil
             }
         }
     }
