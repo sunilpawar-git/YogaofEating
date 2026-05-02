@@ -57,7 +57,7 @@ extension JournalBlockView {
 
     var mealTextField: some View {
         TextField(Strings.Journal.placeholder, text: self.limitedTextBinding, axis: .vertical)
-            .font(.system(size: 17, weight: .regular, design: .serif))
+            .font(FontTheme.mealEntry)
             .foregroundColor(.primary)
             .tint(.blue)
             .textFieldStyle(.plain)

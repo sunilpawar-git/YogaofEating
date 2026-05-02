@@ -79,7 +79,7 @@ struct MealCardBackground: View {
 struct BreathingContentView: View {
     var body: some View {
         Text(Strings.Components.breathe)
-            .font(.system(.subheadline, design: .serif))
+            .font(.system(.subheadline, design: .rounded))
             .italic()
             .foregroundColor(.secondary)
     }

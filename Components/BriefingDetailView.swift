@@ -44,7 +44,7 @@ struct BriefingDetailView: View {
             }
 
             Text(self.briefing.headline)
-                .font(.system(.title3, design: .serif))
+                .font(.system(.title3, design: .rounded))
                 .fontWeight(.semibold)
         }
         .padding(.vertical, 8)

@@ -81,6 +81,7 @@ struct ReflectJournalSection: View {
                 .padding(.horizontal)
 
             TextEditor(text: self.$text)
+                .font(FontTheme.textEntry)
                 .frame(minHeight: 150)
                 .scrollContentBackground(.hidden)
                 .focused(self.isJournalFocused)

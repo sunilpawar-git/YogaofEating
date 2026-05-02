@@ -256,7 +256,7 @@ struct DayTimelineView: View {
                 mealCount: self.meals.count, isToday: self.isToday
             ) {
                 Text(QuoteService.getDailyQuote().text)
-                    .font(.system(size: 11, design: .serif))
+                    .font(.system(size: 11, design: .rounded))
                     .italic()
                     .foregroundColor(.secondary.opacity(0.6))
                     .multilineTextAlignment(.center)

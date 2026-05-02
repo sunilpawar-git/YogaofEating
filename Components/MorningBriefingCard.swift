@@ -33,7 +33,7 @@ struct MorningBriefingCard: View {
                 }
 
                 Text(self.headline)
-                    .font(.system(.subheadline, design: .serif))
+                    .font(.system(.subheadline, design: .rounded))
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
                     .lineLimit(2)

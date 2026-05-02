@@ -210,7 +210,7 @@ struct ScoreBreakdownSheet: View {
             }
 
             Text(self.viewModel.mealDescription)
-                .font(.system(size: 16, weight: .regular, design: .serif))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
         }
