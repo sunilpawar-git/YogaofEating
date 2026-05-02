@@ -91,7 +91,10 @@ extension MainViewModel {
 
     /// Triggers briefing generation for today.
     /// Called after sleep quality is saved (the morning data trigger).
+    /// Guarded to prevent concurrent Firebase calls when triggered multiple times.
     func triggerBriefingGeneration() {
+        guard !self.isBriefingGenerationInProgress else { return }
+
         let date = Date()
 
         if let existing = self.currentBriefing,
@@ -108,7 +111,10 @@ extension MainViewModel {
             return
         }
 
+        self.isBriefingGenerationInProgress = true
         Task {
+            defer { self.isBriefingGenerationInProgress = false }
+
             let healthKitSleepData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
             if let briefing = await self.insightService.generateBriefing(
                 for: date,
