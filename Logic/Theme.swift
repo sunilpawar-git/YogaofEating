@@ -159,20 +159,20 @@ enum AppTheme {
         /// Border width for score badge visibility
         static let borderWidth: CGFloat = 1.2
 
-        /// Score-based color mapping:
-        /// - Excellent (>0.75): Green
-        /// - Good (0.55-0.75): Teal
-        /// - Moderate (0.35-0.55): Orange
-        /// - Low (<0.35): Red
+        /// Score-based color mapping (muted, minimalist palette):
+        /// - Excellent (>0.75): Muted sage green
+        /// - Good (0.55-0.75): Muted slate blue
+        /// - Moderate (0.35-0.55): Muted warm grey
+        /// - Low (<0.35): Muted stone grey
         static func colorForScore(_ score: Double) -> Color {
             if score > 0.75 {
-                .green
+                Color(red: 0.5, green: 0.65, blue: 0.55)  // Sage green
             } else if score >= 0.55 {
-                .teal
+                Color(red: 0.5, green: 0.6, blue: 0.7)    // Slate blue
             } else if score >= 0.35 {
-                .orange
+                Color(red: 0.65, green: 0.6, blue: 0.55)  // Warm grey
             } else {
-                .red
+                Color(red: 0.55, green: 0.55, blue: 0.55) // Stone grey
             }
         }
     }
