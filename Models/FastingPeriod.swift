@@ -20,7 +20,7 @@ struct FastingPeriod: Identifiable, Equatable {
         self.duration / AppTheme.Fasting.secondsPerHour
     }
 
-    /// Formatted duration string for display (e.g., "14h", "16h 30m").
+    /// Formatted duration string for display (e.g., "45m", "1h", "16h 30m").
     /// Returns "0m" for invalid/zero-length periods.
     var formattedDuration: String {
         guard self.duration > 0 else { return "0m" }
@@ -29,8 +29,10 @@ struct FastingPeriod: Identifiable, Equatable {
             self.duration.truncatingRemainder(dividingBy: AppTheme.Fasting.secondsPerHour)
                 / AppTheme.Fasting.secondsPerMinute
         )
-        // Only show minutes if >= 30 minutes
-        if minutes >= 30 {
+        if hours == 0 {
+            // Sub-hour gaps: show minutes only (e.g. "32m", "45m")
+            return "\(minutes)m"
+        } else if minutes >= 30 {
             return "\(hours)h \(minutes)m"
         } else {
             return "\(hours)h"

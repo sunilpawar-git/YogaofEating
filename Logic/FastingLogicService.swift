@@ -8,8 +8,8 @@ enum FastingLogicService {
     /// Scale factor: points per 10 minutes of fasting
     static let spacingScaleFactor: CGFloat = 0.5
 
-    /// Minimum fasting hours to show badge
-    static let minimumBadgeHours: Double = 1.0
+    /// Minimum fasting minutes to show badge (any gap of 5+ minutes shows a duration label)
+    static let minimumBadgeMinutes: Double = 5.0
 
     /// Calculates fasting periods between consecutive meals.
     /// Meals are sorted by timestamp before calculation.
@@ -59,6 +59,6 @@ enum FastingLogicService {
     /// - Parameter period: The fasting period to check
     /// - Returns: True if badge should be displayed
     static func shouldShowBadge(for period: FastingPeriod) -> Bool {
-        period.durationInHours >= self.minimumBadgeHours
+        (period.duration / 60.0) >= self.minimumBadgeMinutes
     }
 }
