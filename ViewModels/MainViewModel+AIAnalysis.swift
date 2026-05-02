@@ -63,6 +63,9 @@ extension MainViewModel {
 
             do {
                 aiLogger.debug("AI analysis started for meal (item count: \(items.count, privacy: .public))")
+                // Check cancellation before making the network request —
+                // a cancelled task must not fire a duplicate Firebase call.
+                try Task.checkCancellation()
                 let result = try await aiService.analyzeMealQuality(description: validatedDescription)
                 aiLogger
                     .debug(
