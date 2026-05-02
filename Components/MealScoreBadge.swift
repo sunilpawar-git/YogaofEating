@@ -41,11 +41,11 @@ struct MealScoreBadge: View {
     var badgeColor: Color {
         guard let score else { return .secondary }
         if score > 0.75 {
-            return Color(red: 0.5, green: 0.65, blue: 0.55)  // Sage green
+            return Color(red: 0.5, green: 0.65, blue: 0.55) // Sage green
         } else if score >= 0.55 {
-            return Color(red: 0.5, green: 0.6, blue: 0.7)    // Slate blue
+            return Color(red: 0.5, green: 0.6, blue: 0.7) // Slate blue
         } else if score >= 0.35 {
-            return Color(red: 0.65, green: 0.6, blue: 0.55)  // Warm grey
+            return Color(red: 0.65, green: 0.6, blue: 0.55) // Warm grey
         } else {
             return Color(red: 0.55, green: 0.55, blue: 0.55) // Stone grey
         }

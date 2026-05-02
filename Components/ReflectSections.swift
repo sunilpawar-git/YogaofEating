@@ -105,8 +105,9 @@ struct ReflectJournalSection: View {
                 }
                 .padding(.horizontal)
                 .onChange(of: self.text) { _, newValue in
-                    if newValue.count > AppTheme.TextEntry.maxCharacters {
-                        self.text = String(newValue.prefix(AppTheme.TextEntry.maxCharacters))
+                    // Enforce max length based on InputValidator constraints
+                    if newValue.count > InputValidator.journalEntryMaxLength {
+                        self.text = String(newValue.prefix(InputValidator.journalEntryMaxLength))
                         return
                     }
                     self.journalDebounce?.cancel()

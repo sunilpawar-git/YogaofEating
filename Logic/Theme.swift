@@ -166,11 +166,11 @@ enum AppTheme {
         /// - Low (<0.35): Muted stone grey
         static func colorForScore(_ score: Double) -> Color {
             if score > 0.75 {
-                Color(red: 0.5, green: 0.65, blue: 0.55)  // Sage green
+                Color(red: 0.5, green: 0.65, blue: 0.55) // Sage green
             } else if score >= 0.55 {
-                Color(red: 0.5, green: 0.6, blue: 0.7)    // Slate blue
+                Color(red: 0.5, green: 0.6, blue: 0.7) // Slate blue
             } else if score >= 0.35 {
-                Color(red: 0.65, green: 0.6, blue: 0.55)  // Warm grey
+                Color(red: 0.65, green: 0.6, blue: 0.55) // Warm grey
             } else {
                 Color(red: 0.55, green: 0.55, blue: 0.55) // Stone grey
             }
@@ -267,9 +267,10 @@ enum AppTheme {
     /// Single source of truth for free-text input limits and debounce behaviour.
     /// Apply these values to every TextEditor / TextField in the app that auto-saves.
     enum TextEntry {
-        /// Maximum number of characters allowed in any free-text field (sleep notes,
-        /// morning thoughts, evening journal, meal items).
-        static let maxCharacters: Int = 1000
+        /// Maximum number of characters allowed in any free-text field.
+        /// References ValidationLimits.universal (the largest field-specific limit).
+        /// This ensures consistency across all text input fields in the app.
+        static let maxCharacters: Int = ValidationLimits.universal
 
         /// Debounce delay before a free-text change is persisted (nanoseconds).
         /// 500 ms balances keystroke responsiveness with reducing unnecessary writes.
