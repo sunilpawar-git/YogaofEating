@@ -179,8 +179,17 @@ extension MainViewModel {
                 self.smileyState = .neutral
             }
         } else {
-            let avgScore = self.meals.map(\.healthScore).reduce(0.0, +) / Double(self.meals.count)
-            self.updateSmileyState(with: avgScore)
+            // Use the same AI-analyzed-only path as reanalyzeAllMealsForSmileyState
+            // to keep smiley state consistent on days with mixed analyzed/unanalyzed meals.
+            let analyzedMeals = self.meals.filter(\.isAIAnalyzed)
+            if analyzedMeals.isEmpty {
+                withAnimation(.spring()) {
+                    self.smileyState = .neutral
+                }
+            } else {
+                let avgScore = analyzedMeals.map(\.healthScore).reduce(0.0, +) / Double(analyzedMeals.count)
+                self.updateSmileyState(with: avgScore)
+            }
         }
         self.saveData()
     }

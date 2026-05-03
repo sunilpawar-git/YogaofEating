@@ -44,6 +44,7 @@ extension MainViewModel {
 
     /// Triggers insight generation if conditions are met.
     /// Conditions: No insight exists for today AND sleep quality is logged AND historical data exists.
+    /// Cancels any in-flight insight task before starting a new one to prevent duplicate generation.
     func triggerInsightGenerationIfNeeded(for date: Date) {
         if let existingInsight = self.currentInsight,
            Calendar.current.isDate(existingInsight.date, inSameDayAs: date)
@@ -51,9 +52,12 @@ extension MainViewModel {
             return
         }
 
-        Task {
+        self.insightTask?.cancel()
+        self.insightTask = Task {
             do {
                 let healthKitSleepData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
+
+                guard !Task.isCancelled else { return }
 
                 if let insight = try await self.insightService.generateInsight(
                     for: date,

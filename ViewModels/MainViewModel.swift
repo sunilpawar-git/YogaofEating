@@ -77,6 +77,14 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Cancelled when the selected date changes during generation.
     var briefingTask: Task<Void, Never>?
 
+    /// Tracked task for the in-flight insight generation request.
+    /// Cancelled and replaced if triggered again before the previous completes.
+    var insightTask: Task<Void, Never>?
+
+    /// Tracked task for the Highlight tab's one-shot HealthKit sleep fetch.
+    /// Stored so it is cancelled on deinit (no duplicate fetch on tab re-open).
+    var sleepHighlightTask: Task<Void, Never>?
+
     // MARK: - Day Navigation (Phase 4)
 
     /// The currently selected date for viewing. Defaults to today.
@@ -165,6 +173,8 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         self.resetMonitorTask?.cancel()
         self.sleepBadgeTask?.cancel()
         self.briefingTask?.cancel()
+        self.insightTask?.cancel()
+        self.sleepHighlightTask?.cancel()
     }
 
     /// Loads persisted data or starts fresh

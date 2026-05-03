@@ -1,4 +1,3 @@
-import HealthKit
 import StoreKit
 import SwiftUI
 #if canImport(UIKit)
@@ -8,7 +7,6 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var mainViewModel: MainViewModel
-    @EnvironmentObject private var authService: AuthService
     @StateObject private var viewModel: SettingsViewModel
     @State private var showingClearConfirmation = false
 
@@ -68,7 +66,7 @@ struct SettingsView: View {
 
     private var userDataSection: some View {
         Section("User Data") {
-            if let user = self.authService.currentUser {
+            if let user = self.viewModel.currentUser {
                 self.signedInUserView(user: user)
                 self.syncButton
             } else {
@@ -89,7 +87,7 @@ struct SettingsView: View {
             }
             Spacer()
             Button("Sign Out") {
-                self.authService.signOut()
+                self.viewModel.signOut()
             }
             .foregroundColor(.red)
         }

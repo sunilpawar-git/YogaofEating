@@ -127,7 +127,7 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         // Calculate average health score
         let averageScore: Double
         if meals.isEmpty {
-            averageScore = 0.5 // Default for empty days
+            averageScore = ScoringThresholds.neutral
         } else {
             let totalScore = meals.map(\.healthScore).reduce(0, +)
             averageScore = totalScore / Double(meals.count)

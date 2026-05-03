@@ -114,17 +114,32 @@ final class CombineDebounceTests: XCTestCase {
         XCTAssertNil(weakVM, "ViewModel must be deallocated; Combine subscription must not create a retain cycle")
     }
 
-    // MARK: - enqueueMealEdit method exists on MainViewModel
+    // MARK: - Debounce window: no update before window expires
 
-    /// Verifies the public API surface required by Phase 5 is present.
-    func test_mainViewModel_hasEnqueueMealEditMethod() {
+    /// Verifies that calling `enqueueMealEdit` does NOT immediately update `$meals` —
+    /// the update must be deferred until after the debounce window.
+    func test_enqueueMealEdit_doesNotUpdateMealsImmediately() async throws {
         let vm = self.makeVM()
         let meal = MealBuilder().build()
         vm.meals = [meal]
 
-        // Should compile and not crash — verifies API surface
-        vm.enqueueMealEdit(mealId: meal.id, items: ["test"])
-        XCTAssertTrue(true, "enqueueMealEdit must exist on MainViewModel")
+        let newItems = ["broccoli"]
+        vm.enqueueMealEdit(mealId: meal.id, items: newItems)
+
+        // Immediately after enqueue — before the 500 ms debounce window — items must be unchanged
+        XCTAssertNotEqual(
+            vm.meals.first?.items,
+            newItems,
+            "Items must NOT update synchronously before the debounce window elapses"
+        )
+
+        // After the debounce window, the update should arrive
+        try await Task.sleep(nanoseconds: 650_000_000)
+        XCTAssertEqual(
+            vm.meals.first?.items,
+            newItems,
+            "Items must update after the debounce window elapses"
+        )
     }
 }
 

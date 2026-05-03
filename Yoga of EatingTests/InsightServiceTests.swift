@@ -54,6 +54,14 @@ final class InsightServiceTests: XCTestCase {
             engineOutput.count,
             "PatternAnalysisEngine must produce the same number of correlation cards as the original PatternAnalyzer"
         )
+
+        let analyzerCategories = analyzerOutput.map(\.category).sorted { $0.rawValue < $1.rawValue }
+        let engineCategories = engineOutput.map(\.category).sorted { $0.rawValue < $1.rawValue }
+        XCTAssertEqual(
+            analyzerCategories,
+            engineCategories,
+            "PatternAnalysisEngine must produce identical card categories as the original PatternAnalyzer"
+        )
     }
 
     func test_patternAnalysisEngine_matchesPatternAnalyzerPatterns() {
@@ -68,7 +76,15 @@ final class InsightServiceTests: XCTestCase {
         XCTAssertEqual(
             analyzerPatterns.count,
             enginePatterns.count,
-            "PatternAnalysisEngine.analyzePatterns must match the original PatternAnalyzer output"
+            "PatternAnalysisEngine.analyzePatterns must match the original PatternAnalyzer output count"
+        )
+
+        let analyzerTypes = analyzerPatterns.map(\.patternType).sorted { $0.rawValue < $1.rawValue }
+        let engineTypes = enginePatterns.map(\.patternType).sorted { $0.rawValue < $1.rawValue }
+        XCTAssertEqual(
+            analyzerTypes,
+            engineTypes,
+            "PatternAnalysisEngine.analyzePatterns must produce identical pattern types as the original PatternAnalyzer"
         )
     }
 

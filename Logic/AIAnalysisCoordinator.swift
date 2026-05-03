@@ -55,8 +55,7 @@ final class AIAnalysisCoordinator: AIAnalysisCoordinating {
     /// Prevents concurrent duplicate analysis calls for the same meal within a single task.
     private var analysisInProgress: Set<UUID> = []
 
-    /// Minimum character count required before triggering AI analysis.
-    private static let minimumContentLength: Int = 5
+    // minimumContentLength sourced from ScoringThresholds.minimumMealDescriptionLength (SSOT)
 
     // MARK: - AIAnalysisCoordinating
 
@@ -121,7 +120,7 @@ final class AIAnalysisCoordinator: AIAnalysisCoordinating {
         let description = items.joined(separator: ", ")
 
         // Guard: description must meet minimum length
-        guard description.count >= Self.minimumContentLength else { return }
+        guard description.count >= ScoringThresholds.minimumMealDescriptionLength else { return }
 
         // Guard: validate input before sending to Firebase
         switch InputValidator.validateMealDescription(description) {
@@ -144,10 +143,14 @@ final class AIAnalysisCoordinator: AIAnalysisCoordinating {
                 guard await MainActor.run(body: { context.shouldProceed(mealId) }) else { return }
 
                 let result = try await context.logicService.analyzeMealQuality(description: sanitized)
+                #if DEBUG
                 coordinatorLogger
                     .debug(
                         "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
                     )
+                #else
+                coordinatorLogger.debug("AI analysis complete for meal \(mealId, privacy: .public)")
+                #endif
 
                 // Deliver result on MainActor via write-back closure
                 await MainActor.run {

@@ -103,23 +103,23 @@ class SettingsViewModel: ObservableObject {
     /// Surfaces errors from `signInWithGoogle()` to the UI without exposing internal details.
     @Published var authError: String?
 
-    // MARK: - Private Properties
+    // MARK: - Internal Properties (accessible to SettingsViewModel+Sync.swift extension)
 
-    private let userDefaults: UserDefaults
-    private let historicalService: any HistoricalDataServiceProtocol
-    private let authService: any AuthServiceProtocol
-    private var syncTask: Task<Void, Never>?
-    private let networkMonitor: NWPathMonitor?
-    private var isNetworkAvailable = true
+    let userDefaults: UserDefaults
+    let historicalService: any HistoricalDataServiceProtocol
+    let authService: any AuthServiceProtocol
+    var syncTask: Task<Void, Never>?
+    let networkMonitor: NWPathMonitor?
+    var isNetworkAvailable = true
 
     // MARK: - Constants
 
     // Keys moved to StorageKeys.swift for centralization
 
-    private let syncSuccessDisplayDuration = TimingConstants.syncSuccessDisplayNanoseconds
-    private let syncErrorDisplayDuration = TimingConstants.syncErrorDisplayNanoseconds
-    private let syncMaxRetryAttempts = TimingConstants.syncMaxRetryAttempts
-    private let syncRetryDelay = TimingConstants.syncRetryDelayNanoseconds
+    let syncSuccessDisplayDuration = TimingConstants.syncSuccessDisplayNanoseconds
+    let syncErrorDisplayDuration = TimingConstants.syncErrorDisplayNanoseconds
+    let syncMaxRetryAttempts = TimingConstants.syncMaxRetryAttempts
+    let syncRetryDelay = TimingConstants.syncRetryDelayNanoseconds
 
     // MARK: - Sync Status Enum
 
@@ -177,189 +177,13 @@ class SettingsViewModel: ObservableObject {
         networkMonitor?.cancel()
     }
 
-    // MARK: - HealthKit Sync
-
-    func syncWithHealthKit() {
-        // Untracked fire-and-forget: triggered by toggle, single run, no cancellation needed.
-        Task {
-            do {
-                _ = try await HealthKitService.shared.requestAuthorization()
-
-                let weightUnit: HKUnit = self.unitSystem == 0 ? .gramUnit(with: .kilo) : .pound()
-                let heightUnit: HKUnit = self.unitSystem == 0 ? .meterUnit(with: .centi) : .inch()
-
-                if let hkWeight = try await HealthKitService.shared.fetchLatestWeight(unit: weightUnit) {
-                    self.weight = String(format: "%.1f", hkWeight)
-                }
-
-                if let hkHeight = try await HealthKitService.shared.fetchLatestHeight(unit: heightUnit) {
-                    self.height = String(format: "%.1f", hkHeight)
-                }
-
-                if let hkAge = try HealthKitService.shared.fetchAge() {
-                    self.age = String(hkAge)
-                }
-
-                if let hkGender = try HealthKitService.shared.fetchGender() {
-                    self.applyHealthKitGender(hkGender)
-                }
-
-                settingsLogger.info("HealthKit sync successful")
-            } catch {
-                settingsLogger.error("HealthKit sync failed: \(error.localizedDescription, privacy: .public)")
-                self.isHealthSyncEnabled = false
-            }
-        }
-    }
-
-    /// Applies a HealthKit gender rawValue to the `gender` property.
-    ///
-    /// HKBiologicalSex rawValues: notSet=0, female=1, male=2, other=3.
-    /// Values outside 0–3 have no matching Picker `.tag()` and emit a
-    /// "variant selector cell index number could not be found" warning on every
-    /// render. Clamping prevents that spam if HealthKit ever returns a future
-    /// enum case.
-    func applyHealthKitGender(_ rawValue: Int) {
-        self.gender = min(max(rawValue, 0), 3)
-    }
-
-    // MARK: - Auth
-
-    /// Signs in with Google via the injected auth service.
-    /// On failure, sets `authError` with a generic user-facing message.
-    /// On success, clears any prior `authError`.
-    /// Views must call this method rather than accessing `authService` directly (MVVM).
-    func signInWithGoogle() async {
-        do {
-            try await self.authService.signInWithGoogle()
-            self.authError = nil
-            settingsLogger.info("Google sign-in succeeded")
-        } catch {
-            settingsLogger.error("Google sign-in failed: \(error.localizedDescription, privacy: .public)")
-            self.authError = AppError.authProviderFailed(underlying: error).errorDescription
-        }
-    }
-
-    // MARK: - Cloud Sync
-
-    func performCloudSync() {
-        self.syncTask?.cancel()
-        self.syncTask = Task {
-            await self.performSyncWithRetry()
-        }
-    }
-
-    func cancelCloudSync() {
-        self.syncTask?.cancel()
-        if self.syncStatus == .syncing {
-            self.syncStatus = .idle
-        }
-    }
-
-    private func performSyncWithRetry(attempt: Int = 1) async {
-        guard self.isNetworkAvailable else {
-            await self.handleSyncError(AppError.syncUploadFailed(
-                underlying: NSError(
-                    domain: "NetworkError",
-                    code: -1009,
-                    userInfo: [NSLocalizedDescriptionKey: "No internet connection"]
-                )
-            ), shouldRetry: false)
-            return
-        }
-
-        self.syncStatus = .syncing
-
-        do {
-            try await self.historicalService.syncToFirebase()
-            if !Task.isCancelled {
-                await self.handleSyncSuccess()
-            }
-        } catch {
-            if !Task.isCancelled {
-                let shouldRetry = attempt < self.syncMaxRetryAttempts
-                await self.handleSyncError(error, shouldRetry: shouldRetry, attempt: attempt)
-            }
-        }
-    }
-
-    private func handleSyncSuccess() async {
-        self.syncStatus = .success
-
-        #if canImport(UIKit)
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-        #endif
-
-        // CancellationError from sleep is intentional (sync task cancelled) — status cleared by guard below
-        try? await Task.sleep(nanoseconds: self.syncSuccessDisplayDuration)
-
-        if !Task.isCancelled {
-            self.syncStatus = .idle
-        }
-    }
-
-    private func handleSyncError(_ error: Error, shouldRetry: Bool, attempt: Int = 1) async {
-        if shouldRetry {
-            self.syncStatus = .error("Sync failed. Retrying... (Attempt \(attempt)/\(self.syncMaxRetryAttempts))")
-            // CancellationError from sleep is intentional (retry cancelled on sync task cancel) — no-op
-            try? await Task.sleep(nanoseconds: self.syncRetryDelay)
-            if !Task.isCancelled {
-                await self.performSyncWithRetry(attempt: attempt + 1)
-            }
-        } else {
-            self
-                .syncStatus = .error(AppError.syncUploadFailed(underlying: error).errorDescription ?? error
-                    .localizedDescription)
-
-            #if canImport(UIKit)
-                UINotificationFeedbackGenerator().notificationOccurred(.error)
-            #endif
-
-            // CancellationError from sleep is intentional (sync task cancelled) — status cleared by guard below
-            try? await Task.sleep(nanoseconds: self.syncErrorDisplayDuration)
-
-            if !Task.isCancelled {
-                self.syncStatus = .idle
-            }
-        }
-    }
-
     // MARK: - Notification Handling
 
-    private func handleMorningNudgeChange(_ enabled: Bool) {
+    func handleMorningNudgeChange(_ enabled: Bool) {
         if enabled {
             NotificationManager.shared.scheduleMorningNudge()
         } else {
             NotificationManager.shared.cancelMorningNudge()
-        }
-    }
-
-    // MARK: - Sync Status Helpers
-
-    var syncStatusText: String {
-        switch self.syncStatus {
-        case .idle: "Sync with Cloud"
-        case .syncing: "Syncing..."
-        case .success: "Synced!"
-        case .error: "Sync Failed"
-        }
-    }
-
-    var syncAccessibilityLabel: String {
-        switch self.syncStatus {
-        case .idle: "Sync with Cloud button"
-        case .syncing: "Syncing data to cloud"
-        case .success: "Sync completed successfully"
-        case let .error(message): "Sync failed: \(message)"
-        }
-    }
-
-    var syncAccessibilityHint: String {
-        switch self.syncStatus {
-        case .idle: "Double tap to sync your data with cloud storage"
-        case .syncing: "Sync in progress, please wait"
-        case .success: "Sync completed"
-        case .error: "Double tap to retry sync"
         }
     }
 }
