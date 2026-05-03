@@ -127,7 +127,7 @@ enum AppTheme {
         static let medium = Color.black.opacity(0.1)
     }
 
-    // MARK: - Meal Card Theme (Score Badge UI)
+    // MARK: - Meal Card Theme
 
     enum MealCard {
         /// Subtle border color for meal cards (adapts to light/dark)
@@ -138,16 +138,43 @@ enum AppTheme {
 
         /// Card background with subtle tint
         static let background = Color(.secondarySystemBackground)
+
+        /// Width of the left-edge accent bar in points (Phase 3).
+        /// 3pt is visible for scanning but does not dominate the card.
+        static let accentBarWidth: CGFloat = 3.0
+
+        /// Corner radius of the left-edge accent bar (Phase 3).
+        static let accentBarCornerRadius: CGFloat = 2.0
     }
 
     // MARK: - Score Badge Theme
 
     enum ScoreBadge {
-        /// Background color for the score badge
+        /// Background color for the score badge (deprecated — now uses dynamic color)
         static let background = Color(.secondarySystemBackground)
 
-        /// Text color for the score badge
+        /// Text color for the score badge (deprecated — now uses white on colored background)
         static let textColor = Color.secondary
+
+        /// Border width for score badge visibility
+        static let borderWidth: CGFloat = 1.2
+
+        /// Score-based color mapping (muted, minimalist palette):
+        /// - Excellent (>0.75): Muted sage green
+        /// - Good (0.55-0.75): Muted slate blue
+        /// - Moderate (0.35-0.55): Muted warm grey
+        /// - Low (<0.35): Muted stone grey
+        static func colorForScore(_ score: Double) -> Color {
+            if score > 0.75 {
+                Color(red: 0.5, green: 0.65, blue: 0.55) // Sage green
+            } else if score >= 0.55 {
+                Color(red: 0.5, green: 0.6, blue: 0.7) // Slate blue
+            } else if score >= ScoringThresholds.unhealthy {
+                Color(red: 0.65, green: 0.6, blue: 0.55) // Warm grey
+            } else {
+                Color(red: 0.55, green: 0.55, blue: 0.55) // Stone grey
+            }
+        }
     }
 
     // MARK: - Score Category Colors
@@ -169,6 +196,10 @@ enum AppTheme {
     // MARK: - Animation
 
     enum Animation {
+        /// Standard easeInOut duration (0.3s) shared by navigation transitions, gesture
+        /// callbacks, and scroll animations. Use `easeInOut(duration: standardDuration)`.
+        static let standardDuration: Double = 0.3
+
         /// Standard spring animation
         static let standard = SwiftUI.Animation.spring(response: 0.3, dampingFraction: 0.7)
 
@@ -177,6 +208,73 @@ enum AppTheme {
 
         /// Slow animation for emphasis
         static let slow = SwiftUI.Animation.easeInOut(duration: 0.5)
+
+        /// Gentle breathing animation used for the smiley when no meals are logged.
+        /// Repeats indefinitely, autoreverses for a smooth in-out pulse.
+        static let breathingPulse = SwiftUI.Animation
+            .easeInOut(duration: 2.0)
+            .repeatForever(autoreverses: true)
+
+        /// Scale factor applied at peak of the breathing pulse.
+        /// 1.04 is perceptible but not distracting — a subtle ambient invitation.
+        static let breathingScale: CGFloat = 1.04
+    }
+
+    // MARK: - Background (Phase 5)
+
+    /// Constants for the ambient background glow behind the date header.
+    enum Background {
+        /// Opacity of the warm orange glow ellipse.
+        /// 0.08 is perceptible against white/cream — subtle but present.
+        static let glowOpacity: Double = 0.08
+
+        /// Blur radius for the glow ellipse. Tighter than the old 100pt.
+        static let glowBlurRadius: CGFloat = 60
+
+        /// Size of the glow ellipse in points (width and height).
+        static let glowSize: CGFloat = 200
+
+        /// Horizontal offset of the glow (negative = left).
+        static let glowOffsetX: CGFloat = -100
+
+        /// Vertical offset of the glow (negative = up, towards date header).
+        static let glowOffsetY: CGFloat = -150
+    }
+
+    // MARK: - Timeline (Phase 1)
+
+    /// Visual constants for the day timeline spine and fasting connectors.
+    enum Timeline {
+        /// Opacity of the vertical timeline spine line.
+        /// 0.18 ensures legibility on white/cream backgrounds while staying minimal.
+        static let spineOpacity: Double = 0.18
+
+        /// Width of the vertical timeline spine line in points.
+        static let spineWidth: CGFloat = 1.5
+
+        /// Fill opacity for the significant-fasting capsule background (green wash).
+        static let fastingSignificantFillOpacity: Double = 0.08
+
+        /// Text/stroke color for significant fasting badges (12h+).
+        static let fastingSignificantColor: Color = .green
+
+        /// Text/stroke color for default (non-significant) fasting badges.
+        static let fastingDefaultColor: Color = .secondary.opacity(0.8)
+    }
+
+    // MARK: - Text Entry
+
+    /// Single source of truth for free-text input limits and debounce behaviour.
+    /// Apply these values to every TextEditor / TextField in the app that auto-saves.
+    enum TextEntry {
+        /// Maximum number of characters allowed in any free-text field.
+        /// References ValidationLimits.universal (the largest field-specific limit).
+        /// This ensures consistency across all text input fields in the app.
+        static let maxCharacters: Int = ValidationLimits.universal
+
+        /// Debounce delay before a free-text change is persisted (nanoseconds).
+        /// Delegates to TimingConstants — single source of truth.
+        static let debounceNanoseconds: UInt64 = TimingConstants.debounceNanoseconds
     }
 }
 

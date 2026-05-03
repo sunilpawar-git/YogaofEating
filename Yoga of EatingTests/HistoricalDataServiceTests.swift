@@ -94,9 +94,9 @@
         func test_archiveCurrentDay_calculates_averageHealthScore() {
             // Arrange
             let meals = [
-                Meal(id: UUID(), timestamp: Date(), mealType: .breakfast, items: ["Item1"], healthScore: 0.8),
-                Meal(id: UUID(), timestamp: Date(), mealType: .lunch, items: ["Item2"], healthScore: 0.6),
-                Meal(id: UUID(), timestamp: Date(), mealType: .dinner, items: ["Item3"], healthScore: 0.7)
+                MealBuilder().withMealType(.breakfast).withItems(["Item1"]).withScore(0.8).build(),
+                MealBuilder().withMealType(.lunch).withItems(["Item2"]).withScore(0.6).build(),
+                MealBuilder().withMealType(.dinner).withItems(["Item3"]).withScore(0.7).build()
             ]
             let expectedAverage = (0.8 + 0.6 + 0.7) / 3.0
             let state = SmileyState.neutral

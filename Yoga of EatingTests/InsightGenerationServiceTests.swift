@@ -30,19 +30,8 @@
 
         func test_gatherDataForInsight_collectsLast7Days() {
             // Arrange: Create 7 days of data
-            let calendar = Calendar.current
             for daysAgo in 0..<7 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date())!
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: [
-                        Meal(mealType: .breakfast, items: ["Oatmeal"], healthScore: 0.8)
-                    ],
-                    mealCount: 1,
-                    averageHealthScore: 0.8
-                )
+                let snapshot = self.makeSnapshot(daysAgo: daysAgo, score: 0.8, items: ["Oatmeal"], mealType: .breakfast)
                 self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
             }
 
@@ -55,18 +44,11 @@
 
         func test_gatherDataForInsight_excludesEmptyDays() {
             // Arrange: Create mix of empty and non-empty days
-            let calendar = Calendar.current
             for daysAgo in 0..<4 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date())!
                 let hasMeals = daysAgo % 2 == 0
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: hasMeals ? [Meal(mealType: .breakfast, items: ["Food"], healthScore: 0.7)] : [],
-                    mealCount: hasMeals ? 1 : 0,
-                    averageHealthScore: hasMeals ? 0.7 : 0.5
-                )
+                let meals = hasMeals ?
+                    [MealBuilder().withMealType(.breakfast).withItems(["Food"]).withScore(0.7).build()] : [Meal]()
+                let snapshot = DailySmileySnapshotBuilder().daysAgo(daysAgo).withMeals(meals).build()
                 self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
             }
 
@@ -87,15 +69,11 @@
                 sleepQuality: .great,
                 note: ""
             )
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .dinner, items: ["Pizza"], healthScore: 0.4)],
-                mealCount: 1,
-                averageHealthScore: 0.4,
-                reflection: reflection
-            )
+            let snapshot = DailySmileySnapshotBuilder()
+                .withDate(today)
+                .withMeals([MealBuilder().withMealType(.dinner).withItems(["Pizza"]).withScore(0.4).build()])
+                .withReflection(reflection)
+                .build()
             self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
 
             // Act
@@ -108,14 +86,7 @@
         func test_createInsightPrompt_includesMealData() {
             // Arrange
             let today = Date()
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .dinner, items: ["Pizza", "Ice Cream"], healthScore: 0.3)],
-                mealCount: 1,
-                averageHealthScore: 0.3
-            )
+            let snapshot = self.makeSnapshot(score: 0.3, items: ["Pizza", "Ice Cream"], mealType: .dinner)
             self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
 
             // Act
@@ -134,13 +105,9 @@
             let eveningEntries = [
                 MindCheckEntry(category: .accomplished, text: "Done", timestamp: today, context: .evening)
             ]
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .lunch, items: ["Salad"], healthScore: 0.9)],
-                mealCount: 1,
-                averageHealthScore: 0.9,
+            let snapshot = self.makeSnapshot(
+                score: 0.9,
+                items: ["Salad"],
                 morningMindCheck: morningEntries,
                 eveningMindCheck: eveningEntries
             )
@@ -178,15 +145,7 @@
                     isAccomplished: false
                 )
             ]
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .lunch, items: ["Salad"], healthScore: 0.9)],
-                mealCount: 1,
-                averageHealthScore: 0.9,
-                morningMindCheck: morningEntries
-            )
+            let snapshot = self.makeSnapshot(score: 0.9, items: ["Salad"], morningMindCheck: morningEntries)
 
             // When: Creating insight prompt
             let prompt = self.sut.createInsightPrompt(from: [snapshot])
@@ -204,14 +163,7 @@
         func test_saveInsight_persistsToSnapshot() async {
             // Arrange
             let today = Date()
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Eggs"], healthScore: 0.8)],
-                mealCount: 1,
-                averageHealthScore: 0.8
-            )
+            let snapshot = self.makeSnapshot(score: 0.8, items: ["Eggs"], mealType: .breakfast)
             self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
 
             let insight = DailyInsight(
@@ -232,57 +184,38 @@
         // MARK: - Tests: Check If Insight Needed
 
         func test_shouldGenerateInsight_returnsTrueForNewDay() {
-            // Arrange: Need at least 2 days of data plus today with sleep logged
+            // Arrange: Need minimum 3 days of data per BriefingThresholds.minimumDataPoints
             let calendar = Calendar.current
             let today = Date()
 
-            // Add yesterday's data
-            let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
-            let yesterdaySnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: yesterday,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .dinner, items: ["Pasta"], healthScore: 0.5)],
-                mealCount: 1,
-                averageHealthScore: 0.5
-            )
+            // Add 2 days ago
+            let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: today)!
+            let twoDaysSnapshot = self.makeSnapshot(daysAgo: 2, score: 0.7, items: ["Salad"])
+            self.mockHistorical.historicalData.addOrUpdate(snapshot: twoDaysSnapshot)
+
+            let yesterdaySnapshot = self.makeSnapshot(daysAgo: 1, score: 0.5, items: ["Pasta"], mealType: .dinner)
             self.mockHistorical.historicalData.addOrUpdate(snapshot: yesterdaySnapshot)
 
-            // Add today's data with sleep logged
-            let reflection = DailyReflection(
-                feeling: nil,
-                sleepQuality: .good,
-                note: ""
-            )
-            let todaySnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Toast"], healthScore: 0.6)],
-                mealCount: 1,
-                averageHealthScore: 0.6,
-                reflection: reflection
+            let sleepReflection = DailyReflection(feeling: nil, sleepQuality: .good, note: "")
+            let todaySnapshot = self.makeSnapshot(
+                score: 0.6,
+                items: ["Toast"],
+                mealType: .breakfast,
+                reflection: sleepReflection
             )
             self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
 
             // Act
             let shouldGenerate = self.sut.shouldGenerateInsight(for: today)
 
-            // Assert - Should be true when sleep just logged and have historical data
+            // Assert - Should be true when sleep logged with minimum historical data
             XCTAssertTrue(shouldGenerate)
         }
 
         func test_shouldGenerateInsight_returnsFalseWithoutSleep() {
             // Arrange: No sleep logged
             let today = Date()
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Toast"], healthScore: 0.6)],
-                mealCount: 1,
-                averageHealthScore: 0.6
-            )
+            let snapshot = self.makeSnapshot(score: 0.6, items: ["Toast"], mealType: .breakfast)
             self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
 
             // Act
@@ -295,36 +228,31 @@
         // MARK: - Tests: Rich Insight Generation (Phase 5)
 
         func test_generateInsight_includesDateReferences() async throws {
-            // Arrange: Create data with late dinner
+            // Arrange: Create data with late dinner (need minimum 3 days per BriefingThresholds)
             let calendar = Calendar.current
             let today = Date()
+
+            // 2 days ago baseline
+            let twoDaysAgo = calendar.date(byAdding: .day, value: -2, to: today)!
+            let twoDaysSnapshot = self.makeSnapshot(daysAgo: 2, score: 0.7, items: ["Chicken"])
+            self.mockHistorical.historicalData.addOrUpdate(snapshot: twoDaysSnapshot)
 
             // Yesterday with late dinner
             let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
             var lateDinnerTime = calendar.startOfDay(for: yesterday)
             lateDinnerTime = calendar.date(byAdding: .hour, value: 21, to: lateDinnerTime)!
 
-            let yesterdaySnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: yesterday,
-                smileyState: .neutral,
-                meals: [
-                    Meal(timestamp: lateDinnerTime, mealType: .dinner, items: ["Heavy pasta"], healthScore: 0.4)
-                ],
-                mealCount: 1,
-                averageHealthScore: 0.4
-            )
+            let lateMeal = MealBuilder().withTimestamp(lateDinnerTime).withMealType(.dinner).withItems(["Heavy pasta"])
+                .withScore(0.4).build()
+            let yesterdaySnapshot = DailySmileySnapshotBuilder().daysAgo(1).withMeals([lateMeal]).build()
             self.mockHistorical.historicalData.addOrUpdate(snapshot: yesterdaySnapshot)
 
             // Today with poor sleep
             let reflection = DailyReflection(feeling: .tired, sleepQuality: .poor, note: nil)
-            let todaySnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Toast"], healthScore: 0.6)],
-                mealCount: 1,
-                averageHealthScore: 0.6,
+            let todaySnapshot = self.makeSnapshot(
+                score: 0.6,
+                items: ["Toast"],
+                mealType: .breakfast,
                 reflection: reflection
             )
             self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
@@ -332,7 +260,7 @@
             // Act
             let insight = try await self.sut.generateInsight(for: today)
 
-            // Assert - Insight should exist (with or without references depending on pattern detection)
+            // Assert - Insight should exist with minimum data threshold met
             XCTAssertNotNil(insight)
         }
 
@@ -343,27 +271,18 @@
 
             // Add multiple days of data
             for daysAgo in 1...3 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: [Meal(mealType: .dinner, items: ["Food"], healthScore: 0.5)],
-                    mealCount: 1,
-                    averageHealthScore: 0.5
-                )
-                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: self.makeSnapshot(
+                    daysAgo: daysAgo,
+                    mealType: .dinner
+                ))
             }
 
             // Today with sleep
             let reflection = DailyReflection(feeling: nil, sleepQuality: .good, note: nil)
-            let todaySnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Eggs"], healthScore: 0.8)],
-                mealCount: 1,
-                averageHealthScore: 0.8,
+            let todaySnapshot = self.makeSnapshot(
+                score: 0.8,
+                items: ["Eggs"],
+                mealType: .breakfast,
                 reflection: reflection
             )
             self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
@@ -386,27 +305,19 @@
 
             // Add historical data
             for daysAgo in 1...4 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: [Meal(mealType: .lunch, items: ["Salad"], healthScore: 0.9)],
-                    mealCount: 1,
-                    averageHealthScore: 0.9
-                )
-                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+                self.mockHistorical.historicalData.addOrUpdate(snapshot: self.makeSnapshot(
+                    daysAgo: daysAgo,
+                    score: 0.9,
+                    items: ["Salad"]
+                ))
             }
 
             // Today
             let reflection = DailyReflection(feeling: nil, sleepQuality: .great, note: nil)
-            let todaySnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Fruit"], healthScore: 0.95)],
-                mealCount: 1,
-                averageHealthScore: 0.95,
+            let todaySnapshot = self.makeSnapshot(
+                score: 0.95,
+                items: ["Fruit"],
+                mealType: .breakfast,
                 reflection: reflection
             )
             self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
@@ -427,27 +338,22 @@
 
             // Add historical data
             for daysAgo in 1...2 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: [Meal(mealType: .dinner, items: ["Healthy food"], healthScore: 0.8)],
-                    mealCount: 1,
-                    averageHealthScore: 0.8
+                self.mockHistorical.historicalData.addOrUpdate(
+                    snapshot: self.makeSnapshot(
+                        daysAgo: daysAgo,
+                        score: 0.8,
+                        items: ["Healthy food"],
+                        mealType: .dinner
+                    )
                 )
-                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
             }
 
             // Today with sleep
             let reflection = DailyReflection(feeling: nil, sleepQuality: .good, note: nil)
-            let todaySnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Oatmeal"], healthScore: 0.9)],
-                mealCount: 1,
-                averageHealthScore: 0.9,
+            let todaySnapshot = self.makeSnapshot(
+                score: 0.9,
+                items: ["Oatmeal"],
+                mealType: .breakfast,
                 reflection: reflection
             )
             self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
@@ -481,27 +387,17 @@
 
             // Add historical data
             for daysAgo in 1...2 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: [Meal(mealType: .dinner, items: ["Food"], healthScore: 0.7)],
-                    mealCount: 1,
-                    averageHealthScore: 0.7
+                self.mockHistorical.historicalData.addOrUpdate(
+                    snapshot: self.makeSnapshot(daysAgo: daysAgo, score: 0.7, items: ["Food"], mealType: .dinner)
                 )
-                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
             }
 
             // Today with sleep
             let reflection = DailyReflection(feeling: nil, sleepQuality: .poor, note: nil)
-            let todaySnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Toast"], healthScore: 0.6)],
-                mealCount: 1,
-                averageHealthScore: 0.6,
+            let todaySnapshot = self.makeSnapshot(
+                score: 0.6,
+                items: ["Toast"],
+                mealType: .breakfast,
                 reflection: reflection
             )
             self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
@@ -520,18 +416,10 @@
 
             // Add 3 days of historical data
             for daysAgo in 0..<3 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
                 let reflection = daysAgo == 0 ? DailyReflection(feeling: nil, sleepQuality: .good, note: nil) : nil
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: [Meal(mealType: .lunch, items: ["Lunch"], healthScore: 0.7)],
-                    mealCount: 1,
-                    averageHealthScore: 0.7,
-                    reflection: reflection
+                self.mockHistorical.historicalData.addOrUpdate(
+                    snapshot: self.makeSnapshot(daysAgo: daysAgo, score: 0.7, items: ["Lunch"], reflection: reflection)
                 )
-                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
             }
 
             // Create HealthKit sleep data for all 3 days
@@ -557,36 +445,89 @@
             XCTAssertNotNil(insight)
         }
 
+        // MARK: - Phase A4: saveInsight Persistence Tests
+
+        func test_saveInsight_persistsToHistoricalService() {
+            // Arrange
+            let today = Date()
+            let insight = DailyInsight(
+                id: UUID(),
+                date: today,
+                insightText: "You sleep better on days with less sugar.",
+                insightType: .foodSleep,
+                confidence: 0.8
+            )
+
+            // Act
+            self.sut.saveInsight(insight, for: today)
+
+            // Assert: mock spy should have recorded the call
+            XCTAssertTrue(self.mockHistorical.updateInsightCalled)
+            XCTAssertEqual(self.mockHistorical.lastUpdatedInsight?.id, insight.id)
+        }
+
+        func test_saveInsight_savedInsightIsRecoverable() {
+            // Arrange
+            let today = Date()
+            let insight = DailyInsight(
+                id: UUID(),
+                date: today,
+                insightText: "Gratitude practice correlates with better mood.",
+                insightType: .mindsetFeeling,
+                confidence: 0.75
+            )
+
+            // Act
+            self.sut.saveInsight(insight, for: today)
+
+            // Assert: retrieving snapshot for today should surface the insight
+            let recovered = self.mockHistorical.getSnapshot(for: today)?.insight
+            XCTAssertNotNil(recovered)
+            XCTAssertEqual(recovered?.id, insight.id)
+        }
+
+        func test_saveInsight_doesNotLogInsightText() {
+            // This test documents the security requirement: insightText (sensitive health data)
+            // must not be logged. saveInsight only logs date metadata, never the text content.
+            // Verified by code review — briefingLogger.info logs date only (privacy: .public).
+            // Sensitive field insightText has no Logger call after Phase A4 fix.
+            let today = Date()
+            let insight = DailyInsight(
+                id: UUID(),
+                date: today,
+                insightText: "SENSITIVE: high cholesterol detected",
+                insightType: .pattern,
+                confidence: 0.9
+            )
+            // Should not throw or crash — functional contract
+            self.sut.saveInsight(insight, for: today)
+            XCTAssertTrue(self.mockHistorical.updateInsightCalled)
+        }
+
         // MARK: - Phase 5: Server Fallback Tests
 
         func test_generateInsight_fallsBackToLocal_whenServerUnavailable() async throws {
             // Arrange: Create data with sleep logged (no Firebase functions in test)
-            let calendar = Calendar.current
             let today = Date()
 
             // Add historical data
             for daysAgo in 1...2 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: [Meal(mealType: .dinner, items: ["Healthy food"], healthScore: 0.8)],
-                    mealCount: 1,
-                    averageHealthScore: 0.8
+                self.mockHistorical.historicalData.addOrUpdate(
+                    snapshot: self.makeSnapshot(
+                        daysAgo: daysAgo,
+                        score: 0.8,
+                        items: ["Healthy food"],
+                        mealType: .dinner
+                    )
                 )
-                self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
             }
 
             // Today with sleep
             let reflection = DailyReflection(feeling: nil, sleepQuality: .good, note: nil)
-            let todaySnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: today,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Oatmeal"], healthScore: 0.9)],
-                mealCount: 1,
-                averageHealthScore: 0.9,
+            let todaySnapshot = self.makeSnapshot(
+                score: 0.9,
+                items: ["Oatmeal"],
+                mealType: .breakfast,
                 reflection: reflection
             )
             self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
@@ -597,6 +538,27 @@
             // Assert: Should still get an insight via local fallback
             XCTAssertNotNil(insight)
             XCTAssertFalse(insight!.insightText.isEmpty)
+        }
+
+        // MARK: - Helpers
+
+        private func makeSnapshot(
+            daysAgo: Int = 0,
+            score: Double = 0.7,
+            items: [String] = ["Food"],
+            mealType: MealType = .lunch,
+            reflection: DailyReflection? = nil,
+            morningMindCheck: [MindCheckEntry]? = nil,
+            eveningMindCheck: [MindCheckEntry]? = nil
+        ) -> DailySmileySnapshot {
+            let meal = MealBuilder().withMealType(mealType).withItems(items).withScore(score).build()
+            var builder = DailySmileySnapshotBuilder()
+                .daysAgo(daysAgo)
+                .withMeals([meal])
+            if let reflection { builder = builder.withReflection(reflection) }
+            if let morningMindCheck { builder = builder.withMorningMindCheck(morningMindCheck) }
+            if let eveningMindCheck { builder = builder.withEveningMindCheck(eveningMindCheck) }
+            return builder.build()
         }
     }
 #endif

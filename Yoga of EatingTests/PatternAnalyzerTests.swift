@@ -149,7 +149,7 @@ final class PatternAnalyzerTests: XCTestCase {
         let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date())!
 
         var meals: [Meal] = [
-            Meal(mealType: .breakfast, items: ["Oatmeal"], healthScore: 0.8)
+            MealBuilder().withMealType(.breakfast).withItems(["Oatmeal"]).withScore(0.8).build()
         ]
 
         if lateDinner {
@@ -157,13 +157,12 @@ final class PatternAnalyzerTests: XCTestCase {
             var dinnerDate = calendar.startOfDay(for: date)
             dinnerDate = calendar.date(byAdding: .hour, value: 21, to: dinnerDate)!
             meals.append(
-                Meal(
-                    id: UUID(),
-                    timestamp: dinnerDate,
-                    mealType: .dinner,
-                    items: ["Heavy pasta"],
-                    healthScore: 0.4
-                )
+                MealBuilder()
+                    .withTimestamp(dinnerDate)
+                    .withMealType(.dinner)
+                    .withItems(["Heavy pasta"])
+                    .withScore(0.4)
+                    .build()
             )
         }
 
@@ -178,36 +177,59 @@ final class PatternAnalyzerTests: XCTestCase {
             var entries: [MindCheckEntry] = []
             if todosCompleted {
                 entries.append(
-                    MindCheckEntry(
-                        category: .todo,
-                        text: "Task",
-                        context: .morning,
-                        isAccomplished: todosCompleted
-                    )
+                    MindCheckEntryBuilder()
+                        .withCategory(.todo)
+                        .withText("Task")
+                        .withContext(.morning)
+                        .accomplished()
+                        .build()
                 )
             }
             if hasGratitude {
                 entries.append(
-                    MindCheckEntry(
-                        category: .gratitude,
-                        text: "Grateful",
-                        context: .morning
-                    )
+                    MindCheckEntryBuilder()
+                        .withCategory(.gratitude)
+                        .withText("Grateful")
+                        .withContext(.morning)
+                        .build()
                 )
             }
             morningMindCheck = entries
         }
 
-        return DailySmileySnapshot(
-            id: UUID(),
-            date: date,
-            smileyState: .neutral,
-            meals: meals,
-            mealCount: meals.count,
-            averageHealthScore: meals.map(\.healthScore).reduce(0, +) / Double(meals.count),
-            reflection: reflection,
-            morningMindCheck: morningMindCheck,
-            eveningMindCheck: nil
+        var builder = DailySmileySnapshotBuilder()
+            .withDate(date)
+            .withMeals(meals)
+            .withReflection(reflection)
+        if let morningMindCheck {
+            builder = builder.withMorningMindCheck(morningMindCheck)
+        }
+        return builder.build()
+    }
+
+    // MARK: - Phase B1: BriefingThresholds SSOT Tests
+
+    func test_analyzePatterns_withTwoSnapshots_returnsEmpty() {
+        // Given: exactly 2 snapshots — below BriefingThresholds.minimumDataPoints (3)
+        let snapshots = [
+            self.createSnapshot(daysAgo: 0),
+            self.createSnapshot(daysAgo: 1)
+        ]
+
+        // When
+        let patterns = self.analyzer.analyzePatterns(from: snapshots)
+
+        // Then: minimum is 3, not 2 — should return empty
+        XCTAssertTrue(
+            patterns.isEmpty,
+            "Expected empty patterns with only 2 snapshots (minimum is \(BriefingThresholds.minimumDataPoints))"
         )
+    }
+
+    func test_briefingThresholds_confidenceThreshold_isAccessible() {
+        // Verifies BriefingThresholds.confidenceThreshold is internal (not private) — accessible in tests.
+        // If this compiles, the constant is correctly exposed (Phase B1 SSOT fix).
+        let threshold = BriefingThresholds.confidenceThreshold
+        XCTAssertEqual(threshold, 0.6, accuracy: 0.0001)
     }
 }

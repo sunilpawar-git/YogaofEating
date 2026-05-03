@@ -1,14 +1,5 @@
 import Foundation
 
-/// Shared scoring thresholds — single source of truth used by MealLogicService,
-/// AILogicService, and SensoryService so feedback tone and smiley always agree.
-enum ScoringThresholds {
-    /// Scores above this are considered "healthy"
-    static let healthy: Double = 0.65
-    /// Scores below this are considered "unhealthy"
-    static let unhealthy: Double = 0.35
-}
-
 /// Service responsible for the "Yoga of Eating" logic.
 /// Adapts the Smiley's state based on meal choices.
 protocol MealLogicProvider {
@@ -45,6 +36,19 @@ class MealLogicService: MealLogicProvider {
         static let friedFoodPenaltyMedium: Double = 0.08
         static let vegetablesBonusHigh: Double = 0.1
         static let vegetablesBonusMedium: Double = 0.05
+    }
+
+    private enum SmileyScaleConstants {
+        /// Amount the scale shrinks per healthy meal
+        static let shrinkAmount: Double = 0.1
+        /// Amount the scale grows per unhealthy meal
+        static let bloatAmount: Double = 0.2
+        /// Neutral drift toward scale = 1.0 per meal
+        static let neutralDrift: Double = 0.05
+        /// Minimum smiley scale (shrink floor)
+        static let scaleFloor: Double = 0.5
+        /// Maximum smiley scale (bloat ceiling)
+        static let scaleCeiling: Double = 2.5
     }
 
     private let healthyKeywords = ["salad", "fruit", "avocado", "smoothie", "vegetable", "water", "organic", "green"]
@@ -153,7 +157,7 @@ class MealLogicService: MealLogicProvider {
     /// Calculates aggregate health score for multiple items.
     /// Returns average score across all items.
     func calculateHealthScore(for items: [String]) -> Double {
-        guard !items.isEmpty else { return 0.5 }
+        guard !items.isEmpty else { return ScoringConstants.neutralBase }
 
         let scores = items.map { self.calculateHealthScore(for: $0) }
         let totalScore = scores.reduce(0.0, +)
@@ -170,24 +174,23 @@ class MealLogicService: MealLogicProvider {
         let sensitivity = profile?.sensitivityMultiplier ?? 1.0
 
         // Bloat/Shrink logic with sensitivity
-        // Healthy (score > 0.6) -> Shrink (to a limit)
-        // Unhealthy (score < 0.4) -> Bloat (to a limit)
+        // Healthy  (score > ScoringThresholds.healthy)   → Shrink (to floor)
+        // Unhealthy (score < ScoringThresholds.unhealthy) → Bloat  (to ceiling)
         if healthScore > ScoringThresholds.healthy {
-            let shrinkAmount = 0.1 * sensitivity
-            nextState.scale = max(0.5, currentState.scale - shrinkAmount)
+            let shrinkAmount = SmileyScaleConstants.shrinkAmount * sensitivity
+            nextState.scale = max(SmileyScaleConstants.scaleFloor, currentState.scale - shrinkAmount)
             nextState.mood = .serene
         } else if healthScore < ScoringThresholds.unhealthy {
-            let bloatAmount = 0.2 * sensitivity
-            nextState.scale = min(2.5, currentState.scale + bloatAmount)
+            let bloatAmount = SmileyScaleConstants.bloatAmount * sensitivity
+            nextState.scale = min(SmileyScaleConstants.scaleCeiling, currentState.scale + bloatAmount)
             nextState.mood = .overwhelmed
         } else {
-            // Neutral/Average
+            // Neutral/Average — scale drifts toward 1.0
             nextState.mood = .neutral
-            // Scale stays relatively same but drifts toward 1.0
             if nextState.scale > 1.0 {
-                nextState.scale -= 0.05
+                nextState.scale -= SmileyScaleConstants.neutralDrift
             } else if nextState.scale < 1.0 {
-                nextState.scale += 0.05
+                nextState.scale += SmileyScaleConstants.neutralDrift
             }
         }
 

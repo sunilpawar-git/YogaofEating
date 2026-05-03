@@ -42,10 +42,12 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
 
     func signInWithGoogle() async throws -> AuthUser {
         guard let clientID = FirebaseApp.app()?.options.clientID else {
-            throw NSError(
-                domain: "AuthService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Firebase Client ID not found"]
+            throw AppError.authProviderFailed(
+                underlying: NSError(
+                    domain: "AuthService",
+                    code: 0,
+                    userInfo: [NSLocalizedDescriptionKey: "Firebase Client ID not found"]
+                )
             )
         }
 
@@ -56,29 +58,35 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let rootViewController = windowScene.windows.first?.rootViewController
             else {
-                throw NSError(
-                    domain: "AuthService",
-                    code: 0,
-                    userInfo: [NSLocalizedDescriptionKey: "No root view controller found"]
+                throw AppError.authProviderFailed(
+                    underlying: NSError(
+                        domain: "AuthService",
+                        code: 0,
+                        userInfo: [NSLocalizedDescriptionKey: "No root view controller found"]
+                    )
                 )
             }
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
         #elseif canImport(AppKit)
             guard let presentingWindow = NSApplication.shared.keyWindow else {
-                throw NSError(
-                    domain: "AuthService",
-                    code: 0,
-                    userInfo: [NSLocalizedDescriptionKey: "No key window found"]
+                throw AppError.authProviderFailed(
+                    underlying: NSError(
+                        domain: "AuthService",
+                        code: 0,
+                        userInfo: [NSLocalizedDescriptionKey: "No key window found"]
+                    )
                 )
             }
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presentingWindow)
         #endif
 
         guard let idToken = result.user.idToken?.tokenString else {
-            throw NSError(
-                domain: "AuthService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Google ID Token missing"]
+            throw AppError.authProviderFailed(
+                underlying: NSError(
+                    domain: "AuthService",
+                    code: 0,
+                    userInfo: [NSLocalizedDescriptionKey: "Google ID Token missing"]
+                )
             )
         }
 
@@ -106,11 +114,7 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
 
     func restorePreviousSignIn() async throws -> AuthUser {
         guard FirebaseApp.app() != nil else {
-            throw NSError(
-                domain: "AuthService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Firebase not configured"]
-            )
+            throw AppError.sessionRestoreFailed
         }
         let user = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
 
@@ -118,11 +122,7 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
         let accessToken = user.accessToken.tokenString
 
         guard let idToken else {
-            throw NSError(
-                domain: "AuthService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Failed to restore ID Token"]
-            )
+            throw AppError.sessionRestoreFailed
         }
 
         let credential = GoogleAuthProvider.credential(
@@ -154,6 +154,9 @@ class AuthService: ObservableObject, AuthServiceProtocol {
     // Task to track pending logout debounce
     private var pendingLogoutTask: Task<Void, Never>?
 
+    // Task to track the session restore request on startup
+    private var sessionRestoreTask: Task<Void, Never>?
+
     // Flag to track if logout was explicitly requested by the user
     // This allows us to ignore all transient nil states from Firebase
     private var isExplicitlySigningOut = false
@@ -175,11 +178,12 @@ class AuthService: ObservableObject, AuthServiceProtocol {
     }
 
     private func restorePreviousSession() {
-        Task {
+        self.sessionRestoreTask = Task {
             do {
                 _ = try await self.provider.restorePreviousSignIn()
+                authLogger.info("Previous session restored successfully")
             } catch {
-                authLogger.debug("No previous session to restore: \(error.localizedDescription, privacy: .public)")
+                authLogger.info("No previous session to restore: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -205,6 +209,7 @@ class AuthService: ObservableObject, AuthServiceProtocol {
 
                 self.pendingLogoutTask?.cancel()
                 self.pendingLogoutTask = Task { @MainActor in
+                    // CancellationError from sleep is intentional (debounce cancelled on sign-in recovery) — no-op
                     try? await Task.sleep(nanoseconds: 2_000_000_000)
                     guard !Task.isCancelled else {
                         authLogger.debug("Auth debounce cancelled (user recovered)")

@@ -82,9 +82,9 @@ class MockAuthCoreProvider: AuthCoreProvider {
 @MainActor
 class MockCloudSyncService: CloudSyncServiceProtocol {
     var uploadedSnapshots: [DailySmileySnapshot] = []
-    var fetchResult: [DailySmileySnapshot] = []
     var uploadCalled = false
-    var fetchCalled = false
+    var batchUploadedSnapshots: [[DailySmileySnapshot]] = []
+    var batchUploadCalled = false
     var shouldFail = false
 
     func upload(snapshot: DailySmileySnapshot, userId _: String) async throws {
@@ -95,12 +95,19 @@ class MockCloudSyncService: CloudSyncServiceProtocol {
         self.uploadedSnapshots.append(snapshot)
     }
 
-    func fetchAll(userId _: String) async throws -> [DailySmileySnapshot] {
-        self.fetchCalled = true
+    func uploadBatch(snapshots: [DailySmileySnapshot], userId _: String) async throws {
+        self.batchUploadCalled = true
         if self.shouldFail {
-            throw NSError(domain: "CloudSync", code: 2, userInfo: [NSLocalizedDescriptionKey: "Fetch failed"])
+            throw NSError(domain: "CloudSync", code: 3, userInfo: [NSLocalizedDescriptionKey: "Batch upload failed"])
         }
-        return self.fetchResult
+        // Mirror the real implementation's chunking behavior
+        let batchSize = 500
+        let chunks = stride(from: 0, to: snapshots.count, by: batchSize).map { startIndex in
+            Array(snapshots[startIndex..<min(startIndex + batchSize, snapshots.count)])
+        }
+        for chunk in chunks {
+            self.batchUploadedSnapshots.append(chunk)
+        }
     }
 }
 
@@ -114,6 +121,12 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     var updateReflectionCalled = false
     var lastUpdatedReflection: DailyReflection?
     var lastReflectionDate: Date?
+
+    func setMainViewModel(_: any MainViewModelProtocol) {}
+
+    var willChangePublisher: AnyPublisher<Void, Never> {
+        self.objectWillChange.map { _ in () }.eraseToAnyPublisher()
+    }
 
     func archiveCurrentDay(meals: [Meal], state: SmileyState, date: Date) {
         self.archivedMeals = meals
@@ -146,20 +159,11 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
         self.lastUpdatedReflection = reflection
         self.lastReflectionDate = date
 
-        // Actually update the historical data for tests that check the result
         let calendar = Calendar.current
         let normalizedDate = calendar.startOfDay(for: date)
 
         if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = DailySmileySnapshot(
-                id: existingSnapshot.id,
-                date: existingSnapshot.date,
-                smileyState: existingSnapshot.smileyState,
-                meals: existingSnapshot.meals,
-                mealCount: existingSnapshot.mealCount,
-                averageHealthScore: existingSnapshot.averageHealthScore,
-                reflection: reflection
-            )
+            let updatedSnapshot = existingSnapshot.withReflection(reflection)
             self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
         } else {
             let newSnapshot = DailySmileySnapshot(
@@ -212,6 +216,120 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
                 mealCount: 0,
                 averageHealthScore: 0.5,
                 eveningMindCheck: entries
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+    }
+
+    func updateHighlightData(for date: Date, data: HighlightData) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withHighlightData(data)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                highlightData: data
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+    }
+
+    func updateReflectData(for date: Date, data: ReflectData) {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withReflectData(data)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                reflectData: data
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+    }
+
+    // Stubs for carry-over and food-debt — tests set these to control ViewModel behaviour.
+    // Service-layer tests (TodoCarryOverTests, FoodDebtTests) use real HistoricalDataService
+    // so they don't rely on these stubs at all.
+    var stubbedCarriedTodos: [MindCheckEntry] = []
+    var stubbedFoodDebtState: SmileyState = .neutral
+
+    func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] {
+        self.stubbedCarriedTodos
+    }
+
+    func foodDebtStartingState(relativeTo _: Date) -> SmileyState {
+        self.stubbedFoodDebtState
+    }
+
+    var updateBriefingCalled = false
+    var lastUpdatedBriefing: DailyBriefing?
+
+    func updateBriefing(for date: Date, briefing: DailyBriefing) {
+        self.updateBriefingCalled = true
+        self.lastUpdatedBriefing = briefing
+
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withBriefing(briefing)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                briefing: briefing
+            )
+            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+        }
+    }
+
+    // MARK: - Insight spy
+
+    var updateInsightCalled = false
+    var lastUpdatedInsight: DailyInsight?
+    var lastInsightDate: Date?
+
+    func updateInsight(for date: Date, insight: DailyInsight) {
+        self.updateInsightCalled = true
+        self.lastUpdatedInsight = insight
+        self.lastInsightDate = date
+
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
+            let updatedSnapshot = existingSnapshot.withInsight(insight)
+            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        } else {
+            let newSnapshot = DailySmileySnapshot(
+                id: UUID(),
+                date: normalizedDate,
+                smileyState: .neutral,
+                meals: [],
+                mealCount: 0,
+                averageHealthScore: 0.5,
+                insight: insight
             )
             self.historicalData.addOrUpdate(snapshot: newSnapshot)
         }

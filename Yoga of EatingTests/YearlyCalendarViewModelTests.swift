@@ -29,14 +29,10 @@
             // Given
             let calendar = Calendar.current
             let date = calendar.date(from: DateComponents(year: 2025, month: 5, day: 15))!
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: date,
-                smileyState: SmileyState(scale: 0.8, mood: .serene),
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.8
-            )
+            let snapshot = DailySmileySnapshotBuilder()
+                .withDate(date)
+                .withSmileyState(SmileyState(scale: 0.8, mood: .serene))
+                .build()
             self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
             self.sut.selectedYear = 2025
 
@@ -52,14 +48,10 @@
             // Given
             let calendar = Calendar.current
             let date = calendar.date(from: DateComponents(year: 2025, month: 5, day: 15))!
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: date,
-                smileyState: SmileyState(scale: 0.8, mood: .serene),
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.8
-            )
+            let snapshot = DailySmileySnapshotBuilder()
+                .withDate(date)
+                .withSmileyState(SmileyState(scale: 0.8, mood: .serene))
+                .build()
 
             // When
             self.sut.selectSnapshot(snapshot)

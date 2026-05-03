@@ -108,7 +108,7 @@ struct Meal: Identifiable, Codable, Equatable {
         timestamp: Date = Date(),
         mealType: MealType? = nil,
         items: [String] = [],
-        healthScore: Double = 0.5,
+        healthScore: Double = 0.0,
         isAIAnalyzed: Bool = false,
         aiInsight: String? = nil
     ) {
@@ -122,7 +122,7 @@ struct Meal: Identifiable, Codable, Equatable {
     }
 
     /// Legacy initializer for backward compatibility
-    init(id: UUID = UUID(), timestamp: Date = Date(), description: String = "", healthScore: Double = 0.5) {
+    init(id: UUID = UUID(), timestamp: Date = Date(), description: String = "", healthScore: Double = 0.0) {
         self.id = id
         self.timestamp = timestamp
         self.mealType = MealType.suggestedMealType()

@@ -77,11 +77,7 @@ class AILogicService: AIAnalysisProvider {
 
         guard let data = result.data as? [String: Any] else {
             aiServiceLogger.error("Invalid response format from Cloud Function")
-            throw NSError(
-                domain: "AILogicService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Invalid response format"]
-            )
+            throw AppError.analysisUnavailable
         }
 
         let score = data["healthScore"] as? Double ?? 0.5
@@ -98,20 +94,7 @@ class AILogicService: AIAnalysisProvider {
     }
 }
 
-extension SmileyMood {
-    init?(rawValue: String) {
-        switch rawValue.lowercased() {
-        case "serene":
-            self = .serene
-        case "neutral":
-            self = .neutral
-        case "overwhelmed":
-            self = .overwhelmed
-        default:
-            return nil
-        }
-    }
-}
+// SmileyMood.init?(rawValue:) case-insensitive extension lives in Models/SmileyState.swift.
 
 // MARK: - Detailed Meal Insight
 
@@ -166,11 +149,7 @@ extension AILogicService: MealInsightProvider {
         let result = try await functions.httpsCallable("getMealInsight").call(requestData)
 
         guard let data = result.data as? [String: Any] else {
-            throw NSError(
-                domain: "AILogicService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Invalid response format"]
-            )
+            throw AppError.analysisUnavailable
         }
 
         let summary = data["summary"] as? String ?? "A balanced meal choice."

@@ -1,3 +1,4 @@
+import FirebaseAuth
 import Foundation
 import SwiftUI
 
@@ -6,11 +7,9 @@ import SwiftUI
 extension MainViewModel {
     // MARK: - Computed Properties
 
-    /// Returns today's generated insight if available.
+    /// Returns today's generated insight if available, loaded from the persisted snapshot.
     var todaysInsight: DailyInsight? {
-        // For now, insights are not persisted - will be added in future
-        // This will be populated when insight generation is triggered
-        nil
+        self.historicalService.getSnapshot(for: Date())?.insight
     }
 
     /// Returns true if the insight card should be shown.
@@ -31,14 +30,38 @@ extension MainViewModel {
         self.currentInsight != nil
     }
 
+    // MARK: - Briefing Computed Properties
+
+    /// Whether the current briefing has been viewed
+    var hasBriefingAvailable: Bool {
+        self.currentBriefing != nil
+    }
+
+    /// Whether there's an unread briefing
+    var hasUnreadBriefing: Bool {
+        guard let briefing = self.currentBriefing else { return false }
+        return !briefing.isViewed
+    }
+
+    /// Data contract for MorningBriefingCard — minimal exposure per tab guidelines.
+    var briefingCardData: (headline: String, topCorrelation: String?, nudge: String, isViewed: Bool)? {
+        guard let briefing = self.currentBriefing else { return nil }
+        return (
+            headline: briefing.headline,
+            topCorrelation: briefing.topCorrelation?.observation,
+            nudge: briefing.nudge.suggestion,
+            isViewed: briefing.isViewed
+        )
+    }
+
     // MARK: - Insight Actions
 
     /// Dismisses the current insight card.
     func dismissInsight() {
-        // Mark insight as viewed
         self.showInsightSheet = false
-        if self.currentInsight != nil {
-            self.currentInsight?.markAsViewed()
+        if var insight = self.currentInsight {
+            insight.markAsViewed()
+            self.currentInsight = insight
         }
     }
 
@@ -54,5 +77,59 @@ extension MainViewModel {
         guard self.hasInsightAvailable else { return }
         SensoryService.shared.playNudge(style: .heavy)
         self.showInsightSheet = true
+    }
+
+    // MARK: - Briefing Actions
+
+    /// Marks the current briefing as viewed and persists the change.
+    func markBriefingViewed() {
+        guard var briefing = self.currentBriefing else { return }
+        briefing.markAsViewed()
+        self.currentBriefing = briefing
+        self.historicalService.updateBriefing(for: Date(), briefing: briefing)
+    }
+
+    /// Triggers briefing generation for today.
+    /// Called after sleep quality is saved (the morning data trigger).
+    /// Guarded to prevent concurrent Firebase calls when triggered multiple times.
+    func triggerBriefingGeneration() {
+        guard !self.isBriefingGenerationInProgress else { return }
+
+        let date = Date()
+
+        if let existing = self.currentBriefing,
+           Calendar.current.isDate(existing.date, inSameDayAs: date)
+        {
+            return
+        }
+
+        // Also check persisted snapshot to avoid duplicate Cloud Function calls after relaunch
+        if let snapshot = self.historicalService.getSnapshot(for: date),
+           let persisted = snapshot.briefing
+        {
+            self.currentBriefing = persisted
+            return
+        }
+
+        self.isBriefingGenerationInProgress = true
+        self.briefingTask = Task {
+            defer { self.isBriefingGenerationInProgress = false }
+
+            let healthKitSleepData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
+            if let briefing = await self.insightService.generateBriefing(
+                for: date,
+                healthKitSleepData: healthKitSleepData
+            ) {
+                guard !Task.isCancelled else { return }
+                self.currentBriefing = briefing
+                self.historicalService.updateBriefing(for: date, briefing: briefing)
+
+                let userId = Auth.auth().currentUser?.uid ?? "unknown"
+                NotificationManager.shared.scheduleBriefingNotification(
+                    headline: briefing.headline,
+                    userId: userId
+                )
+            }
+        }
     }
 }

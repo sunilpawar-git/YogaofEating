@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Represents a fasting period between two consecutive meals.
 struct FastingPeriod: Identifiable, Equatable {
@@ -8,43 +9,50 @@ struct FastingPeriod: Identifiable, Equatable {
     let startTime: Date
     let endTime: Date
 
-    /// Duration of the fasting period in seconds
+    /// Duration of the fasting period in seconds.
+    /// Returns 0 for invalid ranges (endTime before startTime) rather than a negative value.
     var duration: TimeInterval {
-        self.endTime.timeIntervalSince(self.startTime)
+        max(0, self.endTime.timeIntervalSince(self.startTime))
     }
 
     /// Duration in hours (for display and calculations)
     var durationInHours: Double {
-        self.duration / 3600.0
+        self.duration / AppTheme.Fasting.secondsPerHour
     }
 
-    /// Formatted duration string for display (e.g., "14h", "16h 30m")
+    /// Formatted duration string for display (e.g., "45m", "1h", "16h 30m").
+    /// Returns "0m" for invalid/zero-length periods.
     var formattedDuration: String {
-        let hours = Int(self.duration / 3600)
-        let minutes = Int((self.duration.truncatingRemainder(dividingBy: 3600)) / 60)
-
-        // Only show minutes if >= 30 minutes
-        if minutes >= 30 {
+        guard self.duration > 0 else { return "0m" }
+        let hours = Int(self.duration / AppTheme.Fasting.secondsPerHour)
+        let minutes = Int(
+            self.duration.truncatingRemainder(dividingBy: AppTheme.Fasting.secondsPerHour)
+                / AppTheme.Fasting.secondsPerMinute
+        )
+        if hours == 0 {
+            // Sub-hour gaps: show minutes only (e.g. "32m", "45m")
+            return "\(minutes)m"
+        } else if minutes >= 30 {
             return "\(hours)h \(minutes)m"
         } else {
             return "\(hours)h"
         }
     }
 
-    /// Whether this is a significant fasting period (12+ hours)
+    /// Whether this is a significant fasting period (12+ hours per `AppTheme.Fasting.significanceHoursThreshold`)
     var isSignificant: Bool {
-        self.durationInHours >= 12.0
+        self.durationInHours >= AppTheme.Fasting.significanceHoursThreshold
     }
 
     /// Glow intensity based on fasting duration (0.0 to 1.0)
-    /// Scales from 12h (minimum glow) to 20h+ (maximum glow)
+    /// Scales from `significanceHoursThreshold` (minimum glow) to 20h+ (maximum glow).
+    /// Returns 0.0 for zero-duration periods.
     var glowIntensity: Double {
         guard self.isSignificant else { return 0.0 }
-
-        let minHours = 12.0
+        let minHours = AppTheme.Fasting.significanceHoursThreshold
         let maxHours = 20.0
         let normalized = (self.durationInHours - minHours) / (maxHours - minHours)
-        return min(max(normalized, 0.3), 1.0) // Clamp between 0.3 and 1.0
+        return min(max(normalized, 0.3), 1.0)
     }
 
     init(

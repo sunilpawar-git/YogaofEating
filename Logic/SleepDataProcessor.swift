@@ -1,4 +1,7 @@
 import Foundation
+import OSLog
+
+private let sleepLogger = Logger(subsystem: "com.yogaofeating", category: "Sleep")
 
 // MARK: - Sleep Data Processor
 
@@ -151,22 +154,25 @@ enum SleepDataProcessor {
         let sessions = self.identifySleepSessions(from: samples)
 
         if enableLogging {
-            print("🛏️ Found \(sessions.count) sleep session(s)")
+            sleepLogger.debug("Found \(sessions.count, privacy: .public) sleep session(s)")
         }
 
         // Use the most recent (last) session
         guard let lastSession = sessions.last, !lastSession.isEmpty else {
             if enableLogging {
-                print("🛏️ No sleep sessions found")
+                sleepLogger.debug("No sleep sessions found")
             }
             return nil
         }
 
         if enableLogging {
-            print("🛏️ Using most recent session with \(lastSession.count) samples")
+            sleepLogger.debug("Using most recent session with \(lastSession.count, privacy: .public) samples")
             for sample in lastSession {
                 let durationMinutes = Int(sample.duration / 60)
-                print("🛏️   Sample: \(sample.sleepStage), duration: \(durationMinutes)m")
+                sleepLogger
+                    .debug(
+                        "Sample stage: \(sample.sleepStage, privacy: .public), duration: \(durationMinutes, privacy: .public)m"
+                    )
             }
         }
 
@@ -176,14 +182,14 @@ enum SleepDataProcessor {
         if enableLogging {
             let asleepHours = asleepDuration / 3600.0
             let inBedHours = inBedDuration / 3600.0
-            print("🛏️ Session ASLEEP: \(String(format: "%.1f", asleepHours))h (\(Int(asleepDuration / 60))m)")
-            print("🛏️ Session IN-BED: \(String(format: "%.1f", inBedHours))h (\(Int(inBedDuration / 60))m)")
+            sleepLogger.debug("Session ASLEEP: \(String(format: "%.1f", asleepHours), privacy: .public)h")
+            sleepLogger.debug("Session IN-BED: \(String(format: "%.1f", inBedHours), privacy: .public)h")
         }
 
         // Require actual sleep time
         guard asleepDuration > 0 else {
             if enableLogging {
-                print("🛏️ No actual sleep found in session")
+                sleepLogger.debug("No actual sleep found in session")
             }
             return nil
         }
@@ -192,7 +198,7 @@ enum SleepDataProcessor {
         let score = self.calculateSleepScore(sleepDuration: asleepDuration, timeInBed: inBedDuration)
 
         if enableLogging {
-            print("🛏️ Calculated sleep score: \(score ?? 0)")
+            sleepLogger.debug("Calculated sleep score: \(score ?? 0, privacy: .public)")
         }
 
         return SleepData(

@@ -1,44 +1,5 @@
 import SwiftUI
 
-// MARK: - Today Reflection Data
-
-/// Groups today's reflection-related data and callbacks to reduce parameter proliferation.
-/// Only used when `isToday` is true.
-struct TodayReflectionData {
-    /// Today's logged sleep quality (for displaying badge)
-    var sleepQuality: SleepQuality?
-
-    /// Today's Apple HealthKit sleep data (for displaying in badge)
-    var appleSleepData: SleepData?
-
-    /// Today's logged overall feeling (for displaying badge)
-    var feeling: ReflectionFeeling?
-
-    /// Whether to show the End-of-Day pill (only for today when feeling not logged)
-    var showEndOfDayPill: Bool = false
-
-    /// Whether to show the morning mind check pill (after sleep quality)
-    var showMorningMindCheckPill: Bool = false
-
-    /// Today's morning mind check entries (for displaying badge)
-    var morningMindCheck: [MindCheckEntry]?
-
-    /// Callback when user taps to edit sleep quality badge
-    var onEditSleep: (() -> Void)?
-
-    /// Callback when user taps to edit overall feeling badge
-    var onEditFeeling: (() -> Void)?
-
-    /// Callback when user taps the End-of-Day pill
-    var onEndOfDayTap: (() -> Void)?
-
-    /// Callback when user taps the morning mind check pill
-    var onMorningMindCheckTap: (() -> Void)?
-
-    /// Creates an empty reflection data (for historical views or previews)
-    static let empty = TodayReflectionData()
-}
-
 // MARK: - Day Timeline View
 
 /// A reusable view that displays a day's meal timeline.
@@ -70,8 +31,11 @@ struct DayTimelineView: View {
     /// Whether an insight is available (for showing red dot indicator)
     var hasInsightAvailable: Bool = false
 
-    /// Grouped reflection data for today (sleep, feeling, mind check, and callbacks)
-    var reflectionData: TodayReflectionData = .empty
+    /// Data-contract tuple for the morning briefing card (nil hides it).
+    var briefingCardData: (headline: String, topCorrelation: String?, nudge: String, isViewed: Bool)?
+
+    /// Callback when user taps the briefing card
+    var onBriefingTap: (() -> Void)?
 
     /// Grouped meal update actions (reduces callback proliferation)
     var mealActions: MealUpdateActions = .empty
@@ -79,64 +43,32 @@ struct DayTimelineView: View {
     /// Recent meals from past 3 days for quick-add feature (only for today)
     var recentMeals: [Meal] = []
 
-    // MARK: - Legacy Parameter Support (Deprecated)
-
-    // These are kept for backward compatibility but internally map to reflectionData
-
-    /// Today's logged sleep quality (for displaying badge)
-    /// - Note: Prefer using `reflectionData.sleepQuality` instead
-    var todaysSleepQuality: SleepQuality? { self.reflectionData.sleepQuality }
-
-    /// Today's Apple HealthKit sleep data (for displaying in badge)
-    /// - Note: Prefer using `reflectionData.appleSleepData` instead
-    var appleSleepData: SleepData? { self.reflectionData.appleSleepData }
-
-    /// Today's logged overall feeling (for displaying badge)
-    /// - Note: Prefer using `reflectionData.feeling` instead
-    var todaysFeeling: ReflectionFeeling? { self.reflectionData.feeling }
-
-    /// Whether to show the End-of-Day pill
-    /// - Note: Prefer using `reflectionData.showEndOfDayPill` instead
-    var showEndOfDayPill: Bool { self.reflectionData.showEndOfDayPill }
-
-    /// Whether to show the morning mind check pill
-    /// - Note: Prefer using `reflectionData.showMorningMindCheckPill` instead
-    var showMorningMindCheckPill: Bool { self.reflectionData.showMorningMindCheckPill }
-
-    /// Today's morning mind check entries
-    /// - Note: Prefer using `reflectionData.morningMindCheck` instead
-    var todaysMorningMindCheck: [MindCheckEntry]? { self.reflectionData.morningMindCheck }
+    /// Pre-computed average health score for the day summary line (today only, >= 2 meals).
+    /// Provided by the ViewModel to avoid duplicating averaging logic inside the view.
+    /// Nil means the summary line is not shown.
+    var averageHealthScore: Double?
 
     // MARK: - State
 
     @State private var breathingMeals: Set<UUID> = []
     @State private var showInsightCoachmark: Bool = false
+    @State private var isSmileyPulsing: Bool = false
     @AppStorage(StorageKeys.insightCoachmarkSeen) private var insightCoachmarkSeen: Bool = false
 
     // MARK: - Body
 
     var body: some View {
         VStack(spacing: 0) {
-            // Sleep badge at TOP of timeline (for today only)
-            if self.isToday, let sleepQuality = self.todaysSleepQuality {
-                self.sleepBadge(sleepQuality)
-                    .padding(.bottom, 8)
-            }
-
-            // Morning mind check: pill or badge after sleep quality
-            if self.isToday {
-                if let morningEntries = self.todaysMorningMindCheck, !morningEntries.isEmpty {
-                    MindCheckBadgeView(entries: morningEntries, context: .morning) {
-                        // Tap to edit existing entries
-                        self.reflectionData.onMorningMindCheckTap?()
-                    }
-                    .padding(.bottom, 16)
-                } else if self.showMorningMindCheckPill {
-                    MindCheckPillView {
-                        self.reflectionData.onMorningMindCheckTap?()
-                    }
-                    .padding(.bottom, 16)
-                }
+            if self.isToday, let data = self.briefingCardData {
+                MorningBriefingCard(
+                    headline: data.headline,
+                    topCorrelation: data.topCorrelation,
+                    nudge: data.nudge,
+                    isViewed: data.isViewed,
+                    onTap: self.onBriefingTap
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
             }
 
             let sortedMeals = self.meals.sorted { $0.timestamp < $1.timestamp }
@@ -145,36 +77,18 @@ struct DayTimelineView: View {
                 self.mealBlockView(for: meal)
                     .id(meal.id)
 
-                // Show fasting connector after each meal (except the last one)
                 if index < sortedMeals.count - 1,
                    let period = self.fastingPeriods.first(where: { $0.startMealId == meal.id })
                 {
                     self.fastingConnector(for: period)
                 } else if index < sortedMeals.count - 1 {
-                    // Fallback spacing if no period found
                     Spacer().frame(height: 30)
                 }
             }
 
-            // Feeling badge above smiley (for today only, when logged)
-            // OR End-of-Day pill when feeling not yet logged
-            if self.isToday {
-                if let feeling = self.todaysFeeling {
-                    self.feelingBadge(feeling)
-                        .padding(.top, 8)
-                } else if self.showEndOfDayPill {
-                    self.endOfDayPill
-                        .padding(.top, 8)
-                }
-            }
-
-            // Show appropriate bottom content based on whether it's today or historical
             if self.isToday {
                 self.smileyAddButton
-                    .padding(
-                        .top,
-                        (self.todaysFeeling != nil || self.showEndOfDayPill) ? 12 : (sortedMeals.isEmpty ? 20 : 30)
-                    )
+                    .padding(.top, sortedMeals.isEmpty ? 20 : 30)
             } else {
                 self.historicalDaySummary
                     .padding(.top, sortedMeals.isEmpty ? 20 : 30)
@@ -254,72 +168,9 @@ struct DayTimelineView: View {
 
     private var timelineLine: some View {
         Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [.primary.opacity(0.1), .primary.opacity(0.05)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .frame(width: 2)
+            .fill(Color.primary.opacity(AppTheme.Timeline.spineOpacity))
+            .frame(width: AppTheme.Timeline.spineWidth)
             .padding(.top, 20)
-    }
-
-    // MARK: - Reflection Badges (Today Only)
-
-    private func sleepBadge(_ quality: SleepQuality) -> some View {
-        ReflectionBadgeView(
-            type: .sleep(quality),
-            isTappable: true,
-            onTap: {
-                self.reflectionData.onEditSleep?()
-            },
-            sleepData: self.appleSleepData
-        )
-    }
-
-    private func feelingBadge(_ feeling: ReflectionFeeling) -> some View {
-        ReflectionBadgeView(
-            type: .feeling(feeling),
-            isTappable: true,
-            onTap: {
-                self.reflectionData.onEditFeeling?()
-            }
-        )
-    }
-
-    // MARK: - End-of-Day Pill (Today Only, When Feeling Not Logged)
-
-    private var endOfDayPill: some View {
-        Button(action: {
-            self.reflectionData.onEndOfDayTap?()
-            SensoryService.shared.playNudge(style: .light)
-        }) {
-            HStack(spacing: 6) {
-                Image(systemName: "moon.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(.purple.opacity(0.8))
-
-                Text("End of Day")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                Capsule()
-                    .fill(Color.purple.opacity(0.1))
-            )
-            .overlay(
-                Capsule()
-                    .stroke(Color.purple.opacity(0.3), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("end-of-day-pill")
-        .accessibilityLabel("End of Day")
-        .accessibilityHint("Tap to log how you felt today")
     }
 
     // MARK: - Smiley Add Button (Today Only)
@@ -328,15 +179,19 @@ struct DayTimelineView: View {
         VStack(spacing: 16) {
             SmileyView(state: self.smileyState)
                 .frame(width: 120, height: 120)
+                .scaleEffect(self.isSmileyPulsing ? AppTheme.Animation.breathingScale : 1.0)
+                .animation(
+                    self.isSmileyPulsing ? AppTheme.Animation.breathingPulse : .default,
+                    value: self.isSmileyPulsing
+                )
                 .overlay(alignment: .topTrailing) {
-                    // Red dot indicator when insight is available
-                    if self.hasInsightAvailable {
+                    if self.hasInsightAvailable, self.briefingCardData == nil {
                         Circle()
-                            .fill(Color.red)
-                            .frame(width: 14, height: 14)
+                            .fill(Color.orange)
+                            .frame(width: 10, height: 10)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.white, lineWidth: 2)
+                                    .stroke(Color.white, lineWidth: 1.5)
                             )
                             .offset(x: 4, y: -4)
                     }
@@ -365,27 +220,74 @@ struct DayTimelineView: View {
                     }
                     self.onSmileyLongPress?()
                 }
+                .onAppear {
+                    self.updateSmileyPulse()
+                }
+                .onChange(of: self.meals.count) { _, _ in
+                    self.updateSmileyPulse()
+                }
 
-            // Hint text changes when insight available
-            Text(self.hasInsightAvailable ? "TAP TO LOG · HOLD FOR INSIGHT" : "TAP TO LOG")
+            Text(self.hasInsightAvailable ? Strings.Timeline.tapToLogWithInsight : Strings.Timeline.tapToLog)
                 .font(.system(.caption, design: .monospaced))
                 .fontWeight(.bold)
                 .foregroundColor(.secondary)
                 .kerning(self.hasInsightAvailable ? 1 : 2)
                 .fixedSize()
 
-            Text(QuoteService.getDailyQuote().text)
-                .font(.system(size: 11, design: .serif))
-                .italic()
-                .foregroundColor(.secondary.opacity(0.6))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 280)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityLabel("Daily mindful eating quote")
+            if let summary = self.daySummaryText {
+                Text(summary)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .accessibilityIdentifier("day-summary-line")
+            }
+
+            if TimelineAnimationState.shouldShowEmptyStateGreeting(
+                mealCount: self.meals.count, isToday: self.isToday
+            ) {
+                Text(Strings.Timeline.emptyStateGreeting)
+                    .font(.system(size: 12, design: .default))
+                    .italic()
+                    .foregroundColor(.secondary.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("empty-state-greeting")
+            }
+
+            if TimelineAnimationState.shouldShowQuote(
+                mealCount: self.meals.count, isToday: self.isToday
+            ) {
+                Text(QuoteService.getDailyQuote().text)
+                    .font(.system(size: 11, design: .rounded))
+                    .italic()
+                    .foregroundColor(.secondary.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 280)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel(Strings.Timeline.quoteAccessibility)
+            }
         }
         .accessibilityIdentifier("add-meal-button")
-        .accessibilityLabel(self.hasInsightAvailable ? "Add Meal or Hold for Insight" : "Add Meal")
-        .accessibilityHint(self.hasInsightAvailable ? "Tap to log meal, hold to view insight" : "Tap to log a new meal")
+        .accessibilityLabel(self.hasInsightAvailable ? Strings.Accessibility.addMealWithInsight : Strings.Accessibility
+            .addMealButton)
+        .accessibilityHint(self.hasInsightAvailable ? Strings.Accessibility.addMealWithInsightHint : Strings
+            .Accessibility.addMealHint)
+    }
+
+    /// Updates the smiley pulse state based on current meal count and day context.
+    /// Called on appear and whenever meal count changes.
+    private func updateSmileyPulse() {
+        let shouldPulse = TimelineAnimationState.shouldPulse(
+            mealCount: self.meals.count, isToday: self.isToday
+        )
+        if self.isSmileyPulsing != shouldPulse {
+            self.isSmileyPulsing = shouldPulse
+        }
+    }
+
+    /// One-line ambient summary shown above the smiley when the ViewModel provides an average score.
+    /// Uses the pre-computed `averageHealthScore` parameter to keep averaging logic in one place (SSOT).
+    private var daySummaryText: String? {
+        guard self.isToday, let avg = self.averageHealthScore, self.meals.count >= 2 else { return nil }
+        return Strings.Timeline.daySummary(avgScore: Int(avg * 100), mealCount: self.meals.count)
     }
 
     // MARK: - Historical Day Summary
@@ -419,188 +321,13 @@ struct DayTimelineView: View {
                     }
                 }
             }
-
-            // Show reflection if available
-            if let reflection = self.snapshot?.reflection {
-                self.reflectionSummary(reflection)
-            }
-
-            // Show mind check entries if available (Phase 1)
-            if let snapshot = self.snapshot,
-               snapshot.hasMorningMindCheck || snapshot.hasEveningMindCheck
-            {
-                self.historicalMindCheckSection(snapshot: snapshot)
-            }
         }
         .padding(.vertical, 20)
     }
 
-    // MARK: - Historical Mind Check Section
-
-    @State private var isMindCheckExpanded: Bool = false
-
-    @ViewBuilder
-    private func historicalMindCheckSection(snapshot: DailySmileySnapshot) -> some View {
-        VStack(spacing: 12) {
-            Divider()
-                .padding(.horizontal, 40)
-
-            // Expandable header
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    self.isMindCheckExpanded.toggle()
-                }
-            } label: {
-                HStack {
-                    Text(Strings.MindCheck.Historical.mindCheckSectionTitle)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-
-                    Spacer()
-
-                    Image(systemName: self.isMindCheckExpanded ? "chevron.up" : "chevron.down")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 40)
-            }
-            .buttonStyle(.plain)
-
-            // Expandable content
-            if self.isMindCheckExpanded {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Morning todos
-                    if let morningEntries = snapshot.morningMindCheck, !morningEntries.isEmpty {
-                        self.historicalEntriesGroup(
-                            header: Strings.MindCheck.Historical.morningHeader,
-                            entries: morningEntries,
-                            showCompletionStatus: true
-                        )
-                    }
-
-                    // Evening entries
-                    if let eveningEntries = snapshot.eveningMindCheck, !eveningEntries.isEmpty {
-                        self.historicalEntriesGroup(
-                            header: Strings.MindCheck.Historical.eveningHeader,
-                            entries: eveningEntries,
-                            showCompletionStatus: false
-                        )
-                    }
-                }
-                .padding(.horizontal, 24)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .padding(.top, 8)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Strings.MindCheck.Historical.mindCheckSectionTitle)
-    }
-
-    @ViewBuilder
-    private func historicalEntriesGroup(
-        header: String,
-        entries: [MindCheckEntry],
-        showCompletionStatus: Bool
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(header)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-
-            ForEach(entries) { entry in
-                HStack(spacing: 8) {
-                    // Category emoji
-                    Text(entry.category.emoji)
-                        .font(.system(size: 14))
-
-                    // Entry text
-                    Text(entry.text)
-                        .font(.callout)
-                        .foregroundColor(.primary)
-                        .lineLimit(2)
-
-                    Spacer()
-
-                    // Completion status for todos
-                    if showCompletionStatus, entry.category == .todo {
-                        if entry.isAccomplished == true {
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                Text(Strings.MindCheck.Historical.completed)
-                                    .font(.caption2)
-                                    .foregroundColor(.green)
-                            }
-                        } else {
-                            HStack(spacing: 4) {
-                                Image(systemName: "circle")
-                                    .foregroundColor(.secondary.opacity(0.5))
-                                Text(Strings.MindCheck.Historical.notCompleted)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.primary.opacity(0.03))
-                )
-            }
-        }
-    }
-
-    private func reflectionSummary(_ reflection: DailyReflection) -> some View {
-        VStack(spacing: 8) {
-            Divider()
-                .padding(.horizontal, 40)
-
-            HStack(spacing: 12) {
-                if let feeling = reflection.feeling {
-                    Text(feeling.emoji)
-                        .font(.title2)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Felt \(feeling.displayName.lowercased())")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-
-                        if let sleep = reflection.sleepQuality {
-                            Text("Sleep: \(sleep.displayName)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                } else if let sleep = reflection.sleepQuality {
-                    Text(sleep.emoji)
-                        .font(.title2)
-
-                    Text("Sleep: \(sleep.displayName)")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                }
-            }
-
-            if let note = reflection.note, !note.isEmpty {
-                Text("\"\(note)\"")
-                    .font(.caption)
-                    .italic()
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .padding(.horizontal)
-            }
-        }
-        .padding(.top, 8)
-    }
-
     private func scoreColor(_ score: Double) -> Color {
-        if score >= 0.8 { return .green }
-        if score >= 0.5 { return .blue }
+        if score >= ScoringThresholds.healthy { return .green }
+        if score >= ScoringThresholds.neutral { return .blue }
         return .orange
     }
 
@@ -642,6 +369,13 @@ struct DayTimelineView: View {
 
 /// A simplified, non-editable meal card for historical views.
 struct ReadOnlyMealCardView: View {
+    // MARK: - Constants
+
+    /// Base fill color — uses semantically adaptive background for light/dark mode
+    static let cardFillColor: Color = AppTheme.MealCard.background
+
+    // MARK: - Properties
+
     let meal: Meal
 
     /// Callback when user taps the copy button to duplicate meal to today
@@ -707,17 +441,11 @@ struct ReadOnlyMealCardView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
-        .background(
-            // White overlay for consistency with today's cards (works in both light/dark mode)
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.4))
-        )
-        .background(
-            // Subtle tint overlay based on health score
-            RoundedRectangle(cornerRadius: 16)
-                .fill(self.cardBackground)
+                .fill(Self.cardFillColor)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(self.cardBackground)
+                }
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
@@ -733,15 +461,15 @@ struct ReadOnlyMealCardView: View {
     }
 
     private var scoreColor: Color {
-        if self.meal.healthScore >= 0.8 { return .green }
-        if self.meal.healthScore >= 0.5 { return .blue }
+        if self.meal.healthScore >= ScoringThresholds.healthy { return .green }
+        if self.meal.healthScore >= ScoringThresholds.neutral { return .blue }
         return .orange
     }
 
     private var cardBackground: Color {
-        if self.meal.healthScore >= 0.7 {
+        if self.meal.healthScore >= ScoringThresholds.high {
             Color.green.opacity(0.08)
-        } else if self.meal.healthScore >= 0.4 {
+        } else if self.meal.healthScore >= ScoringThresholds.unhealthy {
             Color.blue.opacity(0.05)
         } else {
             Color.orange.opacity(0.08)
@@ -749,9 +477,9 @@ struct ReadOnlyMealCardView: View {
     }
 
     private var borderColor: Color {
-        if self.meal.healthScore >= 0.7 {
+        if self.meal.healthScore >= ScoringThresholds.high {
             Color.green.opacity(0.3)
-        } else if self.meal.healthScore >= 0.4 {
+        } else if self.meal.healthScore >= ScoringThresholds.unhealthy {
             Color.blue.opacity(0.2)
         } else {
             Color.orange.opacity(0.3)
@@ -772,38 +500,7 @@ struct ReadOnlyMealCardView: View {
             isToday: true,
             smileyState: .neutral,
             snapshot: nil,
-            onSmileyTap: { print("Smiley tapped") },
-            reflectionData: TodayReflectionData(
-                sleepQuality: .good,
-                feeling: .calm
-            )
-        )
-    }
-}
-
-#Preview("Today Timeline - With Apple Sleep Data") {
-    ScrollView {
-        DayTimelineView(
-            meals: [
-                Meal(mealType: .breakfast, items: ["Oatmeal", "Berries"], healthScore: 0.9),
-                Meal(mealType: .lunch, items: ["Salad", "Chicken"], healthScore: 0.8)
-            ],
-            fastingPeriods: [],
-            isToday: true,
-            smileyState: .neutral,
-            snapshot: nil,
-            onSmileyTap: { print("Smiley tapped") },
-            reflectionData: TodayReflectionData(
-                sleepQuality: .good,
-                appleSleepData: SleepData(
-                    sleepDuration: 7.5 * 3600,
-                    timeInBed: 8 * 3600,
-                    sleepStart: nil,
-                    sleepEnd: nil,
-                    sleepScore: 85
-                ),
-                feeling: .calm
-            )
+            onSmileyTap: {}
         )
     }
 }
@@ -824,15 +521,7 @@ struct ReadOnlyMealCardView: View {
                 smileyState: SmileyState(scale: 1.2, mood: .overwhelmed),
                 meals: [],
                 mealCount: 2,
-                averageHealthScore: 0.4,
-                reflection: DailyReflection(feeling: .heavy, sleepQuality: .poor, note: "Overate"),
-                morningMindCheck: [
-                    MindCheckEntry(category: .todo, text: "Exercise", context: .morning, isAccomplished: true),
-                    MindCheckEntry(category: .todo, text: "Read book", context: .morning, isAccomplished: false)
-                ],
-                eveningMindCheck: [
-                    MindCheckEntry(category: .gratefulFor, text: "Good health", context: .evening)
-                ]
+                averageHealthScore: 0.4
             )
         )
     }

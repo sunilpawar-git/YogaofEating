@@ -113,8 +113,8 @@
             await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple"])
 
             // Assert
-            // Should use local scoring since service is not AILogicService
-            XCTAssertEqual(self.sut.meals.first?.healthScore, 0.5)
+            // Should preserve default (0.0) since service is not AILogicService
+            XCTAssertEqual(self.sut.meals.first?.healthScore, 0.0)
         }
 
         func test_performDeepAnalysis_fallsBack_onAIError() async {
@@ -145,6 +145,84 @@
             // Assert
             XCTAssertEqual(self.sut.smileyState.scale, 1.0)
             XCTAssertEqual(self.sut.smileyState.mood, .neutral)
+        }
+
+        // MARK: - Smiley Average Filtering Tests
+
+        func test_reanalyzeAllMealsForSmileyState_withOnlyUnanalyzedMeals_returnsNeutral() async {
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+            guard self.sut.meals.count == 2 else {
+                XCTFail("Expected 2 meals")
+                return
+            }
+
+            await self.sut.reanalyzeAllMealsForSmileyState()
+
+            XCTAssertEqual(
+                self.sut.smileyState.mood,
+                .neutral,
+                "Smiley should be neutral when all meals are unanalyzed (0.0)"
+            )
+        }
+
+        func test_reanalyzeAllMealsForSmileyState_filtersOutUnanalyzedMeals() async {
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+
+            var meals = self.sut.meals
+            meals[0].healthScore = 0.8
+            meals[0].isAIAnalyzed = true
+            self.sut.meals = meals
+
+            await self.sut.reanalyzeAllMealsForSmileyState()
+
+            XCTAssertEqual(
+                self.sut.smileyState.mood,
+                .serene,
+                "Smiley should reflect only the analyzed meal (0.8), not the 0.0 unanalyzed one"
+            )
+        }
+
+        func test_reanalyzeAllMealsForSmileyState_naiveAverageWouldFail() async {
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+
+            var meals = self.sut.meals
+            meals[0].healthScore = 0.8
+            meals[0].isAIAnalyzed = true
+            meals[1].healthScore = 0.0
+            meals[1].isAIAnalyzed = false
+            self.sut.meals = meals
+
+            await self.sut.reanalyzeAllMealsForSmileyState()
+
+            XCTAssertNotEqual(
+                self.sut.smileyState.mood,
+                .overwhelmed,
+                "If we naively averaged both, we'd get 0.4 (overwhelmed). Should be serene instead."
+            )
+            XCTAssertEqual(self.sut.smileyState.mood, .serene)
+        }
+
+        func test_reanalyzeAllMealsForSmileyState_allAnalyzedMeals_stillWorks() async {
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+
+            var meals = self.sut.meals
+            meals[0].healthScore = 0.8
+            meals[0].isAIAnalyzed = true
+            meals[1].healthScore = 0.6
+            meals[1].isAIAnalyzed = true
+            self.sut.meals = meals
+
+            await self.sut.reanalyzeAllMealsForSmileyState()
+
+            XCTAssertEqual(
+                self.sut.smileyState.mood,
+                .serene,
+                "With all meals analyzed, average should be 0.7 -> serene"
+            )
         }
 
         // MARK: - Phase 4: AI Analyzed Flag Tests
@@ -283,6 +361,37 @@
 
             // Then: Only ONE analysis should have been performed
             XCTAssertEqual(slowMock.analyzeCallCount, 1, "Should only call analyze once for concurrent requests")
+        }
+
+        func test_performDeepAnalysis_usesAtomicInsertionForRaceConditionPrevention() async {
+            // REGRESSION TEST: Verifies that concurrent rapid calls cannot bypass the analysisInProgress guard
+            // due to race condition between separate contains() and insert() calls.
+            // Using Set.insert().inserted ensures atomicity.
+
+            self.sut.createNewMeal()
+            guard let mealId = self.sut.meals.first?.id else {
+                XCTFail("Meal not created")
+                return
+            }
+
+            let slowMock = SlowMockAILogicService()
+            self.sut = MainViewModel(logicService: slowMock, persistenceService: self.mockPersistence)
+            self.sut.createNewMeal()
+            guard let newMealId = self.sut.meals.first?.id else {
+                XCTFail("Meal not created")
+                return
+            }
+
+            // Fire 3 concurrent analysis requests to stress-test the atomic guard
+            async let first: () = self.sut.performDeepAnalysis(for: newMealId, items: ["Apple"])
+            async let second: () = self.sut.performDeepAnalysis(for: newMealId, items: ["Apple"])
+            async let third: () = self.sut.performDeepAnalysis(for: newMealId, items: ["Apple"])
+
+            _ = await (first, second, third)
+
+            // CRITICAL: Only ONE request should reach the AI service
+            // This catches the bug where separate contains() + insert() calls allow multiple requests through
+            XCTAssertEqual(slowMock.analyzeCallCount, 1, "Atomic insertion must prevent concurrent duplicates")
         }
 
         func test_performDeepAnalysis_allowsSequentialRequestsAfterCompletion() async {
@@ -718,6 +827,40 @@
 
             // Then: AI analysis should be triggered despite content being "unchanged"
             XCTAssertTrue(self.mockAILogic.analyzeCalled, "AI should be triggered on done action after local updates")
+        }
+
+        // MARK: - Production Wiring Tests
+
+        func test_defaultMainViewModel_usesAIAnalysisProvider() {
+            // Regression test: MainViewModel() with no args must wire AILogicService.
+            // This was broken when the default was silently changed to MealLogicService to fix
+            // a Firebase timing warning, causing performDeepAnalysis to always bail early.
+            let vm = MainViewModel(skipDataLoading: true)
+            XCTAssertTrue(
+                vm.logicService is AIAnalysisProvider,
+                "Production MainViewModel must use AIAnalysisProvider — without it, AI analysis silently never runs"
+            )
+        }
+
+        func test_defaultMainViewModel_aiAnalysisGuardPasses() async {
+            // Verifies the AIAnalysisProvider cast in performDeepAnalysis succeeds for the default VM,
+            // so Firebase is actually called rather than returning early with the local score.
+            let vm = MainViewModel(logicService: MockAILogicService(), skipDataLoading: true)
+            vm.createNewMeal()
+            guard let mealId = vm.meals.first?.id else {
+                XCTFail("Meal not created")
+                return
+            }
+
+            // Confirm the guard passes — analyzeCalled would be false if guard bailed early
+            let mock = vm.logicService as! MockAILogicService
+            mock.mockAnalysisResult = (score: 0.9, mood: .serene, sound: "chime", insight: nil)
+            await vm.performDeepAnalysis(for: mealId, items: ["Apple salad"])
+
+            XCTAssertTrue(
+                mock.analyzeCalled,
+                "AIAnalysisProvider guard must pass for default VM — if false, AI is silently disabled"
+            )
         }
     }
 

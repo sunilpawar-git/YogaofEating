@@ -104,8 +104,10 @@ final class InsightTriggerTests: XCTestCase {
         // When: Save sleep quality
         self.sut.saveSleepQuality(.good)
 
-        // Wait for async task
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Wait for insight task to complete
+        if let insightTask = self.sut.insightTask {
+            await insightTask.value
+        }
 
         // Then: currentInsight should be set
         XCTAssertNotNil(self.sut.currentInsight)
@@ -128,8 +130,10 @@ final class InsightTriggerTests: XCTestCase {
         // When: Save sleep quality to trigger insight
         self.sut.saveSleepQuality(.good)
 
-        // Wait for async task
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Wait for insight task to complete
+        if let insightTask = self.sut.insightTask {
+            await insightTask.value
+        }
 
         // Then: Insight should now be available
         XCTAssertTrue(self.sut.hasInsightAvailable)
@@ -149,8 +153,10 @@ final class InsightTriggerTests: XCTestCase {
         // When: Trigger insight generation
         self.sut.saveSleepQuality(.good)
 
-        // Wait for async task
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Wait for insight task to complete
+        if let insightTask = self.sut.insightTask {
+            await insightTask.value
+        }
 
         // Then: Should show unread indicator
         XCTAssertTrue(self.sut.hasUnreadInsight)
@@ -253,25 +259,17 @@ final class InsightTriggerTests: XCTestCase {
 
         // Add yesterday's data
         let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
-        let yesterdaySnapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: yesterday,
-            smileyState: .neutral,
-            meals: [Meal(mealType: .dinner, items: ["Pasta"], healthScore: 0.5)],
-            mealCount: 1,
-            averageHealthScore: 0.5
-        )
+        let yesterdaySnapshot = DailySmileySnapshotBuilder()
+            .withDate(yesterday)
+            .withMeals([MealBuilder().withMealType(.dinner).withItems(["Pasta"]).withScore(0.5).build()])
+            .build()
         self.mockHistorical.historicalData.addOrUpdate(snapshot: yesterdaySnapshot)
 
         // Add today's snapshot (will be updated with sleep)
-        let todaySnapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: today,
-            smileyState: .neutral,
-            meals: [Meal(mealType: .breakfast, items: ["Toast"], healthScore: 0.6)],
-            mealCount: 1,
-            averageHealthScore: 0.6
-        )
+        let todaySnapshot = DailySmileySnapshotBuilder()
+            .withDate(today)
+            .withMeals([MealBuilder().withMealType(.breakfast).withItems(["Toast"]).withScore(0.6).build()])
+            .build()
         self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
     }
 }
@@ -333,5 +331,13 @@ class MockInsightGenerationService: InsightGenerationServiceProtocol {
     func generateWeeklyInsight() async -> WeeklyInsight? {
         self.generateWeeklyInsightCalled = true
         return self.mockWeeklyInsight
+    }
+
+    var generateBriefingCalled = false
+    var mockBriefing: DailyBriefing?
+
+    func generateBriefing(for _: Date, healthKitSleepData _: [Date: SleepData]) async -> DailyBriefing? {
+        self.generateBriefingCalled = true
+        return self.mockBriefing
     }
 }
