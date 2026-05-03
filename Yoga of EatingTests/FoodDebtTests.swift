@@ -204,7 +204,7 @@
             let badSnapshots = [
                 makeSnapshot(daysAgo: 1, score: 0.10, mealCount: 2),
                 makeSnapshot(daysAgo: 2, score: 0.10, mealCount: 2),
-                makeSnapshot(daysAgo: 3, score: 0.75, mealCount: 2)
+                makeSnapshot(daysAgo: 3, score: 0.15, mealCount: 2)
             ]
             // Borderline scores → lower confidence
             let borderlineSnapshots = [
