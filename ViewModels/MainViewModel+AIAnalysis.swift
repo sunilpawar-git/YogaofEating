@@ -79,7 +79,9 @@ extension MainViewModel {
                     updatedMeals[verifyIndex].healthScore = result.score
                     updatedMeals[verifyIndex].isAIAnalyzed = true
                     updatedMeals[verifyIndex].aiInsight = result.insight
-                    meals = updatedMeals
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
+                        meals = updatedMeals
+                    }
                     saveData()
                 }
 
@@ -105,8 +107,16 @@ extension MainViewModel {
             return
         }
 
-        let totalScore = meals.map(\.healthScore).reduce(0.0, +)
-        let avgScore = totalScore / Double(meals.count)
+        let analyzedMeals = meals.filter(\.isAIAnalyzed)
+        guard !analyzedMeals.isEmpty else {
+            withAnimation(.spring()) {
+                smileyState = .neutral
+            }
+            return
+        }
+
+        let totalScore = analyzedMeals.map(\.healthScore).reduce(0.0, +)
+        let avgScore = totalScore / Double(analyzedMeals.count)
 
         updateSmileyState(with: avgScore, withFeedback: withFeedback)
         saveData()

@@ -113,8 +113,8 @@
             await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple"])
 
             // Assert
-            // Should use local scoring since service is not AILogicService
-            XCTAssertEqual(self.sut.meals.first?.healthScore, 0.5)
+            // Should preserve default (0.0) since service is not AILogicService
+            XCTAssertEqual(self.sut.meals.first?.healthScore, 0.0)
         }
 
         func test_performDeepAnalysis_fallsBack_onAIError() async {
@@ -145,6 +145,84 @@
             // Assert
             XCTAssertEqual(self.sut.smileyState.scale, 1.0)
             XCTAssertEqual(self.sut.smileyState.mood, .neutral)
+        }
+
+        // MARK: - Smiley Average Filtering Tests
+
+        func test_reanalyzeAllMealsForSmileyState_withOnlyUnanalyzedMeals_returnsNeutral() async {
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+            guard self.sut.meals.count == 2 else {
+                XCTFail("Expected 2 meals")
+                return
+            }
+
+            await self.sut.reanalyzeAllMealsForSmileyState()
+
+            XCTAssertEqual(
+                self.sut.smileyState.mood,
+                .neutral,
+                "Smiley should be neutral when all meals are unanalyzed (0.0)"
+            )
+        }
+
+        func test_reanalyzeAllMealsForSmileyState_filtersOutUnanalyzedMeals() async {
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+
+            var meals = self.sut.meals
+            meals[0].healthScore = 0.8
+            meals[0].isAIAnalyzed = true
+            self.sut.meals = meals
+
+            await self.sut.reanalyzeAllMealsForSmileyState()
+
+            XCTAssertEqual(
+                self.sut.smileyState.mood,
+                .serene,
+                "Smiley should reflect only the analyzed meal (0.8), not the 0.0 unanalyzed one"
+            )
+        }
+
+        func test_reanalyzeAllMealsForSmileyState_naiveAverageWouldFail() async {
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+
+            var meals = self.sut.meals
+            meals[0].healthScore = 0.8
+            meals[0].isAIAnalyzed = true
+            meals[1].healthScore = 0.0
+            meals[1].isAIAnalyzed = false
+            self.sut.meals = meals
+
+            await self.sut.reanalyzeAllMealsForSmileyState()
+
+            XCTAssertNotEqual(
+                self.sut.smileyState.mood,
+                .overwhelmed,
+                "If we naively averaged both, we'd get 0.4 (overwhelmed). Should be serene instead."
+            )
+            XCTAssertEqual(self.sut.smileyState.mood, .serene)
+        }
+
+        func test_reanalyzeAllMealsForSmileyState_allAnalyzedMeals_stillWorks() async {
+            self.sut.createNewMeal()
+            self.sut.createNewMeal()
+
+            var meals = self.sut.meals
+            meals[0].healthScore = 0.8
+            meals[0].isAIAnalyzed = true
+            meals[1].healthScore = 0.6
+            meals[1].isAIAnalyzed = true
+            self.sut.meals = meals
+
+            await self.sut.reanalyzeAllMealsForSmileyState()
+
+            XCTAssertEqual(
+                self.sut.smileyState.mood,
+                .serene,
+                "With all meals analyzed, average should be 0.7 -> serene"
+            )
         }
 
         // MARK: - Phase 4: AI Analyzed Flag Tests

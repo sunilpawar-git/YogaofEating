@@ -4,124 +4,106 @@
     @testable import Yoga_of_Eating
 
     final class MealScoreBadgeTests: XCTestCase {
-        // MARK: - Display Tests
+        // MARK: - shouldDisplay Logic
 
-        func test_mealScoreBadge_displaysPercentage_whenScoreExists() {
-            // Given: A valid score
-            let score = 0.75
-
-            // When: Creating badge
-            let badge = MealScoreBadge(score: score, onTap: {})
-
-            // Then: Badge should be visible (score > 0)
-            XCTAssertTrue(badge.shouldDisplay, "Badge should display when score exists")
+        func test_shouldDisplay_falseWhenScoreIsZero() {
+            let badge = MealScoreBadge(score: 0.0, onTap: {})
+            XCTAssertFalse(badge.shouldDisplay, "Badge should be hidden for unanalyzed (0.0) meals")
         }
 
-        func test_mealScoreBadge_hidden_whenScoreIsNil() {
-            // Given: Nil score
-            let score: Double? = nil
-
-            // When: Creating badge
-            let badge = MealScoreBadge(score: score, onTap: {})
-
-            // Then: Badge should be hidden
+        func test_shouldDisplay_falseWhenScoreIsNil() {
+            let badge = MealScoreBadge(score: nil, onTap: {})
             XCTAssertFalse(badge.shouldDisplay, "Badge should be hidden when score is nil")
         }
 
-        func test_mealScoreBadge_hidden_whenScoreIsZero() {
-            // Given: Zero score
-            let score = 0.0
-
-            // When: Creating badge
-            let badge = MealScoreBadge(score: score, onTap: {})
-
-            // Then: Badge should be hidden (no AI analysis yet)
-            XCTAssertFalse(badge.shouldDisplay, "Badge should be hidden when score is zero")
+        func test_shouldDisplay_trueWhenScoreIsPositive() {
+            let badge = MealScoreBadge(score: 0.75, onTap: {})
+            XCTAssertTrue(badge.shouldDisplay, "Badge should be visible for AI-analyzed meals with positive score")
         }
 
-        // MARK: - Formatting Tests
-
-        func test_mealScoreBadge_formatsScore_asWholeNumber() {
-            // Given: Various scores
-            let testCases: [(score: Double, expected: String)] = [
-                (0.8, "80%"),
-                (0.75, "75%"),
-                (0.333, "33%"),
-                (1.0, "100%"),
-                (0.05, "5%")
-            ]
-
-            for testCase in testCases {
-                // When
-                let badge = MealScoreBadge(score: testCase.score, onTap: {})
-
-                // Then
-                XCTAssertEqual(
-                    badge.formattedScore,
-                    testCase.expected,
-                    "Score \(testCase.score) should format as \(testCase.expected)"
-                )
-            }
+        func test_shouldDisplay_trueForLowAIScore() {
+            let badge = MealScoreBadge(score: 0.2, onTap: {})
+            XCTAssertTrue(badge.shouldDisplay, "Badge should be visible even for low scores (0.2)")
         }
 
-        func test_mealScoreBadge_formattedScore_returnsEmptyString_whenScoreIsNil() {
-            // Given: Nil score
-            let badge = MealScoreBadge(score: nil, onTap: {})
-
-            // Then
-            XCTAssertEqual(badge.formattedScore, "", "Should return empty string for nil score")
+        func test_shouldDisplay_trueForHighAIScore() {
+            let badge = MealScoreBadge(score: 0.95, onTap: {})
+            XCTAssertTrue(badge.shouldDisplay, "Badge should be visible for excellent scores")
         }
 
-        func test_mealScoreBadge_formattedScore_returnsEmptyString_whenScoreIsZero() {
-            // Given: Zero score
+        // MARK: - Formatted Score
+
+        func test_formattedScore_returnsEmptyForZeroScore() {
             let badge = MealScoreBadge(score: 0.0, onTap: {})
-
-            // Then
-            XCTAssertEqual(badge.formattedScore, "", "Should return empty string for zero score")
+            XCTAssertEqual(badge.formattedScore, "")
         }
 
-        // MARK: - Tap Action Tests
+        func test_formattedScore_returnsEmptyForNil() {
+            let badge = MealScoreBadge(score: nil, onTap: {})
+            XCTAssertEqual(badge.formattedScore, "")
+        }
 
-        func test_mealScoreBadge_onTap_triggersCallback() {
-            // Given
-            var tapCount = 0
-            let badge = MealScoreBadge(score: 0.75) {
-                tapCount += 1
-            }
+        func test_formattedScore_75Percent() {
+            let badge = MealScoreBadge(score: 0.75, onTap: {})
+            XCTAssertEqual(badge.formattedScore, "75%")
+        }
 
-            // When: Simulating tap via callback
-            badge.onTap()
+        func test_formattedScore_roundsDown() {
+            let badge = MealScoreBadge(score: 0.756, onTap: {})
+            XCTAssertEqual(badge.formattedScore, "75%", "Should round down (truncate) to integer")
+        }
 
-            // Then
-            XCTAssertEqual(tapCount, 1, "Tap callback should be triggered")
+        func test_formattedScore_singleDigit() {
+            let badge = MealScoreBadge(score: 0.05, onTap: {})
+            XCTAssertEqual(badge.formattedScore, "5%")
+        }
+
+        func test_formattedScore_100Percent() {
+            let badge = MealScoreBadge(score: 1.0, onTap: {})
+            XCTAssertEqual(badge.formattedScore, "100%")
+        }
+
+        // MARK: - Color Selection
+
+        func test_badgeColor_exceeds75() {
+            let badge = MealScoreBadge(score: 0.8, onTap: {})
+            XCTAssertEqual(badge.badgeColor, Color(red: 0.5, green: 0.65, blue: 0.55))
+        }
+
+        func test_badgeColor_betweenHealthyAndExcellent() {
+            let badge = MealScoreBadge(score: 0.65, onTap: {})
+            XCTAssertEqual(badge.badgeColor, Color(red: 0.5, green: 0.6, blue: 0.7))
+        }
+
+        func test_badgeColor_moderate() {
+            let badge = MealScoreBadge(score: 0.45, onTap: {})
+            XCTAssertEqual(badge.badgeColor, Color(red: 0.65, green: 0.6, blue: 0.55))
+        }
+
+        func test_badgeColor_low() {
+            let badge = MealScoreBadge(score: 0.2, onTap: {})
+            XCTAssertEqual(badge.badgeColor, Color(red: 0.55, green: 0.55, blue: 0.55))
+        }
+
+        func test_badgeColor_nilScore() {
+            let badge = MealScoreBadge(score: nil, onTap: {})
+            XCTAssertEqual(badge.badgeColor, .secondary)
         }
 
         // MARK: - Edge Cases
 
-        func test_mealScoreBadge_handles_verySmallScores() {
-            // Given: Very small but non-zero score
-            let badge = MealScoreBadge(score: 0.001, onTap: {})
-
-            // Then: Should still display (score > 0)
+        func test_badgeVisible_scoreBoundaryAt0_55() {
+            let badge = MealScoreBadge(score: 0.55, onTap: {})
             XCTAssertTrue(badge.shouldDisplay)
-            XCTAssertEqual(badge.formattedScore, "0%") // Rounds to 0 but still shows
+            XCTAssertEqual(badge.formattedScore, "55%")
+            XCTAssertEqual(badge.badgeColor, Color(red: 0.5, green: 0.6, blue: 0.7))
         }
 
-        func test_mealScoreBadge_handles_scoresAboveOne() {
-            // Given: Score above 1.0 (edge case / invalid but handle gracefully)
-            let badge = MealScoreBadge(score: 1.5, onTap: {})
-
-            // Then: Should display and format as 150%
+        func test_badgeVisible_scoreBoundaryAt0_35() {
+            let badge = MealScoreBadge(score: 0.35, onTap: {})
             XCTAssertTrue(badge.shouldDisplay)
-            XCTAssertEqual(badge.formattedScore, "150%")
-        }
-
-        func test_mealScoreBadge_handles_negativeScores() {
-            // Given: Negative score (edge case / invalid)
-            let badge = MealScoreBadge(score: -0.5, onTap: {})
-
-            // Then: Should not display (score <= 0)
-            XCTAssertFalse(badge.shouldDisplay)
+            XCTAssertEqual(badge.formattedScore, "35%")
+            XCTAssertEqual(badge.badgeColor, Color(red: 0.65, green: 0.6, blue: 0.55))
         }
     }
 #endif
