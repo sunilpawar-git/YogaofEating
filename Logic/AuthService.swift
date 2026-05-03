@@ -42,10 +42,12 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
 
     func signInWithGoogle() async throws -> AuthUser {
         guard let clientID = FirebaseApp.app()?.options.clientID else {
-            throw NSError(
-                domain: "AuthService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Firebase Client ID not found"]
+            throw AppError.authProviderFailed(
+                underlying: NSError(
+                    domain: "AuthService",
+                    code: 0,
+                    userInfo: [NSLocalizedDescriptionKey: "Firebase Client ID not found"]
+                )
             )
         }
 
@@ -56,29 +58,35 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let rootViewController = windowScene.windows.first?.rootViewController
             else {
-                throw NSError(
-                    domain: "AuthService",
-                    code: 0,
-                    userInfo: [NSLocalizedDescriptionKey: "No root view controller found"]
+                throw AppError.authProviderFailed(
+                    underlying: NSError(
+                        domain: "AuthService",
+                        code: 0,
+                        userInfo: [NSLocalizedDescriptionKey: "No root view controller found"]
+                    )
                 )
             }
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootViewController)
         #elseif canImport(AppKit)
             guard let presentingWindow = NSApplication.shared.keyWindow else {
-                throw NSError(
-                    domain: "AuthService",
-                    code: 0,
-                    userInfo: [NSLocalizedDescriptionKey: "No key window found"]
+                throw AppError.authProviderFailed(
+                    underlying: NSError(
+                        domain: "AuthService",
+                        code: 0,
+                        userInfo: [NSLocalizedDescriptionKey: "No key window found"]
+                    )
                 )
             }
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presentingWindow)
         #endif
 
         guard let idToken = result.user.idToken?.tokenString else {
-            throw NSError(
-                domain: "AuthService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Google ID Token missing"]
+            throw AppError.authProviderFailed(
+                underlying: NSError(
+                    domain: "AuthService",
+                    code: 0,
+                    userInfo: [NSLocalizedDescriptionKey: "Google ID Token missing"]
+                )
             )
         }
 
@@ -106,11 +114,7 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
 
     func restorePreviousSignIn() async throws -> AuthUser {
         guard FirebaseApp.app() != nil else {
-            throw NSError(
-                domain: "AuthService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Firebase not configured"]
-            )
+            throw AppError.sessionRestoreFailed
         }
         let user = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
 
@@ -118,11 +122,7 @@ class FirebaseAuthCoreProvider: AuthCoreProvider {
         let accessToken = user.accessToken.tokenString
 
         guard let idToken else {
-            throw NSError(
-                domain: "AuthService",
-                code: 0,
-                userInfo: [NSLocalizedDescriptionKey: "Failed to restore ID Token"]
-            )
+            throw AppError.sessionRestoreFailed
         }
 
         let credential = GoogleAuthProvider.credential(

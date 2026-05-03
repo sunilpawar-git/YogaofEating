@@ -1,24 +1,5 @@
 import Foundation
 
-/// Shared scoring thresholds — single source of truth used by MealLogicService,
-/// AILogicService, SensoryService, and PatternAnalyzer so feedback tone and smiley always agree.
-enum ScoringThresholds {
-    /// Scores above this are considered "healthy"
-    static let healthy: Double = 0.65
-    /// Scores below this are considered "unhealthy"
-    static let unhealthy: Double = 0.35
-    /// Two consecutive days with averageHealthScore below this trigger the food-debt
-    /// smiley starting state and a CorrelationCard in the morning briefing.
-    /// Basis: Esposito et al. (2002) — inflammatory markers after 2 poor-eating days.
-    static let foodDebtBadDay: Double = 0.45
-    /// "Great week" threshold — weekly summary phrases above this score
-    static let high: Double = 0.7
-    /// Neutral/default fallback score when no data is available
-    static let neutral: Double = 0.5
-    /// Minimum consecutive days with score >= high to earn a "healthy eating streak" win
-    static let minimumConsistentDays: Int = 5
-}
-
 /// Service responsible for the "Yoga of Eating" logic.
 /// Adapts the Smiley's state based on meal choices.
 protocol MealLogicProvider {

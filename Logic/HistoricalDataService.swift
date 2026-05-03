@@ -222,8 +222,7 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         // Capture userId and snapshots upfront to prevent race conditions
         // during the async upload loop
         guard let userId = self.authService.currentUser?.uid else {
-            struct AuthError: Error {}
-            throw AuthError()
+            throw AppError.syncAuthRequired
         }
 
         // Take a snapshot of the data to sync to avoid issues if data changes mid-sync
