@@ -79,8 +79,8 @@ final class InsightServiceTests: XCTestCase {
             "PatternAnalysisEngine.analyzePatterns must match the original PatternAnalyzer output count"
         )
 
-        let analyzerTypes = analyzerPatterns.map(\.patternType).sorted { $0.rawValue < $1.rawValue }
-        let engineTypes = enginePatterns.map(\.patternType).sorted { $0.rawValue < $1.rawValue }
+        let analyzerTypes = analyzerPatterns.map(\.type).sorted { $0.rawValue < $1.rawValue }
+        let engineTypes = enginePatterns.map(\.type).sorted { $0.rawValue < $1.rawValue }
         XCTAssertEqual(
             analyzerTypes,
             engineTypes,
