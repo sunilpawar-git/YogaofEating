@@ -59,6 +59,7 @@ struct MealScoreBadge: View {
                 HStack(spacing: 3) {
                     Text(self.formattedScore)
                         .font(FontTheme.textEntry(size: 12, weight: .semibold))
+                        .contentTransition(.numericText())
 
                     Image(systemName: "chevron.right")
                         .font(FontTheme.textEntry(size: 9, weight: .semibold))
@@ -83,6 +84,8 @@ struct MealScoreBadge: View {
             })
             .accessibilityLabel("Health score: \(self.formattedScore)")
             .accessibilityHint("Tap to see detailed score breakdown and nutrition analysis")
+            .transition(.opacity)
+            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: self.shouldDisplay)
         }
     }
 }
