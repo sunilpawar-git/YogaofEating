@@ -126,11 +126,11 @@ extension MainViewModel {
 
             let result = try await aiService.analyzeMealQuality(description: sanitized)
             #if DEBUG
-            aiLogger.debug(
-                "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
-            )
+                aiLogger.debug(
+                    "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
+                )
             #else
-            aiLogger.debug("AI analysis complete for meal \(mealId, privacy: .public)")
+                aiLogger.debug("AI analysis complete for meal \(mealId, privacy: .public)")
             #endif
 
             if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
