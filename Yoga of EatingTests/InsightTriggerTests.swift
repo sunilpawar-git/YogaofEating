@@ -253,25 +253,17 @@ final class InsightTriggerTests: XCTestCase {
 
         // Add yesterday's data
         let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
-        let yesterdaySnapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: yesterday,
-            smileyState: .neutral,
-            meals: [Meal(mealType: .dinner, items: ["Pasta"], healthScore: 0.5)],
-            mealCount: 1,
-            averageHealthScore: 0.5
-        )
+        let yesterdaySnapshot = DailySmileySnapshotBuilder()
+            .withDate(yesterday)
+            .withMeals([MealBuilder().withMealType(.dinner).withItems(["Pasta"]).withScore(0.5).build()])
+            .build()
         self.mockHistorical.historicalData.addOrUpdate(snapshot: yesterdaySnapshot)
 
         // Add today's snapshot (will be updated with sleep)
-        let todaySnapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: today,
-            smileyState: .neutral,
-            meals: [Meal(mealType: .breakfast, items: ["Toast"], healthScore: 0.6)],
-            mealCount: 1,
-            averageHealthScore: 0.6
-        )
+        let todaySnapshot = DailySmileySnapshotBuilder()
+            .withDate(today)
+            .withMeals([MealBuilder().withMealType(.breakfast).withItems(["Toast"]).withScore(0.6).build()])
+            .build()
         self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
     }
 }

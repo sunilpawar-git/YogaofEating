@@ -29,10 +29,6 @@ struct JournalBlockView: View {
     /// Sourced from InputValidator for consistent security validation.
     static let maxCharacterLimit: Int = InputValidator.mealDescriptionMaxLength
 
-    /// Debounce delay for local updates during typing.
-    /// Sourced from AppTheme.TextEntry — single source of truth across the app.
-    static let localUpdateDebounceNanoseconds: UInt64 = AppTheme.TextEntry.debounceNanoseconds
-
     static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
@@ -48,7 +44,6 @@ struct JournalBlockView: View {
     @State var showRecentMealsSheet: Bool = false
     @State var editedTimestamp: Date = .init()
     @FocusState var isFocused: Bool
-    @State private var debounceTask: Task<Void, Never>?
     @State private var hasInitialized: Bool = false
     /// Track the last items we sent to prevent external sync from overwriting during typing
     @State var lastSentItems: [String] = []
@@ -166,22 +161,15 @@ struct JournalBlockView: View {
     }
 
     func handleTextChange(_ newValue: String) {
-        self.debounceTask?.cancel()
-        self.debounceTask = Task { @MainActor in
-            // Short debounce for local updates - just enough to batch rapid keystrokes
-            try? await Task.sleep(nanoseconds: Self.localUpdateDebounceNanoseconds)
-            guard !Task.isCancelled else { return }
-            let items = self.parseItems(from: newValue)
-            self.lastSentItems = items
-            // Use onLocalUpdate for typing - NO AI analysis triggered
-            self.onLocalUpdate(self.selectedMealType, items)
-        }
+        let items = self.parseItems(from: newValue)
+        self.lastSentItems = items
+        // Forward every keystroke immediately — debounce is handled by the Combine
+        // pipeline in MainViewModel.enqueueMealEdit, not in the view.
+        self.onLocalUpdate(self.selectedMealType, items)
     }
 
     func handleFocusChange(_ focused: Bool) {
         if !focused {
-            self.debounceTask?.cancel()
-
             // Skip if Done button already triggered the update
             if self.skipNextFocusLoss {
                 self.skipNextFocusLoss = false
@@ -196,7 +184,6 @@ struct JournalBlockView: View {
     }
 
     func handleSubmit() {
-        self.debounceTask?.cancel()
         let items = self.parseItems(from: self.rawText)
         self.lastSentItems = items
         // Use onUpdate for "done" action - triggers AI analysis

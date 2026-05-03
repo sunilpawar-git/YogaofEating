@@ -122,6 +122,12 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     var lastUpdatedReflection: DailyReflection?
     var lastReflectionDate: Date?
 
+    func setMainViewModel(_: any MainViewModelProtocol) {}
+
+    var willChangePublisher: AnyPublisher<Void, Never> {
+        self.objectWillChange.map { _ in () }.eraseToAnyPublisher()
+    }
+
     func archiveCurrentDay(meals: [Meal], state: SmileyState, date: Date) {
         self.archivedMeals = meals
         self.archivedState = state

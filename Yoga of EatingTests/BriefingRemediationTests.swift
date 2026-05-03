@@ -92,15 +92,7 @@ final class BriefingRemediationTests: XCTestCase {
     func test_loadData_hydratesBriefingFromSnapshot() {
         let mockHistorical = MockHistoricalDataService()
         let briefing = self.makeBriefing()
-        let snapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: Date(),
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5,
-            briefing: briefing
-        )
+        let snapshot = DailySmileySnapshotBuilder().withBriefing(briefing).build()
         mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
 
         let (vm, _, _) = self.makeViewModel(historicalService: mockHistorical)
@@ -117,15 +109,7 @@ final class BriefingRemediationTests: XCTestCase {
     func test_triggerBriefingGeneration_skipsWhenSnapshotAlreadyHasBriefing() {
         let mockHistorical = MockHistoricalDataService()
         let briefing = self.makeBriefing()
-        let snapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: Date(),
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5,
-            briefing: briefing
-        )
+        let snapshot = DailySmileySnapshotBuilder().withBriefing(briefing).build()
         mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
 
         let mockInsight = MockInsightGenerationService(historicalService: mockHistorical)

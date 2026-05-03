@@ -50,14 +50,10 @@
 
         func test_saveMorningMindCheck_mergesWithExistingSnapshot() {
             // Arrange - Create existing snapshot with meals
-            let existingSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: self.testDate,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .breakfast, items: ["Oatmeal"])],
-                mealCount: 1,
-                averageHealthScore: 0.8
-            )
+            let existingSnapshot = DailySmileySnapshotBuilder()
+                .withDate(self.testDate)
+                .withMeals([MealBuilder().withMealType(.breakfast).withItems(["Oatmeal"]).withScore(0.8).build()])
+                .build()
             self.mockHistoricalService.historicalData.addOrUpdate(snapshot: existingSnapshot)
 
             let entries = [

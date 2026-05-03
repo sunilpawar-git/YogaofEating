@@ -47,11 +47,14 @@
             )
         }
 
-        func test_journalBlock_debounce_matchesSSO() {
+        func test_timingConstants_debounceMs_matchesAppThemeNanoseconds() {
+            // Phase 5: debounce moved to MainViewModel Combine pipeline.
+            // TimingConstants.debounceMs must stay in sync with AppTheme.TextEntry.debounceNanoseconds.
+            let expectedMs = Int(AppTheme.TextEntry.debounceNanoseconds / 1_000_000)
             XCTAssertEqual(
-                JournalBlockView.localUpdateDebounceNanoseconds,
-                AppTheme.TextEntry.debounceNanoseconds,
-                "JournalBlockView must use AppTheme.TextEntry.debounceNanoseconds, not a hard-coded value"
+                TimingConstants.debounceMs,
+                expectedMs,
+                "TimingConstants.debounceMs must stay aligned with AppTheme.TextEntry.debounceNanoseconds"
             )
         }
     }

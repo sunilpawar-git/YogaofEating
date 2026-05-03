@@ -112,7 +112,7 @@ extension MainViewModel {
         }
 
         self.isBriefingGenerationInProgress = true
-        Task {
+        self.briefingTask = Task {
             defer { self.isBriefingGenerationInProgress = false }
 
             let healthKitSleepData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
@@ -120,6 +120,7 @@ extension MainViewModel {
                 for: date,
                 healthKitSleepData: healthKitSleepData
             ) {
+                guard !Task.isCancelled else { return }
                 self.currentBriefing = briefing
                 self.historicalService.updateBriefing(for: date, briefing: briefing)
 

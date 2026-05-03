@@ -66,7 +66,8 @@ class PersistenceService: PersistenceServiceProtocol {
             let decoded = try JSONDecoder().decode(AppData.self, from: data)
             return decoded
         } catch {
-            // Try loading old format without historicalData (migration)
+            // Migration fallback: attempt to decode old format without historicalData.
+            // If this also fails, return nil (no data to migrate) — documented no-op.
             if let data = try? Data(contentsOf: url),
                let oldData = try? JSONDecoder().decode(OldAppData.self, from: data)
             {
@@ -92,6 +93,10 @@ class PersistenceService: PersistenceServiceProtocol {
     /// This is a destructive operation and cannot be undone.
     func deleteAll() {
         guard let url = fileURL else { return }
-        try? FileManager.default.removeItem(at: url)
+        do {
+            try FileManager.default.removeItem(at: url)
+        } catch {
+            logger.error("PersistenceService: deleteAll failed — \(error.localizedDescription, privacy: .public)")
+        }
     }
 }

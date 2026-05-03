@@ -193,7 +193,7 @@
             var meals: [Meal] = []
             if let score = mealScore {
                 meals.append(
-                    Meal(mealType: .lunch, items: ["Test meal"], healthScore: score)
+                    MealBuilder().withMealType(.lunch).withItems(["Test meal"]).withScore(score).build()
                 )
             }
 
@@ -201,44 +201,39 @@
                 var dinnerDate = calendar.startOfDay(for: date)
                 dinnerDate = calendar.date(byAdding: .hour, value: 22, to: dinnerDate)!
                 meals.append(
-                    Meal(id: UUID(), timestamp: dinnerDate, mealType: .dinner, items: ["Late meal"], healthScore: 0.3)
+                    MealBuilder()
+                        .withTimestamp(dinnerDate)
+                        .withMealType(.dinner)
+                        .withItems(["Late meal"])
+                        .withScore(0.3)
+                        .build()
                 )
             }
 
-            let reflection = DailyReflection(
-                feeling: feeling,
-                sleepQuality: sleepQuality,
-                note: nil
-            )
+            let reflection = DailyReflection(feeling: feeling, sleepQuality: sleepQuality, note: nil)
 
             var morningMindCheck: [MindCheckEntry]?
             if totalTodos > 0 {
-                var entries: [MindCheckEntry] = []
-                for i in 0..<totalTodos {
-                    entries.append(
-                        MindCheckEntry(
-                            category: .todo,
-                            text: "Todo \(i)",
-                            context: .morning,
-                            isAccomplished: todosCompleted
-                        )
-                    )
+                morningMindCheck = (0..<totalTodos).map { i in
+                    MindCheckEntryBuilder()
+                        .withCategory(.todo)
+                        .withText("Todo \(i)")
+                        .withContext(.morning)
+                        .build()
                 }
-                morningMindCheck = entries
+                if todosCompleted {
+                    morningMindCheck = morningMindCheck?.map { $0.withAccomplished(true) }
+                }
             }
 
-            let avgScore = meals.isEmpty ? 0.5 : meals.map(\.healthScore).reduce(0, +) / Double(meals.count)
-
-            return DailySmileySnapshot(
-                id: UUID(),
-                date: date,
-                smileyState: .neutral,
-                meals: meals,
-                mealCount: meals.count,
-                averageHealthScore: avgScore,
-                reflection: reflection,
-                morningMindCheck: morningMindCheck
-            )
+            var builder = DailySmileySnapshotBuilder()
+                .withDate(date)
+                .withMeals(meals)
+                .withReflection(reflection)
+            if let morningMindCheck {
+                builder = builder.withMorningMindCheck(morningMindCheck)
+            }
+            return builder.build()
         }
 
         private func createSnapshotWithMealTimes(
@@ -254,24 +249,21 @@
             let meals: [Meal] = mealHours.enumerated().map { index, hour in
                 let mealTime = calendar.date(byAdding: .hour, value: hour, to: dayStart)!
                 let type = index < types.count ? types[index] : .snacks
-                return Meal(id: UUID(), timestamp: mealTime, mealType: type, items: ["Meal"], healthScore: 0.7)
+                return MealBuilder()
+                    .withTimestamp(mealTime)
+                    .withMealType(type)
+                    .withItems(["Meal"])
+                    .withScore(0.7)
+                    .build()
             }
 
-            let reflection = DailyReflection(
-                feeling: nil,
-                sleepQuality: sleepQuality,
-                note: nil
-            )
+            let reflection = DailyReflection(feeling: nil, sleepQuality: sleepQuality, note: nil)
 
-            return DailySmileySnapshot(
-                id: UUID(),
-                date: date,
-                smileyState: .neutral,
-                meals: meals,
-                mealCount: meals.count,
-                averageHealthScore: 0.7,
-                reflection: reflection
-            )
+            return DailySmileySnapshotBuilder()
+                .withDate(date)
+                .withMeals(meals)
+                .withReflection(reflection)
+                .build()
         }
 
         private func createHighProteinCorrelationData() -> [DailySmileySnapshot] {

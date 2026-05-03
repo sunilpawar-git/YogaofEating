@@ -169,14 +169,10 @@ final class WeeklyInsightTests: XCTestCase {
         let today = Date()
         for daysAgo in 0..<7 {
             let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: date,
-                smileyState: .neutral,
-                meals: [Meal(mealType: .lunch, items: ["Salad"], healthScore: 0.8)],
-                mealCount: 1,
-                averageHealthScore: 0.8
-            )
+            let snapshot = DailySmileySnapshotBuilder()
+                .withDate(date)
+                .withMeals([MealBuilder().withMealType(.lunch).withItems(["Salad"]).withScore(0.8).build()])
+                .build()
             mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
         }
 

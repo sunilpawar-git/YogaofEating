@@ -91,8 +91,8 @@ struct MainScreenView: View {
                     self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
                 },
                 onLocalUpdate: { mealId, _, items in
-                    // Local-only update - NO AI analysis (called during typing)
-                    self.viewModel.updateMealItemsLocalOnly(mealId, items: items)
+                    // Enqueue for debounced local update — debounce lives in MainViewModel.
+                    self.viewModel.enqueueMealEdit(mealId: mealId, items: items)
                 },
                 onUpdateTimestamp: { mealId, timestamp in
                     self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)

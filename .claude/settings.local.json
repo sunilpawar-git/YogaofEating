@@ -20,7 +20,10 @@
       "Read(//tmp/**)",
       "Bash(swift build *)",
       "Bash(swiftc *)",
-      "Bash(xargs ls *)"
+      "Bash(xargs ls *)",
+      "Bash(git *)",
+      "Bash(swift /tmp/verify_logic.swift)",
+      "Bash(sort -k2)"
     ]
   }
 }
