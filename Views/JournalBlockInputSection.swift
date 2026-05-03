@@ -108,8 +108,8 @@ extension JournalBlockView {
     @ViewBuilder
     var itemCountFooter: some View {
         HStack {
-            // Show recent meals button only when unfocused + has recents
-            if !self.isFocused, !self.recentMeals.isEmpty {
+            // Show recent meals button when has recents (always visible for quick access)
+            if !self.recentMeals.isEmpty {
                 self.recentMealsButton
             }
 
