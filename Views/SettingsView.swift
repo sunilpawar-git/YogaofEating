@@ -148,7 +148,7 @@ struct SettingsView: View {
 
     private var signInButton: some View {
         Button(action: {
-            Task { try? await self.authService.signInWithGoogle() }
+            Task { await self.viewModel.signInWithGoogle() }
         }) {
             HStack {
                 Image(systemName: "person.crop.circle.badge.plus")

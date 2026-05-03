@@ -12,6 +12,12 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     func syncToFirebase() async throws
     func clearAllData()
 
+    /// Wires the back-reference from this service to the view model's save path.
+    /// Called by MainViewModel.init() immediately after the service is stored.
+    /// Conformers use this reference via `MainViewModelProtocol` to avoid a DIP
+    /// violation (no concrete HistoricalDataService cast in MainViewModel.init).
+    func setMainViewModel(_ viewModel: any MainViewModelProtocol)
+
     /// Updates or adds a reflection for a specific date.
     /// If a snapshot exists for the date, adds/updates the reflection.
     /// If no snapshot exists, creates a new one with empty meals and the reflection.
@@ -43,23 +49,36 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// ScoringThresholds.foodDebtBadDay; otherwise returns .neutral.
     /// Used by resetDay() to set the smiley's starting state.
     func foodDebtStartingState(relativeTo date: Date) -> SmileyState
+
+    /// Type-erased publisher that fires whenever the service's state changes.
+    /// Allows MainViewModel to subscribe to historical-service mutations via the
+    /// protocol existential, without needing a concrete cast to access `objectWillChange`.
+    var willChangePublisher: AnyPublisher<Void, Never> { get }
 }
 
 /// Service for managing historical meal data and daily snapshots.
-/// Handles archival, retrieval, and optional cloud synchronization.
+/// Handles archival and retrieval only. Cloud sync is delegated to `HistoricalSyncService`.
 @MainActor
 class HistoricalDataService: HistoricalDataServiceProtocol {
     // MARK: - Properties
 
     @Published var historicalData: HistoricalData
     private let persistenceService: PersistenceServiceProtocol
-    private let authService: any AuthServiceProtocol
-    private let syncService: any CloudSyncServiceProtocol
+    private let syncHandler: HistoricalSyncService
 
-    // Weak back-reference to MainViewModel so saveHistoricalData() always uses
+    // Weak back-reference to MainViewModelProtocol so saveHistoricalData() always uses
     // the authoritative meals / state / resetDate rather than stale caches.
-    // Set by MainViewModel immediately after init.
-    weak var mainViewModel: MainViewModel?
+    // Set via setMainViewModel(_:) called by MainViewModel immediately after init.
+    // Typed as protocol to satisfy DIP — no concrete MainViewModel reference here.
+    weak var mainViewModel: (any MainViewModelProtocol)?
+
+    func setMainViewModel(_ viewModel: any MainViewModelProtocol) {
+        self.mainViewModel = viewModel
+    }
+
+    var willChangePublisher: AnyPublisher<Void, Never> {
+        self.objectWillChange.map { _ in () }.eraseToAnyPublisher()
+    }
 
     // MARK: - Initialization
 
@@ -70,15 +89,31 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
     ) {
         let resolvedPersistence = persistenceService ?? PersistenceService.shared
         self.persistenceService = resolvedPersistence
-        self.authService = authService ?? AuthService.shared
-        self.syncService = syncService ?? CloudSyncService()
 
-        // Load existing historical data from persistence
+        // Load existing historical data from persistence before wiring syncHandler
+        // (syncHandler's snapshotsProvider closure captures self, so historicalData
+        //  must be initialised first).
         if let savedData = resolvedPersistence.load() {
             self.historicalData = savedData.historicalData
         } else {
             self.historicalData = HistoricalData()
         }
+
+        // Intentional placeholder; replaced immediately below after `self` is available.
+        // Swift requires all stored properties to be set before `self` can be used.
+        let resolvedAuth = authService ?? AuthService.shared
+        let resolvedSync = syncService ?? CloudSyncService()
+
+        // syncHandler is a value-type-like coordinator — capture self weakly to avoid retain cycle.
+        var capturedSelf: HistoricalDataService?
+        self.syncHandler = HistoricalSyncService(
+            authService: resolvedAuth,
+            syncService: resolvedSync,
+            snapshotsProvider: { capturedSelf?.historicalData.dailySnapshots ?? [] },
+            lastSyncDateProvider: { capturedSelf?.historicalData.lastSyncDate },
+            onSyncCompleted: { date in capturedSelf?.historicalData.lastSyncDate = date }
+        )
+        capturedSelf = self
     }
 
     // MARK: - Archival Methods
@@ -124,35 +159,6 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
 
         // Add or update in historical data
         self.historicalData.addOrUpdate(snapshot: snapshot)
-
-        // Persist to disk
-        self.saveHistoricalData()
-    }
-
-    /// Updates or adds a reflection for a specific date.
-    /// If a snapshot exists for the date, adds/updates the reflection while preserving meals.
-    /// If no snapshot exists, creates a new one with empty meals and the reflection.
-    func updateReflection(for date: Date, reflection: DailyReflection) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        // Check if snapshot already exists
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withReflection(reflection)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
-        } else {
-            // Create new snapshot with reflection but empty meals
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                reflection: reflection
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
-        }
 
         // Persist to disk
         self.saveHistoricalData()
@@ -214,35 +220,10 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         }
     }
 
-    // MARK: - Cloud Sync Methods
+    // MARK: - Cloud Sync (delegates to HistoricalSyncService)
 
-    /// Synchronizes historical data to Firebase.
-    /// Requires an authenticated user.
     func syncToFirebase() async throws {
-        // Capture userId and snapshots upfront to prevent race conditions
-        // during the async upload loop
-        guard let userId = self.authService.currentUser?.uid else {
-            throw AppError.syncAuthRequired
-        }
-
-        // Take a snapshot of the data to sync to avoid issues if data changes mid-sync
-        let allSnapshots = self.historicalData.dailySnapshots
-
-        // Filter snapshots by lastSyncDate for delta sync: only upload recent changes
-        let snapshotsToSync: [DailySmileySnapshot]
-        if let lastSyncDate = self.historicalData.lastSyncDate {
-            let cutoffDate = Calendar.current.startOfDay(for: lastSyncDate)
-            snapshotsToSync = allSnapshots.filter { $0.date >= cutoffDate }
-        } else {
-            // First sync: upload all snapshots
-            snapshotsToSync = allSnapshots
-        }
-
-        // Batch upload all snapshots to cloud
-        try await self.syncService.uploadBatch(snapshots: snapshotsToSync, userId: userId)
-
-        // Update lastSyncDate after successful sync
-        self.historicalData.lastSyncDate = Date()
+        try await self.syncHandler.sync()
         self.saveHistoricalData()
     }
 
@@ -265,154 +246,6 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         let hex = String(format: "%016llx", hash) + String(format: "%016llx", hash &+ 1)
         let u = Array(hex)
         return "\(String(u[0..<8]))-\(String(u[8..<12]))-4\(String(u[13..<16]))-8\(String(u[17..<20]))-\(String(u[20..<32]))"
-    }
-
-    // MARK: - Mind Check Methods
-
-    /// Updates or adds morning mind check entries for a specific date.
-    /// If a snapshot exists for the date, adds/updates the entries while preserving other data.
-    /// If no snapshot exists, creates a new one with empty meals and the entries.
-    func updateMorningMindCheck(for date: Date, entries: [MindCheckEntry]) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withMindChecks(morningMindCheck: entries)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
-        } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                morningMindCheck: entries
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
-        }
-
-        self.saveHistoricalData()
-    }
-
-    /// Updates or adds evening mind check entries for a specific date.
-    /// If a snapshot exists for the date, adds/updates the entries while preserving other data.
-    /// If no snapshot exists, creates a new one with empty meals and the entries.
-    func updateEveningMindCheck(for date: Date, entries: [MindCheckEntry]) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withMindChecks(eveningMindCheck: entries)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
-        } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                eveningMindCheck: entries
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
-        }
-
-        self.saveHistoricalData()
-    }
-
-    // MARK: - Highlight & Reflect Data Methods
-
-    func updateHighlightData(for date: Date, data: HighlightData) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withHighlightData(data)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
-        } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                highlightData: data
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
-        }
-
-        self.saveHistoricalData()
-    }
-
-    func updateReflectData(for date: Date, data: ReflectData) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withReflectData(data)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
-        } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                reflectData: data
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
-        }
-
-        self.saveHistoricalData()
-    }
-
-    func updateBriefing(for date: Date, briefing: DailyBriefing) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withBriefing(briefing)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
-        } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                briefing: briefing
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
-        }
-
-        self.saveHistoricalData()
-    }
-
-    func updateInsight(for date: Date, insight: DailyInsight) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withInsight(insight)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
-        } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                insight: insight
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
-        }
-
-        self.saveHistoricalData()
     }
 
     // MARK: - Todo Carry-Over

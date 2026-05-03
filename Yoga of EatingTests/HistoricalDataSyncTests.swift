@@ -50,22 +50,8 @@ final class HistoricalDataSyncTests: XCTestCase {
         let date1 = Calendar.current.date(from: DateComponents(year: 2024, month: 1, day: 1))!
         let date2 = Calendar.current.date(from: DateComponents(year: 2024, month: 1, day: 2))!
 
-        let snapshot1 = DailySmileySnapshot(
-            id: UUID(),
-            date: date1,
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        )
-        let snapshot2 = DailySmileySnapshot(
-            id: UUID(),
-            date: date2,
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        )
+        let snapshot1 = DailySmileySnapshotBuilder().withDate(date1).build()
+        let snapshot2 = DailySmileySnapshotBuilder().withDate(date2).build()
 
         self.sut.historicalData.addOrUpdate(snapshot: snapshot1)
         self.sut.historicalData.addOrUpdate(snapshot: snapshot2)
@@ -84,14 +70,7 @@ final class HistoricalDataSyncTests: XCTestCase {
         self.mockAuth.currentUser = MockUser(uid: "test-user-123")
         self.mockSync.shouldFail = true
 
-        self.sut.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
-            id: UUID(),
-            date: Date(),
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        ))
+        self.sut.historicalData.addOrUpdate(snapshot: DailySmileySnapshotBuilder().build())
 
         // Act & Assert
         do {
@@ -106,14 +85,7 @@ final class HistoricalDataSyncTests: XCTestCase {
         // Arrange
         self.mockAuth.currentUser = MockUser(uid: "test-user-123")
         let date1 = Calendar.current.date(from: DateComponents(year: 2024, month: 1, day: 1))!
-        let snapshot1 = DailySmileySnapshot(
-            id: UUID(),
-            date: date1,
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        )
+        let snapshot1 = DailySmileySnapshotBuilder().withDate(date1).build()
         self.sut.historicalData.addOrUpdate(snapshot: snapshot1)
 
         // Act
@@ -132,14 +104,7 @@ final class HistoricalDataSyncTests: XCTestCase {
         // Create 501 snapshots (should result in 2 batches)
         for i in 0..<501 {
             let date = calendar.date(byAdding: .day, value: i, to: Date())!
-            let snapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: date,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5
-            )
+            let snapshot = DailySmileySnapshotBuilder().withDate(date).build()
             self.sut.historicalData.addOrUpdate(snapshot: snapshot)
         }
 
@@ -156,14 +121,7 @@ final class HistoricalDataSyncTests: XCTestCase {
         // Arrange
         self.mockAuth.currentUser = MockUser(uid: "test-user-123")
         self.mockSync.shouldFail = true
-        self.sut.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
-            id: UUID(),
-            date: Date(),
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        ))
+        self.sut.historicalData.addOrUpdate(snapshot: DailySmileySnapshotBuilder().build())
 
         // Act & Assert
         do {
@@ -183,30 +141,15 @@ final class HistoricalDataSyncTests: XCTestCase {
         let baseDate = calendar.date(from: DateComponents(year: 2024, month: 1, day: 10))!
         let lastSyncDate = calendar.date(from: DateComponents(year: 2024, month: 1, day: 15))!
 
-        let beforeSnapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: calendar.date(byAdding: .day, value: -5, to: baseDate)!,
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        )
-        let onSnapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: lastSyncDate,
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        )
-        let afterSnapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: calendar.date(byAdding: .day, value: 5, to: baseDate)!,
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        )
+        let beforeSnapshot = DailySmileySnapshotBuilder()
+            .withDate(calendar.date(byAdding: .day, value: -5, to: baseDate)!)
+            .build()
+        let onSnapshot = DailySmileySnapshotBuilder()
+            .withDate(lastSyncDate)
+            .build()
+        let afterSnapshot = DailySmileySnapshotBuilder()
+            .withDate(calendar.date(byAdding: .day, value: 5, to: baseDate)!)
+            .build()
 
         self.sut.historicalData.addOrUpdate(snapshot: beforeSnapshot)
         self.sut.historicalData.addOrUpdate(snapshot: onSnapshot)
@@ -232,22 +175,8 @@ final class HistoricalDataSyncTests: XCTestCase {
         let date1 = Calendar.current.date(from: DateComponents(year: 2024, month: 1, day: 1))!
         let date2 = Calendar.current.date(from: DateComponents(year: 2024, month: 1, day: 2))!
 
-        let snapshot1 = DailySmileySnapshot(
-            id: UUID(),
-            date: date1,
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        )
-        let snapshot2 = DailySmileySnapshot(
-            id: UUID(),
-            date: date2,
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        )
+        let snapshot1 = DailySmileySnapshotBuilder().withDate(date1).build()
+        let snapshot2 = DailySmileySnapshotBuilder().withDate(date2).build()
 
         self.sut.historicalData.addOrUpdate(snapshot: snapshot1)
         self.sut.historicalData.addOrUpdate(snapshot: snapshot2)
@@ -264,14 +193,7 @@ final class HistoricalDataSyncTests: XCTestCase {
         // Arrange
         self.mockAuth.currentUser = MockUser(uid: "test-user-123")
 
-        self.sut.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
-            id: UUID(),
-            date: Date(),
-            smileyState: .neutral,
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.5
-        ))
+        self.sut.historicalData.addOrUpdate(snapshot: DailySmileySnapshotBuilder().build())
 
         // Act
         try await self.sut.syncToFirebase()

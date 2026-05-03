@@ -119,55 +119,37 @@
         // MARK: - Helpers
 
         private func seedSnapshots(count: Int) {
-            let calendar = Calendar.current
             for i in 0..<count {
-                let date = calendar.date(byAdding: .day, value: -i, to: Date())!
-                let meals = [
-                    Meal(mealType: .lunch, items: ["Test meal \(i)"], healthScore: Double.random(in: 0.3...0.9))
-                ]
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: meals,
-                    mealCount: meals.count,
-                    averageHealthScore: meals.first!.healthScore,
-                    reflection: DailyReflection(
-                        feeling: [ReflectionFeeling.great, .calm, .tired].randomElement(),
-                        sleepQuality: [SleepQuality.great, .good, .poor].randomElement()
-                    )
+                let score = Double.random(in: 0.3...0.9)
+                let reflection = DailyReflection(
+                    feeling: [ReflectionFeeling.great, .calm, .tired].randomElement(),
+                    sleepQuality: [SleepQuality.great, .good, .poor].randomElement()
                 )
+                let snapshot = DailySmileySnapshotBuilder()
+                    .daysAgo(i)
+                    .withMeals([MealBuilder().withItems(["Test meal \(i)"]).withScore(score).build()])
+                    .withReflection(reflection)
+                    .build()
                 self.historicalService.historicalData.addOrUpdate(snapshot: snapshot)
             }
         }
 
         private func seedCorrelatedData() {
-            let calendar = Calendar.current
             let goodFeelings: [ReflectionFeeling] = [.great, .calm, .great, .calm, .great]
             let badFeelings: [ReflectionFeeling] = [.tired, .heavy]
             let goodScores: [Double] = [0.85, 0.90, 0.88, 0.82, 0.86]
             let badScores: [Double] = [0.25, 0.30]
 
             for i in 0..<7 {
-                let date = calendar.date(byAdding: .day, value: -i, to: Date())!
                 let isGood = i < 5
                 let score = isGood ? goodScores[i] : badScores[i - 5]
                 let feeling = isGood ? goodFeelings[i] : badFeelings[i - 5]
-
-                let meals = [Meal(mealType: .lunch, items: ["Meal"], healthScore: score)]
-
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: meals,
-                    mealCount: 1,
-                    averageHealthScore: score,
-                    reflection: DailyReflection(
-                        feeling: feeling,
-                        sleepQuality: isGood ? .good : .poor
-                    )
-                )
+                let reflection = DailyReflection(feeling: feeling, sleepQuality: isGood ? .good : .poor)
+                let snapshot = DailySmileySnapshotBuilder()
+                    .daysAgo(i)
+                    .withMeals([MealBuilder().withItems(["Meal"]).withScore(score).build()])
+                    .withReflection(reflection)
+                    .build()
                 self.historicalService.historicalData.addOrUpdate(snapshot: snapshot)
             }
         }

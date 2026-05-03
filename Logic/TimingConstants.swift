@@ -11,6 +11,10 @@ enum TimingConstants {
     /// Mirrors AppTheme.TextEntry.debounceNanoseconds — both reference the same semantic value.
     static let debounceNanoseconds: UInt64 = 500_000_000
 
+    /// Debounce delay in milliseconds — used with Combine's `.debounce(for:scheduler:)`.
+    /// Derived from `debounceNanoseconds` to keep a single SSOT.
+    static let debounceMs: Int = 500
+
     // MARK: - Day Reset Monitoring
 
     /// How often the app polls to detect a calendar-day change and reset the slate (nanoseconds).

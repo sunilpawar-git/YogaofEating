@@ -1,4 +1,7 @@
 import Foundation
+import OSLog
+
+private let highlightLogger = Logger(subsystem: "com.yogaofeating", category: "MainViewModel")
 
 // MARK: - Highlight Tab Extension
 
@@ -168,17 +171,18 @@ extension MainViewModel {
 
     /// Fetches Apple sleep data for display in Highlight.
     private func fetchAppleSleepDataForHighlight() {
+        // Untracked fire-and-forget: no cancellation needed (one-shot UI refresh on tab open).
+        // Failure is non-critical — user can manually select sleep quality.
         Task {
             do {
                 _ = try await HealthKitService.shared.requestAuthorization()
                 if let sleepData = try await HealthKitService.shared.fetchSleepData(for: Date()) {
-                    await MainActor.run {
-                        self.appleSleepData = sleepData
-                        self.suggestedSleepQuality = sleepData.sleepQuality
-                    }
+                    self.appleSleepData = sleepData
+                    self.suggestedSleepQuality = sleepData.sleepQuality
                 }
             } catch {
-                // Silently fail — user can still manually select sleep quality
+                highlightLogger
+                    .info("Sleep data unavailable for Highlight: \(error.localizedDescription, privacy: .public)")
             }
         }
     }

@@ -258,17 +258,11 @@
         }
 
         private func makeSnapshot(on date: Date, score: Double, mealCount: Int) -> DailySmileySnapshot {
-            let meals = (0..<mealCount).map { _ in
-                Meal(mealType: .lunch, items: ["Test"], healthScore: score)
-            }
-            return DailySmileySnapshot(
-                id: UUID(),
-                date: Calendar.current.startOfDay(for: date),
-                smileyState: .neutral,
-                meals: meals,
-                mealCount: mealCount,
-                averageHealthScore: score
-            )
+            let meals = (0..<mealCount).map { _ in MealBuilder().withScore(score).build() }
+            return DailySmileySnapshotBuilder()
+                .withDate(Calendar.current.startOfDay(for: date))
+                .withMeals(meals)
+                .build()
         }
 
         private func makeSnapshot(daysAgo: Int, score: Double, mealCount: Int) -> DailySmileySnapshot {

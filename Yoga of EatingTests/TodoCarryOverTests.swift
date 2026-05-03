@@ -158,10 +158,7 @@
         func test_incompleteTodosForCarryOver_emptyWhenNoHighlightData() {
             let date = Calendar.current.startOfDay(for: Date())
             // Snapshot exists but has no highlightData
-            let snapshot = DailySmileySnapshot(
-                id: UUID(), date: date, smileyState: .neutral,
-                meals: [], mealCount: 0, averageHealthScore: 0.5
-            )
+            let snapshot = DailySmileySnapshotBuilder().withDate(date).build()
             self.sut.historicalData.addOrUpdate(snapshot: snapshot)
 
             let result = self.sut.incompleteTodosForCarryOver(from: date)
@@ -238,11 +235,7 @@
         // MARK: - Helpers
 
         private func seedHighlightData(_ data: HighlightData, on date: Date) {
-            let snapshot = DailySmileySnapshot(
-                id: UUID(), date: date, smileyState: .neutral,
-                meals: [], mealCount: 0, averageHealthScore: 0.5,
-                highlightData: data
-            )
+            let snapshot = DailySmileySnapshotBuilder().withDate(date).withHighlightData(data).build()
             self.sut.historicalData.addOrUpdate(snapshot: snapshot)
         }
     }

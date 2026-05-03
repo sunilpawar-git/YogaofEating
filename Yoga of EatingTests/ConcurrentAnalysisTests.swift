@@ -4,10 +4,8 @@ import XCTest
 /// Tests that rapid meal edits cancel previous in-flight AI analysis tasks,
 /// preventing concurrent Firebase calls from racing and corrupting state.
 ///
-/// RED phase: These tests verify the cancellation contract. Before the fix
-/// (replacing bare `Task {}` with `aiTasks[id]?.cancel()` + tracked tasks),
-/// `aiTasks` for `updateMealItems` and `updateMeal` paths remain nil, causing
-/// multiple concurrent analyses to race.
+/// After Phase 3B, task tracking moved from `MainViewModel.aiTasks` into
+/// `AIAnalysisCoordinator`. These tests access tasks via `vm.aiCoordinator.task(for:)`.
 @MainActor
 final class ConcurrentAnalysisTests: XCTestCase {
     // MARK: - Helpers
@@ -23,9 +21,9 @@ final class ConcurrentAnalysisTests: XCTestCase {
         )
     }
 
-    // MARK: - Phase 1a: updateMealItems uses aiTasks for cancellation
+    // MARK: - Phase 1a: updateMealItems uses coordinator for cancellation
 
-    func test_updateMealItems_storesTaskInAiTasksDict() async throws {
+    func test_updateMealItems_storesTaskInCoordinator() async throws {
         let mockAI = TrackingMockAILogicService(delay: 0.05)
         let vm = self.makeVM(mockAI: mockAI)
 
@@ -34,8 +32,8 @@ final class ConcurrentAnalysisTests: XCTestCase {
 
         vm.updateMealItems(mealId, items: ["salad"])
 
-        // After calling updateMealItems, a task must be tracked in aiTasks
-        XCTAssertNotNil(vm.aiTasks[mealId], "updateMealItems must store task in aiTasks dict")
+        // After calling updateMealItems, a task must be tracked in the coordinator
+        XCTAssertNotNil(vm.aiCoordinator.task(for: mealId), "updateMealItems must store task in coordinator")
     }
 
     func test_updateMealItems_cancelsExistingTaskBeforeStartingNew() async throws {
@@ -47,7 +45,7 @@ final class ConcurrentAnalysisTests: XCTestCase {
 
         // First call — starts a slow task
         vm.updateMealItems(mealId, items: ["pizza"])
-        let firstTask = vm.aiTasks[mealId]
+        let firstTask = vm.aiCoordinator.task(for: mealId)
 
         // Second call before first finishes — must cancel first task
         vm.updateMealItems(mealId, items: ["salad"])
@@ -83,9 +81,9 @@ final class ConcurrentAnalysisTests: XCTestCase {
         )
     }
 
-    // MARK: - Phase 1b: updateMeal (contentChanged branch) uses aiTasks
+    // MARK: - Phase 1b: updateMeal (contentChanged branch) uses coordinator
 
-    func test_updateMeal_contentChanged_storesTaskInAiTasksDict() async throws {
+    func test_updateMeal_contentChanged_storesTaskInCoordinator() async throws {
         let mockAI = TrackingMockAILogicService(delay: 0.05)
         let vm = self.makeVM(mockAI: mockAI)
 
@@ -95,8 +93,8 @@ final class ConcurrentAnalysisTests: XCTestCase {
         vm.updateMeal(mealId, mealType: .lunch, items: ["salad"])
 
         XCTAssertNotNil(
-            vm.aiTasks[mealId],
-            "updateMeal (content changed) must store task in aiTasks dict"
+            vm.aiCoordinator.task(for: mealId),
+            "updateMeal (content changed) must store task in coordinator"
         )
     }
 
@@ -108,7 +106,7 @@ final class ConcurrentAnalysisTests: XCTestCase {
         let mealId = vm.meals[0].id
 
         vm.updateMeal(mealId, mealType: .lunch, items: ["pizza"])
-        let firstTask = vm.aiTasks[mealId]
+        let firstTask = vm.aiCoordinator.task(for: mealId)
 
         vm.updateMeal(mealId, mealType: .lunch, items: ["salad"])
 
@@ -120,9 +118,9 @@ final class ConcurrentAnalysisTests: XCTestCase {
         )
     }
 
-    // MARK: - Phase 1c: updateMeal (needsAIAnalysis branch) uses aiTasks
+    // MARK: - Phase 1c: updateMeal (needsAIAnalysis branch) uses coordinator
 
-    func test_updateMeal_needsAIAnalysis_storesTaskInAiTasksDict() async throws {
+    func test_updateMeal_needsAIAnalysis_storesTaskInCoordinator() async throws {
         let mockAI = TrackingMockAILogicService(delay: 0.05)
         let vm = self.makeVM(mockAI: mockAI)
 
@@ -132,7 +130,7 @@ final class ConcurrentAnalysisTests: XCTestCase {
         // Set meal type first so it won't change in subsequent calls (mealTypeChanged = false)
         vm.updateMeal(mealId, mealType: .lunch, items: ["salad"])
 
-        // Wait for analysis to complete and clear aiTasks
+        // Wait for analysis to complete
         try await Task.sleep(nanoseconds: 300_000_000)
 
         // Mark as not-analyzed: needsAIAnalysis branch fires when same content + same mealType
@@ -141,8 +139,8 @@ final class ConcurrentAnalysisTests: XCTestCase {
         vm.updateMeal(mealId, mealType: .lunch, items: ["salad"])
 
         XCTAssertNotNil(
-            vm.aiTasks[mealId],
-            "updateMeal (needsAIAnalysis) must store task in aiTasks dict"
+            vm.aiCoordinator.task(for: mealId),
+            "updateMeal (needsAIAnalysis) must store task in coordinator"
         )
     }
 
@@ -160,7 +158,7 @@ final class ConcurrentAnalysisTests: XCTestCase {
         // Fire first needsAIAnalysis task
         vm.meals[vm.meals.firstIndex(where: { $0.id == mealId })!].isAIAnalyzed = false
         vm.updateMeal(mealId, mealType: .lunch, items: ["salad"])
-        let firstTask = vm.aiTasks[mealId]
+        let firstTask = vm.aiCoordinator.task(for: mealId)
 
         // Fire second immediately — should cancel first
         vm.meals[vm.meals.firstIndex(where: { $0.id == mealId })!].isAIAnalyzed = false
@@ -174,9 +172,9 @@ final class ConcurrentAnalysisTests: XCTestCase {
         )
     }
 
-    // MARK: - Phase 1d: aiTasks cleared after analysis completes
+    // MARK: - Phase 1d: coordinator clears task after analysis completes
 
-    func test_aiTasksDict_clearedAfterAnalysisCompletes() async throws {
+    func test_coordinatorTask_clearedAfterAnalysisCompletes() async throws {
         let mockAI = TrackingMockAILogicService(delay: 0.01)
         let vm = self.makeVM(mockAI: mockAI)
 
@@ -189,8 +187,8 @@ final class ConcurrentAnalysisTests: XCTestCase {
         try await Task.sleep(nanoseconds: 300_000_000)
 
         XCTAssertNil(
-            vm.aiTasks[mealId],
-            "aiTasks entry must be cleared (set to nil) after analysis completes"
+            vm.aiCoordinator.task(for: mealId),
+            "Coordinator task entry must be cleared after analysis completes"
         )
     }
 }

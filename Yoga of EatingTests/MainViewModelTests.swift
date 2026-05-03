@@ -313,21 +313,9 @@
 
             // Create snapshots for past 3 days with meals
             for daysAgo in 1...3 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-                let meal = Meal(
-                    timestamp: date,
-                    mealType: .breakfast,
-                    items: ["Oatmeal Day \(daysAgo)"],
-                    healthScore: 0.8
-                )
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: [meal],
-                    mealCount: 1,
-                    averageHealthScore: 0.8
-                )
+                let meal = MealBuilder().withMealType(.breakfast).withItems(["Oatmeal Day \(daysAgo)"]).withScore(0.8)
+                    .build()
+                let snapshot = DailySmileySnapshotBuilder().daysAgo(daysAgo).withMeals([meal]).build()
                 self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
             }
 
@@ -345,21 +333,9 @@
 
             // Create snapshots with same meal on 2 different days
             for daysAgo in 1...2 {
-                let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-                let meal = Meal(
-                    timestamp: date,
-                    mealType: .breakfast,
-                    items: ["Oatmeal", "Banana"], // Same items
-                    healthScore: 0.8
-                )
-                let snapshot = DailySmileySnapshot(
-                    id: UUID(),
-                    date: date,
-                    smileyState: .neutral,
-                    meals: [meal],
-                    mealCount: 1,
-                    averageHealthScore: 0.8
-                )
+                let meal = MealBuilder().withMealType(.breakfast).withItems(["Oatmeal", "Banana"]).withScore(0.8)
+                    .build()
+                let snapshot = DailySmileySnapshotBuilder().daysAgo(daysAgo).withMeals([meal]).build()
                 self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
             }
 

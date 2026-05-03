@@ -97,10 +97,17 @@ class SettingsViewModel: ObservableObject {
 
     @Published var syncStatus: SyncStatus = .idle
 
+    // MARK: - Auth Published Properties
+
+    /// Non-nil when a sign-in attempt fails. Cleared on successful sign-in.
+    /// Surfaces errors from `signInWithGoogle()` to the UI without exposing internal details.
+    @Published var authError: String?
+
     // MARK: - Private Properties
 
     private let userDefaults: UserDefaults
     private let historicalService: any HistoricalDataServiceProtocol
+    private let authService: any AuthServiceProtocol
     private var syncTask: Task<Void, Never>?
     private let networkMonitor: NWPathMonitor?
     private var isNetworkAvailable = true
@@ -127,10 +134,12 @@ class SettingsViewModel: ObservableObject {
 
     init(
         historicalService: any HistoricalDataServiceProtocol,
+        authService: (any AuthServiceProtocol)? = nil,
         userDefaults: UserDefaults = .standard
     ) {
         self.userDefaults = userDefaults
         self.historicalService = historicalService
+        self.authService = authService ?? AuthService.shared
 
         // Load initial values from UserDefaults
         self.name = userDefaults.string(forKey: StorageKeys.userName) ?? "User"
@@ -152,6 +161,7 @@ class SettingsViewModel: ObservableObject {
             self.networkMonitor = NWPathMonitor()
             self.networkMonitor?.pathUpdateHandler = { path in
                 let isAvailable = path.status == .satisfied
+                // Untracked @MainActor hop: one-shot property update, no result or cancellation needed.
                 Task { @MainActor [weak self] in
                     self?.isNetworkAvailable = isAvailable
                 }
@@ -170,6 +180,7 @@ class SettingsViewModel: ObservableObject {
     // MARK: - HealthKit Sync
 
     func syncWithHealthKit() {
+        // Untracked fire-and-forget: triggered by toggle, single run, no cancellation needed.
         Task {
             do {
                 _ = try await HealthKitService.shared.requestAuthorization()
@@ -210,6 +221,23 @@ class SettingsViewModel: ObservableObject {
     /// enum case.
     func applyHealthKitGender(_ rawValue: Int) {
         self.gender = min(max(rawValue, 0), 3)
+    }
+
+    // MARK: - Auth
+
+    /// Signs in with Google via the injected auth service.
+    /// On failure, sets `authError` with a generic user-facing message.
+    /// On success, clears any prior `authError`.
+    /// Views must call this method rather than accessing `authService` directly (MVVM).
+    func signInWithGoogle() async {
+        do {
+            try await self.authService.signInWithGoogle()
+            self.authError = nil
+            settingsLogger.info("Google sign-in succeeded")
+        } catch {
+            settingsLogger.error("Google sign-in failed: \(error.localizedDescription, privacy: .public)")
+            self.authError = AppError.authProviderFailed(underlying: error).errorDescription
+        }
     }
 
     // MARK: - Cloud Sync
@@ -262,6 +290,7 @@ class SettingsViewModel: ObservableObject {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         #endif
 
+        // CancellationError from sleep is intentional (sync task cancelled) — status cleared by guard below
         try? await Task.sleep(nanoseconds: self.syncSuccessDisplayDuration)
 
         if !Task.isCancelled {
@@ -272,17 +301,21 @@ class SettingsViewModel: ObservableObject {
     private func handleSyncError(_ error: Error, shouldRetry: Bool, attempt: Int = 1) async {
         if shouldRetry {
             self.syncStatus = .error("Sync failed. Retrying... (Attempt \(attempt)/\(self.syncMaxRetryAttempts))")
+            // CancellationError from sleep is intentional (retry cancelled on sync task cancel) — no-op
             try? await Task.sleep(nanoseconds: self.syncRetryDelay)
             if !Task.isCancelled {
                 await self.performSyncWithRetry(attempt: attempt + 1)
             }
         } else {
-            self.syncStatus = .error(error.localizedDescription)
+            self
+                .syncStatus = .error(AppError.syncUploadFailed(underlying: error).errorDescription ?? error
+                    .localizedDescription)
 
             #if canImport(UIKit)
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
             #endif
 
+            // CancellationError from sleep is intentional (sync task cancelled) — status cleared by guard below
             try? await Task.sleep(nanoseconds: self.syncErrorDisplayDuration)
 
             if !Task.isCancelled {

@@ -169,7 +169,7 @@ enum AppTheme {
                 Color(red: 0.5, green: 0.65, blue: 0.55) // Sage green
             } else if score >= 0.55 {
                 Color(red: 0.5, green: 0.6, blue: 0.7) // Slate blue
-            } else if score >= 0.35 {
+            } else if score >= ScoringThresholds.unhealthy {
                 Color(red: 0.65, green: 0.6, blue: 0.55) // Warm grey
             } else {
                 Color(red: 0.55, green: 0.55, blue: 0.55) // Stone grey
@@ -273,8 +273,8 @@ enum AppTheme {
         static let maxCharacters: Int = ValidationLimits.universal
 
         /// Debounce delay before a free-text change is persisted (nanoseconds).
-        /// 500 ms balances keystroke responsiveness with reducing unnecessary writes.
-        static let debounceNanoseconds: UInt64 = 500_000_000
+        /// Delegates to TimingConstants — single source of truth.
+        static let debounceNanoseconds: UInt64 = TimingConstants.debounceNanoseconds
     }
 }
 

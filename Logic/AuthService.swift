@@ -154,6 +154,9 @@ class AuthService: ObservableObject, AuthServiceProtocol {
     // Task to track pending logout debounce
     private var pendingLogoutTask: Task<Void, Never>?
 
+    // Task to track the session restore request on startup
+    private var sessionRestoreTask: Task<Void, Never>?
+
     // Flag to track if logout was explicitly requested by the user
     // This allows us to ignore all transient nil states from Firebase
     private var isExplicitlySigningOut = false
@@ -175,11 +178,12 @@ class AuthService: ObservableObject, AuthServiceProtocol {
     }
 
     private func restorePreviousSession() {
-        Task {
+        self.sessionRestoreTask = Task {
             do {
                 _ = try await self.provider.restorePreviousSignIn()
+                authLogger.info("Previous session restored successfully")
             } catch {
-                authLogger.debug("No previous session to restore: \(error.localizedDescription, privacy: .public)")
+                authLogger.info("No previous session to restore: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
@@ -205,6 +209,7 @@ class AuthService: ObservableObject, AuthServiceProtocol {
 
                 self.pendingLogoutTask?.cancel()
                 self.pendingLogoutTask = Task { @MainActor in
+                    // CancellationError from sleep is intentional (debounce cancelled on sign-in recovery) — no-op
                     try? await Task.sleep(nanoseconds: 2_000_000_000)
                     guard !Task.isCancelled else {
                         authLogger.debug("Auth debounce cancelled (user recovered)")

@@ -39,7 +39,8 @@ class SensoryService: SensoryServiceProtocol {
 
     private init() {
         #if canImport(UIKit)
-            // Pre-configure audio session (iOS only)
+            // Pre-configure audio session (iOS only).
+            // Failure is a documented no-op — app continues without background audio session.
             try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
             try? AVAudioSession.sharedInstance().setActive(true)
 
