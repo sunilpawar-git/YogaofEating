@@ -65,20 +65,27 @@ class PersistenceService: PersistenceServiceProtocol {
             let data = try Data(contentsOf: url)
             let decoded = try JSONDecoder().decode(AppData.self, from: data)
             return decoded
-        } catch {
+        } catch let primaryError {
             // Migration fallback: attempt to decode old format without historicalData.
-            // If this also fails, return nil (no data to migrate) — documented no-op.
-            if let data = try? Data(contentsOf: url),
-               let oldData = try? JSONDecoder().decode(OldAppData.self, from: data)
-            {
+            logger.info("PersistenceService: primary decode failed (schema change?) — attempting migration")
+            do {
+                let rawData = try Data(contentsOf: url)
+                let oldData = try JSONDecoder().decode(OldAppData.self, from: rawData)
+                logger.info("PersistenceService: migration from old format succeeded")
                 return AppData(
                     meals: oldData.meals,
                     smileyState: oldData.smileyState,
                     lastResetDate: oldData.lastResetDate,
-                    historicalData: HistoricalData() // Empty historical data for migration
+                    historicalData: HistoricalData()
                 )
+            } catch let migrationError {
+                // Both the current and legacy format failed — data is unreadable.
+                // Log at fault level so this appears in Crashlytics if Firebase is configured.
+                logger.fault(
+                    "PersistenceService: all decode attempts failed — primary: \(primaryError.localizedDescription, privacy: .public), migration: \(migrationError.localizedDescription, privacy: .public)"
+                )
+                return nil
             }
-            return nil
         }
     }
 

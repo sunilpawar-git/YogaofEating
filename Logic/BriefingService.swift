@@ -50,7 +50,7 @@ final class BriefingService {
         for date: Date,
         healthKitSleepData: [Date: SleepData] = [:]
     ) async -> DailyBriefing? {
-        let snapshots = self.gatherRecentSnapshots()
+        let snapshots = self.gatherRecentSnapshots(relativeTo: date)
         guard snapshots.count >= 2 else { return nil }
 
         if let serverBriefing = await self.generateBriefingFromServer(
@@ -66,10 +66,10 @@ final class BriefingService {
 
     // MARK: - Data Gathering
 
-    private func gatherRecentSnapshots() -> [DailySmileySnapshot] {
+    private func gatherRecentSnapshots(relativeTo referenceDate: Date) -> [DailySmileySnapshot] {
         let calendar = Calendar.current
         return (0..<self.lookbackDays).compactMap { daysAgo -> DailySmileySnapshot? in
-            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date()) else { return nil }
+            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: referenceDate) else { return nil }
             let snap = self.historicalService.getSnapshot(for: date)
             return snap?.isEmpty == false ? snap : nil
         }
@@ -264,8 +264,8 @@ final class BriefingService {
         let avgFirst = firstHalf.reduce(0, +) / Double(firstHalf.count)
         let avgSecond = secondHalf.reduce(0, +) / Double(secondHalf.count)
         let delta = avgSecond - avgFirst
-        if delta > 0.1 { return .improving }
-        if delta < -0.1 { return .declining }
+        if delta > ScoringThresholds.trendSignificanceDelta { return .improving }
+        if delta < -ScoringThresholds.trendSignificanceDelta { return .declining }
         return .steady
     }
 }

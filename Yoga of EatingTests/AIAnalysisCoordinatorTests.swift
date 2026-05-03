@@ -123,7 +123,9 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
             logicService: mock,
             currentMealsSnapshot: [meal],
             onMealScoreUpdated: { _, _, _ in
-                calledOnMain = MainActor.assumeIsolated { true }
+                // Thread.isMainThread is stable across Swift concurrency versions;
+                // avoids the DEBUG-trap risk of MainActor.assumeIsolated.
+                calledOnMain = Thread.isMainThread
             },
             onSmileyStateChanged: { _ in }
         )
@@ -131,7 +133,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         coordinator.analyzeIfNeeded(mealId: meal.id, items: meal.items, in: ctx)
         try? await Task.sleep(nanoseconds: 200_000_000)
 
-        XCTAssertTrue(calledOnMain, "onMealScoreUpdated must be called on @MainActor")
+        XCTAssertTrue(calledOnMain, "onMealScoreUpdated must be called on @MainActor (main thread)")
     }
 }
 

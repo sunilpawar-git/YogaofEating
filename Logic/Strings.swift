@@ -252,6 +252,12 @@ enum Strings {
 
     // MARK: - Accessibility
 
+    enum Settings {
+        /// Generic sync failure message shown to users when the underlying error is not user-actionable.
+        /// Never expose provider-specific error strings (Firebase, NSError domains) to users.
+        static let syncFailedGeneric = "Sync failed. Please check your connection and try again."
+    }
+
     enum Accessibility {
         static let addMealButton = "Add Meal"
         static let addMealHint = "Tap to log a new meal"

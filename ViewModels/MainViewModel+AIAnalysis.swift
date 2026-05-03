@@ -8,8 +8,8 @@ private let aiLogger = Logger(subsystem: "com.yogaofeating", category: "AIAnalys
 
 extension MainViewModel {
     /// Minimum character count required before triggering AI analysis.
-    /// Prevents excessive API calls while user is still typing short content.
-    static let minimumContentLength: Int = 5
+    /// Sourced from ScoringThresholds.minimumMealDescriptionLength (SSOT).
+    static let minimumContentLength: Int = ScoringThresholds.minimumMealDescriptionLength
 
     /// Normalizes meal content for comparison to avoid redundant AI analysis.
     /// Trims whitespace and normalizes internal spacing.
@@ -125,9 +125,13 @@ extension MainViewModel {
             try Task.checkCancellation()
 
             let result = try await aiService.analyzeMealQuality(description: sanitized)
+            #if DEBUG
             aiLogger.debug(
                 "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
             )
+            #else
+            aiLogger.debug("AI analysis complete for meal \(mealId, privacy: .public)")
+            #endif
 
             if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
                 var updatedMeals = meals

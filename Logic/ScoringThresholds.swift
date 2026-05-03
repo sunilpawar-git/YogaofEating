@@ -23,4 +23,24 @@ enum ScoringThresholds {
 
     /// Minimum consecutive days with score >= high to earn a "healthy eating streak" win.
     static let minimumConsistentDays: Int = 5
+
+    // MARK: - Color Band Thresholds (used in Theme.swift for ScoreBadge colors)
+
+    /// Upper color band: scores above this display as "great" green.
+    static let colorBandHigh: Double = 0.75
+
+    /// Mid color band: scores above this display as "okay" yellow-green.
+    static let colorBandMid: Double = 0.55
+
+    // MARK: - Trend Analysis
+
+    /// Minimum score delta between the first and second half of a lookback window
+    /// required to classify a trend as improving or declining (vs. steady).
+    static let trendSignificanceDelta: Double = 0.1
+
+    // MARK: - Input Validation (co-located with scoring domain to avoid a separate ValidationConstants file)
+
+    /// Minimum character count in a meal description before AI analysis is triggered.
+    /// Prevents excessive API calls while the user is still typing short content.
+    static let minimumMealDescriptionLength: Int = 5
 }

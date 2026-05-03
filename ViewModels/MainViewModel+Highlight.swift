@@ -170,12 +170,14 @@ extension MainViewModel {
     // MARK: - HealthKit
 
     /// Fetches Apple sleep data for display in Highlight.
+    /// Tracked via `sleepHighlightTask` so it is cancelled on deinit and not duplicated on re-entry.
+    /// Failure is non-critical — user can manually select sleep quality.
     private func fetchAppleSleepDataForHighlight() {
-        // Untracked fire-and-forget: no cancellation needed (one-shot UI refresh on tab open).
-        // Failure is non-critical — user can manually select sleep quality.
-        Task {
+        self.sleepHighlightTask?.cancel()
+        self.sleepHighlightTask = Task {
             do {
                 _ = try await HealthKitService.shared.requestAuthorization()
+                guard !Task.isCancelled else { return }
                 if let sleepData = try await HealthKitService.shared.fetchSleepData(for: Date()) {
                     self.appleSleepData = sleepData
                     self.suggestedSleepQuality = sleepData.sleepQuality

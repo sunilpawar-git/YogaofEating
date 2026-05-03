@@ -65,10 +65,17 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
     // MARK: - Data Gathering
 
+    /// Public protocol method — defaults lookback to today for callers without a reference date.
     func gatherDataForInsight() -> [DailySmileySnapshot] {
+        self.gatherDataForInsight(relativeTo: Date())
+    }
+
+    /// Internal overload anchored to a specific reference date.
+    /// Used by `generateInsight(for:)` so the lookback window matches the requested date.
+    private func gatherDataForInsight(relativeTo referenceDate: Date) -> [DailySmileySnapshot] {
         let calendar = Calendar.current
         return (0..<self.lookbackDays).compactMap { daysAgo -> DailySmileySnapshot? in
-            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date()) else { return nil }
+            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: referenceDate) else { return nil }
             let snap = self.historicalService.getSnapshot(for: date)
             return snap?.isEmpty == false ? snap : nil
         }
@@ -139,7 +146,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         guard let snapshot = historicalService.getSnapshot(for: date),
               let reflection = snapshot.reflection,
               reflection.sleepQuality != nil else { return false }
-        return self.gatherDataForInsight().count >= BriefingThresholds.minimumDataPoints
+        return self.gatherDataForInsight(relativeTo: date).count >= BriefingThresholds.minimumDataPoints
     }
 
     // MARK: - Insight Generation
@@ -147,7 +154,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
     func generateInsight(for date: Date, healthKitSleepData: [Date: SleepData] = [:]) async throws -> DailyInsight? {
         guard self.shouldGenerateInsight(for: date) else { return nil }
 
-        let snapshots = self.gatherDataForInsight()
+        let snapshots = self.gatherDataForInsight(relativeTo: date)
         let recentSnapshots = Array(snapshots.prefix(self.serverLookbackDays))
 
         if let serverInsight = await generateInsightFromServer(
