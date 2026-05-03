@@ -130,8 +130,10 @@ final class InsightTriggerTests: XCTestCase {
         // When: Save sleep quality to trigger insight
         self.sut.saveSleepQuality(.good)
 
-        // Wait for async task
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Wait for insight task to complete
+        if let insightTask = self.sut.insightTask {
+            await insightTask.value
+        }
 
         // Then: Insight should now be available
         XCTAssertTrue(self.sut.hasInsightAvailable)
@@ -151,8 +153,10 @@ final class InsightTriggerTests: XCTestCase {
         // When: Trigger insight generation
         self.sut.saveSleepQuality(.good)
 
-        // Wait for async task
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Wait for insight task to complete
+        if let insightTask = self.sut.insightTask {
+            await insightTask.value
+        }
 
         // Then: Should show unread indicator
         XCTAssertTrue(self.sut.hasUnreadInsight)
