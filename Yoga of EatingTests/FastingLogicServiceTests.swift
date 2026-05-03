@@ -132,6 +132,21 @@
             XCTAssertEqual(period.formattedDuration, "14h")
         }
 
+        func test_fastingPeriod_formattedDuration_subHour_showsMinutesOnly() {
+            // 32 minutes — typical short evening snack gap
+            let start = Date(timeIntervalSince1970: 0)
+            let end = Date(timeIntervalSince1970: 1920) // 32 min
+
+            let period = FastingPeriod(
+                startMealId: UUID(),
+                endMealId: UUID(),
+                startTime: start,
+                endTime: end
+            )
+
+            XCTAssertEqual(period.formattedDuration, "32m")
+        }
+
         func test_fastingPeriod_isSignificant_true_for12Hours() {
             let start = Date(timeIntervalSince1970: 0)
             let end = Date(timeIntervalSince1970: 43200) // 12h
@@ -254,12 +269,25 @@
             XCTAssertTrue(FastingLogicService.shouldShowBadge(for: period))
         }
 
-        func test_shouldShowBadge_false_underOneHour() {
+        func test_shouldShowBadge_true_underOneHour_showsShortGaps() {
+            // Sub-hour gaps now show a badge so users can see inter-meal duration
             let period = FastingPeriod(
                 startMealId: UUID(),
                 endMealId: UUID(),
                 startTime: Date(timeIntervalSince1970: 0),
                 endTime: Date(timeIntervalSince1970: 1800) // 30min
+            )
+
+            XCTAssertTrue(FastingLogicService.shouldShowBadge(for: period))
+        }
+
+        func test_shouldShowBadge_false_belowFiveMinutes() {
+            // Gaps under 5 minutes (e.g. same-meal edits) suppress the badge
+            let period = FastingPeriod(
+                startMealId: UUID(),
+                endMealId: UUID(),
+                startTime: Date(timeIntervalSince1970: 0),
+                endTime: Date(timeIntervalSince1970: 240) // 4min
             )
 
             XCTAssertFalse(FastingLogicService.shouldShowBadge(for: period))

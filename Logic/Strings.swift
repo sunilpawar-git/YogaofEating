@@ -92,7 +92,15 @@ enum Strings {
     enum Timeline {
         static let endOfDay = "End of Day"
         static let tapToLog = "TAP TO LOG"
+        static let tapToLogWithInsight = "TAP TO LOG · HOLD FOR INSIGHT"
         static let noMealsLogged = "No meals logged"
+
+        /// Shown above the smiley when no meals have been logged today.
+        /// Replaces the static quote in empty state to give contextual warmth.
+        static let emptyStateGreeting = "Start your day's journal"
+
+        /// Accessibility label for the daily quote text.
+        static let quoteAccessibility = "Daily mindful eating quote"
 
         static func mealsLogged(_ count: Int) -> String {
             "\(count) meal\(count == 1 ? "" : "s") logged"
@@ -100,6 +108,12 @@ enum Strings {
 
         static func itemsCount(_ count: Int) -> String {
             "\(count) item\(count == 1 ? "" : "s")"
+        }
+
+        /// Shown above the smiley when 2+ meals are logged.
+        /// Gives a quick ambient overview of the day without requiring interaction.
+        static func daySummary(avgScore: Int, mealCount: Int) -> String {
+            "Avg. \(avgScore)% · \(mealCount) meal\(mealCount == 1 ? "" : "s")"
         }
     }
 
@@ -125,6 +139,62 @@ enum Strings {
         }
     }
 
+    // MARK: - Date Header (Phase 4)
+
+    enum DateHeader {
+        /// Shown before 10am when no sleep has been logged yet.
+        static let goodMorning = "Good morning"
+
+        /// Shown when sleep quality has been logged. Pass quality display name lowercased.
+        static func sleptQuality(_ quality: String) -> String {
+            "Slept \(quality)"
+        }
+
+        /// Shown when 1+ meals have been logged and no sleep-based context is active.
+        static func mealsSoFar(_ count: Int) -> String {
+            "\(count) meal\(count == 1 ? "" : "s") so far"
+        }
+
+        /// Shown when viewing a historical day. Pass the number of days ago.
+        static func daysAgo(_ count: Int) -> String {
+            "\(count) day\(count == 1 ? "" : "s") ago"
+        }
+
+        /// Label for the "Back to Today" navigation button shown on historical days.
+        static let backToToday = "Back to Today"
+
+        /// Formats the sleep quality display name for use in the context subtext.
+        /// Centralizes lowercasing so `DateContextProvider` does not mix display-string
+        /// transformation with formatting logic.
+        static func sleptQualityFormatted(quality: SleepQuality) -> String {
+            self.sleptQuality(quality.displayName.lowercased())
+        }
+    }
+
+    // MARK: - Journal Block
+
+    enum Journal {
+        /// Placeholder text for the meal text field.
+        static let placeholder = "What are you eating?"
+
+        /// Delete confirmation alert title.
+        static let deleteAlertTitle = "Delete this meal?"
+
+        /// Delete confirmation alert body message.
+        static let deleteAlertMessage = "This action cannot be undone."
+
+        /// Accessibility label for the done (confirm) button on a meal entry.
+        static let doneButtonLabel = "Done"
+
+        /// Accessibility hint for the done button.
+        static let doneButtonHint = "Confirm meal entry and analyze"
+
+        /// Formats item count for display in meal card footer (singular/plural).
+        static func itemCount(_ count: Int) -> String {
+            "\(count) item\(count == 1 ? "" : "s")"
+        }
+    }
+
     // MARK: - Common
 
     enum Common {
@@ -137,12 +207,70 @@ enum Strings {
         static let yesterday = "Yesterday"
     }
 
+    // MARK: - Components
+
+    enum Components {
+        /// Placeholder text shown in BreathingContentView while processing.
+        static let breathe = "Breathe..."
+    }
+
+    // MARK: - Validation Errors (Phase 4)
+
+    enum Validation {
+        static let errorTitle = "Invalid Input"
+        static let dismissButton = "OK"
+
+        // Field-specific error messages
+        enum MealDescription {
+            static let empty = "Please enter what you ate"
+            static let tooLong = "Meal description is too long (max 500 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+
+        enum JournalEntry {
+            static let empty = "Please write something"
+            static let tooLong = "Journal entry is too long (max 2,000 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+
+        enum SleepNotes {
+            static let tooLong = "Sleep notes are too long (max 300 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+
+        enum MorningThoughts {
+            static let tooLong = "Morning thoughts are too long (max 500 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+
+        enum TodoItem {
+            static let empty = "Please enter your to-do"
+            static let tooLong = "To-do item is too long (max 150 characters)"
+            static let suspicious = "Your entry contains characters we can't accept. Please remove any HTML or special markup."
+        }
+    }
+
     // MARK: - Accessibility
+
+    enum Settings {
+        /// Generic sync failure message shown to users when the underlying error is not user-actionable.
+        /// Never expose provider-specific error strings (Firebase, NSError domains) to users.
+        static let syncFailedGeneric = "Sync failed. Please check your connection and try again."
+    }
 
     enum Accessibility {
         static let addMealButton = "Add Meal"
+        static let addMealHint = "Tap to log a new meal"
+        static let addMealWithInsight = "Add Meal or Hold for Insight"
+        static let addMealWithInsightHint = "Tap to log meal, hold to view insight"
         static let settingsButton = "Settings"
         static let mindCheckComplete = "Mind check complete"
+
+        /// Label for the small "+" button that opens the recent meals sheet.
+        static let addMealFromRecent = "Add from recent meals"
+
+        /// Hint explaining what the recent meals button does.
+        static let addMealFromRecentHint = "Shows meals from the past 3 days"
 
         static func mindCheckEntries(_ count: Int) -> String {
             "\(count) entries"

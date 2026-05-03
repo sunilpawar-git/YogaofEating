@@ -6,9 +6,17 @@
         func test_meal_init_defaults() {
             let meal = Meal()
             XCTAssertEqual(meal.items, [])
-            XCTAssertEqual(meal.healthScore, 0.5)
+            XCTAssertEqual(meal.healthScore, 0.0, "New meal should have 0.0 default score (unanalyzed)")
+            XCTAssertFalse(meal.isAIAnalyzed, "New meal should not be AI analyzed")
             // Auto-detected type depends on current time, but we can check it has a value
             XCTAssertNotNil(meal.mealType)
+        }
+
+        func test_meal_legacyInit_defaults() {
+            let meal = Meal(description: "")
+            XCTAssertEqual(meal.healthScore, 0.0, "Legacy init should default to 0.0")
+            XCTAssertFalse(meal.isAIAnalyzed, "Legacy init should not be AI analyzed")
+            XCTAssertNil(meal.aiInsight, "Legacy init should have no insight")
         }
 
         func test_meal_suggestedMealType_breakfast() throws {

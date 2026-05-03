@@ -115,10 +115,15 @@ struct MindCheckEntry: Codable, Identifiable, Equatable {
     /// nil = not yet reviewed, true = done, false = not done
     var isAccomplished: Bool?
 
+    /// Number of days this todo has been carried over from a previous day.
+    /// 0 = created today; N = carried forward N times (i.e., N days old).
+    /// Clamped to [0, 365] on write to prevent corrupt data from causing issues.
+    var carriedOverCount: Int
+
     // MARK: - CodingKeys
 
     enum CodingKeys: String, CodingKey {
-        case id, category, text, timestamp, context, isAccomplished
+        case id, category, text, timestamp, context, isAccomplished, carriedOverCount
     }
 
     // MARK: - Initialization
@@ -131,13 +136,15 @@ struct MindCheckEntry: Codable, Identifiable, Equatable {
     ///   - timestamp: When created (defaults to now)
     ///   - context: Morning or evening context
     ///   - isAccomplished: Whether this todo was accomplished (optional)
+    ///   - carriedOverCount: Days carried from a previous day (default 0 = fresh todo)
     init(
         id: UUID = UUID(),
         category: MindCheckCategory,
         text: String,
         timestamp: Date = Date(),
         context: MindCheckContext,
-        isAccomplished: Bool? = nil
+        isAccomplished: Bool? = nil,
+        carriedOverCount: Int = 0
     ) {
         self.id = id
         self.category = category
@@ -145,6 +152,7 @@ struct MindCheckEntry: Codable, Identifiable, Equatable {
         self.timestamp = timestamp
         self.context = context
         self.isAccomplished = isAccomplished
+        self.carriedOverCount = max(0, min(carriedOverCount, 365))
     }
 
     // MARK: - Codable
@@ -157,6 +165,9 @@ struct MindCheckEntry: Codable, Identifiable, Equatable {
         self.timestamp = try container.decode(Date.self, forKey: .timestamp)
         self.context = try container.decode(MindCheckContext.self, forKey: .context)
         self.isAccomplished = try container.decodeIfPresent(Bool.self, forKey: .isAccomplished)
+        // decodeIfPresent with default 0 — backward compatible with pre-carry-over data
+        let raw = (try? container.decodeIfPresent(Int.self, forKey: .carriedOverCount)) ?? 0
+        self.carriedOverCount = max(0, min(raw, 365))
     }
 
     func encode(to encoder: Encoder) throws {
@@ -167,6 +178,10 @@ struct MindCheckEntry: Codable, Identifiable, Equatable {
         try container.encode(self.timestamp, forKey: .timestamp)
         try container.encode(self.context, forKey: .context)
         try container.encodeIfPresent(self.isAccomplished, forKey: .isAccomplished)
+        // Only encode when non-zero to keep serialized size minimal for fresh todos
+        if self.carriedOverCount > 0 {
+            try container.encode(self.carriedOverCount, forKey: .carriedOverCount)
+        }
     }
 
     // MARK: - Helpers
@@ -175,6 +190,14 @@ struct MindCheckEntry: Codable, Identifiable, Equatable {
     func withAccomplished(_ accomplished: Bool) -> MindCheckEntry {
         var copy = self
         copy.isAccomplished = accomplished
+        return copy
+    }
+
+    /// Returns a copy of this entry with the carriedOverCount updated.
+    /// The count is clamped to [0, 365] to guard against corrupt data.
+    func withCarriedOverCount(_ count: Int) -> MindCheckEntry {
+        var copy = self
+        copy.carriedOverCount = max(0, min(count, 365))
         return copy
     }
 }

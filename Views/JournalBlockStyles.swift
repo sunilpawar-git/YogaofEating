@@ -28,48 +28,48 @@ extension MealType {
 
 // MARK: - Card Background View
 
-/// A reusable card background with material effect and visual feedback overlay.
-/// Used by JournalBlockView for consistent meal card styling.
+/// A reusable card background with material effect, visual feedback overlay,
+/// and a left-edge accent bar coloured by meal type.
+///
+/// The accent bar provides instant meal-type scanning down the left edge of the
+/// timeline without colouring the whole card. The score-based full-border is
+/// intentionally removed — the subtle tint overlay carries score feedback instead.
 struct MealCardBackground: View {
+    // MARK: - Constants
+
+    /// Base fill color — uses semantically adaptive background for light/dark mode
+    static let cardFillColor: Color = AppTheme.MealCard.background
+
+    // MARK: - Properties
+
     let feedback: MealCardFeedback
+
+    /// Meal type colour used for the left accent bar.
+    /// Pass `meal.mealType.displayColor` from the containing view.
+    let mealTypeColor: Color
 
     var body: some View {
         RoundedRectangle(cornerRadius: 16)
-            .fill(.ultraThinMaterial)
+            .fill(Self.cardFillColor)
             .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white.opacity(0.4))
-            }
-            .overlay {
-                // Subtle tint overlay for visual feedback
                 RoundedRectangle(cornerRadius: 16)
                     .fill(self.feedback.tintColor.opacity(self.feedback.tintOpacity))
             }
             .shadow(color: .black.opacity(0.03), radius: 8, y: 4)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(self.feedback.borderColor, lineWidth: self.feedback.borderWidth)
-            )
+            .overlay(alignment: .leading) {
+                self.leftAccentBar
+            }
     }
-}
 
-// MARK: - AI Sparkle Indicator (Deprecated)
-
-/// Sparkle indicator shown when AI analysis completes
-/// - Note: Replaced by `MealScoreBadge` which shows the actual score percentage
-@available(*, deprecated, message: "Use MealScoreBadge instead for displaying meal health scores")
-struct AISparkleIndicator: View {
-    let isAnalyzed: Bool
-
-    var body: some View {
-        if self.isAnalyzed {
-            Text("✨")
-                .font(.system(size: 14))
-                .transition(.opacity.combined(with: .scale))
-                .animation(.easeIn(duration: 0.3), value: self.isAnalyzed)
-                .accessibilityLabel("AI analyzed")
-                .accessibilityHint("This meal has been analyzed by AI")
-        }
+    /// 3pt left-edge bar in the meal type's colour.
+    /// Inset from top and bottom edges to float within the card.
+    private var leftAccentBar: some View {
+        RoundedRectangle(cornerRadius: AppTheme.MealCard.accentBarCornerRadius)
+            .fill(self.mealTypeColor)
+            .frame(width: AppTheme.MealCard.accentBarWidth)
+            .padding(.vertical, AppTheme.Spacing.small)
+            .padding(.leading, 0)
+            .accessibilityHidden(true)
     }
 }
 
@@ -78,8 +78,8 @@ struct AISparkleIndicator: View {
 /// A breathing animation placeholder shown while waiting
 struct BreathingContentView: View {
     var body: some View {
-        Text("Breathe...")
-            .font(.system(.subheadline, design: .serif))
+        Text(Strings.Components.breathe)
+            .font(.system(.subheadline, design: .rounded))
             .italic()
             .foregroundColor(.secondary)
     }
@@ -89,7 +89,8 @@ struct BreathingContentView: View {
 
 #Preview("Card Background - Healthy") {
     MealCardBackground(
-        feedback: MealCardFeedback(score: 0.8, mealTypeColor: .green)
+        feedback: MealCardFeedback(score: 0.8, mealTypeColor: .green),
+        mealTypeColor: .green
     )
     .frame(width: 300, height: 150)
     .padding()
@@ -97,7 +98,8 @@ struct BreathingContentView: View {
 
 #Preview("Card Background - Unhealthy") {
     MealCardBackground(
-        feedback: MealCardFeedback(score: 0.3, mealTypeColor: .orange)
+        feedback: MealCardFeedback(score: 0.3, mealTypeColor: .orange),
+        mealTypeColor: .orange
     )
     .frame(width: 300, height: 150)
     .padding()
@@ -124,5 +126,7 @@ struct RecentMealsAddButton: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Strings.Accessibility.addMealFromRecent)
+        .accessibilityHint(Strings.Accessibility.addMealFromRecentHint)
     }
 }

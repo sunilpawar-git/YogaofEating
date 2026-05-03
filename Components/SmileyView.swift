@@ -30,6 +30,8 @@ struct SmileyView: View {
             "🙂"
         case .neutral:
             "😐"
+        case .concerned:
+            "😟"
         case .overwhelmed:
             "😮"
         }
@@ -41,6 +43,8 @@ struct SmileyView: View {
         SmileyView(state: SmileyState(scale: 1.0, mood: .serene))
             .frame(width: 140, height: 140)
         SmileyView(state: SmileyState(scale: 1.0, mood: .neutral))
+            .frame(width: 140, height: 140)
+        SmileyView(state: SmileyState(scale: 1.1, mood: .concerned))
             .frame(width: 140, height: 140)
         SmileyView(state: SmileyState(scale: 1.0, mood: .overwhelmed))
             .frame(width: 140, height: 140)

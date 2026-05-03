@@ -39,9 +39,9 @@ enum ScoreReasoningGenerator {
         switch score {
         case 0.8...:
             .excellent
-        case 0.65..<0.8:
+        case ScoringThresholds.healthy..<0.8:
             .good
-        case 0.35..<0.65:
+        case ScoringThresholds.unhealthy..<ScoringThresholds.healthy:
             .moderate
         default:
             .poor

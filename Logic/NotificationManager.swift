@@ -95,6 +95,41 @@ class NotificationManager {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
     }
 
+    /// Schedules a local notification for the daily briefing using A/B test variant.
+    /// The notification time depends on the assigned A/B test variant.
+    /// Called after briefing is generated and ready to display.
+    func scheduleBriefingNotification(headline: String, userId: String) {
+        let variant = NotificationTimingABTest.getCurrentVariant(for: userId)
+
+        guard let scheduledTime = NotificationTimingABTest.scheduleNotification(
+            headline: headline,
+            variant: variant,
+            userId: userId
+        ) else {
+            notifLogger.warning("Failed to schedule briefing notification for variant: \(variant.rawValue)")
+            return
+        }
+
+        // Log the scheduling event for analytics
+        NotificationTimingABTest.logNotificationScheduled(
+            userId: userId,
+            variant: variant,
+            scheduledTime: scheduledTime
+        )
+
+        notifLogger
+            .info(
+                "Briefing notification scheduled [\(variant.rawValue)]: \(scheduledTime.formatted(date: .abbreviated, time: .shortened))"
+            )
+    }
+
+    /// Cancels any pending briefing notification.
+    func cancelBriefingNotification() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [NotificationTimingABTest.briefingNotificationIdentifier]
+        )
+    }
+
     /// Clears all pending notifications.
     func cancelAllNotifications() {
         self.center.removeAllPendingNotificationRequests()

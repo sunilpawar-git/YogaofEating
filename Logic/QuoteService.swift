@@ -18,7 +18,7 @@ enum QuoteService {
 
     /// Loads quotes from JSON file, falls back to hardcoded defaults if loading fails
     private static func loadQuotes() -> [MindfulQuote] {
-        // Try to load from JSON file
+        // Load quotes from JSON; failure falls back to hardcoded defaults — documented no-op.
         if let url = Bundle.main.url(forResource: "mindful_quotes", withExtension: "json"),
            let data = try? Data(contentsOf: url),
            let quotesFile = try? JSONDecoder().decode(QuotesFile.self, from: data)

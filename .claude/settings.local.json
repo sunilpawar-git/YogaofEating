@@ -16,7 +16,14 @@
       "Bash(gh run *)",
       "Bash(gh api *)",
       "Bash(git checkout *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Read(//tmp/**)",
+      "Bash(swift build *)",
+      "Bash(swiftc *)",
+      "Bash(xargs ls *)",
+      "Bash(git *)",
+      "Bash(swift /tmp/verify_logic.swift)",
+      "Bash(sort -k2)"
     ]
   }
 }

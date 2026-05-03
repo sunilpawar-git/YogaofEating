@@ -1,5 +1,8 @@
 import Combine
+import OSLog
 import SwiftUI
+
+private let scoreLogger = Logger(subsystem: "com.yogaofeating", category: "Score")
 
 // MARK: - ViewModel
 
@@ -87,7 +90,7 @@ class ScoreBreakdownViewModel: ObservableObject {
                 self.detailedInsight = insight
             }
         } catch {
-            print("❌ Failed to fetch detailed insight: \(error)")
+            scoreLogger.error("Failed to fetch detailed insight: \(error.localizedDescription, privacy: .public)")
             self.detailedInsightError = "Couldn't load detailed analysis"
         }
 
@@ -207,7 +210,7 @@ struct ScoreBreakdownSheet: View {
             }
 
             Text(self.viewModel.mealDescription)
-                .font(.system(size: 16, weight: .regular, design: .serif))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
         }

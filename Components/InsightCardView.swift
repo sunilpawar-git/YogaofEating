@@ -91,7 +91,7 @@ struct InsightCardView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             // Confidence indicator (subtle)
-            if self.insight.confidence > 0.7 {
+            if self.insight.confidence > ScoringThresholds.high {
                 HStack(spacing: 4) {
                     Image(systemName: "sparkle")
                         .font(.system(size: 10))
@@ -127,10 +127,8 @@ struct InsightCardView: View {
                 insightType: .foodSleep,
                 confidence: 0.85
             )
-        ) {
-            print("Dismissed")
-        }
-        .padding()
+        ) {}
+            .padding()
     }
 
     #Preview("Encouragement") {

@@ -1,9 +1,12 @@
 import FirebaseCore
 import GoogleSignIn
+import OSLog
 import SwiftUI
 #if canImport(UIKit)
     import UIKit
 #endif
+
+private let appLogger = Logger(subsystem: "com.yogaofeating", category: "App")
 
 @MainActor
 @main
@@ -23,11 +26,11 @@ struct YogaOfEatingApp: App {
     init() {
         // Skip all initialization if running unit tests to prevent malloc errors
         guard NSClassFromString("XCTestCase") == nil else {
-            print("🧪 Unit testing mode - skipping Firebase and notification setup")
+            appLogger.debug("Unit testing mode — skipping Firebase and notification setup")
             return
         }
 
-        print("📱 Yoga of Eating app starting...")
+        appLogger.info("Yoga of Eating app starting")
 
         // Initialize Firebase FIRST, before any other code that might use it
         // This prevents the "default Firebase app has not yet been configured" warning
@@ -38,15 +41,15 @@ struct YogaOfEatingApp: App {
             // Check if already configured to avoid unnecessary work
             if FirebaseApp.app() == nil {
                 FirebaseApp.configure()
-                print("🔥 Firebase initialized (App init)")
+                appLogger.info("Firebase initialized (App init)")
             } else {
-                print("🔥 Firebase already configured")
+                appLogger.debug("Firebase already configured")
             }
         }
 
         // Check if running UI tests and reset data if needed
         if CommandLine.arguments.contains("--uitesting") {
-            print("🧪 UI Testing mode - clearing all data")
+            appLogger.debug("UI Testing mode — clearing all data")
 
             // Clear UserDefaults
             if let bundleID = Bundle.main.bundleIdentifier {
@@ -58,7 +61,7 @@ struct YogaOfEatingApp: App {
             if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                 let dataFileURL = documentsURL.appendingPathComponent("yoga_of_eating_data.json")
                 try? FileManager.default.removeItem(at: dataFileURL)
-                print("🧪 Removed persisted data file")
+                appLogger.debug("Removed persisted data file for UI test run")
             }
         }
 
@@ -66,7 +69,7 @@ struct YogaOfEatingApp: App {
         NotificationManager.shared.requestPermissions()
         NotificationManager.shared.scheduleMorningNudge()
         NotificationManager.shared.scheduleDefaultMealReminders()
-        print("🔔 Notifications configured")
+        appLogger.info("Notifications configured")
     }
 
     var body: some Scene {
@@ -75,7 +78,7 @@ struct YogaOfEatingApp: App {
                 // Show placeholder during unit tests to avoid SwiftUI issues
                 Text("Unit Testing...")
             } else {
-                MainScreenView()
+                RootTabView()
                     .environmentObject(self.viewModel)
                     .preferredColorScheme(self.colorScheme)
                     .onOpenURL { url in
@@ -115,14 +118,14 @@ struct YogaOfEatingApp: App {
                 // This runs before SwiftUI's @main init, providing an early initialization point
                 if FirebaseApp.app() == nil {
                     FirebaseApp.configure()
-                    print("🔥 Firebase initialized (AppDelegate)")
+                    appLogger.info("Firebase initialized (AppDelegate)")
                 }
 
                 // Initialize AuthService
                 _ = AuthService.shared
-                print("👤 AuthService initialized (AppDelegate)")
+                appLogger.info("AuthService initialized (AppDelegate)")
             } else {
-                print("🧪 Skipping Firebase and AuthService initialization in test/CI environment")
+                appLogger.debug("Skipping Firebase and AuthService initialization in test/CI environment")
             }
 
             return true

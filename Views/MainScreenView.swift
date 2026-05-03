@@ -18,80 +18,7 @@ struct MainScreenView: View {
                 // Note: Peekaboo star removed - insights now accessed via smiley long-press
             }
             .toolbar { self.toolbarContent }
-            .sheet(isPresented: self.$showingSettings) {
-                SettingsView(mainViewModel: self.viewModel)
-            }
-            // Note: Legacy showReflectionSheet removed - now using user-initiated SleepQuality/OverallFeeling sheets
-            .sheet(isPresented: self.$viewModel.showSleepQualitySheet) {
-                SleepQualityInputView(
-                    onSelect: { quality in
-                        self.viewModel.completeSleepQualityInput(quality)
-                    },
-                    onDismiss: {
-                        self.viewModel.dismissSleepQualityInput()
-                    },
-                    suggestedQuality: self.viewModel.suggestedSleepQuality,
-                    sleepData: self.viewModel.appleSleepData
-                )
-                .presentationDetents([.height(320)])
-                .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: self.$viewModel.showOverallFeelingSheet) {
-                OverallFeelingInputView(
-                    onSelect: { feeling in
-                        self.viewModel.completeOverallFeelingInput(feeling)
-                    },
-                    onDismiss: {
-                        self.viewModel.dismissOverallFeelingInput()
-                    }
-                )
-                .presentationDetents([.height(280)])
-                .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: self.$viewModel.showMorningMindCheckSheet) {
-                MindCheckInputView(
-                    existingEntries: self.viewModel.editingMorningEntries,
-                    onSave: { entries in
-                        self.viewModel.completeMorningMindCheckInput(entries)
-                    },
-                    onDismiss: {
-                        self.viewModel.dismissMorningMindCheckInput()
-                    }
-                )
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: self.$viewModel.showEveningMindCheckSheet) {
-                EveningReviewView(
-                    morningEntries: self.viewModel.todaysMorningMindCheck ?? [],
-                    existingEveningEntries: self.viewModel.todaysEveningMindCheck,
-                    showFeelingSelection: self.viewModel.isEndOfDayFlow,
-                    onSave: { updatedMorning, evening, feeling in
-                        self.viewModel.completeEveningReview(
-                            updatedMorningEntries: updatedMorning,
-                            eveningEntries: evening,
-                            feeling: feeling
-                        )
-                    },
-                    onDismiss: {
-                        self.viewModel.dismissEveningMindCheckInput()
-                    }
-                )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: self.$viewModel.showInsightSheet) {
-                if let insight = self.viewModel.currentInsight {
-                    InsightBottomSheet(
-                        insight: insight,
-                        onDismiss: {
-                            self.viewModel.dismissInsight()
-                        }
-                    )
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-                }
-            }
+            .mainScreenSheets(viewModel: self.viewModel, showingSettings: self.$showingSettings)
             // Note: Auto-prompt removed - now using user-initiated reflections via smiley tap
         }
     }
@@ -100,51 +27,13 @@ struct MainScreenView: View {
 
     private var mainContent: some View {
         VStack(spacing: 0) {
-            // Date header with navigation
-            self.dateHeaderWithNavigation
-                .padding(.top, 60)
-                .padding(.bottom, 20)
-
-            // Day page content with gesture-based navigation
-            // Note: Using plain view with drag gesture instead of TabView to control
-            // navigation direction - only allow swiping to previous days, not forward
             self.dayPage(for: self.viewModel.selectedDayIndex)
-                .gesture(
-                    DragGesture(minimumDistance: 50, coordinateSpace: .local)
-                        .onEnded { value in
-                            let horizontalDrag = value.translation.width
-                            let isSwipeLeft = horizontalDrag < -50
-                            let isSwipeRight = horizontalDrag > 50
-
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                if isSwipeLeft, self.viewModel.canNavigateToPreviousDay {
-                                    // Swipe left = go to previous day (higher index)
-                                    self.viewModel.navigateToPreviousDay()
-                                } else if isSwipeRight, self.viewModel.canNavigateToNextDay {
-                                    // Swipe right = go towards today (lower index)
-                                    self.viewModel.navigateToNextDay()
-                                }
-                            }
-                        }
+                .animation(
+                    .easeInOut(duration: AppTheme.Animation.standardDuration),
+                    value: self.viewModel.selectedDayIndex
                 )
-                .animation(.easeInOut(duration: 0.3), value: self.viewModel.selectedDayIndex)
         }
         .contentShape(Rectangle())
-        #if canImport(UIKit)
-            .onTapGesture { self.dismissKeyboard() }
-        #endif
-    }
-
-    // MARK: - Date Header with Navigation
-
-    private var dateHeaderWithNavigation: some View {
-        DateHeaderNavigationView(
-            formattedDate: self.viewModel.formattedSelectedDate,
-            isViewingToday: self.viewModel.isViewingToday,
-            canNavigateToPreviousDay: self.viewModel.canNavigateToPreviousDay,
-            onPreviousDay: { self.viewModel.navigateToPreviousDay() },
-            onNavigateToToday: { self.viewModel.navigateToToday() }
-        )
     }
 
     // MARK: - Day Page Content
@@ -158,7 +47,7 @@ struct MainScreenView: View {
                         // Today: editable timeline
                         self.todayTimelineContent
                             .onChange(of: self.viewModel.meals.count) { _, _ in
-                                withAnimation(.easeInOut(duration: 0.3)) {
+                                withAnimation(.easeInOut(duration: AppTheme.Animation.standardDuration)) {
                                     proxy.scrollTo("bottom", anchor: .bottom)
                                 }
                             }
@@ -167,8 +56,8 @@ struct MainScreenView: View {
                         self.historicalDayContent(daysAgo: dayIndex)
                     }
 
-                    // Bottom spacer
-                    Color.clear.frame(width: 1, height: 100)
+                    // Bottom spacer anchors scroll-to-bottom proxy
+                    Color.clear.frame(width: 1, height: AppTheme.Layout.bottomScrollBuffer)
                         .id("bottom")
                 }
             }
@@ -185,46 +74,25 @@ struct MainScreenView: View {
             smileyState: self.viewModel.smileyState,
             snapshot: nil,
             onSmileyTap: {
-                // Use context-aware smiley tap handling (morning sleep only)
-                self.viewModel.handleSmileyTap()
+                self.viewModel.createNewMeal()
             },
             onSmileyLongPress: {
-                // Show insight if available
                 self.viewModel.handleSmileyLongPress()
             },
             hasInsightAvailable: self.viewModel.hasInsightAvailable,
-            reflectionData: TodayReflectionData(
-                sleepQuality: self.viewModel.todaysSleepQuality,
-                appleSleepData: self.viewModel.appleSleepData,
-                feeling: self.viewModel.todaysFeeling,
-                showEndOfDayPill: self.viewModel.showEndOfDayPill,
-                showMorningMindCheckPill: self.viewModel.showMorningMindCheckPill,
-                morningMindCheck: self.viewModel.todaysMorningMindCheck,
-                onEditSleep: {
-                    self.viewModel.showSleepQualitySheet = true
-                },
-                onEditFeeling: {
-                    self.viewModel.showOverallFeelingSheet = true
-                },
-                onEndOfDayTap: {
-                    self.viewModel.handleEndOfDayPillTap()
-                },
-                onMorningMindCheckTap: {
-                    if let existingEntries = self.viewModel.todaysMorningMindCheck, !existingEntries.isEmpty {
-                        self.viewModel.editMorningMindCheck(existingEntries)
-                    } else {
-                        self.viewModel.showMorningMindCheckSheet = true
-                    }
-                }
-            ),
+            briefingCardData: self.viewModel.briefingCardData,
+            onBriefingTap: {
+                self.viewModel.markBriefingViewed()
+                self.viewModel.showBriefingSheet = true
+            },
             mealActions: MealUpdateActions(
                 onUpdate: { mealId, mealType, items in
                     // Full update - triggers AI analysis (called on "done" actions)
                     self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
                 },
                 onLocalUpdate: { mealId, _, items in
-                    // Local-only update - NO AI analysis (called during typing)
-                    self.viewModel.updateMealItemsLocalOnly(mealId, items: items)
+                    // Enqueue for debounced local update — debounce lives in MainViewModel.
+                    self.viewModel.enqueueMealEdit(mealId: mealId, items: items)
                 },
                 onUpdateTimestamp: { mealId, timestamp in
                     self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
@@ -235,7 +103,8 @@ struct MainScreenView: View {
                     }
                 }
             ),
-            recentMeals: self.viewModel.getRecentUniqueMeals()
+            recentMeals: self.viewModel.getRecentUniqueMeals(),
+            averageHealthScore: self.viewModel.averageHealthScoreToday
         )
     }
 
@@ -244,7 +113,10 @@ struct MainScreenView: View {
     @ViewBuilder
     private func historicalDayContent(daysAgo: Int) -> some View {
         let calendar = Calendar.current
-        let date = calendar.date(byAdding: .day, value: -daysAgo, to: calendar.startOfDay(for: Date()))!
+        // Safe date computation — `date(byAdding:)` can return nil for unusual calendar configs.
+        // Fall back to today's start of day rather than crashing.
+        let date = calendar.date(byAdding: .day, value: -daysAgo, to: calendar.startOfDay(for: Date()))
+            ?? calendar.startOfDay(for: Date())
         let snapshot = self.viewModel.historicalService.getSnapshot(for: date)
         let meals = snapshot?.meals ?? []
         let fastingPeriods = FastingLogicService.calculateFastingPeriods(
@@ -265,7 +137,7 @@ struct MainScreenView: View {
                 onCopy: { meal in
                     // Copy meal to today and navigate to today
                     self.viewModel.copyMealToToday(meal)
-                    withAnimation(.easeInOut(duration: 0.3)) {
+                    withAnimation(.easeInOut(duration: AppTheme.Animation.standardDuration)) {
                         self.viewModel.navigateToToday()
                     }
                 }
@@ -281,10 +153,6 @@ struct MainScreenView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 self.settingsButton
             }
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                self.keyboardDoneButton
-            }
         #elseif canImport(AppKit)
             ToolbarItem(placement: .automatic) {
                 self.settingsButton
@@ -297,30 +165,11 @@ struct MainScreenView: View {
             self.showingSettings = true
         } label: {
             Image(systemName: "gearshape.fill")
-                .font(.system(size: 20, weight: .bold))
+                .font(AppTheme.Typography.headline)
                 .foregroundColor(.secondary.opacity(0.6))
         }
         .accessibilityIdentifier("settings-button")
     }
-
-    #if canImport(UIKit)
-        private var keyboardDoneButton: some View {
-            Button("Done") {
-                self.dismissKeyboard()
-            }
-            .fontWeight(.semibold)
-            .accessibilityIdentifier("keyboard-done-button")
-        }
-
-        private func dismissKeyboard() {
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil,
-                from: nil,
-                for: nil
-            )
-        }
-    #endif
 
     // MARK: - Background
 
@@ -332,21 +181,17 @@ struct MainScreenView: View {
                 Color(uiColor: .systemBackground)
             #endif
 
-            LinearGradient(
-                colors: [
-                    Color.orange.opacity(0.05),
-                    Color.purple.opacity(0.05),
-                    Color.blue.opacity(0.03)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
             Circle()
-                .fill(Color.orange.opacity(0.1))
-                .frame(width: 400, height: 400)
-                .blur(radius: 100)
-                .offset(x: -150, y: -200)
+                .fill(Color.orange.opacity(AppTheme.Background.glowOpacity))
+                .frame(
+                    width: AppTheme.Background.glowSize,
+                    height: AppTheme.Background.glowSize
+                )
+                .blur(radius: AppTheme.Background.glowBlurRadius)
+                .offset(
+                    x: AppTheme.Background.glowOffsetX,
+                    y: AppTheme.Background.glowOffsetY
+                )
         }
     }
 }

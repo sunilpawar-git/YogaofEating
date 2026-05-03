@@ -38,30 +38,11 @@
 
         // MARK: - Helper Methods
 
-        private func createHistoricalSnapshot(
-            daysAgo: Int,
-            mealCount: Int = 2
-        ) -> DailySmileySnapshot {
-            let calendar = Calendar.current
-            let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date())!
+        private func createHistoricalSnapshot(daysAgo: Int, mealCount: Int = 2) -> DailySmileySnapshot {
             let meals = (0..<mealCount).map { index in
-                Meal(
-                    id: UUID(),
-                    timestamp: date,
-                    mealType: .lunch,
-                    items: ["Meal \(index)"],
-                    healthScore: 0.7
-                )
+                MealBuilder().withMealType(.lunch).withItems(["Meal \(index)"]).withScore(0.7).build()
             }
-
-            return DailySmileySnapshot(
-                id: UUID(),
-                date: date,
-                smileyState: .neutral,
-                meals: meals,
-                mealCount: mealCount,
-                averageHealthScore: 0.7
-            )
+            return DailySmileySnapshotBuilder().daysAgo(daysAgo).withMeals(meals).build()
         }
 
         // MARK: - Tests: Selected Date State

@@ -71,7 +71,7 @@ struct InsightBottomSheet: View {
                     }
 
                     // Confidence indicator
-                    if self.insight.confidence > 0.7 {
+                    if self.insight.confidence > ScoringThresholds.high {
                         self.confidenceSection
                     }
 

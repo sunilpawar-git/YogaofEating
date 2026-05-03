@@ -1,4 +1,3 @@
-import HealthKit
 import StoreKit
 import SwiftUI
 #if canImport(UIKit)
@@ -9,7 +8,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: SettingsViewModel
-    @ObservedObject private var authService = AuthService.shared
     @State private var showingClearConfirmation = false
 
     init(mainViewModel: MainViewModel) {
@@ -68,7 +66,7 @@ struct SettingsView: View {
 
     private var userDataSection: some View {
         Section("User Data") {
-            if let user = self.authService.currentUser {
+            if let user = self.viewModel.currentUser {
                 self.signedInUserView(user: user)
                 self.syncButton
             } else {
@@ -89,7 +87,7 @@ struct SettingsView: View {
             }
             Spacer()
             Button("Sign Out") {
-                self.authService.signOut()
+                self.viewModel.signOut()
             }
             .foregroundColor(.red)
         }
@@ -148,7 +146,7 @@ struct SettingsView: View {
 
     private var signInButton: some View {
         Button(action: {
-            Task { try? await self.authService.signInWithGoogle() }
+            Task { await self.viewModel.signInWithGoogle() }
         }) {
             HStack {
                 Image(systemName: "person.crop.circle.badge.plus")
@@ -205,7 +203,7 @@ struct SettingsView: View {
                     if let scene = UIApplication.shared.connectedScenes
                         .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
                     {
-                        SKStoreReviewController.requestReview(in: scene)
+                        AppStore.requestReview(in: scene)
                     }
                 #endif
             } label: {

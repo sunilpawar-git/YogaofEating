@@ -68,14 +68,7 @@ final class SettingsViewSyncTests: XCTestCase {
         self.mockCloudSync.shouldFail = true
 
         // Add a snapshot to ensure upload is attempted
-        let snapshot = DailySmileySnapshot(
-            id: UUID(),
-            date: Date(),
-            smileyState: SmileyState(scale: 1.0, mood: .serene),
-            meals: [],
-            mealCount: 0,
-            averageHealthScore: 0.0
-        )
+        let snapshot = DailySmileySnapshotBuilder().withSmileyState(SmileyState(scale: 1.0, mood: .serene)).build()
         self.historicalService.historicalData.addOrUpdate(snapshot: snapshot)
 
         // Act & Assert

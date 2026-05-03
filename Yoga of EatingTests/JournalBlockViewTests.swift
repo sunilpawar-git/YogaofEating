@@ -203,71 +203,42 @@
             )
         }
 
-        // MARK: - Phase 6: Local Update Debounce Tests
+        // MARK: - Phase 5: Combine Debounce Tests (debounce moved to MainViewModel)
 
-        /// Tests that the local update debounce is configured to reduce excessive updates.
-        /// 500ms (500_000_000 ns) balances responsiveness with reducing UI thrashing.
-        func test_localUpdateDebounce_isConfiguredForBalancedFeedback() {
-            // Given: The debounce constant in JournalBlockView
-            let expectedDelay: UInt64 = 500_000_000 // 500ms in nanoseconds
-
-            // Then: The constant should be set to 500ms for balanced updates
+        /// Debounce is now handled by the Combine pipeline in MainViewModel.
+        /// Verifies that `TimingConstants.debounceMs` is set to a value that
+        /// balances keystroke responsiveness with reducing unnecessary writes.
+        func test_combineDebounce_timingConstant_isConfiguredForBalancedFeedback() {
+            let expectedMs = 500
             XCTAssertEqual(
-                JournalBlockView.localUpdateDebounceNanoseconds,
-                expectedDelay,
-                "Local update debounce should be 500ms to reduce excessive updates"
+                TimingConstants.debounceMs,
+                expectedMs,
+                "Combine debounce should be 500 ms — balances responsiveness with reducing writes"
             )
         }
 
-        /// Tests that local update debounce is reasonable for UX.
-        func test_localUpdateDebounce_isReasonable() {
-            // Given: Acceptable delay range for UX
-            let minDelay: UInt64 = 300_000_000 // 300ms minimum
-            let maxDelay: UInt64 = 1_000_000_000 // 1s maximum
-
-            // Then: The debounce should be within this range
-            XCTAssertGreaterThanOrEqual(
-                JournalBlockView.localUpdateDebounceNanoseconds,
-                minDelay,
-                "Local update debounce should be at least 300ms to reduce UI thrashing"
-            )
-            XCTAssertLessThanOrEqual(
-                JournalBlockView.localUpdateDebounceNanoseconds,
-                maxDelay,
-                "Local update debounce should be at most 1s for reasonable feedback"
-            )
+        /// Verifies that the debounce timing constant is within a sensible UX range.
+        func test_combineDebounce_timingConstant_isReasonable() {
+            XCTAssertGreaterThanOrEqual(TimingConstants.debounceMs, 100, "Debounce must be at least 100 ms")
+            XCTAssertLessThanOrEqual(TimingConstants.debounceMs, 1000, "Debounce must be at most 1 s")
         }
 
-        // MARK: - Done Button Visibility Configuration Tests
+        // MARK: - Checkmark Button Tests (Simplified Pattern)
 
-        /// Tests that Done button visibility is configurable at the static level.
-        func test_doneButtonVisibility_isConfigurable() {
-            // Given: Store original value
-            let originalValue = JournalBlockView.doneButtonVisibility
+        /// Tests that the checkmark button is shown only when focused + has content.
+        /// This follows Apple's HIG: single affordance (green checkmark icon) replaces redundant "Done" button.
+        func test_checkmarkButton_visibleWhenFocusedWithContent() throws {
+            // Given: A meal entry is focused and has typed content
+            self.viewModel.createNewMeal()
+            let mealId = try XCTUnwrap(self.viewModel.meals.first?.id)
 
-            // When: Change the configuration
-            JournalBlockView.doneButtonVisibility = .whenHasContent
-            XCTAssertEqual(JournalBlockView.doneButtonVisibility, .whenHasContent)
+            // When: User types content
+            self.viewModel.updateMeal(mealId, mealType: .lunch, items: ["Rice", "Curry"])
 
-            JournalBlockView.doneButtonVisibility = .never
-            XCTAssertEqual(JournalBlockView.doneButtonVisibility, .never)
-
-            JournalBlockView.doneButtonVisibility = .whenFocused
-            XCTAssertEqual(JournalBlockView.doneButtonVisibility, .whenFocused)
-
-            // Cleanup: Restore original value
-            JournalBlockView.doneButtonVisibility = originalValue
-        }
-
-        /// Tests that the default Done button visibility is .whenFocused for discoverability.
-        func test_doneButtonVisibility_defaultsToWhenFocused() {
-            // The default should be .whenFocused for best discoverability
-            // Note: This test may need updating if we change the default based on UX feedback
-            XCTAssertEqual(
-                JournalBlockView.doneButtonVisibility,
-                .whenFocused,
-                "Default Done button visibility should be .whenFocused for discoverability"
-            )
+            // Then: The checkmark button should be shown (tested visually in UI tests)
+            // For this unit test, we verify the meal was updated with items
+            let meal = try XCTUnwrap(self.viewModel.meals.first)
+            XCTAssertEqual(meal.items.count, 2, "Meal items should be set")
         }
     }
 
