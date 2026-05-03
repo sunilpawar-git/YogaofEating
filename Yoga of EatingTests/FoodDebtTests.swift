@@ -210,7 +210,7 @@
             let borderlineSnapshots = [
                 makeSnapshot(daysAgo: 1, score: 0.42, mealCount: 2),
                 makeSnapshot(daysAgo: 2, score: 0.43, mealCount: 2),
-                makeSnapshot(daysAgo: 3, score: 0.75, mealCount: 2)
+                makeSnapshot(daysAgo: 3, score: 0.44, mealCount: 2)
             ]
 
             let badCards = self.analyzer.analyzeFoodDebt(from: badSnapshots)
