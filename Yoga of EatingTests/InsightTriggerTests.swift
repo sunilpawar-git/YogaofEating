@@ -104,8 +104,10 @@ final class InsightTriggerTests: XCTestCase {
         // When: Save sleep quality
         self.sut.saveSleepQuality(.good)
 
-        // Wait for async task
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        // Wait for insight task to complete
+        if let insightTask = self.sut.insightTask {
+            await insightTask.value
+        }
 
         // Then: currentInsight should be set
         XCTAssertNotNil(self.sut.currentInsight)
