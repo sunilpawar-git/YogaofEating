@@ -88,11 +88,7 @@ class CloudSyncService: CloudSyncServiceProtocol {
     private func encode(_ snapshot: DailySmileySnapshot) throws -> [String: Any] {
         let data = try JSONEncoder().encode(snapshot)
         guard let dictionary = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw NSError(
-                domain: "CloudSyncService",
-                code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "Failed to serialize snapshot"]
-            )
+            throw AppError.syncSerializationFailed
         }
         return dictionary
     }

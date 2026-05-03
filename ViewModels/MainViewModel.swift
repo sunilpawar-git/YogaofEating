@@ -206,7 +206,7 @@ class MainViewModel: ObservableObject {
     private func setupResetMonitoring() {
         Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 60 * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: TimingConstants.dayResetPollIntervalNanoseconds)
                 self?.checkAndResetIfNewDay()
             }
         }

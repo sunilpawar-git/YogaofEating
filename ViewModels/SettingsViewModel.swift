@@ -109,10 +109,10 @@ class SettingsViewModel: ObservableObject {
 
     // Keys moved to StorageKeys.swift for centralization
 
-    private let SYNC_SUCCESS_DISPLAY_DURATION: UInt64 = 2_000_000_000 // 2 seconds
-    private let SYNC_ERROR_DISPLAY_DURATION: UInt64 = 3_000_000_000 // 3 seconds
-    private let SYNC_MAX_RETRY_ATTEMPTS = 3
-    private let SYNC_RETRY_DELAY: UInt64 = 1_000_000_000 // 1 second
+    private let syncSuccessDisplayDuration = TimingConstants.syncSuccessDisplayNanoseconds
+    private let syncErrorDisplayDuration = TimingConstants.syncErrorDisplayNanoseconds
+    private let syncMaxRetryAttempts = TimingConstants.syncMaxRetryAttempts
+    private let syncRetryDelay = TimingConstants.syncRetryDelayNanoseconds
 
     // MARK: - Sync Status Enum
 
@@ -230,16 +230,13 @@ class SettingsViewModel: ObservableObject {
 
     private func performSyncWithRetry(attempt: Int = 1) async {
         guard self.isNetworkAvailable else {
-            await self.handleSyncError(
-                NSError(
-                    domain: "SyncError",
+            await self.handleSyncError(AppError.syncUploadFailed(
+                underlying: NSError(
+                    domain: "NetworkError",
                     code: -1009,
-                    userInfo: [
-                        NSLocalizedDescriptionKey: "No internet connection. Please check your network and try again."
-                    ]
-                ),
-                shouldRetry: false
-            )
+                    userInfo: [NSLocalizedDescriptionKey: "No internet connection"]
+                )
+            ), shouldRetry: false)
             return
         }
 
@@ -252,7 +249,7 @@ class SettingsViewModel: ObservableObject {
             }
         } catch {
             if !Task.isCancelled {
-                let shouldRetry = attempt < self.SYNC_MAX_RETRY_ATTEMPTS
+                let shouldRetry = attempt < self.syncMaxRetryAttempts
                 await self.handleSyncError(error, shouldRetry: shouldRetry, attempt: attempt)
             }
         }
@@ -265,7 +262,7 @@ class SettingsViewModel: ObservableObject {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         #endif
 
-        try? await Task.sleep(nanoseconds: self.SYNC_SUCCESS_DISPLAY_DURATION)
+        try? await Task.sleep(nanoseconds: self.syncSuccessDisplayDuration)
 
         if !Task.isCancelled {
             self.syncStatus = .idle
@@ -274,8 +271,8 @@ class SettingsViewModel: ObservableObject {
 
     private func handleSyncError(_ error: Error, shouldRetry: Bool, attempt: Int = 1) async {
         if shouldRetry {
-            self.syncStatus = .error("Sync failed. Retrying... (Attempt \(attempt)/\(self.SYNC_MAX_RETRY_ATTEMPTS))")
-            try? await Task.sleep(nanoseconds: self.SYNC_RETRY_DELAY)
+            self.syncStatus = .error("Sync failed. Retrying... (Attempt \(attempt)/\(self.syncMaxRetryAttempts))")
+            try? await Task.sleep(nanoseconds: self.syncRetryDelay)
             if !Task.isCancelled {
                 await self.performSyncWithRetry(attempt: attempt + 1)
             }
@@ -286,7 +283,7 @@ class SettingsViewModel: ObservableObject {
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
             #endif
 
-            try? await Task.sleep(nanoseconds: self.SYNC_ERROR_DISPLAY_DURATION)
+            try? await Task.sleep(nanoseconds: self.syncErrorDisplayDuration)
 
             if !Task.isCancelled {
                 self.syncStatus = .idle
