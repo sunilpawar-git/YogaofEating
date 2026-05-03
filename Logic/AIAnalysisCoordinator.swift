@@ -144,12 +144,12 @@ final class AIAnalysisCoordinator: AIAnalysisCoordinating {
 
                 let result = try await context.logicService.analyzeMealQuality(description: sanitized)
                 #if DEBUG
-                coordinatorLogger
-                    .debug(
-                        "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
-                    )
+                    coordinatorLogger
+                        .debug(
+                            "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
+                        )
                 #else
-                coordinatorLogger.debug("AI analysis complete for meal \(mealId, privacy: .public)")
+                    coordinatorLogger.debug("AI analysis complete for meal \(mealId, privacy: .public)")
                 #endif
 
                 // Deliver result on MainActor via write-back closure
