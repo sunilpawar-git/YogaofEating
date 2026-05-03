@@ -155,7 +155,7 @@
             let snapshots = [
                 makeSnapshot(daysAgo: 1, score: 0.25, mealCount: 2),
                 makeSnapshot(daysAgo: 2, score: 0.30, mealCount: 2),
-                makeSnapshot(daysAgo: 3, score: 0.75, mealCount: 2) // older good day
+                makeSnapshot(daysAgo: 3, score: 0.40, mealCount: 2) // older bad day (just under threshold)
             ]
 
             let cards = self.analyzer.analyzeFoodDebt(from: snapshots)
@@ -203,12 +203,14 @@
             // Very low scores → higher confidence
             let badSnapshots = [
                 makeSnapshot(daysAgo: 1, score: 0.10, mealCount: 2),
-                makeSnapshot(daysAgo: 2, score: 0.10, mealCount: 2)
+                makeSnapshot(daysAgo: 2, score: 0.10, mealCount: 2),
+                makeSnapshot(daysAgo: 3, score: 0.75, mealCount: 2)
             ]
             // Borderline scores → lower confidence
             let borderlineSnapshots = [
                 makeSnapshot(daysAgo: 1, score: 0.42, mealCount: 2),
-                makeSnapshot(daysAgo: 2, score: 0.43, mealCount: 2)
+                makeSnapshot(daysAgo: 2, score: 0.43, mealCount: 2),
+                makeSnapshot(daysAgo: 3, score: 0.75, mealCount: 2)
             ]
 
             let badCards = self.analyzer.analyzeFoodDebt(from: badSnapshots)
@@ -236,7 +238,7 @@
             let snapshots = [
                 makeSnapshot(daysAgo: 1, score: 0.20, mealCount: 2),
                 makeSnapshot(daysAgo: 2, score: 0.25, mealCount: 2),
-                makeSnapshot(daysAgo: 3, score: 0.70, mealCount: 2)
+                makeSnapshot(daysAgo: 3, score: 0.40, mealCount: 2)
             ]
 
             let cards = self.analyzer.generateCorrelationCards(from: snapshots)
