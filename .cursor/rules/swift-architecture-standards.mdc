@@ -1,0 +1,281 @@
+---
+description: Swift iOS architecture, TDD, SOLID principles, and security standards for Yoga of Eating
+globs: **/*.swift
+alwaysApply: false
+---
+
+# Swift Architecture & Coding Standards (Yoga of Eating)
+
+## TDD is Non-Negotiable
+
+**Every feature must follow Red-Green-Refactor cycle:**
+1. **Red** — Write failing test that describes ONE behavior
+2. **Green** — Write minimum code to make test pass
+3. **Refactor** — Clean up without breaking tests
+
+✅ Write 3–5 tests FIRST, then implement the feature. If a test passes immediately, it's too loose—tighten it.
+
+**Test naming**: `test_<scenario>_<expectedOutcome>` or `test_<given>_<when>_<then>`
+
+❌ **Never**: Write production code, skip tests because "it's simple," test multiple behaviors in one test, or leave failing tests.
+
+## MVVM Compliance — Mandatory
+
+**Data Flow**: View → ViewModel → Model (Services)
+
+```swift
+// ✅ CORRECT: Views are read-only
+struct MealLogView: View {
+    @StateObject var viewModel: MealViewModel
+    var body: some View {
+        Button("Analyze") {
+            viewModel.analyzeCurrentMeal()  // ViewModel method, not direct service
+        }
+    }
+}
+
+// ❌ WRONG: Direct service access from View
+struct MealLogView: View {
+    let service = AILogicService()  // Hard to test
+}
+```
+
+**Rule**: Never access services directly from Views. All business logic goes through ViewModels.
+
+## Dependency Injection via Protocols
+
+Always inject dependencies via protocol, **never concrete type**:
+
+```swift
+// ✅ CORRECT: Protocol-based injection
+class MainViewModel {
+    let logicService: MealLogicProvider  // Protocol
+    init(logicService: MealLogicProvider = AILogicService()) { }
+}
+
+// ❌ WRONG: Concrete type dependency
+class MainViewModel {
+    let logicService = AILogicService()  // Hard to mock in tests
+}
+```
+
+## SOLID Principles
+
+### Single Responsibility (SRP)
+Each class has ONE reason to change. If you can't describe it in one sentence without "and" or "also", it violates SRP.
+
+```swift
+// ✅ CORRECT: Focused responsibility
+class PersistenceService {
+    func save(_ data: MealData) throws { }  // Only handles JSON/disk I/O
+}
+
+// ❌ WRONG: Multiple responsibilities
+class DataManager {
+    func fetch() { }        // Network
+    func save() { }         // Persistence
+    func validate() { }     // Validation
+    func cache() { }        // Caching
+}
+```
+
+### Open/Closed (OCP)
+Classes are **open for extension** (protocols), **closed for modification**. Add features via protocols, not by modifying existing code.
+
+### Dependency Inversion (DIP)
+High-level modules depend on abstractions (protocols), not concrete types. Inject all dependencies.
+
+## Centralized Strings & Theming (SSOT)
+
+### ❌ Never hardcode user-facing strings:
+```swift
+Text("TAP TO LOG")  // ❌ WRONG
+```
+
+### ✅ Always use `Strings.swift`:
+```swift
+Text(Strings.Timeline.tapToLog)  // ✅ CORRECT
+```
+
+**Strings organized by feature**:
+- `Strings.MindCheck.*` — Morning intentions, evening review
+- `Strings.Insight.*` — Daily insights, patterns
+- `Strings.Timeline.*` — Meal logging, empty states
+
+### ❌ Never hardcode fonts:
+```swift
+Text("Score").font(.system(size: 18, weight: .semibold, design: .rounded))  // ❌ WRONG
+```
+
+### ✅ Always use `FontTheme`:
+```swift
+Text("Score").font(FontTheme.sectionHeader)  // ✅ CORRECT
+```
+
+**Available fonts**: `FontTheme.mealEntry`, `FontTheme.sectionHeader`, `FontTheme.body`, `FontTheme.caption`
+
+**Design principle**: Changing fonts app-wide = one edit in one file.
+
+## Cybersecurity & Data Protection
+
+### Authentication & Authorization
+All user data access must be guarded by authentication checks. Users can only access their own data.
+
+```swift
+// ✅ CORRECT: Guard in performDeepAnalysis
+guard logicService as? AIAnalysisProvider else {
+    return  // Skip if not AI-capable
+}
+```
+
+### Sensitive Data Handling
+**Never log, cache, or transmit unencrypted**:
+- Meal descriptions, health scores, sleep data, user identity
+
+```swift
+// ❌ NEVER: Logs sensitive data
+os_log("User meal: \(meal.description)", log: OSLog.default, type: .debug)
+
+// ✅ CORRECT: Log only non-sensitive metadata
+os_log("Analyzed meal ID %{public}@", log: OSLog.default, type: .debug, mealId)
+```
+
+### Firestore Security Rules
+Users can only access their own data:
+```javascript
+match /meals/{userId}/daily/{mealId} {
+    allow read, write: if request.auth.uid == userId;
+}
+```
+
+## File Organization & Limits
+
+**MainViewModel is split across extensions** to respect 250-line file limit:
+
+| File | Responsibility |
+|------|---|
+| `MainViewModel.swift` | Core state, date navigation, meal CRUD, smiley logic |
+| `MainViewModel+AIAnalysis.swift` | AI analysis pipeline, scoring guards, async analysis flow |
+| `MainViewModel+Insights.swift` | Daily briefing generation, insight notifications |
+| `MainViewModel+Highlight.swift` | Highlight data aggregation (stats, patterns) |
+| `MainViewModel+Reflect.swift` | Reflection/journal logic (evening review, mood tracking) |
+| `MainViewModel+MindCheck.swift` | Mind check (morning intentions, evening accountability) |
+| `MainViewModel+DaySummary.swift` | Daily summary aggregation (stats, insights) |
+
+## Build Quality
+
+### Zero Warnings on Merge
+No `var` where `let` suffices, no unused imports.
+
+```bash
+xcodebuild -scheme "Yoga of Eating" clean build 2>&1 | grep -E "warning:|error:"
+```
+
+### SwiftLint & SwiftFormat
+Before committing:
+```bash
+swiftlint lint "Yoga of Eating"
+swiftformat "Yoga of Eating" --config .swiftformat
+```
+
+**Enforced rules**:
+- `force_unwrap` — ❌ ERROR (use optional chaining or guard)
+- `force_cast` — ❌ ERROR (use `as?` with guard)
+- File length — max 300 lines (warn 250)
+- Function body — max 50 lines (warn 40)
+- Line length — 120 chars max
+- Cyclomatic complexity — max 10 (warn 7)
+
+## Testing Strategy
+
+### Mock at Boundaries, Not Internals
+```swift
+// ✅ CORRECT: Mock Firebase boundary
+let mockLogicService = MockAILogicService()
+
+// ❌ WRONG: Mock internal logic
+let mockViewModel = MockMainViewModel()
+```
+
+### Shared Mocks Live in `Mocks.swift`
+- `MockAILogicService`
+- `MockPersistenceService`
+- `MockHistoricalDataService`
+- Test-local mocks (e.g., `SlowMockAILogicService`) can live inline
+
+### Never Touch Real Resources in Tests
+- No real Firebase calls (use Emulator for integration tests only)
+- No filesystem access (use mocks or temp directories)
+- No HealthKit queries (mock historical data instead)
+- `@MainActor` on all ViewModel tests (MainViewModel is @MainActor)
+
+## Critical Regression Test: AI Analysis Wiring
+
+**Bug**: MainViewModel defaulted to `MealLogicService` instead of `AILogicService`. Firebase never called.
+
+**Guard tests** (must stay green):
+```
+test_defaultInit_logicServiceIsAIAnalysisProvider
+test_defaultInit_performDeepAnalysis_reachesAIProvider
+test_defaultMainViewModel_usesAIAnalysisProvider
+test_defaultMainViewModel_aiAnalysisGuardPasses
+```
+
+**Rule**: MainViewModel.init MUST default `logicService` to `AILogicService()`.
+
+## Common Pitfalls
+
+❌ **Never** instantiate `MainViewModel()` without `skipDataLoading: true` in tests — real init loads disk and launches async HealthKit queries.
+
+❌ **Never** skip tests on "simple" features — test everything.
+
+❌ **Never** hardcode magic values (all thresholds in `ScoringThresholds.swift`):
+- `healthy: 0.65`
+- `unhealthy: 0.35`
+
+❌ **Never** duplicate constants across files — extract to SSOT.
+
+❌ **Never** use `Task {}` fire-and-forget without testing — integration tests must `await` async results.
+
+❌ **Never** reset `isAIAnalyzed` in `updateMealItemsLocalOnly` check — this is intentional; tests must account for it.
+
+## Tab Implementation Security
+
+**Principle of Least Privilege**: Tabs receive ONLY data they need, never full access to MainViewModel.
+
+```swift
+// ✅ CORRECT: Accept data via parameter
+struct MyTabView: View {
+    let data: (mealsCount: Int, averageScore: Double)?
+}
+
+// ❌ WRONG: @EnvironmentObject exposes all user data
+struct MyTabView: View {
+    @EnvironmentObject var viewModel: MainViewModel
+}
+```
+
+Define minimal computed properties on MainViewModel:
+```swift
+var myTabData: (mealsCount: Int, averageScore: Double)? {
+    guard self.isViewingToday else { return nil }
+    guard !self.meals.isEmpty else { return nil }
+    let avg = self.meals.map { $0.healthScore }.reduce(0, +) / Double(self.meals.count)
+    return (mealsCount: self.meals.count, averageScore: avg)
+}
+```
+
+Write data isolation tests to verify tabs cannot access unintended data.
+
+## Code Review Checklist
+
+- ✅ Tests written BEFORE production code
+- ✅ MVVM compliance (Views read-only, ViewModels coordinate services)
+- ✅ All strings centralized in `Strings.swift`
+- ✅ All fonts use `FontTheme.*`
+- ✅ DRY & SSOT (no duplicate constants)
+- ✅ Dependency injection via protocols
+- ✅ Zero build warnings
+- ✅ Security guards for user data access
+- ✅ Sensitive data not logged
+- ✅ All regression tests green

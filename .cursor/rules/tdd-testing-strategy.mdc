@@ -1,0 +1,323 @@
+---
+description: Test-Driven Development and testing strategy for Yoga of Eating
+globs: **/*Tests.swift
+alwaysApply: false
+---
+
+# TDD & Testing Strategy (Yoga of Eating)
+
+## TDD Discipline: Red-Green-Refactor
+
+**EVERY feature requires TDD. No exceptions.**
+
+### The Cycle (Non-Negotiable)
+
+1. **RED** — Write the smallest failing test that describes ONE behavior
+   - Name clearly: `test_<scenario>_<expectedOutcome>`
+   - Test must fail with clear error message
+   - Test fails for the RIGHT reason (not typo/compilation error)
+   
+2. **GREEN** — Write minimum production code to make test pass
+   - Don't over-engineer; just make it pass
+   - Duplicate code is OK at this stage
+   - Resist refactoring until test passes
+   
+3. **REFACTOR** — Clean up both production AND test code without breaking tests
+   - Eliminate duplication (DRY principle)
+   - Extract helper functions and constants
+   - Apply SOLID principles
+   - Run all tests after each refactoring step
+
+### Critical Rule
+
+**Write 3–5 tests FIRST. Then implement the feature.**
+
+If a test passes immediately without any production code changes, the test is **too loose**—rewrite it to actually test the behavior.
+
+```swift
+// ❌ WRONG: Test passes on first run (no production code exists yet)
+func test_analyzeCurrentMeal() {
+    viewModel.analyzeCurrentMeal()
+    // Passes because... nothing exists to test
+}
+
+// ✅ CORRECT: Test fails until you implement the behavior
+func test_analyzeCurrentMeal_updatesScore() {
+    // Initial state: score is 0.5
+    XCTAssertEqual(viewModel.mealScore, 0.5)
+    
+    // After calling analyze: score updates
+    viewModel.analyzeCurrentMeal()
+    
+    // Test FAILS until you implement updateScore logic
+    XCTAssertNotEqual(viewModel.mealScore, 0.5)
+}
+```
+
+## Test Organization
+
+### File Structure
+One test file per behavior area (NOT per class):
+
+```
+Yoga of EatingTests/
+├── MainViewModelAIAnalysisTests.swift      — ViewModel AI logic
+├── AILogicServiceTests.swift               — Service unit tests
+├── AIAnalysisIntegrationTests.swift        — Full pipeline: typing → done → AI → smiley
+├── PersistenceServiceTests.swift           — JSON encode/decode
+├── HistoricalDataSyncTests.swift           — Firestore sync
+├── SecurityAndAuthTests.swift              — Auth guards, data isolation
+├── InputValidationTests.swift              — User input validation
+└── Mocks.swift                             — Shared mock implementations
+```
+
+### Shared Mocks
+All reusable mocks live in `Mocks.swift`:
+
+```swift
+// Yoga of EatingTests/Mocks.swift
+
+class MockAILogicService: AIAnalysisProvider {
+    var stub_score: Double = 0.5
+    var call_count = 0
+    
+    func analyzeMealQuality(for meal: Meal) async throws -> MealScore {
+        call_count += 1
+        return MealScore(score: stub_score, mood: .neutral, insight: "Mock analysis")
+    }
+}
+
+class MockPersistenceService: PersistenceServiceProtocol {
+    var storage: [String: Codable] = [:]
+    
+    func save<T: Codable>(_ data: T, to key: String) throws {
+        storage[key] = data
+    }
+}
+```
+
+Test-local mocks (e.g., `SlowMockAILogicService` used only in one test file) can live inline.
+
+## Mock Strategy: Boundaries, Not Internals
+
+### ✅ Mock at Service Boundaries
+```swift
+// CORRECT: Mock the Firebase boundary
+let mockAI = MockAILogicService()
+let viewModel = MainViewModel(logicService: mockAI)
+```
+
+### ❌ Never Mock the Code Under Test
+```swift
+// WRONG: Mocking internal logic
+let mockViewModel = MockMainViewModel()  // Don't do this
+```
+
+### What to Mock vs. Test Real
+
+| Layer | Mock in Unit Tests | Real in Integration Tests |
+|-------|---|---|
+| Firebase Functions (`AILogicService`) | `MockAILogicService` | Firebase Emulator (separate target, not CI) |
+| Persistence | `MockPersistenceService` | Real `PersistenceService` in `PersistenceServiceTests` |
+| HistoricalData | `MockHistoricalDataService` | Real `HistoricalDataService` in `HistoricalDataServiceTests` |
+| Auth & Security | `MockAuthService` | Manual/TestFlight; test guards in unit tests |
+| Network | Mock HTTP client | Real network in integration tests only |
+
+**Golden rule**: Never let a test touch real Firebase, HealthKit, or filesystem except in dedicated integration tests.
+
+## ViewModel Tests: @MainActor Requirement
+
+All ViewModel tests must be marked `@MainActor` because `MainViewModel` is `@MainActor`:
+
+```swift
+// ✅ CORRECT: @MainActor on test class
+@MainActor
+final class MainViewModelAIAnalysisTests: XCTestCase {
+    func test_performDeepAnalysis_callsAIService() async {
+        let mockAI = MockAILogicService()
+        let viewModel = MainViewModel(logicService: mockAI, skipDataLoading: true)
+        
+        await viewModel.performDeepAnalysis(for: mealId)
+        
+        XCTAssertGreaterThan(mockAI.call_count, 0)
+    }
+}
+
+// ❌ WRONG: Missing @MainActor
+final class MainViewModelAIAnalysisTests: XCTestCase {  // Will crash at runtime
+}
+```
+
+## Async Testing Pattern
+
+For fire-and-forget `Task {}` blocks, use `await Task.sleep()` or call the async method directly:
+
+```swift
+// ❌ WRONG: Can't observe async result
+updateMeal(mealId, description: "New meal")
+// Returns immediately; async analysis starts in background
+// Test has no way to observe the result
+
+// ✅ CORRECT: Use async method or sleep to wait
+await viewModel.performDeepAnalysis(for: mealId)
+// Wait for analysis to complete
+XCTAssertTrue(viewModel.meals[mealId].isAIAnalyzed)
+
+// OR: Sleep to give background task time
+updateMeal(mealId, description: "New meal")
+try await Task.sleep(nanoseconds: 100_000_000)  // 0.1 second
+XCTAssertTrue(viewModel.meals[mealId].isAIAnalyzed)
+```
+
+## Test Isolation & Independence
+
+### ✅ Tests must run in ANY order
+```swift
+func setUp() {
+    viewModel = MainViewModel(skipDataLoading: true)  // Fresh state each test
+}
+
+func test_updateMeal_updatesScore() {
+    // Test 1 can run before test 2
+}
+
+func test_analyzeCurrentMeal_updatesIsAIAnalyzed() {
+    // Test 2 can run before test 1
+    // Order must not matter
+}
+```
+
+### ❌ Never depend on test execution order
+```swift
+// WRONG: Test 2 depends on state from Test 1
+var sharedViewmodel: MainViewModel?
+
+func test_1_setupData() {
+    sharedViewmodel = MainViewModel(...)  // Test 1 must run first
+}
+
+func test_2_analyzeMeal() {
+    sharedViewmodel.performDeepAnalysis(...)  // Fails if Test 1 didn't run
+}
+```
+
+## Common Test Pitfalls
+
+### ❌ Never initialize MainViewModel without `skipDataLoading: true`
+```swift
+// WRONG: Real init loads from disk and launches HealthKit queries
+let viewModel = MainViewModel()
+
+// CORRECT: Skip disk I/O and HealthKit in tests
+let viewModel = MainViewModel(skipDataLoading: true)
+```
+
+### ❌ Never leave failing tests in the codebase
+Either fix them or delete them. No "TODO: fix later" tests.
+
+### ❌ Never test private implementation details
+```swift
+// WRONG: Testing private method
+viewModel.privateHelper()
+
+// CORRECT: Test behavior through public interface
+viewModel.updateMeal(...)
+XCTAssertEqual(viewModel.mealScore, expectedScore)
+```
+
+### ❌ Never mix multiple behaviors in one test
+```swift
+// WRONG: Too many assertions on different concerns
+func test_meal() {
+    viewModel.updateMeal(...)
+    XCTAssertEqual(viewModel.mealScore, 0.75)
+    
+    viewModel.analyzeCurrentMeal()
+    XCTAssertTrue(viewModel.isAIAnalyzed)
+    
+    // Also checking smiley state
+    XCTAssertEqual(viewModel.smileySate, .serene)
+}
+
+// CORRECT: One behavior per test
+func test_updateMeal_updatesScore() {
+    viewModel.updateMeal(mealId, description: "Salad")
+    XCTAssertEqual(viewModel.mealScore, 0.75)
+}
+
+func test_performDeepAnalysis_setsIsAIAnalyzed() {
+    await viewModel.performDeepAnalysis(for: mealId)
+    XCTAssertTrue(viewModel.meals[mealId].isAIAnalyzed)
+}
+```
+
+## Regression Tests: AI Analysis Wiring
+
+These tests **must stay green**. They prevent the Firebase wiring bug (logicService defaulting to `MealLogicService` instead of `AILogicService`):
+
+```swift
+@MainActor
+final class AIAnalysisIntegrationTests: XCTestCase {
+    
+    func test_defaultInit_logicServiceIsAIAnalysisProvider() {
+        let viewModel = MainViewModel(skipDataLoading: true)
+        
+        // If this fails, default logicService is wrong type
+        XCTAssertTrue(viewModel.logicService is AIAnalysisProvider)
+    }
+    
+    func test_defaultInit_performDeepAnalysis_reachesAIProvider() {
+        let viewModel = MainViewModel(skipDataLoading: true)
+        
+        // Integration: typing → done → performDeepAnalysis → Firebase
+        await viewModel.performDeepAnalysis(for: mealId)
+        
+        // If this fails, guard or cast is broken
+        XCTAssertTrue(viewModel.meals[mealId].isAIAnalyzed)
+    }
+}
+```
+
+## Security & Validation Tests
+
+All security-sensitive features require tests:
+
+```swift
+@MainActor
+final class SecurityAndAuthTests: XCTestCase {
+    
+    func test_emptyMealDescriptionIsRejected() {
+        XCTAssertThrowsError(try viewModel.updateMealDescription(""))
+    }
+    
+    func test_userCannotAccessOtherUsersData() {
+        let user1ViewModel = MainViewModel(userId: "user1", ...)
+        let user2ViewModel = MainViewModel(userId: "user2", ...)
+        
+        XCTAssertEqual(user1ViewModel.meals.filter { $0.userId == "user2" }.count, 0)
+    }
+    
+    func test_unauthenticatedUserCannotAnalyzeMeal() {
+        let mockAuth = MockAuthService(isAuthenticated: false)
+        let viewModel = MainViewModel(authService: mockAuth, ...)
+        
+        XCTAssertThrowsError(try viewModel.performDeepAnalysis(...))
+    }
+}
+```
+
+## Code Review Checklist for Tests
+
+- ✅ Tests written BEFORE production code (Red-Green-Refactor)
+- ✅ At least 1 failing test for every feature
+- ✅ All tests pass
+- ✅ No test passing on first run without code changes
+- ✅ One behavior per test (not multiple concerns)
+- ✅ Tests can run in any order (no execution dependencies)
+- ✅ All ViewModel tests marked `@MainActor`
+- ✅ Mocks at boundaries (Firebase, filesystem); not internals
+- ✅ Shared mocks in `Mocks.swift`; test-local mocks inline
+- ✅ No real Firebase, HealthKit, or filesystem access (unit tests)
+- ✅ Security tests for auth, validation, data isolation
+- ✅ No failing tests left in codebase
+- ✅ Regression tests still green
