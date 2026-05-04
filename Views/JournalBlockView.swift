@@ -124,7 +124,7 @@ struct JournalBlockView: View {
         HStack {
             self.mealTypeMenu
             Spacer()
-            MealScoreBadge(score: self.meal.healthScore) {
+            MealScoreBadge(score: self.meal.isAIAnalyzed ? self.meal.healthScore : nil) {
                 self.showScoreBreakdown = true
             }
         }
