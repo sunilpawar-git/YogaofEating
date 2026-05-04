@@ -100,15 +100,6 @@ struct HighlightSleepSection: View {
                         self.onNotesChanged?(newValue)
                     }
                 }
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("Done") {
-                            self.focusedField.wrappedValue = nil
-                        }
-                        .fontWeight(.semibold)
-                    }
-                }
         }
     }
 
@@ -148,10 +139,9 @@ struct HighlightSleepSection: View {
 struct HighlightTodoSection: View {
     let todos: [MindCheckEntry]
     @Binding var newTodoText: String
+    var focusedField: FocusState<HighlightFocusField?>.Binding
     var onAddTodo: ((String) -> Void)?
     var onRemoveTodo: ((UUID) -> Void)?
-
-    @FocusState private var isTodoFieldFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -201,7 +191,7 @@ struct HighlightTodoSection: View {
 
                 TextField("Add a to-do", text: self.$newTodoText)
                     .textFieldStyle(.plain)
-                    .focused(self.$isTodoFieldFocused)
+                    .focused(self.focusedField, equals: .todo)
                     .submitLabel(.done)
                     .onSubmit { self.submitTodo() }
                     .onChange(of: self.newTodoText) { _, newValue in
@@ -217,32 +207,26 @@ struct HighlightTodoSection: View {
                     .fill(Color.accentColor.opacity(0.05))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.accentColor.opacity(self.isTodoFieldFocused ? 0.4 : 0.15), lineWidth: 1)
+                            .strokeBorder(
+                                Color.accentColor.opacity(self.focusedField.wrappedValue == .todo ? 0.4 : 0.15),
+                                lineWidth: 1
+                            )
                     )
             )
             .padding(.horizontal)
-            .animation(.easeInOut(duration: 0.15), value: self.isTodoFieldFocused)
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    self.isTodoFieldFocused = false
-                }
-                .fontWeight(.semibold)
-            }
+            .animation(.easeInOut(duration: 0.15), value: self.focusedField.wrappedValue == .todo)
         }
     }
 
     private func submitTodo() {
         let trimmed = self.newTodoText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            self.isTodoFieldFocused = false
+            self.focusedField.wrappedValue = nil
             return
         }
         // Clear text first so the field empties instantly before the list re-renders
         self.newTodoText = ""
-        self.isTodoFieldFocused = false
+        self.focusedField.wrappedValue = nil
         self.onAddTodo?(trimmed)
     }
 }
@@ -298,15 +282,6 @@ struct HighlightThoughtsSection: View {
                         try? await Task.sleep(nanoseconds: AppTheme.TextEntry.debounceNanoseconds)
                         guard !Task.isCancelled else { return }
                         self.onChanged?(newValue)
-                    }
-                }
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("Done") {
-                            self.focusedField.wrappedValue = nil
-                        }
-                        .fontWeight(.semibold)
                     }
                 }
         }
