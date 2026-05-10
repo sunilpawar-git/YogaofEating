@@ -33,6 +33,10 @@ enum FontTheme {
     /// Size: 12pt, Regular weight
     static let caption = Font.system(size: 12, weight: .regular, design: .rounded)
 
+    /// For small inline icons (e.g. flame icon in CaloriePillView)
+    /// Size: 11pt, Semibold weight
+    static let iconSmall = Font.system(size: 11, weight: .semibold, design: .rounded)
+
     // MARK: - Semantic Convenience Methods
 
     /// Returns the appropriate text entry font for a given context

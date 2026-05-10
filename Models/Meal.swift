@@ -85,6 +85,8 @@ struct Meal: Identifiable, Codable, Equatable {
     var healthScore: Double // 0.0 (unhealthy) to 1.0 (very healthy)
     var isAIAnalyzed: Bool // True after AI (Gemini) has analyzed the meal
     var aiInsight: String? // AI-generated insight/reasoning for the health score
+    /// AI-estimated calorie count for this meal. nil until AI analysis completes.
+    var estimatedCalories: Int?
 
     /// Backward compatibility: computed property that joins items
     var description: String {
@@ -110,7 +112,8 @@ struct Meal: Identifiable, Codable, Equatable {
         items: [String] = [],
         healthScore: Double = 0.0,
         isAIAnalyzed: Bool = false,
-        aiInsight: String? = nil
+        aiInsight: String? = nil,
+        estimatedCalories: Int? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -119,6 +122,7 @@ struct Meal: Identifiable, Codable, Equatable {
         self.healthScore = healthScore
         self.isAIAnalyzed = isAIAnalyzed
         self.aiInsight = aiInsight
+        self.estimatedCalories = estimatedCalories
     }
 
     /// Legacy initializer for backward compatibility
@@ -130,5 +134,6 @@ struct Meal: Identifiable, Codable, Equatable {
         self.healthScore = healthScore
         self.isAIAnalyzed = false
         self.aiInsight = nil
+        self.estimatedCalories = nil
     }
 }

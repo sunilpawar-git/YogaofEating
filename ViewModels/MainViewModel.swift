@@ -104,6 +104,15 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     let historicalService: any HistoricalDataServiceProtocol
     let healthProfileService: HealthProfileServiceProtocol
     let insightService: InsightGenerationServiceProtocol
+    let activityProvider: ActivityDataProvider
+
+    // MARK: - Activity Data (R4: TDEE resolution chain)
+
+    /// Active (exercise) calories burned today, sourced from `activityProvider`.
+    @Published var todayActiveCalories: Double?
+
+    /// Basal (resting) calories burned today, sourced from `activityProvider`.
+    @Published var todayBasalCalories: Double?
 
     /// Combine subscriptions held for the lifetime of the ViewModel.
     private var cancellables = Set<AnyCancellable>()
@@ -128,6 +137,7 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         historicalService: (any HistoricalDataServiceProtocol)? = nil,
         insightService: InsightGenerationServiceProtocol? = nil,
         aiCoordinator: (any AIAnalysisCoordinating)? = nil,
+        activityProvider: ActivityDataProvider? = nil,
         skipDataLoading: Bool = false
     ) {
         let healthService = healthProfileService ?? HealthProfileService()
@@ -138,6 +148,7 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         self.historicalService = historicalSvc
         self.insightService = insightService ?? InsightGenerationService(historicalService: historicalSvc)
         self.aiCoordinator = aiCoordinator ?? AIAnalysisCoordinator()
+        self.activityProvider = activityProvider ?? HealthKitService.shared
 
         // Wire back-reference via protocol so HistoricalDataService.saveHistoricalData()
         // delegates to the single canonical save path here.
