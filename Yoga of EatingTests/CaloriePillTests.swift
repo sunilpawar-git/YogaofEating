@@ -348,4 +348,228 @@
         }
     }
 
+    // MARK: - AILogicService.parseAnalysisResponse — NSNumber cast regression
+
+    /// Tests the internal static parser directly, without a real Firebase connection.
+    /// Verifies that both Int-backed and Double-backed NSNumbers are handled correctly.
+    /// The bug: `data["estimatedCalories"] as? Int` silently returns nil when Firebase
+    /// deserializes a JSON integer as a Double-backed NSNumber on some SDK versions.
+    final class AILogicServiceParseResponseTests: XCTestCase {
+        func test_parseResponse_intNSNumber_extractsEstimatedCalories() {
+            // Arrange: simulate Firebase returning estimatedCalories as Int-backed NSNumber
+            let data: [String: Any] = [
+                "healthScore": 0.75,
+                "mood": "serene",
+                "sound": "chime",
+                "insight": "Good meal",
+                "estimatedCalories": NSNumber(value: 620) // Int-backed
+            ]
+            // Act
+            let result = AILogicService.parseAnalysisResponse(data)
+            // Assert
+            XCTAssertEqual(
+                result.estimatedCalories,
+                620,
+                "Int-backed NSNumber should be extracted by parseAnalysisResponse"
+            )
+        }
+
+        func test_parseResponse_doubleNSNumber_extractsEstimatedCalories() {
+            // Arrange: simulate Firebase returning estimatedCalories as Double-backed NSNumber
+            // (JSONSerialization may decode integer JSON values as Double-backed NSNumber on
+            // some Firebase SDK versions — `as? Int` silently fails in this case)
+            let data: [String: Any] = [
+                "healthScore": 0.75,
+                "mood": "serene",
+                "sound": "chime",
+                "insight": "Good meal",
+                "estimatedCalories": NSNumber(value: 620.0) // Double-backed — the bug case
+            ]
+            // Act
+            let result = AILogicService.parseAnalysisResponse(data)
+            // Assert: must NOT return nil — the NSNumber bridge must handle Double-backed values
+            XCTAssertEqual(
+                result.estimatedCalories,
+                620,
+                "Double-backed NSNumber must still extract calories — `as? Int` alone fails this"
+            )
+        }
+
+        func test_parseResponse_nullEstimatedCalories_returnsNil() {
+            let data: [String: Any] = [
+                "healthScore": 0.5,
+                "mood": "neutral",
+                "sound": "tink",
+                "estimatedCalories": NSNull() // null JSON value
+            ]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertNil(result.estimatedCalories, "JSON null should produce nil estimatedCalories")
+        }
+
+        func test_parseResponse_missingEstimatedCalories_returnsNil() {
+            let data: [String: Any] = [
+                "healthScore": 0.5,
+                "mood": "neutral",
+                "sound": "tink"
+                // estimatedCalories key absent
+            ]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertNil(result.estimatedCalories, "Missing key should produce nil estimatedCalories")
+        }
+
+        func test_parseResponse_healthScore_usesNSNumberBridge() {
+            // Verify healthScore also uses the safe NSNumber bridge path
+            let data: [String: Any] = [
+                "healthScore": NSNumber(value: 0.85),
+                "mood": "serene",
+                "sound": "chime"
+            ]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertEqual(result.score, 0.85, accuracy: 0.001)
+        }
+
+        func test_parseResponse_unknownMood_fallsBackToNeutral() {
+            let data: [String: Any] = [
+                "healthScore": 0.5,
+                "mood": "INVALID_MOOD",
+                "sound": "tink"
+            ]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertEqual(result.mood, .neutral)
+        }
+
+        func test_parseResponse_emptyDict_returnsDefaults() {
+            let result = AILogicService.parseAnalysisResponse([:])
+            XCTAssertEqual(result.score, 0.5, accuracy: 0.001)
+            XCTAssertEqual(result.mood, .neutral)
+            XCTAssertNil(result.estimatedCalories)
+        }
+    }
+
+    // MARK: - Integration: VM pipeline → caloriePillData.consumed
+
+    /// Verifies the full pipeline: VM with mock AI (stubbedCalories: 620) →
+    /// performDeepAnalysis → caloriePillData.consumed == 620.
+    /// This test was missing (T2 in Plans/errors) — its absence meant the calorie
+    /// logging bug could regress undetected.
+    @MainActor
+    final class CaloriePillIntegrationTests: XCTestCase {
+        private func makeVM(stubbedCalories: Int?) -> (MainViewModel, CaloriePillMockAI) {
+            let mock = CaloriePillMockAI(stubbedCalories: stubbedCalories)
+            let vm = MainViewModel(logicService: mock, skipDataLoading: true)
+            return (vm, mock)
+        }
+
+        func test_integration_mealAnalyzed_pillDataConsumed_reflectsEstimatedCalories() async throws {
+            // Arrange
+            let (vm, _) = self.makeVM(stubbedCalories: 620)
+            vm.createNewMeal()
+            guard let meal = vm.meals.first else { XCTFail("No meal created")
+                return
+            }
+            vm.meals[0].items = ["100gm palak paneer", "2 chapati"]
+
+            // Act: trigger AI analysis directly (simulates Done button)
+            await vm.performDeepAnalysis(for: meal.id, items: vm.meals[0].items)
+
+            // Assert: caloriePillData.consumed must reflect the stubbed estimate
+            XCTAssertEqual(
+                vm.caloriePillData.consumed, 620,
+                "After AI analysis, caloriePillData.consumed must equal the AI-returned estimatedCalories. " +
+                    "Failure here means estimatedCalories is not flowing from MealAnalysisResult → Meal → caloriePillData."
+            )
+        }
+
+        func test_integration_mealAnalyzed_pillIsVisible_whenConsumedPositive() async throws {
+            let (vm, _) = self.makeVM(stubbedCalories: 350)
+            vm.createNewMeal()
+            guard let meal = vm.meals.first else { XCTFail("No meal created")
+                return
+            }
+            vm.meals[0].items = ["oats", "berries"]
+
+            await vm.performDeepAnalysis(for: meal.id, items: vm.meals[0].items)
+
+            XCTAssertTrue(
+                vm.caloriePillData.isVisible,
+                "Pill must be visible once consumed > 0"
+            )
+        }
+
+        func test_integration_multipleMeals_consumed_sumsBothEstimates() async throws {
+            let (vm, _) = self.makeVM(stubbedCalories: 500)
+            vm.createNewMeal()
+            vm.createNewMeal()
+            guard vm.meals.count == 2 else { XCTFail("Expected 2 meals")
+                return
+            }
+            let id1 = vm.meals[0].id
+            let id2 = vm.meals[1].id
+            // Items must be >= 5 chars (ScoringThresholds.minimumMealDescriptionLength = 5)
+            vm.meals[0].items = ["oatmeal with berries"]
+            vm.meals[1].items = ["salad with grilled chicken"]
+
+            await vm.performDeepAnalysis(for: id1, items: vm.meals[0].items)
+            await vm.performDeepAnalysis(for: id2, items: vm.meals[1].items)
+
+            XCTAssertEqual(
+                vm.caloriePillData.consumed, 1000,
+                "Two meals each returning 500 Cal must sum to 1000 in caloriePillData.consumed"
+            )
+        }
+
+        func test_integration_aiReturnsNilCalories_consumedStaysZero() async throws {
+            let (vm, _) = self.makeVM(stubbedCalories: nil)
+            vm.createNewMeal()
+            guard let meal = vm.meals.first else { XCTFail("No meal created")
+                return
+            }
+            vm.meals[0].items = ["mystery dish"]
+
+            await vm.performDeepAnalysis(for: meal.id, items: vm.meals[0].items)
+
+            XCTAssertEqual(
+                vm.caloriePillData.consumed, 0,
+                "When AI returns nil estimatedCalories, consumed must remain 0"
+            )
+        }
+    }
+
+    // MARK: - Pill width
+
+    final class CaloriePillWidthTests: XCTestCase {
+        func test_caloriePillMaxWidth_isDefinedAndReasonable() {
+            // The design spec calls for ~220pt. Any value outside 160–280 is a regression.
+            let maxWidth = AppTheme.CaloriePill.pillMaxWidth
+            XCTAssertGreaterThanOrEqual(maxWidth, 160, "pillMaxWidth must be at least 160pt")
+            XCTAssertLessThanOrEqual(maxWidth, 280, "pillMaxWidth must not exceed 280pt (full-width is the bug)")
+        }
+    }
+
+    // MARK: - CaloriePillMockAI (local mock — not in Mocks.swift; scoped to this test file)
+
+    /// Mock AIAnalysisProvider that returns a configurable `estimatedCalories`.
+    /// Kept local to CaloriePillTests to avoid polluting the shared Mocks.swift.
+    final class CaloriePillMockAI: AIAnalysisProvider {
+        var stubbedCalories: Int?
+
+        init(stubbedCalories: Int?) {
+            self.stubbedCalories = stubbedCalories
+        }
+
+        func calculateHealthScore(for _: String) -> Double { 0.7 }
+        func calculateHealthScore(for _: [String]) -> Double { 0.7 }
+        func calculateNextState(from state: SmileyState, healthScore _: Double) -> SmileyState { state }
+
+        func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
+            MealAnalysisResult(
+                score: 0.7,
+                mood: .serene,
+                sound: "chime",
+                insight: "Test meal",
+                estimatedCalories: self.stubbedCalories
+            )
+        }
+    }
+
 #endif

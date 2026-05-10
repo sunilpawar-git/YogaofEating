@@ -51,7 +51,11 @@ struct CaloriePillView: View {
                     if self.isTappable { self.showDetail = true }
                 }
             }
-            .frame(height: AppTheme.CaloriePill.pillHeight)
+            .frame(
+                maxWidth: AppTheme.CaloriePill.pillMaxWidth,
+                minHeight: AppTheme.CaloriePill.pillHeight,
+                maxHeight: AppTheme.CaloriePill.pillHeight
+            )
             .accessibilityLabel(self.accessibilityLabel)
             .accessibilityValue(self.pillLabel)
             .accessibilityAddTraits(self.isTappable ? .isButton : [])
