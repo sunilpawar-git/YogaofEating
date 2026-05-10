@@ -75,17 +75,30 @@ class AILogicService: AIAnalysisProvider {
             throw AppError.analysisUnavailable
         }
 
-        let score = data["healthScore"] as? Double ?? 0.5
+        let parsed = Self.parseAnalysisResponse(data)
+        aiServiceLogger
+            .debug(
+                "Parsed response — score: \(parsed.score, privacy: .public), mood: \(parsed.mood.rawValue, privacy: .public)"
+            )
+        return parsed
+    }
+
+    /// Parses a raw Firebase Cloud Function response dictionary into a `MealAnalysisResult`.
+    ///
+    /// Extracted as an `internal static` method so it can be unit-tested without a real Firebase
+    /// connection. All type casts use `NSNumber` bridging to handle both Int- and Double-backed
+    /// JSON numbers — `as? Int` alone fails silently when Firebase deserializes a JSON integer
+    /// as a Double-backed `NSNumber` (common with certain SDK versions).
+    static func parseAnalysisResponse(_ data: [String: Any]) -> MealAnalysisResult {
+        let score = (data["healthScore"] as? NSNumber)?.doubleValue ?? 0.5
         let moodString = data["mood"] as? String ?? "neutral"
         let sound = data["sound"] as? String ?? "tink"
         let insight = data["insight"] as? String
-        let estimatedCalories = data["estimatedCalories"] as? Int
-
+        // Use NSNumber bridge: handles both Int- and Double-backed NSNumber
+        // (Math.round in JS always returns an integer, but JSONSerialization may decode
+        // it as a Double-backed NSNumber on some Firebase SDK versions).
+        let estimatedCalories = (data["estimatedCalories"] as? NSNumber)?.intValue
         let mood = SmileyMood(rawValue: moodString) ?? .neutral
-
-        aiServiceLogger
-            .debug("Parsed response — score: \(score, privacy: .public), mood: \(moodString, privacy: .public)")
-
         return MealAnalysisResult(
             score: score,
             mood: mood,

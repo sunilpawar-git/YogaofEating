@@ -33,6 +33,9 @@ extension AppTheme {
         /// Fixed pill height in points
         static let pillHeight: CGFloat = 34
 
+        /// Maximum pill width — keeps the pill compact and centered above "TAP TO LOG"
+        static let pillMaxWidth: CGFloat = 220
+
         /// Horizontal padding inside the pill
         static let pillHorizontalPadding: CGFloat = 14
 
