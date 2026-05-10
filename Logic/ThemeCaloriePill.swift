@@ -30,14 +30,11 @@ extension AppTheme {
 
         // MARK: - Pill Geometry
 
-        /// Fixed pill height in points
-        static let pillHeight: CGFloat = 34
+        /// Vertical padding inside the pill (above/below the label text)
+        static let pillVerticalPadding: CGFloat = 3
 
-        /// Maximum pill width — keeps the pill compact and centered above "TAP TO LOG"
-        static let pillMaxWidth: CGFloat = 220
-
-        /// Horizontal padding inside the pill
-        static let pillHorizontalPadding: CGFloat = 14
+        /// Horizontal padding inside the pill — minimal so it hugs the text
+        static let pillHorizontalPadding: CGFloat = 7
 
         // MARK: - Threshold fractions (SSOT for color-band boundaries)
 

@@ -68,7 +68,6 @@ extension DayTimelineView {
 
             if let pillData = self.caloriePillData, pillData.isVisible {
                 CaloriePillView(data: pillData, detailData: self.calorieDetailData)
-                    .padding(.horizontal, 40)
             }
 
             if let summary = self.daySummaryText {
