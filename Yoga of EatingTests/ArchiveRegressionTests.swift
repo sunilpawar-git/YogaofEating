@@ -115,5 +115,59 @@
                 "highlightData must survive multiple re-archives"
             )
         }
+
+        // MARK: - R3: Partial calorie sum bug regression
+
+        func test_archiveCurrentDay_allMealsAnalyzed_setsTotalCalories() {
+            let today = Calendar.current.startOfDay(for: Date())
+            var m1 = Meal(mealType: .breakfast, items: ["Oats"])
+            m1.estimatedCalories = 400
+            var m2 = Meal(mealType: .lunch, items: ["Salad"])
+            m2.estimatedCalories = 500
+            self.service.archiveCurrentDay(meals: [m1, m2], state: .neutral, date: today)
+
+            let snapshot = self.service.getSnapshot(for: today)
+            XCTAssertEqual(snapshot?.totalCalories, 900)
+            XCTAssertTrue(snapshot?.hasCompleteCalorieData ?? false, "All meals analyzed → complete")
+        }
+
+        func test_archiveCurrentDay_someAICalories_storesPartialSumWithFlag() {
+            let today = Calendar.current.startOfDay(for: Date())
+            var m1 = Meal(mealType: .breakfast, items: ["Oats"])
+            m1.estimatedCalories = 400
+            let m2 = Meal(mealType: .lunch, items: ["Mystery dish"])
+            // m2 has no estimatedCalories
+            self.service.archiveCurrentDay(meals: [m1, m2], state: .neutral, date: today)
+
+            let snapshot = self.service.getSnapshot(for: today)
+            XCTAssertEqual(snapshot?.totalCalories, 400, "Partial sum stored — only analyzed meals")
+            XCTAssertFalse(snapshot?.hasCompleteCalorieData ?? true, "Not all meals analyzed → partial")
+        }
+
+        func test_archiveCurrentDay_noAICalories_doesNotOverwriteExistingTotal() {
+            let today = Calendar.current.startOfDay(for: Date())
+            // First archive: analyzed meals → establishes total
+            var m1 = Meal(mealType: .breakfast, items: ["Oats"])
+            m1.estimatedCalories = 600
+            self.service.archiveCurrentDay(meals: [m1], state: .neutral, date: today)
+
+            // Second archive: no AI calories (e.g. unanalyzed draft) → must preserve existing
+            let m2 = Meal(mealType: .lunch, items: ["Draft"])
+            self.service.archiveCurrentDay(meals: [m2], state: .neutral, date: today)
+
+            let snapshot = self.service.getSnapshot(for: today)
+            XCTAssertEqual(snapshot?.totalCalories, 600, "Existing total preserved when new meals have no AI data")
+        }
+
+        func test_archiveCurrentDay_fastingDay_zeroCaloriesStored() {
+            let today = Calendar.current.startOfDay(for: Date())
+            var m1 = Meal(mealType: .breakfast, items: ["Water"])
+            m1.estimatedCalories = 0
+            self.service.archiveCurrentDay(meals: [m1], state: .neutral, date: today)
+
+            let snapshot = self.service.getSnapshot(for: today)
+            XCTAssertEqual(snapshot?.totalCalories, 0, "Genuine 0-calorie day must be stored, not discarded")
+            XCTAssertTrue(snapshot?.hasCompleteCalorieData ?? false, "Single analyzed meal → complete")
+        }
     }
 #endif

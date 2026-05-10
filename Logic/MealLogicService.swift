@@ -8,15 +8,23 @@ protocol MealLogicProvider {
     func calculateNextState(from currentState: SmileyState, healthScore: Double) -> SmileyState
 }
 
+/// Strongly-typed result returned by `AIAnalysisProvider.analyzeMealQuality`.
+/// Replaces the previous 4-tuple to allow forward-compatible fields (e.g. estimatedCalories)
+/// without touching call sites.
+struct MealAnalysisResult {
+    let score: Double
+    let mood: SmileyMood
+    let sound: String
+    let insight: String?
+    /// AI-estimated calories for this meal. `nil` if the backend did not return a value.
+    let estimatedCalories: Int?
+}
+
 /// Protocol for services that provide AI-powered meal analysis
 protocol AIAnalysisProvider: MealLogicProvider {
-    /// Analyzes meal quality and returns score, mood, sound, and optional basic insight
-    func analyzeMealQuality(description: String) async throws -> (
-        score: Double,
-        mood: SmileyMood,
-        sound: String,
-        insight: String?
-    )
+    /// Analyzes meal quality and returns a `MealAnalysisResult` with score, mood, sound,
+    /// optional insight, and optional estimated calorie count.
+    func analyzeMealQuality(description: String) async throws -> MealAnalysisResult
 }
 
 class MealLogicService: MealLogicProvider {

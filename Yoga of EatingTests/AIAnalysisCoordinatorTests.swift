@@ -24,7 +24,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { _, _, _ in },
+            onMealScoreUpdated: { _, _, _, _ in },
             onSmileyStateChanged: { _ in }
         )
 
@@ -51,7 +51,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { _, _, _ in },
+            onMealScoreUpdated: { _, _, _, _ in },
             onSmileyStateChanged: { _ in }
         )
 
@@ -68,7 +68,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { _, _, _ in },
+            onMealScoreUpdated: { _, _, _, _ in },
             onSmileyStateChanged: { _ in }
         )
 
@@ -94,7 +94,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { id, score, _ in
+            onMealScoreUpdated: { id, score, _, _ in
                 capturedId = id
                 capturedScore = score
             },
@@ -122,7 +122,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { _, _, _ in
+            onMealScoreUpdated: { _, _, _, _ in
                 // Thread.isMainThread is stable across Swift concurrency versions;
                 // avoids the DEBUG-trap risk of MainActor.assumeIsolated.
                 calledOnMain = Thread.isMainThread
@@ -148,11 +148,9 @@ class SlowCoordinatorMockAI: AIAnalysisProvider {
     func calculateHealthScore(for _: [String]) -> Double { 0.5 }
     func calculateNextState(from state: SmileyState, healthScore _: Double) -> SmileyState { state }
 
-    func analyzeMealQuality(description _: String) async throws
-        -> (score: Double, mood: SmileyMood, sound: String, insight: String?)
-    {
+    func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
         try await Task.sleep(nanoseconds: UInt64(self.delay * 1_000_000_000))
-        return (0.5, .neutral, "", nil)
+        return MealAnalysisResult(score: 0.5, mood: .neutral, sound: "", insight: nil, estimatedCalories: nil)
     }
 }
 
@@ -165,9 +163,7 @@ class InstantCoordinatorMockAI: AIAnalysisProvider {
     func calculateHealthScore(for _: [String]) -> Double { self.score }
     func calculateNextState(from state: SmileyState, healthScore _: Double) -> SmileyState { state }
 
-    func analyzeMealQuality(description _: String) async throws
-        -> (score: Double, mood: SmileyMood, sound: String, insight: String?)
-    {
-        (self.score, .serene, "chime", nil)
+    func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
+        MealAnalysisResult(score: self.score, mood: .serene, sound: "chime", insight: nil, estimatedCalories: nil)
     }
 }

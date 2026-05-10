@@ -418,3 +418,18 @@ class MockHealthProfileService: HealthProfileServiceProtocol {
         self.mockProfile
     }
 }
+
+// MARK: - MockActivityDataProvider
+
+final class MockActivityDataProvider: ActivityDataProvider {
+    var stubbedActiveCalories: Double?
+    var stubbedBasalCalories: Double?
+
+    func fetchActiveCaloriesBurned(for _: Date) async -> Double? {
+        self.stubbedActiveCalories
+    }
+
+    func fetchBasalCaloriesBurned(for _: Date) async -> Double? {
+        self.stubbedBasalCalories
+    }
+}

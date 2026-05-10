@@ -44,6 +44,7 @@ struct HighlightView: View {
                 HighlightTodoSection(
                     todos: self.data.todos,
                     newTodoText: self.$newTodoText,
+                    focusedField: self.$focusedField,
                     onAddTodo: self.onAddTodo,
                     onRemoveTodo: self.onRemoveTodo
                 )
@@ -59,6 +60,15 @@ struct HighlightView: View {
                 Spacer(minLength: 60)
             }
             .padding(.top, 16)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    self.focusedField = nil
+                }
+                .fontWeight(.semibold)
+            }
         }
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
@@ -85,6 +95,7 @@ struct HighlightView: View {
 enum HighlightFocusField: Hashable {
     case sleepNotes
     case morningThoughts
+    case todo
 }
 
 #Preview {

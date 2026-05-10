@@ -209,11 +209,9 @@ final class TrackingMockAILogicService: AIAnalysisProvider {
     func calculateHealthScore(for _: [String]) -> Double { 0.5 }
     func calculateNextState(from state: SmileyState, healthScore _: Double) -> SmileyState { state }
 
-    func analyzeMealQuality(description _: String) async throws
-        -> (score: Double, mood: SmileyMood, sound: String, insight: String?)
-    {
+    func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
         try await Task.sleep(nanoseconds: UInt64(self.delay * 1_000_000_000))
         self.completedCallCount += 1
-        return (0.7, .serene, "chime", nil)
+        return MealAnalysisResult(score: 0.7, mood: .serene, sound: "chime", insight: nil, estimatedCalories: nil)
     }
 }
