@@ -1,0 +1,281 @@
+---
+description: Security, authentication, and data protection standards for Yoga of Eating
+globs: **/*.swift
+alwaysApply: false
+---
+
+# Security & Data Protection (Yoga of Eating)
+
+## Golden Rule: Sensitive Data Protection
+
+**Sensitive data includes**: Meal descriptions, health scores, sleep data, user identity, fitness metrics.
+
+### Must NEVER:
+- ❌ Log to console in production builds
+- ❌ Send to analytics without explicit opt-in
+- ❌ Store in plaintext on disk
+- ❌ Cache without encryption
+- ❌ Transmit over unencrypted channels
+
+## Authentication Guards (All User Data Access)
+
+Every method accessing user data must verify authentication:
+
+```swift
+// ✅ CORRECT: Guard authentication before access
+func performDeepAnalysis(for mealId: String) async {
+    guard let userId = Auth.auth().currentUser?.uid else {
+        throw AuthenticationError.notAuthenticated
+    }
+    // Now proceed with analysis for verified user
+}
+
+// ❌ WRONG: No auth check
+func performDeepAnalysis(for mealId: String) async {
+    let meal = meals[mealId]  // Assume user is verified?
+}
+```
+
+## Authorization: User Data Isolation
+
+Users can ONLY access their own data:
+
+```swift
+// ✅ CORRECT: Verify userId matches current user
+func fetchUserMeals() -> [Meal] {
+    guard let currentUserId = Auth.auth().currentUser?.uid else { return [] }
+    return meals.filter { $0.userId == currentUserId }
+}
+
+// ❌ WRONG: No user isolation
+func fetchUserMeals() -> [Meal] {
+    return meals  // Returns ALL meals
+}
+```
+
+## Logging Sensitive Data
+
+Use OSLog with `%{public}` only for non-sensitive metadata:
+
+```swift
+import os.log
+
+// ❌ NEVER: Logs sensitive details
+os_log("User meal: %@", log: OSLog.default, type: .debug, meal.description)
+
+// ✅ CORRECT: Only ID and non-sensitive metadata
+os_log("Analyzed meal ID %{public}@", log: OSLog.default, type: .debug, mealId)
+
+// ✅ CORRECT: Use .info for debug messages visible during testing
+os_log("Analysis started for meal", log: OSLog.default, type: .info)
+
+// ❌ NEVER: Console output in production code
+print("User ate: \(meal.description)")
+```
+
+## Network Security
+
+All API calls must enforce HTTPS:
+
+```swift
+// ✅ CORRECT: HTTPS only configuration
+var urlSessionConfig: URLSessionConfiguration {
+    let config = URLSessionConfiguration.default
+    config.tlsMinimumSupportedProtocolVersion = .TLSv12  // Enforce TLS 1.2+
+    // Certificate pinning recommended for Firebase endpoints
+    return config
+}
+
+// ❌ NEVER: Disable certificate validation
+config.urlCredentialStorage = nil
+config.waitsForConnectivity = false
+```
+
+## Secrets & Credentials
+
+### ❌ Never store in UserDefaults:
+```swift
+UserDefaults.standard.set(apiKey, forKey: "API_KEY")  // ❌ WRONG
+```
+
+### ✅ Use Keychain for secrets:
+```swift
+// Store auth tokens in Keychain only
+SecItemAdd(query)  // OS-level encryption at rest
+```
+
+## Input Validation & Sanitization
+
+All user input must be validated BEFORE processing:
+
+```swift
+// ✅ CORRECT: Validate meal description
+func updateMealDescription(_ description: String) throws {
+    guard !description.isEmpty else {
+        throw ValidationError.emptyDescription
+    }
+    guard description.count <= 500 else {
+        throw ValidationError.descriptionTooLong
+    }
+    // Remove HTML/script tags to prevent injection
+    let sanitized = description.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+    meals[currentMealId]?.description = sanitized
+}
+
+// ❌ WRONG: No validation
+func updateMealDescription(_ description: String) {
+    meals[currentMealId]?.description = description
+}
+```
+
+**Test all validation**:
+```swift
+func test_emptyMealDescriptionIsRejected() { }
+func test_excessivelyLongDescriptionIsRejected() { }
+func test_maliciousInputIsSanitized() { }
+```
+
+## Error Handling: No Information Disclosure
+
+Show generic messages to users; log detailed errors server-side only:
+
+```swift
+// ❌ WRONG: Exposes internal error to user
+catch {
+    showAlert("Firebase error: \(error.localizedDescription)")
+}
+
+// ✅ CORRECT: Generic message, detailed server-side logging
+catch {
+    // Log detailed error to Firebase Crashlytics
+    Crashlytics.crashlytics().record(error: error)
+    
+    // Show generic message to user
+    showAlert("We couldn't process that meal. Please try again.")
+}
+```
+
+## Firestore Security Rules Template
+
+Only authenticated users can access their own data:
+
+```javascript
+// Meals: User can read/write only their own
+match /users/{userId}/meals/{mealId} {
+    allow read, write: if request.auth.uid == userId;
+}
+
+// Insights: User can read, Cloud Functions write only
+match /users/{userId}/insights/{insightId} {
+    allow read: if request.auth.uid == userId;
+    allow write: if false;  // Cloud Functions only
+}
+
+// Protect daily snapshots
+match /users/{userId}/daily/{date} {
+    allow read: if request.auth.uid == userId;
+    allow write: if false;  // Backend only
+}
+```
+
+## HealthKit & Personal Health Data
+
+HealthKit data is sensitive. Always:
+- ✅ Request minimal permissions (never ask for "all" health data)
+- ✅ Use `.preferredSource` filter (device `com.apple.health.*` only, no third-party)
+- ✅ Never sync to Firestore without explicit encryption
+- ✅ Never log raw sleep/health metrics
+
+```swift
+// ✅ CORRECT: Limited scope, device-only
+let sampleType = HKSampleType.quantityType(forIdentifier: .sleepAnalysis)!
+let query = HKSampleQuery(
+    sampleType: sampleType,
+    predicate: nil,
+    limit: HKObjectQueryNoLimit,
+    sortDescriptors: [...],
+    resultsHandler: { query, samples, error in
+        let deviceSamples = samples?.filter { $0.sourceRevision.source.bundleIdentifier == "com.apple.health" }
+    }
+)
+```
+
+## Tab View Security: Principle of Least Privilege
+
+Never expose MainViewModel via @EnvironmentObject to tabs. Tabs receive ONLY the data they need:
+
+```swift
+// ❌ WRONG: Tab has access to ALL user data
+struct MyTabView: View {
+    @EnvironmentObject var viewModel: MainViewModel  // Oops, can now access meals, sleep, scores, etc.
+}
+
+// ✅ CORRECT: Tab receives specific aggregated data
+struct MyTabView: View {
+    let data: (mealsCount: Int, averageScore: Double)?
+    
+    var body: some View {
+        if let data {
+            Text("Meals: \(data.mealsCount)")
+        }
+    }
+}
+
+// In MainViewModel, provide minimal computed property:
+var highlightData: (mealsCount: Int, averageScore: Double)? {
+    guard self.isViewingToday else { return nil }
+    guard !self.meals.isEmpty else { return nil }
+    let avg = self.meals.map { $0.healthScore }.reduce(0, +) / Double(self.meals.count)
+    return (mealsCount: self.meals.count, averageScore: avg)
+}
+```
+
+## Security Test Patterns
+
+All security-sensitive features require dedicated tests in `SecurityAndAuthTests.swift`:
+
+```swift
+@MainActor
+final class SecurityAndAuthTests: XCTestCase {
+    
+    func test_unauthenticatedUserCannotAnalyzeMeal() {
+        let mockAuthService = MockAuthService(isAuthenticated: false)
+        let viewModel = MainViewModel(authService: mockAuthService, ...)
+        
+        XCTAssertThrowsError(try viewModel.performDeepAnalysis(...))
+    }
+    
+    func test_userCanOnlyAccessOwnMeals() {
+        let user1ViewModel = createViewModel(userId: "user1", ...)
+        let user2ViewModel = createViewModel(userId: "user2", ...)
+        
+        // user2's meals should not be accessible to user1
+        XCTAssertEqual(user1ViewModel.meals.filter { $0.userId == "user2" }.count, 0)
+    }
+    
+    func test_mealDescriptionWithSQLInjectionIsSanitized() {
+        let maliciousInput = "<script>alert('xss')</script>"
+        XCTAssertThrowsError(try updateMealDescription(maliciousInput))
+    }
+}
+```
+
+## Dependency Security
+
+- ✅ Use CocoaPods/SPM with **pinned versions** (never floating)
+- ✅ Regularly audit dependencies for vulnerabilities
+- ✅ Keep Firebase SDK and dependencies up to date
+- ✅ Review third-party library code before integrating
+
+## Code Review Checklist
+
+- ✅ All user data access guarded by `Auth.auth().currentUser?.uid`
+- ✅ No sensitive data logged to console
+- ✅ Firestore Security Rules enforce `request.auth.uid == userId`
+- ✅ User input validated and sanitized
+- ✅ HTTPS enforced, certificate validation enabled
+- ✅ Errors shown to users are generic; detailed errors logged server-side
+- ✅ API keys and tokens stored in Keychain, not UserDefaults
+- ✅ Security tests exist for auth, validation, data isolation
+- ✅ Tab views receive data via parameters, not @EnvironmentObject
+- ✅ No hardcoded secrets in code

@@ -56,7 +56,13 @@
             // Step 3: User hits "done" — use the meal's own type to avoid hitting the
             // mealTypeChanged branch instead of the needsAIAnalysis branch.
             let mealType = self.sut.meals.first?.mealType ?? .lunch
-            self.mockAI.mockAnalysisResult = (score: 0.85, mood: .serene, sound: "chime", insight: "Great choice!")
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.85,
+                mood: .serene,
+                sound: "chime",
+                insight: "Great choice!",
+                estimatedCalories: nil
+            )
             self.sut.updateMeal(mealId, mealType: mealType, items: ["Apple"])
 
             try await Task.sleep(nanoseconds: 200_000_000) // 200ms — let the async Task finish
@@ -79,7 +85,13 @@
 
             // Items must be set before trigger — performDeepAnalysis guards on description.count >= 5
             self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple salad"])
-            self.mockAI.mockAnalysisResult = (score: 0.75, mood: .serene, sound: "chime", insight: nil)
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.75,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await self.sut.triggerAIAnalysisForMeal(mealId)
 
             // Persistence must be called with the updated score so it survives app restart
@@ -95,13 +107,25 @@
             self.sut.createNewMeal()
             guard let mealId = self.sut.meals.first?.id else { return XCTFail("No meal") }
 
-            self.mockAI.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
             XCTAssertTrue(self.sut.meals.first?.isAIAnalyzed ?? false)
 
             // When: content changes (new item added)
             self.mockAI.analyzeCalled = false
-            self.mockAI.mockAnalysisResult = (score: 0.4, mood: .overwhelmed, sound: "thud", insight: nil)
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.4,
+                mood: .overwhelmed,
+                sound: "thud",
+                insight: nil,
+                estimatedCalories: nil
+            )
             self.sut.updateMeal(mealId, mealType: .breakfast, items: ["Apple", "Fries"])
 
             try await Task.sleep(nanoseconds: 200_000_000)
@@ -117,7 +141,13 @@
             self.sut.createNewMeal()
             guard let mealId = self.sut.meals.first?.id else { return XCTFail("No meal") }
 
-            self.mockAI.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             self.sut.updateMeal(mealId, mealType: .breakfast, items: ["Apple"])
             try await Task.sleep(nanoseconds: 200_000_000)
 
@@ -167,7 +197,13 @@
             self.sut.createNewMeal()
             guard let mealId = self.sut.meals.first?.id else { return XCTFail("No meal") }
 
-            self.mockAI.mockAnalysisResult = (score: 0.9, mood: .serene, sound: "chime", insight: nil)
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.9,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await self.sut.performDeepAnalysis(for: mealId, items: ["Green smoothie bowl"])
 
             XCTAssertEqual(self.sut.smileyState.mood, .serene)
@@ -177,7 +213,13 @@
             self.sut.createNewMeal()
             guard let mealId = self.sut.meals.first?.id else { return XCTFail("No meal") }
 
-            self.mockAI.mockAnalysisResult = (score: 0.1, mood: .overwhelmed, sound: "thud", insight: nil)
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.1,
+                mood: .overwhelmed,
+                sound: "thud",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await self.sut.performDeepAnalysis(for: mealId, items: ["Deep fried everything"])
 
             XCTAssertEqual(self.sut.smileyState.mood, .overwhelmed)
@@ -191,7 +233,13 @@
 
             self.sut.meals[0].items = ["Apple"]
 
-            self.mockAI.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // Fire two concurrent analyses for the same meal
             async let first: () = self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
@@ -208,7 +256,13 @@
             guard let mealId = self.sut.meals.first?.id else { return XCTFail("No meal") }
             let type = self.sut.meals.first?.mealType ?? .lunch
 
-            self.mockAI.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             self.sut.updateMeal(mealId, mealType: type, items: ["Apple"])
             try await Task.sleep(nanoseconds: 200_000_000)
 
@@ -265,7 +319,13 @@
 
             // Second attempt: succeeds (user tries again)
             self.mockAI.shouldThrowError = false
-            self.mockAI.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAI.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             self.sut.meals[0].isAIAnalyzed = false // reset to allow retry
             await self.sut.triggerAIAnalysisForMeal(mealId)
 
@@ -290,7 +350,13 @@
             // End-to-end regression: confirms the AIAnalysisProvider guard in
             // performDeepAnalysis passes when using the default logicService.
             let mockLogic = MockAILogicService()
-            mockLogic.mockAnalysisResult = (score: 0.9, mood: .serene, sound: "chime", insight: nil)
+            mockLogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.9,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             let vm = MainViewModel(
                 logicService: mockLogic,
                 persistenceService: self.mockPersistence,

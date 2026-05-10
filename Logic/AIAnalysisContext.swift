@@ -21,7 +21,8 @@ struct AIAnalysisContext {
     ///   - mealId: The meal that was analysed.
     ///   - score: The health score returned by the AI service.
     ///   - insight: Optional text insight returned by the AI service.
-    let onMealScoreUpdated: @MainActor (UUID, Double, String?) -> Void
+    ///   - estimatedCalories: Optional calorie estimate returned by the AI service.
+    let onMealScoreUpdated: @MainActor (UUID, Double, String?, Int?) -> Void
 
     /// Called on `@MainActor` after `reanalyzeAll` resolves the new smiley state.
     let onSmileyStateChanged: @MainActor (SmileyState) -> Void
@@ -34,7 +35,7 @@ struct AIAnalysisContext {
     init(
         logicService: any AIAnalysisProvider,
         currentMealsSnapshot: [Meal],
-        onMealScoreUpdated: @escaping @MainActor (UUID, Double, String?) -> Void,
+        onMealScoreUpdated: @escaping @MainActor (UUID, Double, String?, Int?) -> Void,
         onSmileyStateChanged: @escaping @MainActor (SmileyState) -> Void,
         shouldProceed: (@MainActor (UUID) -> Bool)? = nil
     ) {

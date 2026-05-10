@@ -589,19 +589,20 @@
             self.nextState
         }
 
-        func analyzeMealQuality(description _: String) async throws -> (
-            score: Double,
-            mood: SmileyMood,
-            sound: String,
-            insight: String?
-        ) {
+        func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
             self.analyzeCallCount += 1
             if self.shouldFail {
                 throw NSError(domain: "AI", code: 1, userInfo: [NSLocalizedDescriptionKey: "AI analysis failed"])
             }
             // Simulate network delay
             try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-            return (self.aiScore, self.aiMood, self.aiSound, self.aiInsight)
+            return MealAnalysisResult(
+                score: self.aiScore,
+                mood: self.aiMood,
+                sound: self.aiSound,
+                insight: self.aiInsight,
+                estimatedCalories: nil
+            )
         }
     }
 
