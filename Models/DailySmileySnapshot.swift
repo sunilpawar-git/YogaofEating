@@ -36,6 +36,14 @@ struct DailySmileySnapshot: Codable, Identifiable {
     /// AI-generated daily insight for this date. Added in Tech Debt Phase A4.
     let insight: DailyInsight?
 
+    /// Total calories consumed from AI-analyzed meals this day. Added in Calorie Pill phase.
+    let totalCalories: Int?
+
+    /// Whether all meals for this day have been AI-analyzed (complete calorie data).
+    /// `false` means the total is a partial sum — display with "~" prefix.
+    /// Added in Calorie Pill R3 remediation.
+    let hasCompleteCalorieData: Bool
+
     // MARK: - Initialization
 
     /// Creates a new daily snapshot with all properties including optional reflection and mind checks.
@@ -52,7 +60,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
         highlightData: HighlightData? = nil,
         reflectData: ReflectData? = nil,
         briefing: DailyBriefing? = nil,
-        insight: DailyInsight? = nil
+        insight: DailyInsight? = nil,
+        totalCalories: Int? = nil,
+        hasCompleteCalorieData: Bool = false
     ) {
         self.id = id
         self.date = Calendar(identifier: .gregorian).startOfDay(for: date) // Normalize to midnight
@@ -67,6 +77,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.reflectData = reflectData
         self.briefing = briefing
         self.insight = insight
+        self.totalCalories = totalCalories
+        self.hasCompleteCalorieData = hasCompleteCalorieData
     }
 
     // MARK: - Codable (Backward Compatible)
@@ -85,6 +97,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         case reflectData
         case briefing
         case insight
+        case totalCalories
+        case hasCompleteCalorieData
     }
 
     init(from decoder: Decoder) throws {
@@ -105,6 +119,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.reflectData = try container.decodeIfPresent(ReflectData.self, forKey: .reflectData)
         self.briefing = try container.decodeIfPresent(DailyBriefing.self, forKey: .briefing)
         self.insight = try container.decodeIfPresent(DailyInsight.self, forKey: .insight)
+        self.totalCalories = try container.decodeIfPresent(Int.self, forKey: .totalCalories)
+        self.hasCompleteCalorieData = try container.decodeIfPresent(Bool.self, forKey: .hasCompleteCalorieData) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -122,6 +138,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         try container.encodeIfPresent(self.reflectData, forKey: .reflectData)
         try container.encodeIfPresent(self.briefing, forKey: .briefing)
         try container.encodeIfPresent(self.insight, forKey: .insight)
+        try container.encodeIfPresent(self.totalCalories, forKey: .totalCalories)
+        try container.encode(self.hasCompleteCalorieData, forKey: .hasCompleteCalorieData)
     }
 
     // MARK: - Computed Properties
@@ -234,7 +252,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
             highlightData: self.highlightData,
             reflectData: self.reflectData,
             briefing: self.briefing,
-            insight: self.insight
+            insight: self.insight,
+            totalCalories: self.totalCalories,
+            hasCompleteCalorieData: self.hasCompleteCalorieData
         )
     }
 
@@ -255,7 +275,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
             highlightData: self.highlightData,
             reflectData: self.reflectData,
             briefing: self.briefing,
-            insight: self.insight
+            insight: self.insight,
+            totalCalories: self.totalCalories,
+            hasCompleteCalorieData: self.hasCompleteCalorieData
         )
     }
 
@@ -274,7 +296,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
             highlightData: highlightData,
             reflectData: self.reflectData,
             briefing: self.briefing,
-            insight: self.insight
+            insight: self.insight,
+            totalCalories: self.totalCalories,
+            hasCompleteCalorieData: self.hasCompleteCalorieData
         )
     }
 
@@ -293,7 +317,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
             highlightData: self.highlightData,
             reflectData: reflectData,
             briefing: self.briefing,
-            insight: self.insight
+            insight: self.insight,
+            totalCalories: self.totalCalories,
+            hasCompleteCalorieData: self.hasCompleteCalorieData
         )
     }
 
@@ -312,7 +338,9 @@ struct DailySmileySnapshot: Codable, Identifiable {
             highlightData: self.highlightData,
             reflectData: self.reflectData,
             briefing: briefing,
-            insight: self.insight
+            insight: self.insight,
+            totalCalories: self.totalCalories,
+            hasCompleteCalorieData: self.hasCompleteCalorieData
         )
     }
 
@@ -331,7 +359,30 @@ struct DailySmileySnapshot: Codable, Identifiable {
             highlightData: self.highlightData,
             reflectData: self.reflectData,
             briefing: self.briefing,
-            insight: insight
+            insight: insight,
+            totalCalories: self.totalCalories,
+            hasCompleteCalorieData: self.hasCompleteCalorieData
+        )
+    }
+
+    /// Creates a copy with the total calories consumed for the day.
+    func withTotalCalories(_ calories: Int, hasCompleteCalorieData: Bool) -> DailySmileySnapshot {
+        DailySmileySnapshot(
+            id: self.id,
+            date: self.date,
+            smileyState: self.smileyState,
+            meals: self.meals,
+            mealCount: self.mealCount,
+            averageHealthScore: self.averageHealthScore,
+            reflection: self.reflection,
+            morningMindCheck: self.morningMindCheck,
+            eveningMindCheck: self.eveningMindCheck,
+            highlightData: self.highlightData,
+            reflectData: self.reflectData,
+            briefing: self.briefing,
+            insight: self.insight,
+            totalCalories: calories,
+            hasCompleteCalorieData: hasCompleteCalorieData
         )
     }
 }

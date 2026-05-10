@@ -143,11 +143,9 @@ final class InstantMockAILogicService: AIAnalysisProvider {
     func calculateHealthScore(for _: [String]) -> Double { 0.5 }
     func calculateNextState(from state: SmileyState, healthScore _: Double) -> SmileyState { state }
 
-    func analyzeMealQuality(description _: String) async throws
-        -> (score: Double, mood: SmileyMood, sound: String, insight: String?)
-    {
+    func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
         // No delay — fires back immediately, stressing concurrent completion handling
         self.completedCallCount += 1
-        return (0.75, .serene, "chime", nil)
+        return MealAnalysisResult(score: 0.75, mood: .serene, sound: "chime", insight: nil, estimatedCalories: nil)
     }
 }

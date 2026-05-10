@@ -104,7 +104,9 @@ struct MainScreenView: View {
                 }
             ),
             recentMeals: self.viewModel.getRecentUniqueMeals(),
-            averageHealthScore: self.viewModel.averageHealthScoreToday
+            averageHealthScore: self.viewModel.averageHealthScoreToday,
+            caloriePillData: self.viewModel.caloriePillData,
+            calorieDetailData: self.viewModel.calorieDetailData
         )
     }
 
@@ -141,7 +143,8 @@ struct MainScreenView: View {
                         self.viewModel.navigateToToday()
                     }
                 }
-            )
+            ),
+            caloriePillData: self.viewModel.historicalCaloriePillData(for: self.viewModel.selectedDate)
         )
     }
 

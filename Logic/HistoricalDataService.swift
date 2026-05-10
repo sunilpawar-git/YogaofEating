@@ -142,6 +142,11 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         let stableId = existing?.id ?? UUID(uuidString: Self.stableUUIDString(for: normalizedDate)) ?? UUID()
 
         // Create snapshot preserving all per-day user data
+        let analyzedCalories = meals.compactMap(\.estimatedCalories)
+        let hasAnyCalorieData = !analyzedCalories.isEmpty
+        let totalCalories = analyzedCalories.reduce(0, +)
+        // Complete only when every meal has been AI-analyzed — partial sum shown with "~" in UI
+        let hasCompleteCalorieData = !meals.isEmpty && meals.allSatisfy { $0.estimatedCalories != nil }
         let snapshot = DailySmileySnapshot(
             id: stableId,
             date: normalizedDate,
@@ -154,7 +159,11 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             eveningMindCheck: existing?.eveningMindCheck,
             highlightData: existing?.highlightData,
             reflectData: existing?.reflectData,
-            briefing: existing?.briefing
+            briefing: existing?.briefing,
+            insight: existing?.insight,
+            totalCalories: hasAnyCalorieData ? totalCalories : existing?.totalCalories,
+            hasCompleteCalorieData: hasAnyCalorieData ? hasCompleteCalorieData : existing?
+                .hasCompleteCalorieData ?? false
         )
 
         // Add or update in historical data

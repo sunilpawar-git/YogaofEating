@@ -36,7 +36,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // Act
             await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple", "Salad"])
@@ -54,7 +60,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.9, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.9,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // Act
             await self.sut.performDeepAnalysis(for: meal.id, items: ["Healthy food"])
@@ -244,7 +256,13 @@
             }
             XCTAssertFalse(meal.isAIAnalyzed)
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // When: Perform AI analysis
             await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple", "Salad"])
@@ -278,7 +296,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple"])
 
             // Then: Saved data should have isAIAnalyzed = true
@@ -296,7 +320,13 @@
             }
 
             // First analysis
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
 
             // Verify first call happened
@@ -323,7 +353,13 @@
 
             XCTAssertFalse(self.sut.meals.first?.isAIAnalyzed ?? true)
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.7, mood: .neutral, sound: "tink", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.7,
+                mood: .neutral,
+                sound: "tink",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // When: Analyze the meal
             await self.sut.performDeepAnalysis(for: mealId, items: ["Salad"])
@@ -402,7 +438,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // When: First analysis completes
             await self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
@@ -432,7 +474,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
             XCTAssertTrue(self.sut.meals.first?.isAIAnalyzed ?? false)
 
@@ -503,7 +551,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // When: Attempt to analyze with short content like "E" or "Am"
             await self.sut.performDeepAnalysis(for: meal.id, items: ["E"])
@@ -520,7 +574,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // When: Analyze with sufficient content
             await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple"])
@@ -554,7 +614,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // First analysis should proceed
             await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple Pie"])
@@ -578,7 +644,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // First analysis
             await self.sut.performDeepAnalysis(for: meal.id, items: ["Apple"])
@@ -603,7 +675,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // First update with content
             self.sut.updateMealItems(mealId, items: ["Apple"])
@@ -665,7 +743,13 @@
                 return
             }
 
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // When: Update using local-only method
             self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple Pie"])
@@ -702,7 +786,13 @@
             }
 
             // First, run AI analysis to set isAIAnalyzed = true
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
             XCTAssertTrue(self.sut.meals.first?.isAIAnalyzed ?? false, "Should be marked as AI analyzed")
             let aiScore = self.sut.meals.first?.healthScore ?? 0
@@ -735,7 +825,13 @@
 
             // Set up meal with items
             self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple Pie"])
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // When: Trigger AI analysis explicitly
             await self.sut.triggerAIAnalysisForMeal(mealId)
@@ -753,7 +849,13 @@
             }
 
             // First analysis
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
             XCTAssertTrue(self.sut.meals.first?.isAIAnalyzed ?? false)
 
@@ -784,7 +886,13 @@
 
             // Set up meal with short content (< 5 chars)
             self.sut.meals[0].items = ["Hi"]
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
 
             // When: Trigger AI analysis
             await self.sut.triggerAIAnalysisForMeal(mealId)
@@ -819,7 +927,13 @@
 
             // When: User triggers "done" action (focus loss / Done button)
             // This calls updateMeal with the same items AND same meal type (content unchanged)
-            self.mockAILogic.mockAnalysisResult = (score: 0.8, mood: .serene, sound: "chime", insight: nil)
+            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
+                score: 0.8,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             self.sut.updateMeal(mealId, mealType: originalMealType, items: ["Apple Pie"])
 
             // Wait for async AI analysis to complete
@@ -854,7 +968,13 @@
 
             // Confirm the guard passes — analyzeCalled would be false if guard bailed early
             let mock = vm.logicService as! MockAILogicService
-            mock.mockAnalysisResult = (score: 0.9, mood: .serene, sound: "chime", insight: nil)
+            mock.mockAnalysisResult = MealAnalysisResult(
+                score: 0.9,
+                mood: .serene,
+                sound: "chime",
+                insight: nil,
+                estimatedCalories: nil
+            )
             await vm.performDeepAnalysis(for: mealId, items: ["Apple salad"])
 
             XCTAssertTrue(
@@ -869,8 +989,9 @@
     /// A mock that simulates network delay to test concurrent request handling
     class SlowMockAILogicService: AIAnalysisProvider {
         var analyzeCallCount: Int = 0
-        var mockAnalysisResult: (score: Double, mood: SmileyMood, sound: String, insight: String?) =
-            (0.7, .serene, "chime", nil)
+        var mockAnalysisResult: MealAnalysisResult = .init(
+            score: 0.7, mood: .serene, sound: "chime", insight: nil, estimatedCalories: nil
+        )
 
         func calculateHealthScore(for _: String) -> Double { 0.5 }
         func calculateHealthScore(for _: [String]) -> Double { 0.5 }
@@ -884,9 +1005,7 @@
             return nextState
         }
 
-        func analyzeMealQuality(description _: String) async throws
-            -> (score: Double, mood: SmileyMood, sound: String, insight: String?)
-        {
+        func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
             self.analyzeCallCount += 1
 
             // Simulate network delay
@@ -900,8 +1019,9 @@
 
     /// Mock AILogicService for testing
     class MockAILogicService: AIAnalysisProvider {
-        var mockAnalysisResult: (score: Double, mood: SmileyMood, sound: String, insight: String?) =
-            (0.7, .serene, "chime", nil)
+        var mockAnalysisResult: MealAnalysisResult = .init(
+            score: 0.7, mood: .serene, sound: "chime", insight: nil, estimatedCalories: nil
+        )
         var shouldThrowError: Bool = false
         var analyzeCalled: Bool = false
 
@@ -929,9 +1049,7 @@
             return nextState
         }
 
-        func analyzeMealQuality(description _: String) async throws
-            -> (score: Double, mood: SmileyMood, sound: String, insight: String?)
-        {
+        func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
             self.analyzeCalled = true
 
             if self.shouldThrowError {

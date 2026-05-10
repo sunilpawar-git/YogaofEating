@@ -60,15 +60,10 @@ class AILogicService: AIAnalysisProvider {
     // MARK: - Async Cloud Function Call
 
     /// Calls the 'analyzeMeal' Firebase Cloud Function.
-    func analyzeMealQuality(description: String) async throws -> (
-        score: Double,
-        mood: SmileyMood,
-        sound: String,
-        insight: String?
-    ) {
+    func analyzeMealQuality(description: String) async throws -> MealAnalysisResult {
         guard let functions = self.functions else {
             aiServiceLogger.warning("Firebase Functions not available — returning defaults")
-            return (0.5, .neutral, "tink", nil)
+            return MealAnalysisResult(score: 0.5, mood: .neutral, sound: "tink", insight: nil, estimatedCalories: nil)
         }
 
         aiServiceLogger.debug("Calling Firebase Cloud Function 'analyzeMeal'")
@@ -84,13 +79,20 @@ class AILogicService: AIAnalysisProvider {
         let moodString = data["mood"] as? String ?? "neutral"
         let sound = data["sound"] as? String ?? "tink"
         let insight = data["insight"] as? String
+        let estimatedCalories = data["estimatedCalories"] as? Int
 
         let mood = SmileyMood(rawValue: moodString) ?? .neutral
 
         aiServiceLogger
             .debug("Parsed response — score: \(score, privacy: .public), mood: \(moodString, privacy: .public)")
 
-        return (score, mood, sound, insight)
+        return MealAnalysisResult(
+            score: score,
+            mood: mood,
+            sound: sound,
+            insight: insight,
+            estimatedCalories: estimatedCalories
+        )
     }
 }
 

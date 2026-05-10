@@ -8,7 +8,7 @@ private let healthKitLogger = Logger(subsystem: "com.yogaofeating", category: "H
 class HealthKitService {
     static let shared = HealthKitService()
 
-    private let healthStore: HKHealthStore?
+    let healthStore: HKHealthStore?
 
     /// Enable debug logging for sleep data processing
     var enableSleepLogging = true
