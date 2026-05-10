@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Yoga of Eating — Claude Code Guide
 
 ## Project overview
@@ -31,13 +35,19 @@ YogaOfEatingApp (entry point)
 
 | File | Responsibility |
 |------|---|
-| `MainViewModel.swift` | Core state, date navigation, meal CRUD, smiley logic |
+| `MainViewModel.swift` | Core state, smiley logic, `@Published` properties |
+| `MainViewModel+MealCRUD.swift` | Add/update/delete meals, local score updates |
 | `MainViewModel+AIAnalysis.swift` | AI analysis pipeline, scoring guards, async analysis flow |
 | `MainViewModel+Insights.swift` | Daily briefing generation, insight notifications |
 | `MainViewModel+Highlight.swift` | Highlight data aggregation (stats, patterns) |
-| `MainViewModel+Reflect.swift` | Reflection/journal logic (evening review, mood tracking) |
+| `MainViewModel+Reflect.swift` | Reflection tab data contract (`ReflectViewContract`) |
+| `MainViewModel+Reflection.swift` | Journal entry persistence and evening review logic |
 | `MainViewModel+MindCheck.swift` | Mind check (morning intentions, evening accountability) |
 | `MainViewModel+DaySummary.swift` | Daily summary aggregation (stats, insights) |
+| `MainViewModel+DateContext.swift` | Date header/subtext for the timeline banner |
+| `MainViewModel+Navigation.swift` | Day navigation and data contracts for tab views |
+| `MainViewModel+RecentMeals.swift` | Recent meals list and copy-meal (repeat meal) feature |
+| `MainViewModel+CaloriePill.swift` | `CaloriePillData` computed property for the calorie pill |
 
 All extensions are logically part of the same class but split for readability and code organization.
 
@@ -93,14 +103,32 @@ Custom sizes: `FontTheme.textEntry(size: 14, weight: .semibold)`
 
 **Design principle**: Changing fonts app-wide requires edits in ONE file. Never search/replace fonts across views.
 
-### Colors & Theming (Future Expansion)
+### Colors & Theming (Logic/Theme.swift)
 
-If color theming becomes centralized (e.g., `ColorTheme.swift`), follow the same pattern:
-- All SwiftUI `.foregroundColor()` calls reference `ColorTheme.*`
-- All `.backgroundColor()` calls reference `ColorTheme.*`
-- Never hardcode `Color.blue`, `Color.gray`, etc.
+Color theming is centralized in `AppTheme` (enum in `Theme.swift`). Use it instead of hardcoding `Color.*`:
 
-This ensures consistent styling and enables dark mode / accessibility themes without code changes.
+```swift
+// ✅ CORRECT
+view.background(AppTheme.cardBackground)
+
+// ❌ WRONG
+view.background(Color(.systemGray6).opacity(0.5))
+```
+
+Key tokens: `AppTheme.background`, `AppTheme.cardBackground`, `AppTheme.sheetBackground`, `AppTheme.secondaryBackground`.
+
+### Validation Limits (Logic/ValidationLimits.swift)
+
+All character-count limits are defined in `ValidationLimits`:
+- `ValidationLimits.mealDescription` — 500 chars
+- `ValidationLimits.journalEntry` — 1000 chars
+- `ValidationLimits.todoItem` — 150 chars
+
+Never hardcode field length limits in Views or ViewModels.
+
+### Timing Constants (Logic/TimingConstants.swift)
+
+All async delays, debounce intervals, and polling periods live in `TimingConstants`. Never hardcode nanosecond or millisecond literals outside this file.
 
 ## Commands
 
@@ -305,6 +333,14 @@ Never let a test touch the real filesystem, Firebase, or HealthKit. Use mocks at
 ### Mocks live in `Mocks.swift`
 
 Shared mocks (`MockAILogicService`, `MockPersistenceService`, `MockHistoricalDataService`, etc.) are in `Yoga of EatingTests/Mocks.swift`. Add new shared mocks there. Test-local mocks (e.g. `SlowMockAILogicService`) can live inline in the test file.
+
+### Test fixtures use `TestBuilders.swift`
+
+`Yoga of EatingTests/TestBuilders.swift` provides fluent builder classes (e.g. `MealBuilder`) for constructing test data without boilerplate. Use these instead of ad-hoc `Meal(id: UUID(), ...)` literals in test files.
+
+### `MainViewModelProtocol.swift`
+
+`Logic/MainViewModelProtocol.swift` defines the minimal `@MainActor` protocol that `HistoricalDataService` calls back on. It exists to break the DIP violation of `HistoricalDataService` holding a concrete `MainViewModel` reference. Any new service that needs to delegate persistence back to the ViewModel should use this protocol.
 
 ### TDD Anti-Patterns (NEVER do these)
 
@@ -635,26 +671,26 @@ Do not duplicate these thresholds. Always import from `ScoringThresholds`.
 When implementing a new tab view (e.g., Highlight, Reflect), follow this secure pattern to prevent data leakage:
 
 ### DO ✅
-- **Accept data via parameters, never @EnvironmentObject**
+- **Accept a typed contract struct via parameter, never @EnvironmentObject**
   ```swift
   struct MyTabView: View {
-      let data: (mealsCount: Int, averageScore: Double)?
+      let data: MyTabViewContract?
       // Only receives what it needs
   }
   ```
-- **Define minimal data contracts in MainViewModel via computed properties**
+- **Define contract structs in `Models/TabViewContracts.swift`** (existing SSOT for tab contracts, e.g., `HighlightViewContract`, `ReflectViewContract`)
+- **Expose the contract via a computed property on MainViewModel** (in the relevant `MainViewModel+<Tab>.swift` extension)
   ```swift
-  var myTabData: (mealsCount: Int, averageScore: Double)? {
+  var myTabData: MyTabViewContract? {
       guard self.isViewingToday else { return nil }
       guard !self.meals.isEmpty else { return nil }
-      let avg = self.meals.map { $0.healthScore }.reduce(0, +) / Double(self.meals.count)
-      return (mealsCount: self.meals.count, averageScore: avg)
+      return MyTabViewContract(mealsCount: self.meals.count, ...)
   }
   ```
 - **Use mock data in previews**
   ```swift
   #Preview {
-      MyTabView(data: (mealsCount: 3, averageScore: 0.75))
+      MyTabView(data: MyTabViewContract(mealsCount: 3, averageScore: 0.75))
   }
   ```
 - **Write data isolation unit tests**
@@ -733,14 +769,15 @@ Every PR must satisfy all of these before merge:
 ### ✅ DRY & SSOT
 - [ ] No hardcoded magic values (all constants centralized)
 - [ ] `ScoringThresholds.swift` is sole source of threshold values
-- [ ] `Constants.swift` contains all shared constants
+- [ ] `ValidationLimits.swift` is sole source of field length limits
+- [ ] `TimingConstants.swift` is sole source of all async delays / debounce intervals
 - [ ] No duplicate code; extracted into helpers or services
 - [ ] Search results for constant values (e.g., `0.65`) appear only in constants files
 
 ### ✅ Centralized Resources & Theming
 - [ ] All user-facing strings defined in `Strings.swift` (never hardcoded in views)
 - [ ] All fonts use `FontTheme.*` (never hardcoded `.system(...)` or `.serif`)
-- [ ] No hardcoded `Color` values (ready for future `ColorTheme.swift`)
+- [ ] No hardcoded `Color` values — use `AppTheme.*` from `Logic/Theme.swift`
 - [ ] String enums organized by feature area for localization readiness
 - [ ] FontTheme changes don't require view edits (SSOT principle)
 
