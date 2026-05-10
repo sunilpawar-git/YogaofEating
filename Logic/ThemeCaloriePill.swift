@@ -30,6 +30,9 @@ extension AppTheme {
 
         // MARK: - Pill Geometry
 
+        /// Maximum width for the calorie pill (design spec: ~220pt)
+        static let pillMaxWidth: CGFloat = 220
+
         /// Vertical padding inside the pill (above/below the label text)
         static let pillVerticalPadding: CGFloat = 3
 
