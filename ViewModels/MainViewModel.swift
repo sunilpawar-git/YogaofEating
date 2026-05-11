@@ -123,7 +123,7 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
 
     /// Timestamp of the last successful activity data fetch.
     /// Used by `refreshActivityDataIfNeeded()` to enforce the cooldown window.
-    private(set) var lastActivityDataFetchDate: Date?
+    var lastActivityDataFetchDate: Date?
 
     /// Combine subscriptions held for the lifetime of the ViewModel.
     private var cancellables = Set<AnyCancellable>()
