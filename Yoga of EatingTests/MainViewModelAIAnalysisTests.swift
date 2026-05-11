@@ -218,20 +218,32 @@
         }
 
         func test_reanalyzeAllMealsForSmileyState_allAnalyzedMeals_stillWorks() async {
-            self.sut.createNewMeal()
-            self.sut.createNewMeal()
+            // Use an isolated ViewModel with a mock historicalService so that real on-disk
+            // snapshot data (reflection/sleep) cannot skew the synthesis score below the
+            // serene threshold (0.65). Without this, meals averaging 0.7 can drop to ~0.61
+            // when today's real snapshot contributes emotional/sleep streams.
+            let mockHistorical = MockHistoricalDataService()
+            let isolatedSut = MainViewModel(
+                logicService: self.mockAILogic,
+                persistenceService: self.mockPersistence,
+                historicalService: mockHistorical,
+                skipDataLoading: true
+            )
 
-            var meals = self.sut.meals
+            isolatedSut.createNewMeal()
+            isolatedSut.createNewMeal()
+
+            var meals = isolatedSut.meals
             meals[0].healthScore = 0.8
             meals[0].isAIAnalyzed = true
             meals[1].healthScore = 0.6
             meals[1].isAIAnalyzed = true
-            self.sut.meals = meals
+            isolatedSut.meals = meals
 
-            await self.sut.reanalyzeAllMealsForSmileyState()
+            await isolatedSut.reanalyzeAllMealsForSmileyState()
 
             XCTAssertEqual(
-                self.sut.smileyState.mood,
+                isolatedSut.smileyState.mood,
                 .serene,
                 "With all meals analyzed, average should be 0.7 -> serene"
             )
