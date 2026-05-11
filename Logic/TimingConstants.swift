@@ -54,4 +54,11 @@ enum TimingConstants {
     /// Minimum interval between activity data refreshes (seconds).
     /// Prevents redundant HealthKit queries on rapid foreground/background cycles.
     static let activityFetchCooldownSeconds: TimeInterval = 60
+
+    // MARK: - Test Timing
+
+    /// Short settle delay used in async tests to allow fire-and-forget Tasks to complete
+    /// before asserting. Prefer structural alternatives (await on direct method calls)
+    /// but use this constant when a small sleep is truly unavoidable.
+    static let testSettleDelayNanoseconds: UInt64 = 200_000_000
 }
