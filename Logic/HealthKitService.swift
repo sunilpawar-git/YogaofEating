@@ -5,6 +5,9 @@ import OSLog
 private let healthKitLogger = Logger(subsystem: "com.yogaofeating", category: "HealthKit")
 
 /// Service to handle HealthKit interactions for reading body metrics.
+/// `@MainActor` ensures all mutable state (sleepDataCache, enableSleepLogging) is accessed
+/// from a single actor, preventing data races from concurrent HealthKit callbacks.
+@MainActor
 class HealthKitService {
     static let shared = HealthKitService()
 

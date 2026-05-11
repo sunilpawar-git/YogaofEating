@@ -88,6 +88,12 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Stored so it is cancelled on deinit (no duplicate fetch on tab re-open).
     var sleepHighlightTask: Task<Void, Never>?
 
+    /// Tracked task for the activity-data refresh pipeline.
+    /// Cancelled and replaced on each call to `refreshActivityDataIfNeeded()`.
+    /// Not `private` because the setter is in a separate extension file (MainViewModel+Lifecycle.swift).
+    /// No code outside of `refreshActivityDataIfNeeded()` should write this property.
+    var activityRefreshTask: Task<Void, Never>?
+
     // MARK: - Day Navigation (Phase 4)
 
     /// The currently selected date for viewing. Defaults to today.
@@ -215,5 +221,6 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         self.briefingTask?.cancel()
         self.insightTask?.cancel()
         self.sleepHighlightTask?.cancel()
+        self.activityRefreshTask?.cancel()
     }
 }

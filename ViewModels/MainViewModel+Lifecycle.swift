@@ -96,18 +96,23 @@ extension MainViewModel {
         guard elapsed >= TimingConstants.activityFetchCooldownSeconds else { return }
         self.lastActivityDataFetchDate = Date()
 
-        // Request HealthKit permissions (fire-and-forget; may show permission dialog)
+        // Request HealthKit permissions (fire-and-forget; may show permission dialog).
+        // After successful auth, also load today's data — covers the first-launch case where
+        // the data task below fires before the permission dialog is dismissed.
         Task { [weak self] in
-            guard self != nil else { return }
+            guard let self else { return }
             do {
                 _ = try await HealthKitService.shared.requestAuthorization()
+                await self.loadTodayActivityData()
             } catch {
                 lifecycleLogger.info("Activity auth unavailable: \(error.localizedDescription, privacy: .public)")
             }
         }
 
-        // Fetch data via injected provider (mockable; runs independently of auth task)
-        Task { [weak self] in
+        // Fetch data via injected provider (mockable; runs independently of auth task).
+        // Cancel any prior in-flight fetch before launching a new one.
+        self.activityRefreshTask?.cancel()
+        self.activityRefreshTask = Task { [weak self] in
             guard let self else { return }
             await self.loadTodayActivityData()
             lifecycleLogger.info("Activity data refreshed")
