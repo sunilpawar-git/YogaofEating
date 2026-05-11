@@ -42,8 +42,13 @@ struct YogaOfEatingApp: App {
 
         appLogger.info("Yoga of Eating app starting")
 
-        // Firebase is initialized exclusively in AppDelegate.application(_:didFinishLaunchingWithOptions:),
-        // which runs before SwiftUI's @StateObject initialization. Do not init Firebase here.
+        // Configure Firebase here in App.init() — this is earlier than AppDelegate.didFinishLaunchingWithOptions
+        // and guarantees Firebase is ready before any @StateObject or service singleton accesses it.
+        let isCIForFirebase = ProcessInfo.processInfo.environment["CI"] == "true"
+        if !isCIForFirebase, FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+            appLogger.info("Firebase initialized (App.init)")
+        }
 
         // Check if running UI tests and reset data if needed
         if CommandLine.arguments.contains("--uitesting") {
@@ -126,11 +131,11 @@ struct YogaOfEatingApp: App {
             let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
 
             if !isTestEnvironment, !isCIEnvironment {
-                // Ensure Firebase is configured early in app lifecycle
-                // This runs before SwiftUI's @main init, providing an early initialization point
+                // Firebase is configured in YogaOfEatingApp.init() before this runs.
+                // The guard here is a safety net in case of unexpected execution order.
                 if FirebaseApp.app() == nil {
                     FirebaseApp.configure()
-                    appLogger.info("Firebase initialized (AppDelegate)")
+                    appLogger.info("Firebase initialized (AppDelegate fallback)")
                 }
 
                 // Initialize AuthService
