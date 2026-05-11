@@ -27,6 +27,9 @@ extension MainViewModel {
         {
             self.currentBriefing = todayBriefing
         }
+
+        // Refresh today's activity data for a live TDEE in the calorie pill
+        self.refreshActivityDataIfNeeded()
     }
 
     func fetchAppleSleepDataForBadge() {
@@ -81,8 +84,32 @@ extension MainViewModel {
     }
 
     /// Refreshes today's activity data from HealthKit if the cooldown window has elapsed.
-    /// Implemented in Phase 3. Stub intentionally empty during Phase 2 (TDD Red).
+    /// Call on app startup and on foreground. The cooldown guard prevents redundant
+    /// HealthKit queries on rapid foreground/background cycles.
+    ///
+    /// Auth and data fetch are intentionally separate Tasks:
+    /// - Auth uses `HealthKitService.shared` directly (not injectable) and may show a dialog
+    /// - Data fetch uses the injected `activityProvider` (mockable in tests), so tests are deterministic
     func refreshActivityDataIfNeeded() {
-        // stub — Phase 3
+        let elapsed = Date().timeIntervalSince(self.lastActivityDataFetchDate ?? .distantPast)
+        guard elapsed >= TimingConstants.activityFetchCooldownSeconds else { return }
+        self.lastActivityDataFetchDate = Date()
+
+        // Request HealthKit permissions (fire-and-forget; may show permission dialog)
+        Task { [weak self] in
+            guard self != nil else { return }
+            do {
+                _ = try await HealthKitService.shared.requestAuthorization()
+            } catch {
+                lifecycleLogger.info("Activity auth unavailable: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+
+        // Fetch data via injected provider (mockable; runs independently of auth task)
+        Task { [weak self] in
+            guard let self else { return }
+            await self.loadTodayActivityData()
+            lifecycleLogger.info("Activity data refreshed")
+        }
     }
 }
