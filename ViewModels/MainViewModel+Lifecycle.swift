@@ -79,4 +79,10 @@ extension MainViewModel {
             }
         }
     }
+
+    /// Refreshes today's activity data from HealthKit if the cooldown window has elapsed.
+    /// Implemented in Phase 3. Stub intentionally empty during Phase 2 (TDD Red).
+    func refreshActivityDataIfNeeded() {
+        // stub — Phase 3
+    }
 }
