@@ -20,8 +20,8 @@ class HealthKitService {
     /// Key: normalized date (start of day), Value: (cached SleepData, timestamp)
     private var sleepDataCache: [Date: (data: SleepData?, timestamp: Date)] = [:]
 
-    /// Cache expiration interval in seconds. Sleep data from the same date won't be re-queried within this window.
-    private let sleepCacheExpiration: TimeInterval = 300 // 5 minutes
+    /// Cache expiration interval. Sleep data from the same date won't be re-queried within this window.
+    private let sleepCacheExpiration: TimeInterval = TimingConstants.sleepCacheDuration
 
     private init() {
         if HKHealthStore.isHealthDataAvailable() {

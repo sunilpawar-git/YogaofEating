@@ -93,7 +93,7 @@ extension MainViewModel {
     /// - Data fetch uses the injected `activityProvider` (mockable in tests), so tests are deterministic
     func refreshActivityDataIfNeeded() {
         let elapsed = Date().timeIntervalSince(self.lastActivityDataFetchDate ?? .distantPast)
-        guard elapsed >= TimingConstants.activityFetchCooldownSeconds else { return }
+        guard elapsed >= TimingConstants.activityFetchCooldown else { return }
         self.lastActivityDataFetchDate = Date()
 
         // Request HealthKit permissions (fire-and-forget; may show permission dialog).
