@@ -87,8 +87,13 @@ class MockHealthProfileService: HealthProfileServiceProtocol {
 final class MockActivityDataProvider: ActivityDataProvider {
     var stubbedActiveCalories: Double?
     var stubbedBasalCalories: Double?
+    var fetchCallCount: Int = 0
 
-    func fetchActiveCaloriesBurned(for _: Date) async -> Double? { self.stubbedActiveCalories }
+    func fetchActiveCaloriesBurned(for _: Date) async -> Double? {
+        self.fetchCallCount += 1
+        return self.stubbedActiveCalories
+    }
+
     func fetchBasalCaloriesBurned(for _: Date) async -> Double? { self.stubbedBasalCalories }
 }
 
