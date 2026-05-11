@@ -97,7 +97,9 @@ extension AppTheme {
 
     enum TextEntry {
         static let maxCharacters: Int = ValidationLimits.universal
-        static let debounceNanoseconds: UInt64 = TimingConstants.debounceNanoseconds
+        /// Settle delay (500 ms) used in Highlight/Reflect text-entry async Tasks.
+        /// Intentionally separate from any meal-entry pipeline constant.
+        static let debounceNanoseconds: UInt64 = 500_000_000
     }
 }
 

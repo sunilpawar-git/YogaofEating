@@ -125,10 +125,9 @@
             XCTAssertFalse(self.viewModel.showValidationErrorAlert)
         }
 
-        // MARK: - Meal Description Validation
+        // MARK: - Meal Description Validation (enforced at updateMeal — the sole submission path)
 
-        func test_updateMealItemsLocalOnly_withSuspiciousContent_setsErrorState() {
-            // Add a meal first
+        func test_updateMeal_withSuspiciousContent_setsErrorState() {
             let meal = Meal(
                 id: UUID(),
                 timestamp: Date(),
@@ -138,15 +137,13 @@
             )
             self.viewModel.meals = [meal]
 
-            // Try to update with malicious content
-            let maliciousItems = ["<script>alert('xss')</script>"]
-            self.viewModel.updateMealItemsLocalOnly(meal.id, items: maliciousItems)
+            self.viewModel.updateMeal(meal.id, mealType: .lunch, items: ["<script>alert('xss')</script>"])
 
             XCTAssertTrue(self.viewModel.showValidationErrorAlert)
             XCTAssertNotNil(self.viewModel.lastValidationError)
         }
 
-        func test_updateMealItemsLocalOnly_withValidInput_succeeds() {
+        func test_updateMeal_withValidInput_succeeds() {
             let meal = Meal(
                 id: UUID(),
                 timestamp: Date(),
@@ -156,7 +153,7 @@
             )
             self.viewModel.meals = [meal]
 
-            self.viewModel.updateMealItemsLocalOnly(meal.id, items: ["banana", "yogurt"])
+            self.viewModel.updateMeal(meal.id, mealType: .breakfast, items: ["banana", "yogurt"])
 
             guard let updated = self.viewModel.meals.first else {
                 XCTFail("Meal not found")
@@ -166,7 +163,7 @@
             XCTAssertFalse(self.viewModel.showValidationErrorAlert)
         }
 
-        func test_updateMealItemsLocalOnly_withComparisonOperators_passes() {
+        func test_updateMeal_withComparisonOperators_passes() {
             let meal = Meal(
                 id: UUID(),
                 timestamp: Date(),
@@ -176,8 +173,7 @@
             )
             self.viewModel.meals = [meal]
 
-            // This should pass (not trigger validation error)
-            self.viewModel.updateMealItemsLocalOnly(meal.id, items: ["< 100g", "> 5 servings"])
+            self.viewModel.updateMeal(meal.id, mealType: .lunch, items: ["< 100g", "> 5 servings"])
 
             XCTAssertFalse(self.viewModel.showValidationErrorAlert)
         }

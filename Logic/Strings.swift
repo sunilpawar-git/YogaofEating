@@ -272,6 +272,12 @@ enum Strings {
         /// Hint explaining what the recent meals button does.
         static let addMealFromRecentHint = "Shows meals from the past 3 days"
 
+        /// Accessibility label for the green checkmark submit button on a meal card.
+        static let submitMealEntry = "Submit meal entry"
+
+        /// Accessibility hint for the green checkmark submit button.
+        static let submitMealHint = "Tap to save and analyze this meal"
+
         static func mindCheckEntries(_ count: Int) -> String {
             "\(count) entries"
         }

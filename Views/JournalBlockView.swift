@@ -1,23 +1,17 @@
 import SwiftUI
 
-// MARK: - Submission Methods
+// MARK: - JournalBlockView
 
-/// Green checkmark icon is shown when focused + has content.
-/// Submission occurs via:
-/// 1. Checkmark tap
-/// 2. Return key (from keyboard)
-/// 3. Focus loss (implicit)
+//
+// Submission contract: green checkmark tap is the ONLY path that saves a meal.
+// Focus loss and Return key are no-ops — text lives in rawText (@State) until confirmed.
 
 struct JournalBlockView: View {
     let meal: Meal
     let isBreathing: Bool
 
-    /// Called on "done" actions (focus loss, Return key, Done button) - triggers AI analysis
+    /// Called only on green checkmark tap — triggers save + AI analysis.
     let onUpdate: (MealType, [String]) -> Void
-
-    /// Called during typing for local-only updates - NO AI analysis
-    /// Use this for real-time feedback while user types
-    let onLocalUpdate: (MealType, [String]) -> Void
 
     let onTimestampUpdate: (Date) -> Void
     let onDelete: () -> Void
@@ -25,8 +19,7 @@ struct JournalBlockView: View {
     /// Recent meals from past 3 days for quick-add feature
     var recentMeals: [Meal] = []
 
-    /// Maximum characters enforced by the limitedTextBinding.
-    /// Sourced from InputValidator for consistent security validation.
+    /// Maximum characters enforced by limitedTextBinding (security boundary).
     static let maxCharacterLimit: Int = InputValidator.mealDescriptionMaxLength
 
     static let timeFormatter: DateFormatter = {
@@ -45,22 +38,12 @@ struct JournalBlockView: View {
     @State var editedTimestamp: Date = .init()
     @FocusState var isFocused: Bool
     @State private var hasInitialized: Bool = false
-    /// Track the last items we sent to prevent external sync from overwriting during typing
-    @State var lastSentItems: [String] = []
-    /// Controls visibility of score breakdown sheet
     @State private var showScoreBreakdown: Bool = false
-    /// Prevents duplicate AI triggers when Done button dismisses focus
-    @State var skipNextFocusLoss: Bool = false
-    /// True while the user is actively editing — more reliable than @FocusState for
-    /// guarding external rawText syncs, since @FocusState can desync during haptics,
-    /// alerts, and system interruptions.
-    @State var isUserEditing: Bool = false
 
     init(
         meal: Meal,
         isBreathing: Bool,
         onUpdate: @escaping (MealType, [String]) -> Void,
-        onLocalUpdate: @escaping (MealType, [String]) -> Void = { _, _ in },
         onTimestampUpdate: @escaping (Date) -> Void = { _ in },
         onDelete: @escaping () -> Void,
         recentMeals: [Meal] = []
@@ -68,7 +51,6 @@ struct JournalBlockView: View {
         self.meal = meal
         self.isBreathing = isBreathing
         self.onUpdate = onUpdate
-        self.onLocalUpdate = onLocalUpdate
         self.onTimestampUpdate = onTimestampUpdate
         self.onDelete = onDelete
         self.recentMeals = recentMeals
@@ -83,10 +65,10 @@ struct JournalBlockView: View {
             .accessibilityIdentifier("meal-block-\(self.meal.id)")
             .background {
                 MealCardBackground(feedback: self.feedback, mealTypeColor: self.selectedMealType.displayColor)
+                    .animation(.easeInOut(duration: 0.5), value: self.meal.healthScore)
             }
             .scaleEffect(self.isPressed ? 0.96 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: self.isPressed)
-            .animation(.easeInOut(duration: 0.5), value: self.meal.healthScore)
             .onLongPressGesture(minimumDuration: 1.0) {
                 SensoryService.shared.playNudge(style: .heavy)
                 self.showDeleteAlert = true
@@ -123,7 +105,6 @@ struct JournalBlockView: View {
         }
     }
 
-    /// Header row with meal type tag (left) and score badge (right)
     private var cardHeader: some View {
         HStack {
             self.mealTypeMenu
@@ -140,7 +121,7 @@ struct JournalBlockView: View {
                 Button {
                     self.selectedMealType = type
                     let items = self.parsedItems
-                    self.lastSentItems = items
+                    guard !items.isEmpty else { return }
                     self.onUpdate(type, items)
                     SensoryService.shared.playNudge(style: .light)
                 } label: {
@@ -156,44 +137,21 @@ struct JournalBlockView: View {
     // MARK: - Actions
 
     private func initializeState() {
-        if !self.hasInitialized {
-            self.rawText = self.meal.items.joined(separator: "\n")
-            self.selectedMealType = self.meal.mealType
-            self.lastSentItems = self.meal.items
-            self.hasInitialized = true
-        }
+        guard !self.hasInitialized else { return }
+        self.rawText = self.meal.items.joined(separator: "\n")
+        self.selectedMealType = self.meal.mealType
+        self.hasInitialized = true
     }
 
-    func handleTextChange(_ newValue: String) {
-        let items = self.parseItems(from: newValue)
-        self.lastSentItems = items
-        self.isUserEditing = true
-        // Forward every keystroke immediately — debounce is handled by the Combine
-        // pipeline in MainViewModel.enqueueMealEdit, not in the view.
-        self.onLocalUpdate(self.selectedMealType, items)
-    }
-
-    func handleFocusChange(_ focused: Bool) {
-        if !focused {
-            self.isUserEditing = false
-
-            // Skip if Done button already triggered the update
-            if self.skipNextFocusLoss {
-                self.skipNextFocusLoss = false
-                return
-            }
-
-            let items = self.parseItems(from: self.rawText)
-            self.lastSentItems = items
-            // Use onUpdate for "done" action - triggers AI analysis
-            self.onUpdate(self.selectedMealType, items)
-        }
+    func handleCheckmarkTap() {
+        self.isFocused = false
+        self.handleSubmit()
+        SensoryService.shared.playNudge(style: .light)
     }
 
     func handleSubmit() {
         let items = self.parseItems(from: self.rawText)
-        self.lastSentItems = items
-        // Use onUpdate for "done" action - triggers AI analysis
+        guard !items.isEmpty else { return }
         self.onUpdate(self.selectedMealType, items)
     }
 
@@ -209,7 +167,6 @@ struct JournalBlockView: View {
         self.parseItems(from: self.rawText)
     }
 
-    /// Visual feedback helper based on meal's health score
     private var feedback: MealCardFeedback {
         MealCardFeedback(score: self.meal.healthScore, mealTypeColor: self.selectedMealType.displayColor)
     }

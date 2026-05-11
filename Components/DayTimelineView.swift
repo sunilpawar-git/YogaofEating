@@ -123,9 +123,6 @@ struct DayTimelineView: View {
                 onUpdate: { mealType, newItems in
                     self.mealActions.onUpdate(meal.id, mealType, newItems)
                 },
-                onLocalUpdate: { mealType, newItems in
-                    self.mealActions.onLocalUpdate(meal.id, mealType, newItems)
-                },
                 onTimestampUpdate: { newTimestamp in
                     self.mealActions.onUpdateTimestamp(meal.id, newTimestamp)
                 },

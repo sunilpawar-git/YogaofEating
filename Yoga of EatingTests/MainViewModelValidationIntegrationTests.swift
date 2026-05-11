@@ -182,7 +182,7 @@
             )
             self.viewModel.meals = [meal]
 
-            self.viewModel.updateMealItemsLocalOnly(meal.id, items: ["< 100g"])
+            self.viewModel.updateMeal(meal.id, mealType: .lunch, items: ["< 100g"])
 
             XCTAssertFalse(self.viewModel.showValidationErrorAlert)
             guard let updated = self.viewModel.meals.first else {
@@ -201,7 +201,7 @@
             )
             self.viewModel.meals = [meal]
 
-            self.viewModel.updateMealItemsLocalOnly(meal.id, items: ["> 5 servings"])
+            self.viewModel.updateMeal(meal.id, mealType: .lunch, items: ["> 5 servings"])
 
             XCTAssertFalse(self.viewModel.showValidationErrorAlert)
         }
@@ -407,7 +407,7 @@
             )
             self.viewModel.meals = [meal]
 
-            self.viewModel.updateMealItemsLocalOnly(meal.id, items: ["oatmeal", "berries", "milk"])
+            self.viewModel.updateMeal(meal.id, mealType: .breakfast, items: ["oatmeal", "berries", "milk"])
 
             guard let updated = self.viewModel.meals.first else {
                 XCTFail("Meal not found")
@@ -427,7 +427,7 @@
             self.viewModel.meals = [meal]
 
             let xss = "normal <Script>alert(1)</script>"
-            self.viewModel.updateMealItemsLocalOnly(meal.id, items: [xss])
+            self.viewModel.updateMeal(meal.id, mealType: .lunch, items: [xss])
 
             XCTAssertTrue(self.viewModel.showValidationErrorAlert)
         }

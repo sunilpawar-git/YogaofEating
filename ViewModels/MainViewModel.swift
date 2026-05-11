@@ -137,11 +137,6 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Combine subscriptions held for the lifetime of the ViewModel.
     private var cancellables = Set<AnyCancellable>()
 
-    /// Subject that receives raw (mealId, items) pairs on every keystroke.
-    /// The debounce pipeline downstream collapses rapid edits before forwarding
-    /// to `updateMealItemsLocalOnly`. Owned by the ViewModel — never exposed to views.
-    private let mealEditSubject = PassthroughSubject<(UUID, [String]), Never>()
-
     /// Cached formatter for the selected date display. Allocated once per VM instance
     /// rather than on every call to `formattedSelectedDate`.
     let selectedDateFormatter: DateFormatter = {
@@ -196,23 +191,10 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &self.cancellables)
 
-        // Collapse rapid-fire keystrokes into a single updateMealItemsLocalOnly call.
-        // RunLoop.main avoids subtle threading issues with Swift concurrency on @MainActor.
-        self.mealEditSubject
-            .debounce(for: .milliseconds(TimingConstants.debounceMs), scheduler: RunLoop.main)
-            .sink { [weak self] mealId, items in
-                self?.updateMealItemsLocalOnly(mealId, items: items)
-            }
-            .store(in: &self.cancellables)
-
         if !skipDataLoading {
             self.loadData()
             self.setupResetMonitoring()
         }
-    }
-
-    func enqueueMealEdit(mealId: UUID, items: [String]) {
-        self.mealEditSubject.send((mealId, items))
     }
 
     deinit {
