@@ -29,6 +29,18 @@ private struct MainScreenSheetsModifier: ViewModifier {
                         .onAppear { self.viewModel.showInsightSheet = false }
                 }
             }
+            .sheet(isPresented: self.$viewModel.showBreakdownSheet) {
+                if let contract = self.viewModel.wellbeingBreakdownContract {
+                    WellbeingBreakdownSheet(contract: contract, onDismiss: {
+                        self.viewModel.showBreakdownSheet = false
+                    })
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                } else {
+                    Color.clear
+                        .onAppear { self.viewModel.showBreakdownSheet = false }
+                }
+            }
             .sheet(isPresented: self.$viewModel.showBriefingSheet) {
                 if let briefing = self.viewModel.currentBriefing {
                     BriefingDetailView(

@@ -227,6 +227,11 @@ struct BriefingDetailView: View {
         case .focusToFeeling: .purple
         case .timingPattern: .orange
         case .foodDebt: Color(red: 0.95, green: 0.65, blue: 0.0)
+        case .sleepRecoveryCarryover: .teal
+        case .intentionFollowthrough: .blue
+        case .journalTonePrediction: Color(red: 0.6, green: 0.4, blue: 0.8)
+        case .sleepMismatch: .yellow
+        case .carryOverLoad: .red
         }
     }
 

@@ -27,7 +27,7 @@
 
         func test_correlationCategory_hasExpectedCases() {
             let allCases = CorrelationCategory.allCases
-            XCTAssertEqual(allCases.count, 5)
+            XCTAssertEqual(allCases.count, 10) // 5 original + 5 synthesis-aware (Phase 4)
             XCTAssertTrue(allCases.contains(.foodToSleep))
             XCTAssertTrue(allCases.contains(.foodToMood))
             XCTAssertTrue(allCases.contains(.focusToFeeling))

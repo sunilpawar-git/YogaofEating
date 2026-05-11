@@ -1,115 +1,24 @@
 import Combine
-import FirebaseAuth
 import Foundation
 @testable import Yoga_of_Eating
 
-/// Mock for AuthService to enable testing without Firebase
-@MainActor
-class MockAuthService: AuthServiceProtocol {
-    var currentUser: AuthUser?
-    var signInCalled = false
-    var signOutCalled = false
-    var shouldThrowError = false
-
-    func signInWithGoogle() async throws {
-        self.signInCalled = true
-        if self.shouldThrowError {
-            throw NSError(domain: "Auth", code: 1, userInfo: [NSLocalizedDescriptionKey: "Mock Error"])
-        }
-    }
-
-    func signOut() {
-        self.signOutCalled = true
-        self.currentUser = nil
-    }
-}
-
-struct MockAuthUser: AuthUser {
-    var uid: String
-    var displayName: String?
-    var email: String?
-}
+// MARK: - MockSynthesisScheduler
 
 @MainActor
-class MockAuthCoreProvider: AuthCoreProvider {
-    var currentUser: AuthUser?
-    var signInCalled = false
-    var signOutCalled = false
-    var restorePreviousSignInCalled = false
-    var shouldThrowError = false
-    var listener: ((AuthUser?) -> Void)?
+final class MockSynthesisScheduler: SynthesisScheduling {
+    /// Records every trigger passed to `schedule(_:)` in call order.
+    var scheduledTriggers: [SynthesisTrigger] = []
 
-    func signInWithGoogle() async throws -> AuthUser {
-        self.signInCalled = true
-        if self.shouldThrowError {
-            throw NSError(domain: "Auth", code: 1, userInfo: [NSLocalizedDescriptionKey: "Mock Error"])
-        }
-        let user = MockAuthUser(uid: "mock_uid", displayName: "Mock User", email: "mock@example.com")
-        return user
+    func schedule(_ trigger: SynthesisTrigger) {
+        self.scheduledTriggers.append(trigger)
     }
 
-    func signOut() throws {
-        self.signOutCalled = true
-        if self.shouldThrowError {
-            throw NSError(domain: "Auth", code: 2, userInfo: [NSLocalizedDescriptionKey: "Sign Out Error"])
-        }
-        self.currentUser = nil
-    }
-
-    func addStateDidChangeListener(_ listener: @escaping (AuthUser?) -> Void) -> Any? {
-        self.listener = listener
-        return "mock_handle"
-    }
-
-    func simulateStateChange(user: AuthUser?) {
-        self.currentUser = user
-        self.listener?(user)
-    }
-
-    func restorePreviousSignIn() async throws -> AuthUser {
-        self.restorePreviousSignInCalled = true
-        if self.shouldThrowError {
-            throw NSError(domain: "Auth", code: 3, userInfo: [NSLocalizedDescriptionKey: "Restore Error"])
-        }
-        let user = MockAuthUser(uid: "restored_uid", displayName: "Restored User", email: "restored@example.com")
-        self.currentUser = user
-        self.listener?(user)
-        return user
+    func reset() {
+        self.scheduledTriggers.removeAll()
     }
 }
 
-/// Mock for CloudSyncService
-@MainActor
-class MockCloudSyncService: CloudSyncServiceProtocol {
-    var uploadedSnapshots: [DailySmileySnapshot] = []
-    var uploadCalled = false
-    var batchUploadedSnapshots: [[DailySmileySnapshot]] = []
-    var batchUploadCalled = false
-    var shouldFail = false
-
-    func upload(snapshot: DailySmileySnapshot, userId _: String) async throws {
-        self.uploadCalled = true
-        if self.shouldFail {
-            throw NSError(domain: "CloudSync", code: 1, userInfo: [NSLocalizedDescriptionKey: "Upload failed"])
-        }
-        self.uploadedSnapshots.append(snapshot)
-    }
-
-    func uploadBatch(snapshots: [DailySmileySnapshot], userId _: String) async throws {
-        self.batchUploadCalled = true
-        if self.shouldFail {
-            throw NSError(domain: "CloudSync", code: 3, userInfo: [NSLocalizedDescriptionKey: "Batch upload failed"])
-        }
-        // Mirror the real implementation's chunking behavior
-        let batchSize = 500
-        let chunks = stride(from: 0, to: snapshots.count, by: batchSize).map { startIndex in
-            Array(snapshots[startIndex..<min(startIndex + batchSize, snapshots.count)])
-        }
-        for chunk in chunks {
-            self.batchUploadedSnapshots.append(chunk)
-        }
-    }
-}
+// MARK: - MockHistoricalDataService
 
 @MainActor
 class MockHistoricalDataService: HistoricalDataServiceProtocol {
@@ -146,7 +55,6 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     }
 
     func saveHistoricalData() {}
-
     func syncToFirebase() async throws {}
 
     func clearAllData() {
@@ -159,123 +67,72 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
         self.lastUpdatedReflection = reflection
         self.lastReflectionDate = date
 
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withReflection(reflection)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(snapshot: existing.withReflection(reflection))
         } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                reflection: reflection
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
+                id: UUID(), date: normalizedDate, smileyState: .neutral,
+                meals: [], mealCount: 0, averageHealthScore: 0.5, reflection: reflection
+            ))
         }
     }
 
     func updateMorningMindCheck(for date: Date, entries: [MindCheckEntry]) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withMindChecks(morningMindCheck: entries)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(snapshot: existing.withMindChecks(morningMindCheck: entries))
         } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                morningMindCheck: entries
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
+                id: UUID(), date: normalizedDate, smileyState: .neutral,
+                meals: [], mealCount: 0, averageHealthScore: 0.5, morningMindCheck: entries
+            ))
         }
     }
 
     func updateEveningMindCheck(for date: Date, entries: [MindCheckEntry]) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withMindChecks(eveningMindCheck: entries)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(snapshot: existing.withMindChecks(eveningMindCheck: entries))
         } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                eveningMindCheck: entries
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
+                id: UUID(), date: normalizedDate, smileyState: .neutral,
+                meals: [], mealCount: 0, averageHealthScore: 0.5, eveningMindCheck: entries
+            ))
         }
     }
 
     func updateHighlightData(for date: Date, data: HighlightData) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withHighlightData(data)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(snapshot: existing.withHighlightData(data))
         } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                highlightData: data
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
+                id: UUID(), date: normalizedDate, smileyState: .neutral,
+                meals: [], mealCount: 0, averageHealthScore: 0.5, highlightData: data
+            ))
         }
     }
 
     func updateReflectData(for date: Date, data: ReflectData) {
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withReflectData(data)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(snapshot: existing.withReflectData(data))
         } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                reflectData: data
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
+                id: UUID(), date: normalizedDate, smileyState: .neutral,
+                meals: [], mealCount: 0, averageHealthScore: 0.5, reflectData: data
+            ))
         }
     }
 
-    // Stubs for carry-over and food-debt — tests set these to control ViewModel behaviour.
-    // Service-layer tests (TodoCarryOverTests, FoodDebtTests) use real HistoricalDataService
-    // so they don't rely on these stubs at all.
     var stubbedCarriedTodos: [MindCheckEntry] = []
     var stubbedFoodDebtState: SmileyState = .neutral
 
-    func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] {
-        self.stubbedCarriedTodos
-    }
+    func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] { self.stubbedCarriedTodos }
+    func foodDebtStartingState(relativeTo _: Date) -> SmileyState { self.stubbedFoodDebtState }
 
-    func foodDebtStartingState(relativeTo _: Date) -> SmileyState {
-        self.stubbedFoodDebtState
-    }
+    // MARK: - Briefing spy
 
     var updateBriefingCalled = false
     var lastUpdatedBriefing: DailyBriefing?
@@ -283,24 +140,14 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     func updateBriefing(for date: Date, briefing: DailyBriefing) {
         self.updateBriefingCalled = true
         self.lastUpdatedBriefing = briefing
-
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withBriefing(briefing)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(snapshot: existing.withBriefing(briefing))
         } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                briefing: briefing
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
+                id: UUID(), date: normalizedDate, smileyState: .neutral,
+                meals: [], mealCount: 0, averageHealthScore: 0.5, briefing: briefing
+            ))
         }
     }
 
@@ -314,122 +161,58 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
         self.updateInsightCalled = true
         self.lastUpdatedInsight = insight
         self.lastInsightDate = date
-
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        if let existingSnapshot = self.historicalData.snapshot(for: normalizedDate) {
-            let updatedSnapshot = existingSnapshot.withInsight(insight)
-            self.historicalData.addOrUpdate(snapshot: updatedSnapshot)
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(snapshot: existing.withInsight(insight))
         } else {
-            let newSnapshot = DailySmileySnapshot(
-                id: UUID(),
-                date: normalizedDate,
-                smileyState: .neutral,
-                meals: [],
-                mealCount: 0,
-                averageHealthScore: 0.5,
-                insight: insight
-            )
-            self.historicalData.addOrUpdate(snapshot: newSnapshot)
+            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
+                id: UUID(), date: normalizedDate, smileyState: .neutral,
+                meals: [], mealCount: 0, averageHealthScore: 0.5, insight: insight
+            ))
         }
     }
-}
 
-@MainActor
-class MockPersistenceService: PersistenceServiceProtocol {
-    var savedData: PersistenceService.AppData?
-    var saveCalled = false
-    var deleteAllCalled = false
+    // MARK: - EnrichedInsight spy
 
-    func load() -> PersistenceService.AppData? {
-        nil
+    var updateEnrichedInsightCalled = false
+    var lastEnrichedInsight: EnrichedDailyInsight?
+
+    func updateEnrichedInsight(for date: Date, insight: EnrichedDailyInsight) {
+        self.updateEnrichedInsightCalled = true
+        self.lastEnrichedInsight = insight
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(snapshot: existing.withEnrichedInsight(insight))
+        } else {
+            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
+                id: UUID(), date: normalizedDate, smileyState: .neutral,
+                meals: [], mealCount: 0, averageHealthScore: 0.5,
+                enrichedInsight: insight
+            ))
+        }
     }
 
-    func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {
-        self.saveCalled = true
-        self.savedData = PersistenceService.AppData(
-            meals: meals,
-            smileyState: smileyState,
-            lastResetDate: lastResetDate,
-            historicalData: historicalData
-        )
-    }
+    // MARK: - WellbeingDimensions spy
 
-    func deleteAll() {
-        self.deleteAllCalled = true
-        self.savedData = nil
-    }
-}
+    var updateWellbeingDimensionsCalled = false
+    var lastWellbeingDimensions: WellbeingDimensions?
+    var lastWellbeingTextSignals: [TextSignal]?
 
-@MainActor
-class MockMealLogicService: MealLogicProvider {
-    var mockScore: Double = 0.5
-    var nextState = SmileyState.neutral
-
-    func calculateHealthScore(for _: String) -> Double {
-        self.mockScore
-    }
-
-    func calculateHealthScore(for items: [String]) -> Double {
-        guard !items.isEmpty else { return 0.5 }
-        return self.mockScore
-    }
-
-    func calculateNextState(from _: SmileyState, healthScore _: Double) -> SmileyState {
-        self.nextState
-    }
-}
-
-class MockHealthProfileService: HealthProfileServiceProtocol {
-    var mockProfile: UserHealthProfile?
-
-    func calculateBMI(height _: Double, weight _: Double, unitSystem _: UnitSystem) -> Double {
-        self.mockProfile?.bmi ?? 0.0
-    }
-
-    func getBMICategory(bmi _: Double) -> BMICategory {
-        self.mockProfile?.bmiCategory ?? .normal
-    }
-
-    func calculateBMR(
-        weight _: Double,
-        height _: Double,
-        age _: Int,
-        gender _: Gender,
-        unitSystem _: UnitSystem
-    ) -> Double {
-        self.mockProfile?.bmr ?? 0.0
-    }
-
-    func calculateTDEE(bmr _: Double, activityLevel _: Double) -> Double {
-        self.mockProfile?.tdee ?? 0.0
-    }
-
-    func getSensitivityMultiplier(bmi _: Double, age _: Int) -> Double {
-        self.mockProfile?.sensitivityMultiplier ?? 1.0
-    }
-
-    func getHealthRiskLevel(bmi _: Double, age _: Int) -> HealthRiskLevel {
-        self.mockProfile?.riskLevel ?? .low
-    }
-
-    func getUserHealthProfile() -> UserHealthProfile? {
-        self.mockProfile
-    }
-}
-
-// MARK: - MockActivityDataProvider
-
-final class MockActivityDataProvider: ActivityDataProvider {
-    var stubbedActiveCalories: Double?
-    var stubbedBasalCalories: Double?
-
-    func fetchActiveCaloriesBurned(for _: Date) async -> Double? {
-        self.stubbedActiveCalories
-    }
-
-    func fetchBasalCaloriesBurned(for _: Date) async -> Double? {
-        self.stubbedBasalCalories
+    func updateWellbeingDimensions(for date: Date, dimensions: WellbeingDimensions, textSignals: [TextSignal]) {
+        self.updateWellbeingDimensionsCalled = true
+        self.lastWellbeingDimensions = dimensions
+        self.lastWellbeingTextSignals = textSignals
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(
+                snapshot: existing.withWellbeingDimensions(dimensions).withTextSignals(textSignals)
+            )
+        } else {
+            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
+                id: UUID(), date: normalizedDate, smileyState: .neutral,
+                meals: [], mealCount: 0, averageHealthScore: 0.5,
+                wellbeingDimensions: dimensions, textSignals: textSignals
+            ))
+        }
     }
 }

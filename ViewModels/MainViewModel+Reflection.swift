@@ -23,7 +23,7 @@ extension MainViewModel {
     }
 
     /// Saves sleep quality for today, merging with existing reflection if present.
-    /// Also triggers insight generation and ensures Apple sleep data is available for badge.
+    /// Schedules the full insight lifecycle via `synthesisScheduler` (bypasses debounce).
     func saveSleepQuality(_ quality: SleepQuality, at date: Date = Date()) {
         let newReflection = DailyReflection.withSleepQuality(quality, at: date)
 
@@ -38,14 +38,29 @@ extension MainViewModel {
             self.fetchAppleSleepDataForBadge()
         }
 
-        self.triggerInsightGenerationIfNeeded(for: date)
-        self.triggerBriefingGeneration()
+        // .sleepLogged bypasses debounce — fires full insight + briefing + enriched cycle immediately.
+        self.synthesisScheduler.schedule(.sleepLogged)
     }
 
-    /// Triggers insight generation if conditions are met.
-    /// Conditions: No insight exists for today AND sleep quality is logged AND historical data exists.
-    /// Cancels any in-flight insight task before starting a new one to prevent duplicate generation.
-    func triggerInsightGenerationIfNeeded(for date: Date) {
+    /// Single entry point for the insight lifecycle, called by `SynthesisScheduler`.
+    ///
+    /// For `.sleepLogged`: runs full pipeline — legacy insight, morning briefing, and enriched insight.
+    /// For all other triggers: re-synthesises smiley and regenerates enriched insight.
+    func performInsightLifecycle(trigger: SynthesisTrigger) {
+        let date = Date()
+        self.updateSmileyStateFromAllMeals()
+
+        if trigger == .sleepLogged {
+            self.triggerLegacyInsightGenerationIfNeeded(for: date)
+            self.triggerBriefingGeneration()
+        }
+
+        self.triggerEnrichedInsightGeneration(for: date)
+    }
+
+    /// Generates the legacy `DailyInsight` if one does not already exist for today.
+    /// Cancels any in-flight task before starting a new one.
+    private func triggerLegacyInsightGenerationIfNeeded(for date: Date) {
         if let existingInsight = self.currentInsight,
            Calendar.current.isDate(existingInsight.date, inSameDayAs: date)
         {
@@ -92,6 +107,34 @@ extension MainViewModel {
         }
 
         return sleepDataByDate
+    }
+
+    /// Triggers enriched insight generation after sleep is logged.
+    /// Uses the current synthesis to produce an `EnrichedDailyInsight` via `InsightLifecycleService`.
+    func triggerEnrichedInsightGeneration(for date: Date) {
+        Task {
+            let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
+            let healthKitData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
+            let recentSnapshots = (0..<7).compactMap { daysAgo -> DailySmileySnapshot? in
+                let target = Calendar.current.date(byAdding: .day, value: -daysAgo, to: date)!
+                return self.historicalService.getSnapshot(for: target)
+            }.filter { !$0.isEmpty }
+
+            let synthesis = self.synthesisEngine.synthesize(
+                meals: self.meals,
+                highlightData: snapshot?.highlightData,
+                reflectData: snapshot?.reflectData,
+                appleSleepData: self.appleSleepData,
+                yesterday: nil
+            )
+
+            _ = await self.insightLifecycleService.generateEnrichedInsight(
+                for: date,
+                synthesis: synthesis,
+                recentSnapshots: recentSnapshots,
+                healthKitSleepData: healthKitData
+            )
+        }
     }
 
     /// Saves overall feeling for today, merging with existing reflection if present.

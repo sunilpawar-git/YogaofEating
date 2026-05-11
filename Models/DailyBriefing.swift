@@ -17,36 +17,45 @@ enum CorrelationCategory: String, Codable, CaseIterable {
     case foodToMood
     case focusToFeeling
     case timingPattern
-    /// Two consecutive days of low-quality eating — inflammation and cravings may be elevated.
     case foodDebt
+    /// Two consecutive poor-sleep nights predicting reduced cognitive clarity.
+    case sleepRecoveryCarryover
+    /// Morning todos with low completion rate signals momentum leak.
+    case intentionFollowthrough
+    /// Negative evening journal tone predicting lower wellbeing next day.
+    case journalTonePrediction
+    /// User rated sleep great but synthesis shows low cognitive clarity.
+    case sleepMismatch
+    /// Three or more low-wellbeing days in the past week.
+    case carryOverLoad
 
     var icon: String {
         switch self {
-        case .foodToSleep:
-            "moon.zzz.fill"
-        case .foodToMood:
-            "face.smiling.inverse"
-        case .focusToFeeling:
-            "brain.head.profile"
-        case .timingPattern:
-            "clock.arrow.2.circlepath"
-        case .foodDebt:
-            "flame.fill"
+        case .foodToSleep: "moon.zzz.fill"
+        case .foodToMood: "face.smiling.inverse"
+        case .focusToFeeling: "brain.head.profile"
+        case .timingPattern: "clock.arrow.2.circlepath"
+        case .foodDebt: "flame.fill"
+        case .sleepRecoveryCarryover: "bed.double.fill"
+        case .intentionFollowthrough: "checkmark.circle.trianglebadge.exclamationmark"
+        case .journalTonePrediction: "text.bubble.fill"
+        case .sleepMismatch: "exclamationmark.triangle.fill"
+        case .carryOverLoad: "chart.line.downtrend.xyaxis"
         }
     }
 
     var displayName: String {
         switch self {
-        case .foodToSleep:
-            "Food & Sleep"
-        case .foodToMood:
-            "Food & Mood"
-        case .focusToFeeling:
-            "Focus & Feeling"
-        case .timingPattern:
-            "Timing Pattern"
-        case .foodDebt:
-            "Food & Momentum"
+        case .foodToSleep: Strings.Correlation.foodToSleep
+        case .foodToMood: Strings.Correlation.foodToMood
+        case .focusToFeeling: Strings.Correlation.focusToFeeling
+        case .timingPattern: Strings.Correlation.timingPattern
+        case .foodDebt: Strings.Correlation.foodDebt
+        case .sleepRecoveryCarryover: Strings.Correlation.sleepRecoveryCarryover
+        case .intentionFollowthrough: Strings.Correlation.intentionFollowthrough
+        case .journalTonePrediction: Strings.Correlation.journalTonePrediction
+        case .sleepMismatch: Strings.Correlation.sleepMismatch
+        case .carryOverLoad: Strings.Correlation.carryOverLoad
         }
     }
 }

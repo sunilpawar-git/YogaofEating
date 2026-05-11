@@ -81,6 +81,7 @@ struct MainScreenView: View {
             },
             hasInsightAvailable: self.viewModel.hasInsightAvailable,
             briefingCardData: self.viewModel.briefingCardData,
+            briefingWeakDimensions: self.viewModel.briefingWeakDimensions,
             onBriefingTap: {
                 self.viewModel.markBriefingViewed()
                 self.viewModel.showBriefingSheet = true

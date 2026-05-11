@@ -44,3 +44,20 @@ enum ScoringThresholds {
     /// Prevents excessive API calls while the user is still typing short content.
     static let minimumMealDescriptionLength: Int = 5
 }
+
+// MARK: - SynthesisThresholds
+
+enum SynthesisThresholds {
+    /// Minimum shift in any dimension that warrants a full insight re-generation.
+    static let dimensionShiftThreshold: Double = 0.08
+
+    /// Synthesis overall score above this → .serene smiley.
+    static let overallHealthy: Double = 0.65
+
+    /// Synthesis overall score in this range → .neutral smiley.
+    static let overallNeutral: Double = 0.45
+
+    /// Synthesis overall score below this → .overwhelmed smiley.
+    /// Values between overallNeutral and this → .thoughtful (Phase 3).
+    static let overallThoughtful: Double = 0.35
+}
