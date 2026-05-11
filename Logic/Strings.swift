@@ -343,4 +343,12 @@ enum Strings {
             static let balanced = "All dimensions are contributing equally today."
         }
     }
+
+    // MARK: - HealthKit Activity
+
+    enum HealthKit {
+        static let activityTrackingTitle = "Activity Tracking"
+        static let activityTrackingDescription = "Grants access to today's active and resting calories for a live calorie goal."
+        static let activityPermissionDenied = "Enable Activity access in Settings → Health → Data Access."
+    }
 }

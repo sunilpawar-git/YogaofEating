@@ -41,7 +41,9 @@ class HealthKitService {
             HKObjectType.quantityType(forIdentifier: .height)!,
             HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!,
             HKObjectType.characteristicType(forIdentifier: .biologicalSex)!,
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
+            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKObjectType.quantityType(forIdentifier: .basalEnergyBurned)!
         ]
 
         try await healthStore.requestAuthorization(toShare: [], read: typesToRead)
