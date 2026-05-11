@@ -148,8 +148,12 @@ final class PatternAnalyzerTests: XCTestCase {
         let calendar = Calendar.current
         let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date())!
 
+        // Use an explicit 8am timestamp so breakfast is never misclassified as a late dinner
+        // (the default `Date()` timestamp would be ≥ 21:00 when tests run in the evening).
+        let breakfastDate = calendar.date(byAdding: .hour, value: 8, to: calendar.startOfDay(for: date))!
         var meals: [Meal] = [
-            MealBuilder().withMealType(.breakfast).withItems(["Oatmeal"]).withScore(0.8).build()
+            MealBuilder().withTimestamp(breakfastDate).withMealType(.breakfast).withItems(["Oatmeal"]).withScore(0.8)
+                .build()
         ]
 
         if lateDinner {
