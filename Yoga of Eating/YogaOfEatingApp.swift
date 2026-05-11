@@ -42,20 +42,8 @@ struct YogaOfEatingApp: App {
 
         appLogger.info("Yoga of Eating app starting")
 
-        // Initialize Firebase FIRST, before any other code that might use it
-        // This prevents the "default Firebase app has not yet been configured" warning
-        // that occurs when MainViewModel (created as @StateObject) initializes AILogicService
-        let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
-        if !isCIEnvironment {
-            // Configure Firebase unconditionally (it's safe to call multiple times)
-            // Check if already configured to avoid unnecessary work
-            if FirebaseApp.app() == nil {
-                FirebaseApp.configure()
-                appLogger.info("Firebase initialized (App init)")
-            } else {
-                appLogger.debug("Firebase already configured")
-            }
-        }
+        // Firebase is initialized exclusively in AppDelegate.application(_:didFinishLaunchingWithOptions:),
+        // which runs before SwiftUI's @StateObject initialization. Do not init Firebase here.
 
         // Check if running UI tests and reset data if needed
         if CommandLine.arguments.contains("--uitesting") {
@@ -70,16 +58,25 @@ struct YogaOfEatingApp: App {
             // Clear persisted JSON data file
             if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                 let dataFileURL = documentsURL.appendingPathComponent("yoga_of_eating_data.json")
-                try? FileManager.default.removeItem(at: dataFileURL)
-                appLogger.debug("Removed persisted data file for UI test run")
+                do {
+                    try FileManager.default.removeItem(at: dataFileURL)
+                    appLogger.debug("Removed persisted data file for UI test run")
+                } catch {
+                    appLogger
+                        .error("Failed to remove persisted data file: \(error.localizedDescription, privacy: .public)")
+                }
             }
         }
 
-        // Request permissions and schedule daily nudges on startup
-        NotificationManager.shared.requestPermissions()
-        NotificationManager.shared.scheduleMorningNudge()
-        NotificationManager.shared.scheduleDefaultMealReminders()
-        appLogger.info("Notifications configured")
+        // Request permissions and schedule daily nudges on startup.
+        // Skipped in CI environments to prevent permission popups causing test flakiness.
+        let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
+        if !isCIEnvironment {
+            NotificationManager.shared.requestPermissions()
+            NotificationManager.shared.scheduleMorningNudge()
+            NotificationManager.shared.scheduleDefaultMealReminders()
+            appLogger.info("Notifications configured")
+        }
     }
 
     var body: some Scene {

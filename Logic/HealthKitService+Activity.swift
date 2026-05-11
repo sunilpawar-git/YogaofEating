@@ -37,6 +37,8 @@ extension HealthKitService: ActivityDataProvider {
             options: .strictStartDate
         )
 
+        // TODO: Switch to withCheckedThrowingContinuation so callers can distinguish
+        // "permission denied" from "no data" instead of collapsing both to nil.
         return await withCheckedContinuation { continuation in
             let query = HKStatisticsQuery(
                 quantityType: quantityType,

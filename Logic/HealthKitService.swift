@@ -107,11 +107,16 @@ class HealthKitService {
     private func fetchLatestQuantity(for type: HKQuantityType, unit: HKUnit) async throws -> Double? {
         guard let healthStore else { return nil }
 
+        // Limit scan to the last 90 days — avoids a full historical table scan
+        // that would scan potentially years of data for a single "latest" value.
+        let ninetyDaysAgo = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? .distantPast
+        let predicate = HKQuery.predicateForSamples(withStart: ninetyDaysAgo, end: Date(), options: .strictStartDate)
+
         return try await withCheckedThrowingContinuation { continuation in
             let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
             let query = HKSampleQuery(
                 sampleType: type,
-                predicate: nil,
+                predicate: predicate,
                 limit: 1,
                 sortDescriptors: [sortDescriptor]
             ) { _, samples, error in
