@@ -33,6 +33,7 @@ extension MainViewModel {
     }
 
     func fetchAppleSleepDataForBadge() {
+        self.sleepBadgeTask?.cancel()
         self.sleepBadgeTask = Task {
             do {
                 _ = try await HealthKitService.shared.requestAuthorization()

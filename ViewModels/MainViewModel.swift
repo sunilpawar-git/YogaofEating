@@ -123,6 +123,9 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
 
     /// Timestamp of the last successful activity data fetch.
     /// Used by `refreshActivityDataIfNeeded()` to enforce the cooldown window.
+    /// Written only from `refreshActivityDataIfNeeded()` in MainViewModel+Lifecycle.swift.
+    /// Not `private(set)` because Swift does not support that modifier across extension files,
+    /// but no View should ever write to this property.
     var lastActivityDataFetchDate: Date?
 
     /// Combine subscriptions held for the lifetime of the ViewModel.

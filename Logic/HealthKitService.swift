@@ -36,15 +36,30 @@ class HealthKitService {
             throw HealthKitError.notAvailable
         }
 
-        let typesToRead: Set<HKObjectType> = [
-            HKObjectType.quantityType(forIdentifier: .bodyMass)!,
-            HKObjectType.quantityType(forIdentifier: .height)!,
-            HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!,
-            HKObjectType.characteristicType(forIdentifier: .biologicalSex)!,
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
-            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKObjectType.quantityType(forIdentifier: .basalEnergyBurned)!
+        let quantityIdentifiers: [HKQuantityTypeIdentifier] = [
+            .bodyMass, .height, .activeEnergyBurned, .basalEnergyBurned
         ]
+        let characteristicIdentifiers: [HKCharacteristicTypeIdentifier] = [
+            .dateOfBirth, .biologicalSex
+        ]
+
+        var typesToRead = Set<HKObjectType>()
+        for id in quantityIdentifiers {
+            guard let type = HKObjectType.quantityType(forIdentifier: id) else {
+                throw HealthKitError.notAvailable
+            }
+            typesToRead.insert(type)
+        }
+        for id in characteristicIdentifiers {
+            guard let type = HKObjectType.characteristicType(forIdentifier: id) else {
+                throw HealthKitError.notAvailable
+            }
+            typesToRead.insert(type)
+        }
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            throw HealthKitError.notAvailable
+        }
+        typesToRead.insert(sleepType)
 
         try await healthStore.requestAuthorization(toShare: [], read: typesToRead)
         return true
