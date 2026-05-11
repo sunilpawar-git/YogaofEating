@@ -25,7 +25,7 @@ extension BriefingService {
         let nudge = if let top = correlationCards.first {
             ActionableNudge(
                 suggestion: "Focus on what worked: \(top.category.displayName.lowercased())",
-                reasoning: top.observation
+                reasoning: "Your recent patterns make this the highest-leverage area to act on today"
             )
         } else {
             ActionableNudge(

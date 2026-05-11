@@ -9,6 +9,7 @@ import SwiftUI
 private let appLogger = Logger(subsystem: "com.yogaofeating", category: "App")
 
 // MARK: - Console Output Filters (For Development)
+
 // NOTE: The following warnings are benign UIKit system noise and do NOT affect app functionality:
 // - "The variant selector cell index number could not be found" — UIKit keyboard autocorrect/predictive text
 // - "Could not find cached accumulator for token=..." — Autocorrect state management
