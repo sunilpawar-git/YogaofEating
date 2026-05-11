@@ -20,6 +20,16 @@ struct HighlightViewContract: Equatable {
     }
 }
 
+/// Minimal data contract for the WellbeingBreakdownSheet.
+/// Contains only the synthesis output — no meals, no raw journal text.
+struct WellbeingBreakdownSheetContract: Equatable {
+    let dimensions: WellbeingDimensions
+    let dominantDimension: WellbeingDimension
+    let causalNarrative: String
+    /// Up to 2 weakest dimensions (score < SynthesisThresholds.overallNeutral), sorted ascending.
+    let weakDimensions: [WellbeingDimension]
+}
+
 /// Minimal data contract for ReflectView.
 /// Contains ONLY the data the Reflect tab needs — no meals, no sleep data.
 struct ReflectViewContract: Equatable {
@@ -27,4 +37,6 @@ struct ReflectViewContract: Equatable {
     let feeling: ReflectionFeeling?
     let morningTodos: [MindCheckEntry]
     let isToday: Bool
+    /// Structured emotional signals extracted from the journal text. Added in Synthesis Layer phase.
+    let detectedSignals: [TextSignal]
 }

@@ -26,13 +26,15 @@ extension MainViewModel {
             return
         }
 
-        // Validate non-empty journal text
+        // Validate non-empty journal text — extractor runs AFTER validation (security boundary)
         switch InputValidator.validateJournalEntry(trimmed) {
         case let .success(sanitized):
             var data = self.currentOrNewReflectData()
             data.journalText = sanitized
+            data.textSignals = self.textSignalExtractor.extractSignals(from: sanitized, context: .eveningJournal)
             data.lastModified = Date()
             self.historicalService.updateReflectData(for: self.selectedDate, data: data)
+            self.synthesisScheduler.schedule(.journalSaved)
         case let .failure(error):
             self.lastValidationError = error
             self.showValidationErrorAlert = true
@@ -50,6 +52,7 @@ extension MainViewModel {
         // Mirror to legacy reflection so the insight pipeline stays in sync.
         // Always write (even nil) so both stores agree when user clears their feeling.
         self.syncFeelingToLegacyReflection(feeling, at: self.selectedDate)
+        self.synthesisScheduler.schedule(.feelingUpdated)
     }
 
     /// Toggles accomplished status for a morning to-do item.
@@ -63,6 +66,7 @@ extension MainViewModel {
         highlightData.todos[index] = highlightData.todos[index].withAccomplished(!current)
         highlightData.lastModified = Date()
         self.historicalService.updateHighlightData(for: self.selectedDate, data: highlightData)
+        self.synthesisScheduler.schedule(.todoCompleted)
     }
 
     // MARK: - Private Helpers

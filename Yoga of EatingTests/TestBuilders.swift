@@ -86,6 +86,9 @@ final class DailySmileySnapshotBuilder {
     private var reflectData: ReflectData?
     private var briefing: DailyBriefing?
     private var insight: DailyInsight?
+    private var wellbeingDimensions: WellbeingDimensions?
+    private var textSignals: [TextSignal]?
+    private var enrichedInsight: EnrichedDailyInsight?
 
     @discardableResult
     func withID(_ id: UUID) -> Self {
@@ -160,6 +163,24 @@ final class DailySmileySnapshotBuilder {
         return self
     }
 
+    @discardableResult
+    func withEnrichedInsight(_ insight: EnrichedDailyInsight) -> Self {
+        self.enrichedInsight = insight
+        return self
+    }
+
+    @discardableResult
+    func withWellbeingDimensions(_ dimensions: WellbeingDimensions) -> Self {
+        self.wellbeingDimensions = dimensions
+        return self
+    }
+
+    @discardableResult
+    func withTextSignals(_ signals: [TextSignal]) -> Self {
+        self.textSignals = signals
+        return self
+    }
+
     func build() -> DailySmileySnapshot {
         let mealCount = self.meals.count
         let avgScore = self.meals.isEmpty
@@ -179,7 +200,10 @@ final class DailySmileySnapshotBuilder {
             highlightData: self.highlightData,
             reflectData: self.reflectData,
             briefing: self.briefing,
-            insight: self.insight
+            insight: self.insight,
+            wellbeingDimensions: self.wellbeingDimensions,
+            textSignals: self.textSignals,
+            enrichedInsight: self.enrichedInsight
         )
     }
 }

@@ -37,4 +37,15 @@ enum TimingConstants {
 
     /// Maximum number of sync retry attempts before giving up and showing a persistent error.
     static let syncMaxRetryAttempts: Int = 3
+
+    // MARK: - Synthesis Debounce
+
+    /// Debounce window before re-synthesising after non-sleep data changes (nanoseconds).
+    /// 30 seconds allows multiple rapid changes (typing, todo toggles) to accumulate
+    /// before triggering a full synthesis + enriched insight generation cycle.
+    static let synthesisDebounceNanoseconds: UInt64 = 30_000_000_000
+
+    /// When true, `.sleepLogged` triggers bypass the debounce and fire immediately.
+    /// Sleep is a high-signal event that warrants an immediate full insight cycle.
+    static let sleepTriggerBypassesDebounce: Bool = true
 }

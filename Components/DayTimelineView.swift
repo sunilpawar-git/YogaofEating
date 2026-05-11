@@ -34,6 +34,9 @@ struct DayTimelineView: View {
     /// Data-contract tuple for the morning briefing card (nil hides it).
     var briefingCardData: (headline: String, topCorrelation: String?, nudge: String, isViewed: Bool)?
 
+    /// Weak dimensions to surface in the briefing card subtext (≤2). Defaults to empty.
+    var briefingWeakDimensions: [WellbeingDimension] = []
+
     /// Callback when user taps the briefing card
     var onBriefingTap: (() -> Void)?
 
@@ -71,6 +74,7 @@ struct DayTimelineView: View {
                     topCorrelation: data.topCorrelation,
                     nudge: data.nudge,
                     isViewed: data.isViewed,
+                    weakDimensions: self.briefingWeakDimensions,
                     onTap: self.onBriefingTap
                 )
                 .padding(.horizontal, 16)

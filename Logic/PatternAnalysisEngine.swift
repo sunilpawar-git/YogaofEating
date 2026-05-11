@@ -31,6 +31,12 @@ final class PatternAnalysisEngine {
         cards.append(contentsOf: self.analyzeTimingConsistency(from: snapshots))
         cards.append(contentsOf: self.analyzeTodoProductivity(from: snapshots))
         cards.append(contentsOf: self.analyzeFoodDebt(from: snapshots))
+        // Phase 4 synthesis-aware correlations
+        cards.append(contentsOf: self.analyzeSleepRecoveryCarryover(from: snapshots))
+        cards.append(contentsOf: self.analyzeIntentionFollowthrough(from: snapshots))
+        cards.append(contentsOf: self.analyzeJournalTonePrediction(from: snapshots))
+        cards.append(contentsOf: self.analyzeSleepMismatch(from: snapshots))
+        cards.append(contentsOf: self.analyzeCarryOverLoad(from: snapshots))
         return cards.sorted { $0.confidence > $1.confidence }
     }
 

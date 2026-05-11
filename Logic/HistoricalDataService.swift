@@ -41,6 +41,12 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// Updates or adds a daily insight for a specific date.
     func updateInsight(for date: Date, insight: DailyInsight)
 
+    /// Updates or adds wellbeing dimensions and text signals for a specific date.
+    func updateWellbeingDimensions(for date: Date, dimensions: WellbeingDimensions, textSignals: [TextSignal])
+
+    /// Updates or adds the enriched insight for a specific date.
+    func updateEnrichedInsight(for date: Date, insight: EnrichedDailyInsight)
+
     /// Returns incomplete .todo entries from the given date's snapshot, each with
     /// carriedOverCount incremented by 1. Used by resetDay() to seed the next day's todos.
     func incompleteTodosForCarryOver(from date: Date) -> [MindCheckEntry]
@@ -63,8 +69,8 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
     // MARK: - Properties
 
     @Published var historicalData: HistoricalData
-    private let persistenceService: PersistenceServiceProtocol
-    private let syncHandler: HistoricalSyncService
+    let persistenceService: PersistenceServiceProtocol
+    let syncHandler: HistoricalSyncService
 
     // Weak back-reference to MainViewModelProtocol so saveHistoricalData() always uses
     // the authoritative meals / state / resetDate rather than stale caches.
@@ -219,28 +225,6 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         }
     }
 
-    /// Loads historical data from persistent storage.
-    /// This is called automatically during initialization.
-    func loadHistoricalData() -> HistoricalData {
-        if let savedData = persistenceService.load() {
-            savedData.historicalData
-        } else {
-            HistoricalData()
-        }
-    }
-
-    // MARK: - Cloud Sync (delegates to HistoricalSyncService)
-
-    func syncToFirebase() async throws {
-        try await self.syncHandler.sync()
-        self.saveHistoricalData()
-    }
-
-    /// Clears all historical data. Used for factory reset.
-    func clearAllData() {
-        self.historicalData = HistoricalData()
-    }
-
     // MARK: - Private Helpers
 
     /// Produces a deterministic UUID-shaped string from an ISO date string so that
@@ -255,31 +239,5 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         let hex = String(format: "%016llx", hash) + String(format: "%016llx", hash &+ 1)
         let u = Array(hex)
         return "\(String(u[0..<8]))-\(String(u[8..<12]))-4\(String(u[13..<16]))-8\(String(u[17..<20]))-\(String(u[20..<32]))"
-    }
-
-    // MARK: - Todo Carry-Over
-
-    func incompleteTodosForCarryOver(from date: Date) -> [MindCheckEntry] {
-        guard let todos = self.getSnapshot(for: date)?.highlightData?.todos else { return [] }
-        return todos
-            .filter { $0.category == .todo && $0.isAccomplished != true }
-            .map { $0.withCarriedOverCount($0.carriedOverCount + 1) }
-    }
-
-    // MARK: - Food Debt Starting State
-
-    func foodDebtStartingState(relativeTo date: Date) -> SmileyState {
-        let calendar = Calendar.current
-        guard
-            let d1 = calendar.date(byAdding: .day, value: -1, to: date),
-            let d2 = calendar.date(byAdding: .day, value: -2, to: date),
-            let s1 = self.getSnapshot(for: d1),
-            s1.mealCount > 0,
-            s1.averageHealthScore < ScoringThresholds.foodDebtBadDay,
-            let s2 = self.getSnapshot(for: d2),
-            s2.mealCount > 0,
-            s2.averageHealthScore < ScoringThresholds.foodDebtBadDay
-        else { return .neutral }
-        return .concerned
     }
 }

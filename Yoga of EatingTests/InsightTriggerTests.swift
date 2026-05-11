@@ -104,7 +104,9 @@ final class InsightTriggerTests: XCTestCase {
         // When: Save sleep quality
         self.sut.saveSleepQuality(.good)
 
-        // Wait for insight task to complete
+        // Wait for the scheduler's bypass-debounce Task to fire (sets insightTask),
+        // then await the insight generation task itself.
+        try? await Task.sleep(nanoseconds: 10_000_000) // 10ms — scheduler fires immediately
         if let insightTask = self.sut.insightTask {
             await insightTask.value
         }
@@ -130,7 +132,8 @@ final class InsightTriggerTests: XCTestCase {
         // When: Save sleep quality to trigger insight
         self.sut.saveSleepQuality(.good)
 
-        // Wait for insight task to complete
+        // Wait for scheduler bypass-debounce Task → insightTask → insight result
+        try? await Task.sleep(nanoseconds: 10_000_000)
         if let insightTask = self.sut.insightTask {
             await insightTask.value
         }
@@ -153,7 +156,8 @@ final class InsightTriggerTests: XCTestCase {
         // When: Trigger insight generation
         self.sut.saveSleepQuality(.good)
 
-        // Wait for insight task to complete
+        // Wait for scheduler bypass-debounce Task → insightTask → insight result
+        try? await Task.sleep(nanoseconds: 10_000_000)
         if let insightTask = self.sut.insightTask {
             await insightTask.value
         }

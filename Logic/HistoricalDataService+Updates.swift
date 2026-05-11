@@ -79,6 +79,36 @@ extension HistoricalDataService {
         self.saveHistoricalData()
     }
 
+    func updateEnrichedInsight(for date: Date, insight: EnrichedDailyInsight) {
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(snapshot: existing.withEnrichedInsight(insight))
+        } else {
+            self.historicalData.addOrUpdate(
+                snapshot: Self.emptySnapshot(for: normalizedDate, enrichedInsight: insight)
+            )
+        }
+        self.saveHistoricalData()
+    }
+
+    func updateWellbeingDimensions(for date: Date, dimensions: WellbeingDimensions, textSignals: [TextSignal]) {
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        if let existing = self.historicalData.snapshot(for: normalizedDate) {
+            self.historicalData.addOrUpdate(
+                snapshot: existing.withWellbeingDimensions(dimensions).withTextSignals(textSignals)
+            )
+        } else {
+            self.historicalData.addOrUpdate(
+                snapshot: Self.emptySnapshot(
+                    for: normalizedDate,
+                    wellbeingDimensions: dimensions,
+                    textSignals: textSignals
+                )
+            )
+        }
+        self.saveHistoricalData()
+    }
+
     // MARK: - Private factory helper
 
     /// Returns a minimal placeholder snapshot for dates that have no meal data yet.
@@ -90,7 +120,10 @@ extension HistoricalDataService {
         highlightData: HighlightData? = nil,
         reflectData: ReflectData? = nil,
         briefing: DailyBriefing? = nil,
-        insight: DailyInsight? = nil
+        insight: DailyInsight? = nil,
+        wellbeingDimensions: WellbeingDimensions? = nil,
+        textSignals: [TextSignal]? = nil,
+        enrichedInsight: EnrichedDailyInsight? = nil
     ) -> DailySmileySnapshot {
         DailySmileySnapshot(
             id: UUID(),
@@ -105,7 +138,10 @@ extension HistoricalDataService {
             highlightData: highlightData,
             reflectData: reflectData,
             briefing: briefing,
-            insight: insight
+            insight: insight,
+            wellbeingDimensions: wellbeingDimensions,
+            textSignals: textSignals,
+            enrichedInsight: enrichedInsight
         )
     }
 }

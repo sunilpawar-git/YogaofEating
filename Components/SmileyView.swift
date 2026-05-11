@@ -30,6 +30,8 @@ struct SmileyView: View {
             "🙂"
         case .neutral:
             "😐"
+        case .thoughtful:
+            "🤔"
         case .concerned:
             "😟"
         case .overwhelmed:

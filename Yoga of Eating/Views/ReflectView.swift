@@ -37,6 +37,11 @@ struct ReflectView: View {
                     onChanged: self.onJournalTextChanged
                 )
 
+                // Inline signal chips — shown when journal text signals are detected
+                if !self.data.detectedSignals.isEmpty {
+                    ReflectSignalChipsSection(signals: self.data.detectedSignals)
+                }
+
                 Divider().padding(.horizontal)
 
                 // Feeling picker — tapping an emoji also dismisses the keyboard (Issue 5)
@@ -67,6 +72,34 @@ struct ReflectView: View {
     }
 }
 
+// MARK: - Signal Chips Section
+
+/// Horizontal row of pill-shaped chips showing detected emotional signals from journal text.
+private struct ReflectSignalChipsSection: View {
+    let signals: [TextSignal]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(Strings.WellbeingBreakdown.detectedSignalsLabel)
+                .font(.caption2)
+                .foregroundStyle(AppTheme.textMuted)
+                .padding(.horizontal)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(self.signals, id: \.self) { signal in
+                        Text(signal.displayName)
+                            .font(.caption2)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(AppTheme.cardBackground))
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
 // MARK: - Focus Field Enum (Reflect)
 
 // ReflectView only has one text entry field, so a simple Bool @FocusState suffices.
@@ -81,7 +114,8 @@ struct ReflectView: View {
                 MindCheckEntry(category: .todo, text: "Exercise", context: .morning),
                 MindCheckEntry(category: .todo, text: "Read book", context: .morning)
             ],
-            isToday: true
+            isToday: true,
+            detectedSignals: [.clear]
         )
     )
 }

@@ -71,12 +71,17 @@ extension MainViewModel {
         self.showInsightSheet = true
     }
 
-    /// Handles long-press on smiley to show insight.
-    /// Only shows insight sheet if an insight is available.
+    /// Handles long-press on smiley.
+    /// Opens WellbeingBreakdownSheet when synthesis data is available;
+    /// falls back to InsightBottomSheet for legacy insight-only days.
     func handleSmileyLongPress() {
-        guard self.hasInsightAvailable else { return }
+        guard self.wellbeingBreakdownContract != nil || self.hasInsightAvailable else { return }
         SensoryService.shared.playNudge(style: .heavy)
-        self.showInsightSheet = true
+        if self.wellbeingBreakdownContract != nil {
+            self.showBreakdownSheet = true
+        } else {
+            self.showInsightSheet = true
+        }
     }
 
     // MARK: - Briefing Actions

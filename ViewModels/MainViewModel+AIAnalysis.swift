@@ -161,7 +161,7 @@ extension MainViewModel {
     /// Reanalyzes all meals to update the smiley state.
     /// - Parameter withFeedback: Pass false when called from async AI completion to avoid
     ///   surprising the user with haptics while they are in a different context.
-    func reanalyzeAllMealsForSmileyState(withFeedback: Bool = false) async {
+    func reanalyzeAllMealsForSmileyState(withFeedback _: Bool = false) async {
         guard !meals.isEmpty else {
             withAnimation(.spring()) {
                 smileyState = .neutral
@@ -177,10 +177,17 @@ extension MainViewModel {
             return
         }
 
-        let totalScore = analyzedMeals.map(\.healthScore).reduce(0.0, +)
-        let avgScore = totalScore / Double(analyzedMeals.count)
-
-        updateSmileyState(with: avgScore, withFeedback: withFeedback)
+        let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
+        let synthesis = self.synthesisEngine.synthesize(
+            meals: analyzedMeals,
+            highlightData: snapshot?.highlightData,
+            reflectData: snapshot?.reflectData,
+            appleSleepData: self.appleSleepData,
+            yesterday: nil
+        )
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+            self.smileyState = synthesis.smileySuggestion
+        }
         saveData()
     }
 }

@@ -56,6 +56,7 @@ extension MainViewModel {
         }
 
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
+        self.synthesisScheduler.schedule(.mealUpdated)
 
         self.aiCoordinator.analyzeIfNeeded(
             mealId: mealId,
@@ -142,6 +143,7 @@ extension MainViewModel {
             }
 
             self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
+            self.synthesisScheduler.schedule(.mealUpdated)
 
             self.aiCoordinator.analyzeIfNeeded(
                 mealId: mealId,
@@ -214,19 +216,30 @@ extension MainViewModel {
         }
     }
 
-    /// Updates smiley state based on all current meals' health scores.
+    /// Updates smiley state using the DailySynthesisEngine (all four data streams).
+    /// Falls back to neutral if no data is present.
     func updateSmileyStateFromAllMeals(withFeedback: Bool = false) {
-        guard !self.meals.isEmpty else {
-            withAnimation(.spring()) {
-                self.smileyState = .neutral
+        let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
+        let synthesis = self.synthesisEngine.synthesize(
+            meals: self.meals,
+            highlightData: snapshot?.highlightData,
+            reflectData: snapshot?.reflectData,
+            appleSleepData: self.appleSleepData,
+            yesterday: nil
+        )
+
+        if withFeedback {
+            let hapticsEnabled = UserDefaults.standard.object(forKey: StorageKeys.hapticsEnabled) as? Bool ?? true
+            if hapticsEnabled {
+                let overall = synthesis.dimensions.overall
+                SensoryService.shared
+                    .playNudge(style: overall < SynthesisThresholds.overallThoughtful ? .heavy : .light)
             }
-            return
         }
 
-        let totalScore = self.meals.map(\.healthScore).reduce(0.0, +)
-        let avgScore = totalScore / Double(self.meals.count)
-
-        self.updateSmileyState(with: avgScore, withFeedback: withFeedback)
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+            self.smileyState = synthesis.smileySuggestion
+        }
     }
 
     // MARK: - Day Reset
