@@ -48,4 +48,10 @@ enum TimingConstants {
     /// When true, `.sleepLogged` triggers bypass the debounce and fire immediately.
     /// Sleep is a high-signal event that warrants an immediate full insight cycle.
     static let sleepTriggerBypassesDebounce: Bool = true
+
+    // MARK: - Activity Data
+
+    /// Minimum interval between activity data refreshes (seconds).
+    /// Prevents redundant HealthKit queries on rapid foreground/background cycles.
+    static let activityFetchCooldownSeconds: TimeInterval = 60
 }
