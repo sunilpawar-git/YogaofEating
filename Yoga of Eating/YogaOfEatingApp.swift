@@ -27,6 +27,8 @@ struct YogaOfEatingApp: App {
 
     // Shared state across the app
     @StateObject private var viewModel = MainViewModel()
+    @Environment(\.scenePhase)
+    private var scenePhase
 
     @AppStorage("app_theme")
     private var theme: Int = 0 // 0: System, 1: Light, 2: Dark
@@ -92,6 +94,11 @@ struct YogaOfEatingApp: App {
                     .onOpenURL { url in
                         GIDSignIn.sharedInstance.handle(url)
                     }
+            }
+        }
+        .onChange(of: self.scenePhase) { _, newPhase in
+            if newPhase == .active {
+                self.viewModel.refreshActivityDataIfNeeded()
             }
         }
     }
