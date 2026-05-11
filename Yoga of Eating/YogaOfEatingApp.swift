@@ -8,6 +8,13 @@ import SwiftUI
 
 private let appLogger = Logger(subsystem: "com.yogaofeating", category: "App")
 
+// MARK: - Console Output Filters (For Development)
+// NOTE: The following warnings are benign UIKit system noise and do NOT affect app functionality:
+// - "The variant selector cell index number could not be found" — UIKit keyboard autocorrect/predictive text
+// - "Could not find cached accumulator for token=..." — Autocorrect state management
+// - "Attempted to update accumulator after completion..." — Text input event synchronization
+// These are filtered by the build scheme's OS_ACTIVITY_DT_MODE setting to reduce console clutter.
+
 @MainActor
 @main
 struct YogaOfEatingApp: App {

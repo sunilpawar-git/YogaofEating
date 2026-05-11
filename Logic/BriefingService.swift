@@ -23,6 +23,16 @@ final class BriefingService {
     /// Number of days to look back for briefing generation.
     private let lookbackDays: Int = 7
 
+    /// Tracks the date of the current in-flight briefing request to prevent concurrent duplicate calls.
+    /// Reset when request completes (success or failure).
+    private var inFlightDate: Date?
+
+    /// Debounce window for briefing requests (seconds). Prevents rapid re-triggering.
+    private let debounceInterval: TimeInterval = 2.0
+
+    /// Timestamp of the last completed briefing request. Used for debounce logic.
+    private var lastBriefingRequestTime: Date?
+
     // MARK: - Initialization
 
     init(
@@ -45,13 +55,42 @@ final class BriefingService {
     // MARK: - Public API
 
     /// Generates a structured `DailyBriefing` from historical data.
-    /// Returns `nil` if fewer than 2 snapshots are available.
+    /// Returns `nil` if fewer than 2 snapshots are available or if a request is already in flight for this date.
+    /// Includes debouncing to prevent rapid re-triggering (2-second window).
     func generateBriefing(
         for date: Date,
         healthKitSleepData: [Date: SleepData] = [:]
     ) async -> DailyBriefing? {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        // Guard 1: Prevent concurrent requests for the same date
+        if let inFlight = self.inFlightDate,
+           calendar.isDate(inFlight, inSameDayAs: normalizedDate)
+        {
+            briefingServiceLogger.debug("Briefing request already in-flight for this date; skipping duplicate")
+            return nil
+        }
+
+        // Guard 2: Debounce rapid re-requests (within 2 seconds)
+        if let lastTime = self.lastBriefingRequestTime,
+           Date().timeIntervalSince(lastTime) < self.debounceInterval
+        {
+            briefingServiceLogger.debug(
+                "Briefing request debounced; too soon since last request (\(Date().timeIntervalSince(lastTime), privacy: .public)s)"
+            )
+            return nil
+        }
+
         let snapshots = self.gatherRecentSnapshots(relativeTo: date)
         guard snapshots.count >= 2 else { return nil }
+
+        // Mark this date as in-flight
+        self.inFlightDate = normalizedDate
+        defer {
+            self.inFlightDate = nil
+            self.lastBriefingRequestTime = Date()
+        }
 
         if let serverBriefing = await self.generateBriefingFromServer(
             snapshots: snapshots,
