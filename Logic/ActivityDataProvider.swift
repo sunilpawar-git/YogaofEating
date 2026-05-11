@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Conforming types can be real HealthKit queries or test doubles.
 /// Inject via `MainViewModel(activityProvider:)` — never create inside the ViewModel.
-protocol ActivityDataProvider {
+protocol ActivityDataProvider: Sendable {
     /// Returns total active (exercise) calories burned for the given calendar day,
     /// or `nil` when data is unavailable or permission is denied.
     func fetchActiveCaloriesBurned(for date: Date) async -> Double?
