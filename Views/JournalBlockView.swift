@@ -51,6 +51,10 @@ struct JournalBlockView: View {
     @State private var showScoreBreakdown: Bool = false
     /// Prevents duplicate AI triggers when Done button dismisses focus
     @State var skipNextFocusLoss: Bool = false
+    /// True while the user is actively editing — more reliable than @FocusState for
+    /// guarding external rawText syncs, since @FocusState can desync during haptics,
+    /// alerts, and system interruptions.
+    @State var isUserEditing: Bool = false
 
     init(
         meal: Meal,
@@ -163,6 +167,7 @@ struct JournalBlockView: View {
     func handleTextChange(_ newValue: String) {
         let items = self.parseItems(from: newValue)
         self.lastSentItems = items
+        self.isUserEditing = true
         // Forward every keystroke immediately — debounce is handled by the Combine
         // pipeline in MainViewModel.enqueueMealEdit, not in the view.
         self.onLocalUpdate(self.selectedMealType, items)
@@ -170,6 +175,8 @@ struct JournalBlockView: View {
 
     func handleFocusChange(_ focused: Bool) {
         if !focused {
+            self.isUserEditing = false
+
             // Skip if Done button already triggered the update
             if self.skipNextFocusLoss {
                 self.skipNextFocusLoss = false

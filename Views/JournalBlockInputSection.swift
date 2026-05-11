@@ -9,17 +9,20 @@ extension JournalBlockView {
 
     var textInputSection: some View {
         let hasContent = !self.rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let showCheckmark = self.isFocused && hasContent
 
         return VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
                 self.mealTextField
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Green checkmark icon only (no "Done" label) - shown when focused with content
-                if self.isFocused, hasContent {
-                    self.checkmarkButton
-                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                }
+                // Checkmark is always in the layout to keep TextField width stable.
+                // Opacity-only show/hide avoids the layout recalculation that causes
+                // the multiline TextField to briefly render blank when content appears.
+                self.checkmarkButton
+                    .opacity(showCheckmark ? 1 : 0)
+                    .allowsHitTesting(showCheckmark)
+                    .animation(.easeInOut(duration: 0.2), value: showCheckmark)
             }
             self.itemCountFooter
         }
@@ -72,11 +75,12 @@ extension JournalBlockView {
                 self.handleFocusChange(focused)
             }
             .onChange(of: self.meal.items) { _, newItems in
-                // Sync rawText with external meal.items updates.
-                // Only sync when NOT focused (user not actively typing)
-                // and when the new items differ from what we last sent
-                // (prevents AI analysis updates from overwriting live typing).
-                if !self.isFocused, newItems != self.lastSentItems {
+                // Sync rawText with external meal.items updates (e.g. AI score write-back).
+                // Guard on isUserEditing rather than isFocused: @FocusState can desync to
+                // false during haptics, alerts, or scroll events while the keyboard is still
+                // up. isUserEditing is set on every keystroke and cleared only on genuine
+                // focus loss, so it reliably prevents overwriting live typing.
+                if !self.isUserEditing, newItems != self.lastSentItems {
                     let externalText = newItems.joined(separator: "\n")
                     if self.rawText != externalText {
                         self.rawText = externalText
