@@ -134,7 +134,7 @@ final class AIAnalysisCoordinator: AIAnalysisCoordinating {
 
             do {
                 coordinatorLogger
-                    .debug("AI analysis started (item count: \(items.count, privacy: .public))")
+                    .debug("AI analysis started (item count: \(items.count, privacy: .private))")
                 // Check cancellation before the network call to prevent duplicate Firebase requests
                 try Task.checkCancellation()
 
@@ -146,10 +146,10 @@ final class AIAnalysisCoordinator: AIAnalysisCoordinating {
                 #if DEBUG
                     coordinatorLogger
                         .debug(
-                            "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
+                            "AI analysis complete — score: \(result.score, privacy: .private), mood: \(result.mood.rawValue, privacy: .private)"
                         )
                 #else
-                    coordinatorLogger.debug("AI analysis complete for meal \(mealId, privacy: .public)")
+                    coordinatorLogger.debug("AI analysis complete for meal \(mealId, privacy: .private)")
                 #endif
 
                 // Deliver result on MainActor via write-back closure
@@ -164,7 +164,7 @@ final class AIAnalysisCoordinator: AIAnalysisCoordinating {
 
             } catch {
                 coordinatorLogger
-                    .error("AI analysis failed: \(error.localizedDescription, privacy: .public)")
+                    .error("AI analysis failed (meal redacted for privacy)")
                 // Failure is non-critical — MainViewModel handles smiley fallback via context.
             }
         }

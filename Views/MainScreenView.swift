@@ -88,12 +88,7 @@ struct MainScreenView: View {
             },
             mealActions: MealUpdateActions(
                 onUpdate: { mealId, mealType, items in
-                    // Full update - triggers AI analysis (called on "done" actions)
                     self.viewModel.updateMeal(mealId, mealType: mealType, items: items)
-                },
-                onLocalUpdate: { mealId, _, items in
-                    // Enqueue for debounced local update — debounce lives in MainViewModel.
-                    self.viewModel.enqueueMealEdit(mealId: mealId, items: items)
                 },
                 onUpdateTimestamp: { mealId, timestamp in
                     self.viewModel.updateMealTimestamp(mealId, timestamp: timestamp)
@@ -134,11 +129,9 @@ struct MainScreenView: View {
             snapshot: snapshot,
             mealActions: MealUpdateActions(
                 onUpdate: { _, _, _ in },
-                onLocalUpdate: { _, _, _ in },
                 onUpdateTimestamp: { _, _ in },
                 onDelete: { _ in },
                 onCopy: { meal in
-                    // Copy meal to today and navigate to today
                     self.viewModel.copyMealToToday(meal)
                     withAnimation(.easeInOut(duration: AppTheme.Animation.standardDuration)) {
                         self.viewModel.navigateToToday()

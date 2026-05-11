@@ -55,6 +55,17 @@ enum InputValidator {
 
     // MARK: - Validation Functions
 
+    /// Sanitizes an array of meal items: trims whitespace, removes dangerous characters, drops empty results.
+    /// Call this after `validateMealDescription` succeeds so stored items match what was validated.
+    /// This is the SSOT for per-item cleaning — never call `removeDangerousCharacters` directly on items.
+    static func sanitizeMealItems(_ items: [String]) -> [String] {
+        items
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .map { self.removeDangerousCharacters($0) }
+            .filter { !$0.isEmpty }
+    }
+
     static func validateMealDescription(_ text: String) -> Result<String, ValidationError> {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -217,9 +228,11 @@ extension Character {
         let scalars = String(self).unicodeScalars
         return scalars.allSatisfy { scalar in
             let value = scalar.value
-            // Control characters: C0 (0x00-0x1F) and C1 (0x7F-0x9F)
-            return (value <= 0x1f && value != 0x09 && value != 0x0a && value != 0x0d) ||
-                (value >= 0x7f && value <= 0x9f)
+            // Strip all C0 control chars (0x00–0x1F) except LF (0x0A) used for item splitting.
+            // Tabs (0x09) and CR (0x0D) are NOT exempted: they have no meaning in food
+            // descriptions and can manipulate downstream parsers or AI prompt formatting.
+            return (value <= 0x1f && value != 0x0a) ||
+                (value >= 0x7f && value <= 0x9f) // C1 block
         }
     }
 }

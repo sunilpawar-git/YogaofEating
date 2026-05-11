@@ -51,7 +51,7 @@ struct TimePickerSheetView: View {
 #Preview {
     TimePickerSheetView(
         selectedTime: .constant(Date()),
-        onSave: { print("Saved") },
-        onCancel: { print("Cancelled") }
+        onSave: {},
+        onCancel: {}
     )
 }

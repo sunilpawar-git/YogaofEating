@@ -41,20 +41,16 @@
 
         // MARK: - Full pipeline: typing → done → AI score
 
-        func test_pipeline_localScore_then_aiScore() async throws {
+        func test_pipeline_checkmark_triggersAIScore() async throws {
             // Step 1: Create meal
             self.sut.createNewMeal()
             guard let mealId = self.sut.meals.first?.id else { return XCTFail("No meal") }
 
-            // Step 2: Simulate typing (local-only updates)
-            self.sut.updateMealItemsLocalOnly(mealId, items: ["App"])
-            self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple"])
-            XCTAssertEqual(self.sut.meals.first?.healthScore, 0.5, "Local stub score should be 0.5 during typing")
+            // Before submission: meal is new, not analyzed
             XCTAssertFalse(self.sut.meals.first?.isAIAnalyzed ?? true, "Not yet AI analyzed")
-            XCTAssertFalse(self.mockAI.analyzeCalled, "AI should not be called during typing")
+            XCTAssertFalse(self.mockAI.analyzeCalled, "AI must not be called before submission")
 
-            // Step 3: User hits "done" — use the meal's own type to avoid hitting the
-            // mealTypeChanged branch instead of the needsAIAnalysis branch.
+            // Step 2: User presses checkmark — the sole submission path
             let mealType = self.sut.meals.first?.mealType ?? .lunch
             self.mockAI.mockAnalysisResult = MealAnalysisResult(
                 score: 0.85,
@@ -83,8 +79,8 @@
             self.sut.createNewMeal()
             guard let mealId = self.sut.meals.first?.id else { return XCTFail("No meal") }
 
-            // Items must be set before trigger — performDeepAnalysis guards on description.count >= 5
-            self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple salad"])
+            // Set items directly — performDeepAnalysis guards on description.count >= 5
+            self.sut.meals[0].items = ["Apple salad"]
             self.mockAI.mockAnalysisResult = MealAnalysisResult(
                 score: 0.75,
                 mood: .serene,

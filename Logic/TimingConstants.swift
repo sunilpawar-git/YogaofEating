@@ -4,17 +4,6 @@ import Foundation
 /// All async delays, debounce intervals, and polling periods must reference these constants.
 /// Never hardcode nanosecond or millisecond literals in service files, view models, or views.
 enum TimingConstants {
-    // MARK: - Input Debounce
-
-    /// Debounce delay before a free-text meal entry change is persisted (nanoseconds).
-    /// 500 ms balances keystroke responsiveness with reducing unnecessary writes.
-    /// Mirrors AppTheme.TextEntry.debounceNanoseconds — both reference the same semantic value.
-    static let debounceNanoseconds: UInt64 = 500_000_000
-
-    /// Debounce delay in milliseconds — used with Combine's `.debounce(for:scheduler:)`.
-    /// Derived from `debounceNanoseconds` to keep a single SSOT.
-    static let debounceMs: Int = 500
-
     // MARK: - Day Reset Monitoring
 
     /// How often the app polls to detect a calendar-day change and reset the slate (nanoseconds).
