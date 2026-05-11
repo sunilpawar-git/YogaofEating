@@ -94,7 +94,10 @@ final class MockActivityDataProvider: ActivityDataProvider {
         return self.stubbedActiveCalories
     }
 
-    func fetchBasalCaloriesBurned(for _: Date) async -> Double? { self.stubbedBasalCalories }
+    func fetchBasalCaloriesBurned(for _: Date) async -> Double? {
+        self.fetchCallCount += 1
+        return self.stubbedBasalCalories
+    }
 }
 
 // MARK: - MockInsightLifecycleService
