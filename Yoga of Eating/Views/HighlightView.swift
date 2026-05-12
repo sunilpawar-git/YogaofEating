@@ -61,15 +61,6 @@ struct HighlightView: View {
             }
             .padding(.top, 16)
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    self.focusedField = nil
-                }
-                .fontWeight(.semibold)
-            }
-        }
         .scrollDismissesKeyboard(.interactively)
         .onAppear {
             self.sleepNotesText = self.data.sleepNotes ?? ""
