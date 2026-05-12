@@ -184,37 +184,35 @@ class HealthKitService {
             options: .strictStartDate
         )
 
-        return try await withCheckedThrowingContinuation { continuation in
+        // Fetch raw samples on HealthKit's background thread — no main-actor state touched here.
+        let rawSamples: [HKCategorySample]? = try await withCheckedThrowingContinuation { continuation in
             let query = HKSampleQuery(
                 sampleType: sleepType,
                 predicate: predicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
-            ) { [weak self] _, samples, error in
+            ) { _, samples, error in
                 if let error {
                     continuation.resume(throwing: error)
-                    return
-                }
-
-                guard let samples = samples as? [HKCategorySample], !samples.isEmpty else {
-                    Task { @MainActor [weak self] in
-                        if self?.enableSleepLogging == true {
-                            healthKitLogger.debug("No sleep samples found in window")
-                        }
-                        self?.sleepDataCache[normalizedDate] = (nil, Date())
-                    }
-                    continuation.resume(returning: nil)
-                    return
-                }
-
-                Task { @MainActor [weak self] in
-                    let sleepData = self?.processSamples(samples)
-                    self?.sleepDataCache[normalizedDate] = (sleepData, Date())
-                    continuation.resume(returning: sleepData)
+                } else {
+                    continuation.resume(returning: samples as? [HKCategorySample])
                 }
             }
             healthStore.execute(query)
         }
+
+        // Back on the main actor — safe to access all @MainActor-isolated state.
+        guard let samples = rawSamples, !samples.isEmpty else {
+            if self.enableSleepLogging {
+                healthKitLogger.debug("No sleep samples found in window")
+            }
+            self.sleepDataCache[normalizedDate] = (nil, Date())
+            return nil
+        }
+
+        let sleepData = self.processSamples(samples)
+        self.sleepDataCache[normalizedDate] = (sleepData, Date())
+        return sleepData
     }
 
     // MARK: - Private Helpers
