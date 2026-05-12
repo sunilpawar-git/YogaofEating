@@ -197,19 +197,21 @@ class HealthKitService {
                 }
 
                 guard let samples = samples as? [HKCategorySample], !samples.isEmpty else {
-                    if self?.enableSleepLogging == true {
-                        healthKitLogger.debug("No sleep samples found in window")
+                    Task { @MainActor [weak self] in
+                        if self?.enableSleepLogging == true {
+                            healthKitLogger.debug("No sleep samples found in window")
+                        }
+                        self?.sleepDataCache[normalizedDate] = (nil, Date())
                     }
-                    // Cache the nil result too
-                    self?.sleepDataCache[normalizedDate] = (nil, Date())
                     continuation.resume(returning: nil)
                     return
                 }
 
-                let sleepData = self?.processSamples(samples)
-                // Store in cache
-                self?.sleepDataCache[normalizedDate] = (sleepData, Date())
-                continuation.resume(returning: sleepData)
+                Task { @MainActor [weak self] in
+                    let sleepData = self?.processSamples(samples)
+                    self?.sleepDataCache[normalizedDate] = (sleepData, Date())
+                    continuation.resume(returning: sleepData)
+                }
             }
             healthStore.execute(query)
         }
