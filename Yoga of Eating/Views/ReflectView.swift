@@ -15,8 +15,6 @@ struct ReflectView: View {
 
     @State private var journalText: String = ""
 
-    /// Tracks whether the journal field is currently focused so that date navigation
-    /// does not reset the journal while the user is actively typing (Issue 4, Option B).
     @FocusState private var isJournalFocused: Bool
 
     var body: some View {
@@ -61,11 +59,12 @@ struct ReflectView: View {
         .onAppear {
             self.journalText = self.data.journalText ?? ""
         }
-        .onChange(of: self.data) { _, newData in
-            // Option B: don't reset the journal while the user is actively typing.
-            if !self.isJournalFocused {
-                self.journalText = newData.journalText ?? ""
-            }
+        .onChange(of: self.data.date) { _, _ in
+            // Re-initialize text only when the selected date changes (e.g. date navigation).
+            // Reacting to self.data directly caused journal text to vanish when any same-day
+            // background mutation fired (feeling tap, todo toggle, Firestore sync) while the
+            // debounce hadn't saved yet — resetting in-progress text to nil.
+            self.journalText = self.data.journalText ?? ""
         }
         .disabled(!self.data.isToday)
         .opacity(self.data.isToday ? 1.0 : 0.7)
@@ -115,7 +114,8 @@ private struct ReflectSignalChipsSection: View {
                 MindCheckEntry(category: .todo, text: "Read book", context: .morning)
             ],
             isToday: true,
-            detectedSignals: [.clear]
+            detectedSignals: [.clear],
+            date: Calendar.current.startOfDay(for: Date())
         )
     )
 }

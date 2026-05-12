@@ -56,7 +56,8 @@ extension MainViewModel {
             todos: data?.todos ?? [],
             morningThoughts: data?.morningThoughts,
             healthKitSleepData: self.isViewingToday ? self.appleSleepData : nil,
-            isToday: self.isViewingToday
+            isToday: self.isViewingToday,
+            date: Calendar.current.startOfDay(for: self.selectedDate)
         )
     }
 
@@ -71,7 +72,8 @@ extension MainViewModel {
             feeling: data?.feeling,
             morningTodos: highlightTodos,
             isToday: self.isViewingToday,
-            detectedSignals: data?.textSignals ?? []
+            detectedSignals: data?.textSignals ?? [],
+            date: Calendar.current.startOfDay(for: self.selectedDate)
         )
     }
 

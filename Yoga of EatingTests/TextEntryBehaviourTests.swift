@@ -96,5 +96,109 @@
             let saved = self.mockHistorical.getSnapshot(for: Date())?.reflectData?.journalText
             XCTAssertNil(saved)
         }
+
+        // MARK: - Contract Date-Identity Invariants (Regression: text-vanishing bug)
+
+        // These document the invariant HighlightView and ReflectView rely on:
+        // same-day background mutations must NOT change data.date so the view's
+        // onChange(of: data.date) only fires on actual date navigation.
+
+        func test_highlightViewData_date_unchangedWhenSleepQualityUpdated() {
+            let before = self.sut.highlightViewData.date
+            self.sut.updateHighlightSleepQuality(.good)
+            XCTAssertEqual(
+                self.sut.highlightViewData.date,
+                before,
+                "Same-day sleep quality update must not change contract date"
+            )
+        }
+
+        func test_highlightViewData_date_unchangedWhenSleepNotesUpdated() {
+            let before = self.sut.highlightViewData.date
+            self.sut.updateHighlightSleepNotes("Good sleep")
+            XCTAssertEqual(
+                self.sut.highlightViewData.date,
+                before,
+                "Same-day sleep notes update must not change contract date"
+            )
+        }
+
+        func test_highlightViewData_date_unchangedWhenMorningThoughtsUpdated() {
+            let before = self.sut.highlightViewData.date
+            self.sut.updateHighlightMorningThoughts("Feeling good")
+            XCTAssertEqual(
+                self.sut.highlightViewData.date,
+                before,
+                "Same-day morning thoughts update must not change contract date"
+            )
+        }
+
+        func test_highlightViewData_date_unchangedWhenTodoAdded() {
+            let before = self.sut.highlightViewData.date
+            self.sut.addHighlightTodo("Exercise")
+            XCTAssertEqual(
+                self.sut.highlightViewData.date,
+                before,
+                "Same-day todo addition must not change contract date"
+            )
+        }
+
+        func test_highlightViewData_date_changesOnDateNavigation() {
+            let today = self.sut.highlightViewData.date
+            self.sut.navigateToPreviousDay()
+            XCTAssertNotEqual(
+                self.sut.highlightViewData.date,
+                today,
+                "Date navigation must change contract date to trigger view reset"
+            )
+        }
+
+        func test_reflectViewData_date_unchangedWhenFeelingUpdated() {
+            let before = self.sut.reflectViewData.date
+            self.sut.updateReflectFeeling(.calm)
+            XCTAssertEqual(
+                self.sut.reflectViewData.date,
+                before,
+                "Same-day feeling update must not change contract date"
+            )
+        }
+
+        func test_reflectViewData_date_unchangedWhenJournalTextUpdated() {
+            let before = self.sut.reflectViewData.date
+            self.sut.updateReflectJournalText("Today was good")
+            XCTAssertEqual(
+                self.sut.reflectViewData.date,
+                before,
+                "Same-day journal text update must not change contract date"
+            )
+        }
+
+        func test_reflectViewData_date_changesOnDateNavigation() {
+            let today = self.sut.reflectViewData.date
+            self.sut.navigateToPreviousDay()
+            XCTAssertNotEqual(
+                self.sut.reflectViewData.date,
+                today,
+                "Date navigation must change contract date to trigger view reset"
+            )
+        }
+
+        // Confirms that a same-day data change leaves date unchanged in the contract,
+        // meaning HighlightView's onChange(of: data.date) will NOT fire — text is safe.
+        func test_highlightViewContract_sleepNotesChange_dateIdentityPreserved() {
+            let contractBefore = self.sut.highlightViewData
+            self.sut.updateHighlightSleepQuality(.great)
+            let contractAfter = self.sut.highlightViewData
+            XCTAssertEqual(
+                contractBefore.date,
+                contractAfter.date,
+                "Contract date must be identical after same-day mutation"
+            )
+            XCTAssertNotEqual(
+                contractBefore,
+                contractAfter,
+                "Contract equality detects the quality change (non-date field changed)"
+            )
+        }
     }
 #endif

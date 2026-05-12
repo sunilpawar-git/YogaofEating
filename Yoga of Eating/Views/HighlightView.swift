@@ -20,8 +20,6 @@ struct HighlightView: View {
     @State private var morningThoughtsText: String = ""
     @State private var newTodoText: String = ""
 
-    /// Tracks which text field is currently focused so that date navigation
-    /// does not reset a field the user is actively typing in (Issue 4, Option B).
     @FocusState private var focusedField: HighlightFocusField?
 
     var body: some View {
@@ -66,14 +64,13 @@ struct HighlightView: View {
             self.sleepNotesText = self.data.sleepNotes ?? ""
             self.morningThoughtsText = self.data.morningThoughts ?? ""
         }
-        .onChange(of: self.data) { _, newData in
-            // Option B: skip resetting a field if the user is currently typing in it.
-            if self.focusedField != .sleepNotes {
-                self.sleepNotesText = newData.sleepNotes ?? ""
-            }
-            if self.focusedField != .morningThoughts {
-                self.morningThoughtsText = newData.morningThoughts ?? ""
-            }
+        .onChange(of: self.data.date) { _, _ in
+            // Re-initialize text only when the selected date changes (e.g. date navigation).
+            // Reacting to self.data directly caused text to vanish: any same-day background
+            // mutation (HealthKit callback, Firestore sync, quality tap) would fire this
+            // handler while the debounce hadn't saved yet, resetting in-progress text to nil.
+            self.sleepNotesText = self.data.sleepNotes ?? ""
+            self.morningThoughtsText = self.data.morningThoughts ?? ""
         }
         .disabled(!self.data.isToday)
         .opacity(self.data.isToday ? 1.0 : 0.7)
@@ -100,7 +97,8 @@ enum HighlightFocusField: Hashable {
             ],
             morningThoughts: "Feeling rested and ready",
             healthKitSleepData: nil,
-            isToday: true
+            isToday: true,
+            date: Calendar.current.startOfDay(for: Date())
         )
     )
 }

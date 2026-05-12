@@ -128,6 +128,128 @@ final class TabViewDataIsolationTests: XCTestCase {
         XCTAssertTrue(data.isToday)
     }
 
+    // MARK: - Contract Date Identity Tests
+
+    func test_highlightViewContract_dateMatchesToday_whenViewingToday() {
+        let data = self.viewModel.highlightViewData
+        let today = Calendar.current.startOfDay(for: Date())
+        XCTAssertEqual(data.date, today)
+    }
+
+    func test_highlightViewContract_dateMatchesYesterday_afterNavigation() {
+        let yesterday = Calendar.current.startOfDay(
+            for: Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        )
+        self.viewModel.selectedDate = yesterday
+        let data = self.viewModel.highlightViewData
+        XCTAssertEqual(data.date, yesterday)
+    }
+
+    func test_highlightViewContract_sameContentSameDate_isEqual() {
+        let fixedDate = Calendar.current.startOfDay(for: Date())
+        let a = HighlightViewContract(
+            sleepQuality: .good,
+            sleepNotes: "Hello",
+            todos: [],
+            morningThoughts: nil,
+            healthKitSleepData: nil,
+            isToday: true,
+            date: fixedDate
+        )
+        let b = HighlightViewContract(
+            sleepQuality: .good,
+            sleepNotes: "Hello",
+            todos: [],
+            morningThoughts: nil,
+            healthKitSleepData: nil,
+            isToday: true,
+            date: fixedDate
+        )
+        XCTAssertEqual(a, b)
+    }
+
+    func test_highlightViewContract_sameContentDifferentDate_isNotEqual() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+        let a = HighlightViewContract(
+            sleepQuality: nil,
+            sleepNotes: nil,
+            todos: [],
+            morningThoughts: nil,
+            healthKitSleepData: nil,
+            isToday: true,
+            date: today
+        )
+        let b = HighlightViewContract(
+            sleepQuality: nil,
+            sleepNotes: nil,
+            todos: [],
+            morningThoughts: nil,
+            healthKitSleepData: nil,
+            isToday: false,
+            date: yesterday
+        )
+        XCTAssertNotEqual(a, b)
+    }
+
+    func test_reflectViewContract_dateMatchesToday_whenViewingToday() {
+        let data = self.viewModel.reflectViewData
+        let today = Calendar.current.startOfDay(for: Date())
+        XCTAssertEqual(data.date, today)
+    }
+
+    func test_reflectViewContract_dateMatchesYesterday_afterNavigation() {
+        let yesterday = Calendar.current.startOfDay(
+            for: Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        )
+        self.viewModel.selectedDate = yesterday
+        let data = self.viewModel.reflectViewData
+        XCTAssertEqual(data.date, yesterday)
+    }
+
+    func test_reflectViewContract_sameContentSameDate_isEqual() {
+        let fixedDate = Calendar.current.startOfDay(for: Date())
+        let a = ReflectViewContract(
+            journalText: "Hello",
+            feeling: .calm,
+            morningTodos: [],
+            isToday: true,
+            detectedSignals: [],
+            date: fixedDate
+        )
+        let b = ReflectViewContract(
+            journalText: "Hello",
+            feeling: .calm,
+            morningTodos: [],
+            isToday: true,
+            detectedSignals: [],
+            date: fixedDate
+        )
+        XCTAssertEqual(a, b)
+    }
+
+    func test_reflectViewContract_sameContentDifferentDate_isNotEqual() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+        let a = ReflectViewContract(
+            journalText: nil,
+            feeling: nil,
+            morningTodos: [],
+            isToday: true,
+            detectedSignals: [],
+            date: today
+        )
+        let b = ReflectViewContract(
+            journalText: nil,
+            feeling: nil,
+            morningTodos: [],
+            isToday: false,
+            detectedSignals: [],
+            date: yesterday
+        )
+        XCTAssertNotEqual(a, b)
+    }
+
     // MARK: - Date Sync Tests
 
     func test_tabData_syncWithSelectedDate() {
