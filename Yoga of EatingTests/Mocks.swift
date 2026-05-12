@@ -55,7 +55,34 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     }
 
     func saveHistoricalData() {}
-    func syncToFirebase() async throws {}
+
+    // MARK: - Sync spy
+
+    var syncToFirebaseCalled = false
+    var syncToFirebaseCallCount = 0
+    var syncToFirebaseShouldThrow = false
+
+    func syncToFirebase() async throws {
+        self.syncToFirebaseCalled = true
+        self.syncToFirebaseCallCount += 1
+        if self.syncToFirebaseShouldThrow {
+            throw AppError.syncUploadFailed(
+                underlying: NSError(domain: "MockSync", code: 1, userInfo: nil)
+            )
+        }
+    }
+
+    // MARK: - Restore spy
+
+    var restoreFromFirebaseCalled = false
+    var restoreFromFirebaseShouldThrow = false
+
+    func restoreFromFirebase() async throws {
+        self.restoreFromFirebaseCalled = true
+        if self.restoreFromFirebaseShouldThrow {
+            throw AppError.syncAuthRequired
+        }
+    }
 
     func clearAllData() {
         self.clearAllDataCalled = true

@@ -25,7 +25,8 @@
       "Bash(swift /tmp/verify_logic.swift)",
       "Bash(sort -k2)",
       "Bash(awk '{print $2}')",
-      "Bash(ruby -e ' *)"
+      "Bash(ruby -e ' *)",
+      "Bash(git diff *)"
     ]
   }
 }

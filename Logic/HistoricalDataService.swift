@@ -47,6 +47,11 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// Updates or adds the enriched insight for a specific date.
     func updateEnrichedInsight(for date: Date, insight: EnrichedDailyInsight)
 
+    /// Downloads all snapshots from Firebase and merges them into local storage.
+    /// Throws `AppError.syncAuthRequired` when not authenticated.
+    /// No-op when the cloud returns no data; saves to disk after a successful restore.
+    func restoreFromFirebase() async throws
+
     /// Returns incomplete .todo entries from the given date's snapshot, each with
     /// carriedOverCount incremented by 1. Used by resetDay() to seed the next day's todos.
     func incompleteTodosForCarryOver(from date: Date) -> [MindCheckEntry]

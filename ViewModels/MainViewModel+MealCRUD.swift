@@ -273,6 +273,13 @@ extension MainViewModel {
         self.currentBriefing = nil
 
         self.saveData()
+
+        // Auto-sync the just-archived day to Firebase in the background.
+        // Fire-and-forget: sync failure is silently ignored so it never blocks the day reset.
+        Task { [weak self] in
+            guard let self else { return }
+            try? await self.historicalService.syncToFirebase()
+        }
     }
 
     /// Completely deletes all app data including meals, history, and resets to factory state.
@@ -286,6 +293,10 @@ extension MainViewModel {
 
         self.historicalService.clearAllData()
         self.persistenceService.deleteAll()
+
+        // Write an empty-but-valid persistence file so the next cold launch does not
+        // mistake the missing file for a "fresh install" and restore the just-deleted data.
+        self.saveData()
 
         for key in StorageKeys.allKeys {
             UserDefaults.standard.removeObject(forKey: key)

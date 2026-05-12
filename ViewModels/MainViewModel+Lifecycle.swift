@@ -19,6 +19,11 @@ extension MainViewModel {
             if self.todaysSleepQuality != nil {
                 self.fetchAppleSleepDataForBadge()
             }
+        } else {
+            // No local persistence file — fresh install or Xcode reinstall.
+            // Attempt to restore historical data from Firebase so the user's
+            // past entries reappear after a device/simulator wipe.
+            self.triggerCloudRestoreIfNeeded()
         }
 
         // Hydrate today's briefing from persisted snapshot (independent of persistence load)
@@ -30,6 +35,15 @@ extension MainViewModel {
 
         // Refresh today's activity data for a live TDEE in the calorie pill
         self.refreshActivityDataIfNeeded()
+    }
+
+    /// Kicks off a background restore from Firebase when no local persistence file exists.
+    /// Fire-and-forget: throws `syncAuthRequired` (silently) when not signed in.
+    func triggerCloudRestoreIfNeeded() {
+        Task { [weak self] in
+            guard let self else { return }
+            try? await self.historicalService.restoreFromFirebase()
+        }
     }
 
     func fetchAppleSleepDataForBadge() {
