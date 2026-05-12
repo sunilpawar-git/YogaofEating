@@ -20,6 +20,17 @@ extension HistoricalDataService {
         self.saveHistoricalData()
     }
 
+    // MARK: - Cloud Restore
+
+    func restoreFromFirebase() async throws {
+        let snapshots = try await self.syncHandler.restore()
+        guard !snapshots.isEmpty else { return }
+        for snapshot in snapshots {
+            self.historicalData.addOrUpdate(snapshot: snapshot)
+        }
+        self.saveHistoricalData()
+    }
+
     func clearAllData() {
         self.historicalData = HistoricalData()
     }

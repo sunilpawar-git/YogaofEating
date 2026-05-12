@@ -88,6 +88,13 @@ class MockCloudSyncService: CloudSyncServiceProtocol {
     var batchUploadCalled = false
     var shouldFail = false
 
+    // MARK: - Restore stubs
+
+    /// Snapshots returned by `fetchAllSnapshots`. Empty by default.
+    var stubbedFetchedSnapshots: [DailySmileySnapshot] = []
+    var fetchAllSnapshotsCalled = false
+    var fetchShouldFail = false
+
     func upload(snapshot: DailySmileySnapshot, userId _: String) async throws {
         self.uploadCalled = true
         if self.shouldFail {
@@ -108,5 +115,17 @@ class MockCloudSyncService: CloudSyncServiceProtocol {
         for chunk in chunks {
             self.batchUploadedSnapshots.append(chunk)
         }
+    }
+
+    func fetchAllSnapshots(userId _: String) async throws -> [DailySmileySnapshot] {
+        self.fetchAllSnapshotsCalled = true
+        if self.fetchShouldFail {
+            throw NSError(
+                domain: "CloudSync",
+                code: 4,
+                userInfo: [NSLocalizedDescriptionKey: "Fetch failed"]
+            )
+        }
+        return self.stubbedFetchedSnapshots
     }
 }

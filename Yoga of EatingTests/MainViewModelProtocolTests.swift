@@ -110,4 +110,5 @@ final class SetMainViewModelTrackingService: ObservableObject, HistoricalDataSer
     func updateEnrichedInsight(for _: Date, insight _: EnrichedDailyInsight) {}
     func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] { [] }
     func foodDebtStartingState(relativeTo _: Date) -> SmileyState { .neutral }
+    func restoreFromFirebase() async throws {}
 }

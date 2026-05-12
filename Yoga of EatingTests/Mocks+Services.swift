@@ -9,8 +9,11 @@ class MockPersistenceService: PersistenceServiceProtocol {
     var saveCalled = false
     var deleteAllCalled = false
 
+    /// Stub the return value of `load()`. nil by default (simulates fresh install / missing file).
+    var stubbedLoadData: PersistenceService.AppData?
+
     func load() -> PersistenceService.AppData? {
-        nil
+        self.stubbedLoadData
     }
 
     func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {
