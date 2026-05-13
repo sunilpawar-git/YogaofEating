@@ -160,27 +160,12 @@ final class WeeklyInsightTests: XCTestCase {
 
     @MainActor
     func test_insightService_generatesWeeklyInsight() async {
-        // Given
+        // Phase 3: generateWeeklyInsight is suppressed (returns nil).
+        // WeeklyInsight model is deleted in Phase 5.
         let mockHistorical = MockHistoricalDataService()
         let service = InsightGenerationService(historicalService: mockHistorical)
-
-        // Add 7 days of data
-        let calendar = Calendar.current
-        let today = Date()
-        for daysAgo in 0..<7 {
-            let date = calendar.date(byAdding: .day, value: -daysAgo, to: today)!
-            let snapshot = DailySmileySnapshotBuilder()
-                .withDate(date)
-                .withMeals([MealBuilder().withMealType(.lunch).withItems(["Salad"]).withScore(0.8).build()])
-                .build()
-            mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
-        }
-
-        // When
         let weeklyInsight = await service.generateWeeklyInsight()
-
-        // Then
-        XCTAssertNotNil(weeklyInsight)
+        XCTAssertNil(weeklyInsight, "generateWeeklyInsight suppressed in Phase 3")
     }
 
     // MARK: - Strings Tests

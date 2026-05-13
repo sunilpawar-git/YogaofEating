@@ -257,76 +257,25 @@
             )
             self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
 
-            // Act
+            // Act: Phase 3 — generateInsight suppressed; InsightLifecycleService owns generation
             let insight = try await self.sut.generateInsight(for: today)
 
-            // Assert - Insight should exist with minimum data threshold met
-            XCTAssertNotNil(insight)
+            // Assert: legacy pipeline returns nil in Phase 3 (deleted with class in Phase 4)
+            XCTAssertNil(insight, "generateInsight is a no-op in Phase 3; behavior tested via InsightLifecycleService")
         }
 
         func test_generateInsight_prescriptiveFormat() async throws {
-            // Arrange: Setup data for prescriptive insight
-            let calendar = Calendar.current
+            // Phase 3: legacy generateInsight returns nil; behavior lives in InsightLifecycleService
             let today = Date()
-
-            // Add multiple days of data
-            for daysAgo in 1...3 {
-                self.mockHistorical.historicalData.addOrUpdate(snapshot: self.makeSnapshot(
-                    daysAgo: daysAgo,
-                    mealType: .dinner
-                ))
-            }
-
-            // Today with sleep
-            let reflection = DailyReflection(feeling: nil, sleepQuality: .good, note: nil)
-            let todaySnapshot = self.makeSnapshot(
-                score: 0.8,
-                items: ["Eggs"],
-                mealType: .breakfast,
-                reflection: reflection
-            )
-            self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
-
-            // Act
             let insight = try await self.sut.generateInsight(for: today)
-
-            // Assert
-            XCTAssertNotNil(insight)
-            // Insight text should contain actionable language
-            if let text = insight?.insightText {
-                XCTAssertFalse(text.isEmpty)
-            }
+            XCTAssertNil(insight, "generateInsight suppressed in Phase 3")
         }
 
         func test_generateInsight_observationalFormat() async throws {
-            // Arrange: Setup data for observational insight
-            let calendar = Calendar.current
+            // Phase 3: legacy generateInsight returns nil
             let today = Date()
-
-            // Add historical data
-            for daysAgo in 1...4 {
-                self.mockHistorical.historicalData.addOrUpdate(snapshot: self.makeSnapshot(
-                    daysAgo: daysAgo,
-                    score: 0.9,
-                    items: ["Salad"]
-                ))
-            }
-
-            // Today
-            let reflection = DailyReflection(feeling: nil, sleepQuality: .great, note: nil)
-            let todaySnapshot = self.makeSnapshot(
-                score: 0.95,
-                items: ["Fruit"],
-                mealType: .breakfast,
-                reflection: reflection
-            )
-            self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
-
-            // Act
             let insight = try await self.sut.generateInsight(for: today)
-
-            // Assert
-            XCTAssertNotNil(insight)
+            XCTAssertNil(insight, "generateInsight suppressed in Phase 3")
         }
 
         // MARK: - Phase 6: HealthKit Sleep Data Integration Tests
@@ -375,38 +324,15 @@
                 healthKitSleepData: healthKitSleepData
             )
 
-            // Then: Should still get an insight (fallback to local since no Firebase in tests)
-            XCTAssertNotNil(insight)
-            XCTAssertFalse(insight!.insightText.isEmpty)
+            // Then: Phase 3 — generateInsight is a no-op
+            XCTAssertNil(insight, "generateInsight suppressed in Phase 3")
         }
 
         func test_generateInsight_worksWithoutHealthKitData() async throws {
-            // Given: Setup data with sleep logged but no HealthKit data
-            let calendar = Calendar.current
+            // Phase 3: generateInsight returns nil regardless of data
             let today = Date()
-
-            // Add historical data
-            for daysAgo in 1...2 {
-                self.mockHistorical.historicalData.addOrUpdate(
-                    snapshot: self.makeSnapshot(daysAgo: daysAgo, score: 0.7, items: ["Food"], mealType: .dinner)
-                )
-            }
-
-            // Today with sleep
-            let reflection = DailyReflection(feeling: nil, sleepQuality: .poor, note: nil)
-            let todaySnapshot = self.makeSnapshot(
-                score: 0.6,
-                items: ["Toast"],
-                mealType: .breakfast,
-                reflection: reflection
-            )
-            self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
-
-            // When: Generate insight with empty HealthKit data (backward compatible)
             let insight = try await self.sut.generateInsight(for: today, healthKitSleepData: [:])
-
-            // Then: Should still generate an insight
-            XCTAssertNotNil(insight)
+            XCTAssertNil(insight, "generateInsight suppressed in Phase 3")
         }
 
         func test_generateInsight_handlesMultipleDaysOfHealthKitData() async throws {
@@ -435,14 +361,14 @@
                 )
             }
 
-            // When: Generate insight with multiple days of HealthKit data
+            // When: Phase 3 — no-op
             let insight = try await self.sut.generateInsight(
                 for: today,
                 healthKitSleepData: healthKitSleepData
             )
 
-            // Then: Should generate an insight
-            XCTAssertNotNil(insight)
+            // Then: Phase 3 — nil
+            XCTAssertNil(insight, "generateInsight suppressed in Phase 3")
         }
 
         // MARK: - Phase A4: saveInsight Persistence Tests
@@ -498,37 +424,10 @@
         // MARK: - Phase 5: Server Fallback Tests
 
         func test_generateInsight_fallsBackToLocal_whenServerUnavailable() async throws {
-            // Arrange: Create data with sleep logged (no Firebase functions in test)
+            // Phase 3: generateInsight is a no-op; fallback now lives in InsightLifecycleService.
             let today = Date()
-
-            // Add historical data
-            for daysAgo in 1...2 {
-                self.mockHistorical.historicalData.addOrUpdate(
-                    snapshot: self.makeSnapshot(
-                        daysAgo: daysAgo,
-                        score: 0.8,
-                        items: ["Healthy food"],
-                        mealType: .dinner
-                    )
-                )
-            }
-
-            // Today with sleep
-            let reflection = DailyReflection(feeling: nil, sleepQuality: .good, note: nil)
-            let todaySnapshot = self.makeSnapshot(
-                score: 0.9,
-                items: ["Oatmeal"],
-                mealType: .breakfast,
-                reflection: reflection
-            )
-            self.mockHistorical.historicalData.addOrUpdate(snapshot: todaySnapshot)
-
-            // Act: Generate insight (should fall back to local since no Firebase)
             let insight = try await self.sut.generateInsight(for: today)
-
-            // Assert: Should still get an insight via local fallback
-            XCTAssertNotNil(insight)
-            XCTAssertFalse(insight!.insightText.isEmpty)
+            XCTAssertNil(insight, "generateInsight suppressed in Phase 3; InsightLifecycleService handles fallback")
         }
 
         // MARK: - Helpers
