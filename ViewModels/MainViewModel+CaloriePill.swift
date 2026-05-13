@@ -13,10 +13,7 @@ extension MainViewModel {
     ///
     /// Always returns a non-nil `CaloriePillData`; callers rely on `isVisible` to hide the pill.
     var caloriePillData: CaloriePillData {
-        let consumed = self.meals
-            .compactMap(\.estimatedCalories)
-            .reduce(0, +)
-
+        let consumed = self.totalConsumedCalories
         let tdee = self.resolvedTDEE()
         return CaloriePillData(consumed: consumed, tdee: tdee)
     }
@@ -32,6 +29,12 @@ extension MainViewModel {
     }
 
     // MARK: - Private
+
+    /// Total estimated calories consumed today across all logged meals.
+    /// Single source of truth — used by both `caloriePillData` and `calorieDetailData`.
+    private var totalConsumedCalories: Int {
+        self.meals.compactMap(\.estimatedCalories).reduce(0, +)
+    }
 
     /// Resolves today's TDEE using the best available data source.
     private func resolvedTDEE() -> Int? {
@@ -60,7 +63,7 @@ extension MainViewModel {
 
     /// Full breakdown data for `CalorieDetailSheet`, including per-meal entries and activity calories.
     var calorieDetailData: CalorieDetailData {
-        let consumed = self.meals.compactMap(\.estimatedCalories).reduce(0, +)
+        let consumed = self.totalConsumedCalories
         let tdee = self.resolvedTDEE()
         return CalorieDetailData(
             consumed: consumed,

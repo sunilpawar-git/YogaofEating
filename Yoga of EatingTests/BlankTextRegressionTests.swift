@@ -1,16 +1,13 @@
 import XCTest
 @testable import Yoga_of_Eating
 
-/// Regression tests: rapid AI analysis completions must not blank out meal items.
+/// Regression tests: AI analysis completions must not overwrite meal items.
 ///
-/// Root cause: bare `Task {}` blocks in `updateMealItems`/`updateMeal` caused
-/// multiple concurrent Firebase calls to race. Each completion wrote back to
-/// `meals[i]`, triggering rapid `@Published var meals` emissions. The
-/// `JournalBlockInputSection` onChange guard on `meal.items` could fire with
-/// empty items if `@FocusState` momentarily reset between renders.
-///
-/// After Phase 1 (aiTasks cancellation fix), only one task runs at a time per
-/// meal, so the race is eliminated.
+/// Root cause (historical): concurrent Firebase calls raced to write back to
+/// `meals[i]`, causing `@Published var meals` emissions that could blank the TextField.
+/// Fixed by: (1) single tracked task per meal in AIAnalysisCoordinator, and
+/// (2) removing the keystroke→ViewModel pipeline entirely (checkmark-only submission).
+/// These tests now verify the coordinator-level isolation via updateMeal.
 @MainActor
 final class BlankTextRegressionTests: XCTestCase {
     // MARK: - Helpers
@@ -28,7 +25,7 @@ final class BlankTextRegressionTests: XCTestCase {
 
     // MARK: - Meal items not blanked by concurrent completions
 
-    func test_activeTyping_aiAnalysisCompletion_doesNotClearMealItems() async throws {
+    func test_submission_aiAnalysisCompletion_doesNotClearMealItems() async throws {
         let mockAI = InstantMockAILogicService()
         let vm = self.makeVM(mockAI: mockAI)
 
@@ -36,10 +33,7 @@ final class BlankTextRegressionTests: XCTestCase {
         let mealId = vm.meals[0].id
         let typedItems = ["chicken salad with avocado"]
 
-        // Simulate user typing (local-only update)
-        vm.updateMealItemsLocalOnly(mealId, items: typedItems)
-
-        // Simulate user hitting "done" while a concurrent analysis might have been in-flight
+        // User presses checkmark — sole submission path in simplified design
         vm.updateMeal(mealId, mealType: .lunch, items: typedItems)
 
         // Wait for the single tracked task to complete
@@ -53,7 +47,7 @@ final class BlankTextRegressionTests: XCTestCase {
         )
     }
 
-    func test_rapidLocalUpdates_thenAICompletion_itemsRetainLastTypedValue() async throws {
+    func test_submission_aiCompletion_itemsRetainSubmittedValue() async throws {
         let mockAI = InstantMockAILogicService()
         let vm = self.makeVM(mockAI: mockAI)
 
@@ -61,13 +55,7 @@ final class BlankTextRegressionTests: XCTestCase {
         let mealId = vm.meals[0].id
         let finalItems = ["lentil soup"]
 
-        // Simulate rapid local-only typing
-        vm.updateMealItemsLocalOnly(mealId, items: ["l"])
-        vm.updateMealItemsLocalOnly(mealId, items: ["le"])
-        vm.updateMealItemsLocalOnly(mealId, items: ["len"])
-        vm.updateMealItemsLocalOnly(mealId, items: finalItems)
-
-        // User hits done — triggers single tracked AI task
+        // User presses checkmark with final content — triggers single tracked AI task
         vm.updateMeal(mealId, mealType: .dinner, items: finalItems)
 
         try await Task.sleep(nanoseconds: 100_000_000)

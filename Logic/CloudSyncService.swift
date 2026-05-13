@@ -9,6 +9,8 @@ private let syncLogger = Logger(subsystem: "com.yogaofeating", category: "CloudS
 protocol CloudSyncServiceProtocol {
     func upload(snapshot: DailySmileySnapshot, userId: String) async throws
     func uploadBatch(snapshots: [DailySmileySnapshot], userId: String) async throws
+    /// Downloads all snapshots stored in the cloud for the given user.
+    func fetchAllSnapshots(userId: String) async throws -> [DailySmileySnapshot]
 }
 
 /// Service for interacting with Firebase Firestore to sync heatmap data.
@@ -75,6 +77,20 @@ class CloudSyncService: CloudSyncServiceProtocol {
                 throw error
             }
         }
+    }
+
+    /// Downloads all snapshots for the given user from Firestore.
+    func fetchAllSnapshots(userId: String) async throws -> [DailySmileySnapshot] {
+        guard let db = self.db else { return [] }
+
+        let querySnapshot = try await db.collection("users").document(userId)
+            .collection(self.collectionName).getDocuments()
+
+        let snapshots = querySnapshot.documents.compactMap { doc -> DailySmileySnapshot? in
+            try? self.decode(doc.data())
+        }
+        syncLogger.info("Fetched \(snapshots.count) snapshots from cloud for restore")
+        return snapshots
     }
 
     // MARK: - Helpers

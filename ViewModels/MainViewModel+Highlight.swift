@@ -116,13 +116,15 @@ extension MainViewModel {
             return
         }
 
-        // Validate non-empty thoughts
+        // Validate non-empty thoughts — extractor runs AFTER validation (security boundary)
         switch InputValidator.validateMorningThoughts(trimmed) {
         case let .success(sanitized):
             var data = self.currentOrNewHighlightData()
             data.morningThoughts = sanitized
+            data.textSignals = self.textSignalExtractor.extractSignals(from: sanitized, context: .morningThoughts)
             data.lastModified = Date()
             self.historicalService.updateHighlightData(for: self.selectedDate, data: data)
+            self.synthesisScheduler.schedule(.morningThoughtsChanged)
         case let .failure(error):
             self.lastValidationError = error
             self.showValidationErrorAlert = true

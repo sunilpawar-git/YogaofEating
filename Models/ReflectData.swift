@@ -9,16 +9,21 @@ struct ReflectData: Codable, Equatable {
     /// How the user felt overall at end of day
     var feeling: ReflectionFeeling?
 
+    /// Structured signals extracted from journalText. Added in Synthesis Layer phase.
+    var textSignals: [TextSignal]?
+
     /// When this data was last modified (for auto-save tracking)
     var lastModified: Date
 
     init(
         journalText: String? = nil,
         feeling: ReflectionFeeling? = nil,
+        textSignals: [TextSignal]? = nil,
         lastModified: Date = Date()
     ) {
         self.journalText = journalText
         self.feeling = feeling
+        self.textSignals = textSignals
         self.lastModified = lastModified
     }
 

@@ -49,7 +49,8 @@
 
             XCTAssertEqual(self.sut.meals.count, 1)
             XCTAssertEqual(self.sut.meals.first?.items, ["Salad"])
-            XCTAssertEqual(self.sut.smileyState.scale, 0.9)
+            // Synthesis engine drives mood — scale is an implementation detail
+            XCTAssertEqual(self.sut.smileyState.mood, .serene)
         }
 
         func test_updatingMeal_withTypeAndItems_updatesCorrectly() throws {

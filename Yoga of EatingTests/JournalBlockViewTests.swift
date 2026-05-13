@@ -203,26 +203,6 @@
             )
         }
 
-        // MARK: - Phase 5: Combine Debounce Tests (debounce moved to MainViewModel)
-
-        /// Debounce is now handled by the Combine pipeline in MainViewModel.
-        /// Verifies that `TimingConstants.debounceMs` is set to a value that
-        /// balances keystroke responsiveness with reducing unnecessary writes.
-        func test_combineDebounce_timingConstant_isConfiguredForBalancedFeedback() {
-            let expectedMs = 500
-            XCTAssertEqual(
-                TimingConstants.debounceMs,
-                expectedMs,
-                "Combine debounce should be 500 ms — balances responsiveness with reducing writes"
-            )
-        }
-
-        /// Verifies that the debounce timing constant is within a sensible UX range.
-        func test_combineDebounce_timingConstant_isReasonable() {
-            XCTAssertGreaterThanOrEqual(TimingConstants.debounceMs, 100, "Debounce must be at least 100 ms")
-            XCTAssertLessThanOrEqual(TimingConstants.debounceMs, 1000, "Debounce must be at most 1 s")
-        }
-
         // MARK: - Checkmark Button Tests (Simplified Pattern)
 
         /// Tests that the checkmark button is shown only when focused + has content.

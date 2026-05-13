@@ -19,19 +19,19 @@
             XCTAssertGreaterThan(AppTheme.TextEntry.maxCharacters, 0)
         }
 
-        // MARK: - Debounce
+        // MARK: - Debounce (Highlight/Reflect text-entry settle delay)
 
         func test_debounceNanoseconds_is500ms() {
             XCTAssertEqual(
                 AppTheme.TextEntry.debounceNanoseconds,
                 500_000_000,
-                "Auto-save debounce must be 500 ms (SSOT)"
+                "Highlight/Reflect text-entry settle delay must be 500 ms"
             )
         }
 
         func test_debounceNanoseconds_isReasonableForUX() {
-            let min: UInt64 = 300_000_000 // 300 ms — below this feels laggy to persist
-            let max: UInt64 = 1_000_000_000 // 1 s — above this the user notices the delay
+            let min: UInt64 = 300_000_000
+            let max: UInt64 = 1_000_000_000
             XCTAssertGreaterThanOrEqual(AppTheme.TextEntry.debounceNanoseconds, min)
             XCTAssertLessThanOrEqual(AppTheme.TextEntry.debounceNanoseconds, max)
         }
@@ -44,17 +44,6 @@
                 AppTheme.TextEntry.maxCharacters,
                 1000,
                 "JournalBlockView must use AppTheme.TextEntry.maxCharacters (1000)"
-            )
-        }
-
-        func test_timingConstants_debounceMs_matchesAppThemeNanoseconds() {
-            // Phase 5: debounce moved to MainViewModel Combine pipeline.
-            // TimingConstants.debounceMs must stay in sync with AppTheme.TextEntry.debounceNanoseconds.
-            let expectedMs = Int(AppTheme.TextEntry.debounceNanoseconds / 1_000_000)
-            XCTAssertEqual(
-                TimingConstants.debounceMs,
-                expectedMs,
-                "TimingConstants.debounceMs must stay aligned with AppTheme.TextEntry.debounceNanoseconds"
             )
         }
     }

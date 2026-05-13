@@ -42,6 +42,9 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Whether the briefing detail sheet is shown
     @Published var showBriefingSheet: Bool = false
 
+    /// Whether the wellbeing breakdown sheet is shown (opened via smiley long-press)
+    @Published var showBreakdownSheet: Bool = false
+
     /// Suggested sleep quality from Apple HealthKit (if available)
     @Published var suggestedSleepQuality: SleepQuality?
 
@@ -85,6 +88,12 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Stored so it is cancelled on deinit (no duplicate fetch on tab re-open).
     var sleepHighlightTask: Task<Void, Never>?
 
+    /// Tracked task for the activity-data refresh pipeline.
+    /// Cancelled and replaced on each call to `refreshActivityDataIfNeeded()`.
+    /// Not `private` because the setter is in a separate extension file (MainViewModel+Lifecycle.swift).
+    /// No code outside of `refreshActivityDataIfNeeded()` should write this property.
+    var activityRefreshTask: Task<Void, Never>?
+
     // MARK: - Day Navigation (Phase 4)
 
     /// The currently selected date for viewing. Defaults to today.
@@ -105,6 +114,10 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     let healthProfileService: HealthProfileServiceProtocol
     let insightService: InsightGenerationServiceProtocol
     let activityProvider: ActivityDataProvider
+    let textSignalExtractor: any TextSignalExtracting
+    let synthesisEngine: any DailySynthesizing
+    let insightLifecycleService: any InsightLifecycling
+    let synthesisScheduler: any SynthesisScheduling
 
     // MARK: - Activity Data (R4: TDEE resolution chain)
 
@@ -114,13 +127,15 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Basal (resting) calories burned today, sourced from `activityProvider`.
     @Published var todayBasalCalories: Double?
 
+    /// Timestamp of the last successful activity data fetch.
+    /// Used by `refreshActivityDataIfNeeded()` to enforce the cooldown window.
+    /// Written only from `refreshActivityDataIfNeeded()` in MainViewModel+Lifecycle.swift.
+    /// Not `private(set)` because Swift does not support that modifier across extension files,
+    /// but no View should ever write to this property.
+    var lastActivityDataFetchDate: Date?
+
     /// Combine subscriptions held for the lifetime of the ViewModel.
     private var cancellables = Set<AnyCancellable>()
-
-    /// Subject that receives raw (mealId, items) pairs on every keystroke.
-    /// The debounce pipeline downstream collapses rapid edits before forwarding
-    /// to `updateMealItemsLocalOnly`. Owned by the ViewModel — never exposed to views.
-    private let mealEditSubject = PassthroughSubject<(UUID, [String]), Never>()
 
     /// Cached formatter for the selected date display. Allocated once per VM instance
     /// rather than on every call to `formattedSelectedDate`.
@@ -138,6 +153,10 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         insightService: InsightGenerationServiceProtocol? = nil,
         aiCoordinator: (any AIAnalysisCoordinating)? = nil,
         activityProvider: ActivityDataProvider? = nil,
+        textSignalExtractor: (any TextSignalExtracting)? = nil,
+        synthesisEngine: (any DailySynthesizing)? = nil,
+        insightLifecycleService: (any InsightLifecycling)? = nil,
+        synthesisScheduler: (any SynthesisScheduling)? = nil,
         skipDataLoading: Bool = false
     ) {
         let healthService = healthProfileService ?? HealthProfileService()
@@ -149,29 +168,27 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         self.insightService = insightService ?? InsightGenerationService(historicalService: historicalSvc)
         self.aiCoordinator = aiCoordinator ?? AIAnalysisCoordinator()
         self.activityProvider = activityProvider ?? HealthKitService.shared
+        self.textSignalExtractor = textSignalExtractor ?? TextSignalExtractor()
+        self.synthesisEngine = synthesisEngine ?? DailySynthesisEngine()
+        self
+            .insightLifecycleService = insightLifecycleService ??
+            InsightLifecycleService(historicalService: historicalSvc)
+        // Phase 1: store scheduler (no handler yet — [weak self] not valid before all properties set).
+        let sched: any SynthesisScheduling = synthesisScheduler ?? SynthesisScheduler()
+        self.synthesisScheduler = sched
+        // Phase 2: wire handler now that self is fully initialized; skip for injected mocks.
+        if let realScheduler = sched as? SynthesisScheduler {
+            realScheduler.setHandler { [weak self] trigger in
+                self?.performInsightLifecycle(trigger: trigger)
+            }
+        }
 
-        // Wire back-reference via protocol so HistoricalDataService.saveHistoricalData()
-        // delegates to the single canonical save path here.
-        // No concrete cast needed — protocol method satisfies DIP.
+        // Wire back-reference via protocol (DIP-compliant; no concrete cast needed).
         historicalSvc.setMainViewModel(self)
 
-        // Forward historicalService mutations to MainViewModel.objectWillChange so that
-        // computed view contracts (highlightViewData, reflectViewData) trigger SwiftUI
-        // re-renders even when no @Published property on MainViewModel changes directly.
+        // Forward historicalService mutations to objectWillChange so view contracts re-render.
         historicalSvc.willChangePublisher
             .sink { [weak self] _ in self?.objectWillChange.send() }
-            .store(in: &self.cancellables)
-
-        // Combine debounce pipeline for local meal edits during typing.
-        // Views call `enqueueMealEdit` on every keystroke; rapid-fire calls are collapsed
-        // into a single `updateMealItemsLocalOnly` invocation after the debounce window.
-        // RunLoop.main is used instead of DispatchQueue.main to avoid subtle threading
-        // issues with Swift concurrency on @MainActor classes.
-        self.mealEditSubject
-            .debounce(for: .milliseconds(TimingConstants.debounceMs), scheduler: RunLoop.main)
-            .sink { [weak self] mealId, items in
-                self?.updateMealItemsLocalOnly(mealId, items: items)
-            }
             .store(in: &self.cancellables)
 
         if !skipDataLoading {
@@ -186,100 +203,6 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         self.briefingTask?.cancel()
         self.insightTask?.cancel()
         self.sleepHighlightTask?.cancel()
-    }
-
-    /// Loads persisted data or starts fresh
-    func loadData() {
-        if let data = self.persistenceService.load() {
-            self.meals = data.meals
-            self.smileyState = data.smileyState
-            self.lastResetDate = data.lastResetDate
-            self.historicalService.historicalData = data.historicalData
-
-            // Still check if we need to reset for a new day since the last save
-            self.checkAndResetIfNewDay()
-
-            // If sleep quality is already logged today, fetch Apple sleep data for badge display
-            if self.todaysSleepQuality != nil {
-                self.fetchAppleSleepDataForBadge()
-            }
-        }
-
-        // Hydrate today's briefing from persisted snapshot (independent of persistence load)
-        if self.currentBriefing == nil,
-           let todayBriefing = self.historicalService.getSnapshot(for: Date())?.briefing
-        {
-            self.currentBriefing = todayBriefing
-        }
-    }
-
-    /// Fetches Apple sleep data for badge display (after sleep quality is already saved).
-    /// Called on app load when sleep quality is already logged.
-    func fetchAppleSleepDataForBadge() {
-        self.sleepBadgeTask = Task {
-            do {
-                _ = try await HealthKitService.shared.requestAuthorization()
-                if let sleepData = try await HealthKitService.shared.fetchSleepData(for: Date()) {
-                    self.appleSleepData = sleepData
-                    vmLogger
-                        .info(
-                            "Loaded Apple sleep data for badge: \(sleepData.formattedDuration, privacy: .public)"
-                        )
-                }
-            } catch {
-                // Non-critical: badge simply won't show Apple metrics. Log at .info for debuggability.
-                vmLogger.info("Sleep badge fetch unavailable: \(error.localizedDescription, privacy: .public)")
-            }
-        }
-    }
-
-    /// Saves current state
-    func saveData() {
-        self.persistenceService.save(
-            meals: self.meals,
-            smileyState: self.smileyState,
-            lastResetDate: self.lastResetDate,
-            historicalData: self.historicalService.historicalData
-        )
-    }
-
-    /// Periodically checks if the day has changed to reset the slate.
-    private func setupResetMonitoring() {
-        self.resetMonitorTask = Task { [weak self] in
-            while !Task.isCancelled {
-                // CancellationError from sleep is intentional (task cancelled on deinit) — no-op
-                try? await Task.sleep(nanoseconds: TimingConstants.dayResetPollIntervalNanoseconds)
-                self?.checkAndResetIfNewDay()
-            }
-        }
-    }
-
-    /// Cancels the in-flight briefing generation task, if any.
-    /// Called when the selected date changes so stale briefing work is discarded.
-    func cancelBriefingTask() {
-        self.briefingTask?.cancel()
-        self.briefingTask = nil
-    }
-
-    func checkAndResetIfNewDay() {
-        let calendar = Calendar.current
-        if !calendar.isDateInToday(self.lastResetDate) {
-            self.resetDay()
-            self.lastResetDate = Date()
-            self.saveData()
-        }
-    }
-
-    /// Enqueues a local meal edit for debounced processing.
-    ///
-    /// Views call this on every keystroke instead of calling `updateMealItemsLocalOnly` directly.
-    /// The Combine pipeline in `init` debounces rapid calls and forwards the final value
-    /// to `updateMealItemsLocalOnly` after `TimingConstants.debounceMs` of silence.
-    ///
-    /// - Parameters:
-    ///   - mealId: The ID of the meal being edited.
-    ///   - items: The current parsed items from the text field.
-    func enqueueMealEdit(mealId: UUID, items: [String]) {
-        self.mealEditSubject.send((mealId, items))
+        self.activityRefreshTask?.cancel()
     }
 }

@@ -1,52 +1,36 @@
 import Foundation
 
 /// Represents a snapshot of a single day's eating data for archival purposes.
-/// Captures meals, smiley state, health metrics, and optional end-of-day reflection for historical tracking.
 struct DailySmileySnapshot: Codable, Identifiable {
-    // MARK: - Properties
+    // MARK: - Core Properties
 
     let id: UUID
-    let date: Date // Normalized to midnight (start of day)
+    let date: Date
     let smileyState: SmileyState
     let meals: [Meal]
     let mealCount: Int
     let averageHealthScore: Double
-
-    /// Optional end-of-day reflection about how eating affected the user.
-    /// Added in Phase 1 - backward compatible with existing snapshots (defaults to nil).
     let reflection: DailyReflection?
-
-    /// Optional morning mind check entries (todos, gratitude, thoughts).
-    /// Added in Phase 2 - Mind Check feature.
     let morningMindCheck: [MindCheckEntry]?
-
-    /// Optional evening mind check entries (accomplished, grateful for, let go).
-    /// Added in Phase 2 - Mind Check feature.
     let eveningMindCheck: [MindCheckEntry]?
-
-    /// Highlight tab data (sleep, todos, morning thoughts). Added in Tab Redesign.
     let highlightData: HighlightData?
-
-    /// Reflect tab data (journal, feeling). Added in Tab Redesign.
     let reflectData: ReflectData?
-
-    /// Morning briefing generated from yesterday's data. Added in Briefing Engine.
     let briefing: DailyBriefing?
-
-    /// AI-generated daily insight for this date. Added in Tech Debt Phase A4.
     let insight: DailyInsight?
-
-    /// Total calories consumed from AI-analyzed meals this day. Added in Calorie Pill phase.
     let totalCalories: Int?
-
-    /// Whether all meals for this day have been AI-analyzed (complete calorie data).
-    /// `false` means the total is a partial sum — display with "~" prefix.
-    /// Added in Calorie Pill R3 remediation.
     let hasCompleteCalorieData: Bool
+
+    /// Four-dimension holistic wellbeing model. Added in Synthesis Layer phase.
+    let wellbeingDimensions: WellbeingDimensions?
+
+    /// Structured emotional signals extracted from free text. Added in Synthesis Layer phase.
+    let textSignals: [TextSignal]?
+
+    /// Unified enriched insight combining synthesis + correlations + causal narrative. Added in Phase 5.
+    let enrichedInsight: EnrichedDailyInsight?
 
     // MARK: - Initialization
 
-    /// Creates a new daily snapshot with all properties including optional reflection and mind checks.
     init(
         id: UUID,
         date: Date,
@@ -62,10 +46,13 @@ struct DailySmileySnapshot: Codable, Identifiable {
         briefing: DailyBriefing? = nil,
         insight: DailyInsight? = nil,
         totalCalories: Int? = nil,
-        hasCompleteCalorieData: Bool = false
+        hasCompleteCalorieData: Bool = false,
+        wellbeingDimensions: WellbeingDimensions? = nil,
+        textSignals: [TextSignal]? = nil,
+        enrichedInsight: EnrichedDailyInsight? = nil
     ) {
         self.id = id
-        self.date = Calendar(identifier: .gregorian).startOfDay(for: date) // Normalize to midnight
+        self.date = Calendar(identifier: .gregorian).startOfDay(for: date)
         self.smileyState = smileyState
         self.meals = meals
         self.mealCount = mealCount
@@ -79,310 +66,81 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.insight = insight
         self.totalCalories = totalCalories
         self.hasCompleteCalorieData = hasCompleteCalorieData
+        self.wellbeingDimensions = wellbeingDimensions
+        self.textSignals = textSignals
+        self.enrichedInsight = enrichedInsight
     }
 
     // MARK: - Codable (Backward Compatible)
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case date
-        case smileyState
-        case meals
-        case mealCount
-        case averageHealthScore
-        case reflection
-        case morningMindCheck
-        case eveningMindCheck
-        case highlightData
-        case reflectData
-        case briefing
-        case insight
-        case totalCalories
-        case hasCompleteCalorieData
+        case id, date, smileyState, meals, mealCount, averageHealthScore
+        case reflection, morningMindCheck, eveningMindCheck
+        case highlightData, reflectData, briefing, insight
+        case totalCalories, hasCompleteCalorieData
+        case wellbeingDimensions, textSignals, enrichedInsight
     }
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(UUID.self, forKey: .id)
         self.date = try Calendar(identifier: .gregorian).startOfDay(
-            for: container.decode(Date.self, forKey: .date)
+            for: c.decode(Date.self, forKey: .date)
         )
-        self.smileyState = try container.decode(SmileyState.self, forKey: .smileyState)
-        self.meals = try container.decode([Meal].self, forKey: .meals)
-        self.mealCount = try container.decode(Int.self, forKey: .mealCount)
-        self.averageHealthScore = try container.decode(Double.self, forKey: .averageHealthScore)
-        // Backward compatibility: optional fields may not exist in legacy data
-        self.reflection = try container.decodeIfPresent(DailyReflection.self, forKey: .reflection)
-        self.morningMindCheck = try container.decodeIfPresent([MindCheckEntry].self, forKey: .morningMindCheck)
-        self.eveningMindCheck = try container.decodeIfPresent([MindCheckEntry].self, forKey: .eveningMindCheck)
-        self.highlightData = try container.decodeIfPresent(HighlightData.self, forKey: .highlightData)
-        self.reflectData = try container.decodeIfPresent(ReflectData.self, forKey: .reflectData)
-        self.briefing = try container.decodeIfPresent(DailyBriefing.self, forKey: .briefing)
-        self.insight = try container.decodeIfPresent(DailyInsight.self, forKey: .insight)
-        self.totalCalories = try container.decodeIfPresent(Int.self, forKey: .totalCalories)
-        self.hasCompleteCalorieData = try container.decodeIfPresent(Bool.self, forKey: .hasCompleteCalorieData) ?? false
+        self.smileyState = try c.decode(SmileyState.self, forKey: .smileyState)
+        self.meals = try c.decode([Meal].self, forKey: .meals)
+        self.mealCount = try c.decode(Int.self, forKey: .mealCount)
+        self.averageHealthScore = try c.decode(Double.self, forKey: .averageHealthScore)
+        self.reflection = try c.decodeIfPresent(DailyReflection.self, forKey: .reflection)
+        self.morningMindCheck = try c.decodeIfPresent([MindCheckEntry].self, forKey: .morningMindCheck)
+        self.eveningMindCheck = try c.decodeIfPresent([MindCheckEntry].self, forKey: .eveningMindCheck)
+        self.highlightData = try c.decodeIfPresent(HighlightData.self, forKey: .highlightData)
+        self.reflectData = try c.decodeIfPresent(ReflectData.self, forKey: .reflectData)
+        self.briefing = try c.decodeIfPresent(DailyBriefing.self, forKey: .briefing)
+        self.insight = try c.decodeIfPresent(DailyInsight.self, forKey: .insight)
+        self.totalCalories = try c.decodeIfPresent(Int.self, forKey: .totalCalories)
+        self.hasCompleteCalorieData = try c.decodeIfPresent(Bool.self, forKey: .hasCompleteCalorieData) ?? false
+        self.wellbeingDimensions = try c.decodeIfPresent(WellbeingDimensions.self, forKey: .wellbeingDimensions)
+        self.textSignals = try c.decodeIfPresent([TextSignal].self, forKey: .textSignals)
+        self.enrichedInsight = try c.decodeIfPresent(EnrichedDailyInsight.self, forKey: .enrichedInsight)
     }
 
     func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.id, forKey: .id)
-        try container.encode(self.date, forKey: .date)
-        try container.encode(self.smileyState, forKey: .smileyState)
-        try container.encode(self.meals, forKey: .meals)
-        try container.encode(self.mealCount, forKey: .mealCount)
-        try container.encode(self.averageHealthScore, forKey: .averageHealthScore)
-        try container.encodeIfPresent(self.reflection, forKey: .reflection)
-        try container.encodeIfPresent(self.morningMindCheck, forKey: .morningMindCheck)
-        try container.encodeIfPresent(self.eveningMindCheck, forKey: .eveningMindCheck)
-        try container.encodeIfPresent(self.highlightData, forKey: .highlightData)
-        try container.encodeIfPresent(self.reflectData, forKey: .reflectData)
-        try container.encodeIfPresent(self.briefing, forKey: .briefing)
-        try container.encodeIfPresent(self.insight, forKey: .insight)
-        try container.encodeIfPresent(self.totalCalories, forKey: .totalCalories)
-        try container.encode(self.hasCompleteCalorieData, forKey: .hasCompleteCalorieData)
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.date, forKey: .date)
+        try c.encode(self.smileyState, forKey: .smileyState)
+        try c.encode(self.meals, forKey: .meals)
+        try c.encode(self.mealCount, forKey: .mealCount)
+        try c.encode(self.averageHealthScore, forKey: .averageHealthScore)
+        try c.encodeIfPresent(self.reflection, forKey: .reflection)
+        try c.encodeIfPresent(self.morningMindCheck, forKey: .morningMindCheck)
+        try c.encodeIfPresent(self.eveningMindCheck, forKey: .eveningMindCheck)
+        try c.encodeIfPresent(self.highlightData, forKey: .highlightData)
+        try c.encodeIfPresent(self.reflectData, forKey: .reflectData)
+        try c.encodeIfPresent(self.briefing, forKey: .briefing)
+        try c.encodeIfPresent(self.insight, forKey: .insight)
+        try c.encodeIfPresent(self.totalCalories, forKey: .totalCalories)
+        try c.encode(self.hasCompleteCalorieData, forKey: .hasCompleteCalorieData)
+        try c.encodeIfPresent(self.wellbeingDimensions, forKey: .wellbeingDimensions)
+        try c.encodeIfPresent(self.textSignals, forKey: .textSignals)
+        try c.encodeIfPresent(self.enrichedInsight, forKey: .enrichedInsight)
     }
 
     // MARK: - Computed Properties
 
-    /// Returns true if no meals were logged this day
-    var isEmpty: Bool {
-        self.meals.isEmpty
-    }
+    var isEmpty: Bool { self.meals.isEmpty }
 
-    /// Returns the smiley state to display in the UI.
-    /// For empty days, returns a neutral state for dimmed display.
-    /// Always returns a valid state with guaranteed finite, positive scale.
     var displayState: SmileyState {
-        if self.isEmpty {
-            return SmileyState(scale: 1.0, mood: .neutral)
-        }
-        // Ensure the scale is valid before returning
+        if self.isEmpty { return SmileyState(scale: 1.0, mood: .neutral) }
         let validScale = self.smileyState.scale.isFinite && self.smileyState.scale > 0
             ? min(max(self.smileyState.scale, 0.1), 10.0)
             : 1.0
         return SmileyState(scale: validScale, mood: self.smileyState.mood)
     }
 
-    /// Returns true if morning mind check has been logged with at least one entry
-    var hasMorningMindCheck: Bool {
-        guard let entries = self.morningMindCheck else { return false }
-        return !entries.isEmpty
-    }
-
-    /// Returns true if evening mind check has been logged with at least one entry
-    var hasEveningMindCheck: Bool {
-        guard let entries = self.eveningMindCheck else { return false }
-        return !entries.isEmpty
-    }
-
-    /// Returns true if a morning briefing has been generated for this day
-    var hasBriefing: Bool {
-        self.briefing != nil
-    }
-
-    /// Returns true if a daily insight has been generated for this day
-    var hasInsight: Bool {
-        self.insight != nil
-    }
-
-    // MARK: - Factory Methods
-
-    /// Creates a snapshot from current day's data.
-    /// Automatically calculates mealCount and averageHealthScore from the meals array.
-    /// - Parameters:
-    ///   - date: The date for this snapshot
-    ///   - smileyState: The smiley state at end of day
-    ///   - meals: All meals logged for the day
-    ///   - reflection: Optional end-of-day reflection
-    ///   - morningMindCheck: Optional morning mind check entries
-    ///   - eveningMindCheck: Optional evening mind check entries
-    /// - Returns: A new DailySmileySnapshot with computed metrics
-    static func create(
-        date: Date,
-        smileyState: SmileyState,
-        meals: [Meal],
-        reflection: DailyReflection? = nil,
-        morningMindCheck: [MindCheckEntry]? = nil,
-        eveningMindCheck: [MindCheckEntry]? = nil,
-        highlightData: HighlightData? = nil,
-        reflectData: ReflectData? = nil,
-        briefing: DailyBriefing? = nil
-    ) -> DailySmileySnapshot {
-        let mealCount = meals.count
-        let averageHealthScore = meals.isEmpty
-            ? 0.5
-            : meals.map(\.healthScore).reduce(0.0, +) / Double(meals.count)
-
-        return DailySmileySnapshot(
-            id: UUID(),
-            date: date,
-            smileyState: smileyState,
-            meals: meals,
-            mealCount: mealCount,
-            averageHealthScore: averageHealthScore,
-            reflection: reflection,
-            morningMindCheck: morningMindCheck,
-            eveningMindCheck: eveningMindCheck,
-            highlightData: highlightData,
-            reflectData: reflectData,
-            briefing: briefing
-        )
-    }
-
-    /// Creates a copy of this snapshot with updated mind check entries.
-    /// Useful for adding mind check data to an existing snapshot.
-    /// - Parameters:
-    ///   - morningMindCheck: New morning mind check entries (nil to keep existing)
-    ///   - eveningMindCheck: New evening mind check entries (nil to keep existing)
-    /// - Returns: A new snapshot with updated mind check data
-    func withMindChecks(
-        morningMindCheck: [MindCheckEntry]? = nil,
-        eveningMindCheck: [MindCheckEntry]? = nil
-    ) -> DailySmileySnapshot {
-        DailySmileySnapshot(
-            id: self.id,
-            date: self.date,
-            smileyState: self.smileyState,
-            meals: self.meals,
-            mealCount: self.mealCount,
-            averageHealthScore: self.averageHealthScore,
-            reflection: self.reflection,
-            morningMindCheck: morningMindCheck ?? self.morningMindCheck,
-            eveningMindCheck: eveningMindCheck ?? self.eveningMindCheck,
-            highlightData: self.highlightData,
-            reflectData: self.reflectData,
-            briefing: self.briefing,
-            insight: self.insight,
-            totalCalories: self.totalCalories,
-            hasCompleteCalorieData: self.hasCompleteCalorieData
-        )
-    }
-
-    /// Creates a copy of this snapshot with updated reflection.
-    /// - Parameter reflection: The new reflection data
-    /// - Returns: A new snapshot with updated reflection
-    func withReflection(_ reflection: DailyReflection) -> DailySmileySnapshot {
-        DailySmileySnapshot(
-            id: self.id,
-            date: self.date,
-            smileyState: self.smileyState,
-            meals: self.meals,
-            mealCount: self.mealCount,
-            averageHealthScore: self.averageHealthScore,
-            reflection: reflection,
-            morningMindCheck: self.morningMindCheck,
-            eveningMindCheck: self.eveningMindCheck,
-            highlightData: self.highlightData,
-            reflectData: self.reflectData,
-            briefing: self.briefing,
-            insight: self.insight,
-            totalCalories: self.totalCalories,
-            hasCompleteCalorieData: self.hasCompleteCalorieData
-        )
-    }
-
-    /// Creates a copy with updated highlight data.
-    func withHighlightData(_ highlightData: HighlightData) -> DailySmileySnapshot {
-        DailySmileySnapshot(
-            id: self.id,
-            date: self.date,
-            smileyState: self.smileyState,
-            meals: self.meals,
-            mealCount: self.mealCount,
-            averageHealthScore: self.averageHealthScore,
-            reflection: self.reflection,
-            morningMindCheck: self.morningMindCheck,
-            eveningMindCheck: self.eveningMindCheck,
-            highlightData: highlightData,
-            reflectData: self.reflectData,
-            briefing: self.briefing,
-            insight: self.insight,
-            totalCalories: self.totalCalories,
-            hasCompleteCalorieData: self.hasCompleteCalorieData
-        )
-    }
-
-    /// Creates a copy with updated reflect data.
-    func withReflectData(_ reflectData: ReflectData) -> DailySmileySnapshot {
-        DailySmileySnapshot(
-            id: self.id,
-            date: self.date,
-            smileyState: self.smileyState,
-            meals: self.meals,
-            mealCount: self.mealCount,
-            averageHealthScore: self.averageHealthScore,
-            reflection: self.reflection,
-            morningMindCheck: self.morningMindCheck,
-            eveningMindCheck: self.eveningMindCheck,
-            highlightData: self.highlightData,
-            reflectData: reflectData,
-            briefing: self.briefing,
-            insight: self.insight,
-            totalCalories: self.totalCalories,
-            hasCompleteCalorieData: self.hasCompleteCalorieData
-        )
-    }
-
-    /// Creates a copy with updated briefing data.
-    func withBriefing(_ briefing: DailyBriefing) -> DailySmileySnapshot {
-        DailySmileySnapshot(
-            id: self.id,
-            date: self.date,
-            smileyState: self.smileyState,
-            meals: self.meals,
-            mealCount: self.mealCount,
-            averageHealthScore: self.averageHealthScore,
-            reflection: self.reflection,
-            morningMindCheck: self.morningMindCheck,
-            eveningMindCheck: self.eveningMindCheck,
-            highlightData: self.highlightData,
-            reflectData: self.reflectData,
-            briefing: briefing,
-            insight: self.insight,
-            totalCalories: self.totalCalories,
-            hasCompleteCalorieData: self.hasCompleteCalorieData
-        )
-    }
-
-    /// Creates a copy with a persisted daily insight.
-    func withInsight(_ insight: DailyInsight) -> DailySmileySnapshot {
-        DailySmileySnapshot(
-            id: self.id,
-            date: self.date,
-            smileyState: self.smileyState,
-            meals: self.meals,
-            mealCount: self.mealCount,
-            averageHealthScore: self.averageHealthScore,
-            reflection: self.reflection,
-            morningMindCheck: self.morningMindCheck,
-            eveningMindCheck: self.eveningMindCheck,
-            highlightData: self.highlightData,
-            reflectData: self.reflectData,
-            briefing: self.briefing,
-            insight: insight,
-            totalCalories: self.totalCalories,
-            hasCompleteCalorieData: self.hasCompleteCalorieData
-        )
-    }
-
-    /// Creates a copy with the total calories consumed for the day.
-    func withTotalCalories(_ calories: Int, hasCompleteCalorieData: Bool) -> DailySmileySnapshot {
-        DailySmileySnapshot(
-            id: self.id,
-            date: self.date,
-            smileyState: self.smileyState,
-            meals: self.meals,
-            mealCount: self.mealCount,
-            averageHealthScore: self.averageHealthScore,
-            reflection: self.reflection,
-            morningMindCheck: self.morningMindCheck,
-            eveningMindCheck: self.eveningMindCheck,
-            highlightData: self.highlightData,
-            reflectData: self.reflectData,
-            briefing: self.briefing,
-            insight: self.insight,
-            totalCalories: calories,
-            hasCompleteCalorieData: hasCompleteCalorieData
-        )
-    }
+    var hasMorningMindCheck: Bool { !(self.morningMindCheck ?? []).isEmpty }
+    var hasEveningMindCheck: Bool { !(self.eveningMindCheck ?? []).isEmpty }
+    var hasBriefing: Bool { self.briefing != nil }
+    var hasInsight: Bool { self.insight != nil }
 }

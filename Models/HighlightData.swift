@@ -15,6 +15,9 @@ struct HighlightData: Codable, Equatable {
     /// Free-form Apple Notes-style morning thoughts
     var morningThoughts: String?
 
+    /// Structured signals extracted from morningThoughts. Added in Synthesis Layer phase.
+    var textSignals: [TextSignal]?
+
     /// When this data was last modified (for auto-save tracking)
     var lastModified: Date
 
@@ -23,12 +26,14 @@ struct HighlightData: Codable, Equatable {
         sleepNotes: String? = nil,
         todos: [MindCheckEntry] = [],
         morningThoughts: String? = nil,
+        textSignals: [TextSignal]? = nil,
         lastModified: Date = Date()
     ) {
         self.sleepQuality = sleepQuality
         self.sleepNotes = sleepNotes
         self.todos = todos
         self.morningThoughts = morningThoughts
+        self.textSignals = textSignals
         self.lastModified = lastModified
     }
 

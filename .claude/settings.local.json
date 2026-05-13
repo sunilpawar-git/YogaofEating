@@ -23,7 +23,10 @@
       "Bash(xargs ls *)",
       "Bash(git *)",
       "Bash(swift /tmp/verify_logic.swift)",
-      "Bash(sort -k2)"
+      "Bash(sort -k2)",
+      "Bash(awk '{print $2}')",
+      "Bash(ruby -e ' *)",
+      "Bash(git diff *)"
     ]
   }
 }

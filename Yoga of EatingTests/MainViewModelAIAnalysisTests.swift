@@ -218,20 +218,32 @@
         }
 
         func test_reanalyzeAllMealsForSmileyState_allAnalyzedMeals_stillWorks() async {
-            self.sut.createNewMeal()
-            self.sut.createNewMeal()
+            // Use an isolated ViewModel with a mock historicalService so that real on-disk
+            // snapshot data (reflection/sleep) cannot skew the synthesis score below the
+            // serene threshold (0.65). Without this, meals averaging 0.7 can drop to ~0.61
+            // when today's real snapshot contributes emotional/sleep streams.
+            let mockHistorical = MockHistoricalDataService()
+            let isolatedSut = MainViewModel(
+                logicService: self.mockAILogic,
+                persistenceService: self.mockPersistence,
+                historicalService: mockHistorical,
+                skipDataLoading: true
+            )
 
-            var meals = self.sut.meals
+            isolatedSut.createNewMeal()
+            isolatedSut.createNewMeal()
+
+            var meals = isolatedSut.meals
             meals[0].healthScore = 0.8
             meals[0].isAIAnalyzed = true
             meals[1].healthScore = 0.6
             meals[1].isAIAnalyzed = true
-            self.sut.meals = meals
+            isolatedSut.meals = meals
 
-            await self.sut.reanalyzeAllMealsForSmileyState()
+            await isolatedSut.reanalyzeAllMealsForSmileyState()
 
             XCTAssertEqual(
-                self.sut.smileyState.mood,
+                isolatedSut.smileyState.mood,
                 .serene,
                 "With all meals analyzed, average should be 0.7 -> serene"
             )
@@ -733,98 +745,17 @@
             )
         }
 
-        // MARK: - Phase 1: Local-Only Update Tests
-
-        func test_updateMealItemsLocalOnly_updatesItems_withoutTriggeringAI() async throws {
-            // Given: Create a meal
-            self.sut.createNewMeal()
-            guard let mealId = self.sut.meals.first?.id else {
-                XCTFail("Meal not created")
-                return
-            }
-
-            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
-                score: 0.8,
-                mood: .serene,
-                sound: "chime",
-                insight: nil,
-                estimatedCalories: nil
-            )
-
-            // When: Update using local-only method
-            self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple Pie"])
-
-            // Wait for any async tasks that might have been triggered
-            try await Task.sleep(nanoseconds: 100_000_000) // 100ms
-
-            // Then: Items should be updated but AI should NOT be called
-            XCTAssertEqual(self.sut.meals.first?.items, ["Apple Pie"], "Items should be updated")
-            XCTAssertFalse(self.mockAILogic.analyzeCalled, "AI analysis should NOT be triggered for local-only update")
-        }
-
-        func test_updateMealItemsLocalOnly_updatesLocalHealthScore() {
-            // Given: Create a meal
-            self.sut.createNewMeal()
-            guard let mealId = self.sut.meals.first?.id else {
-                XCTFail("Meal not created")
-                return
-            }
-
-            // When: Update using local-only method
-            self.sut.updateMealItemsLocalOnly(mealId, items: ["Healthy Salad"])
-
-            // Then: Local health score should be calculated (mock returns 0.5)
-            XCTAssertEqual(self.sut.meals.first?.healthScore, 0.5, "Local health score should be calculated")
-        }
-
-        func test_updateMealItemsLocalOnly_doesNotResetIsAIAnalyzedFlag() async {
-            // Given: Create a meal and mark it as AI analyzed
-            self.sut.createNewMeal()
-            guard let mealId = self.sut.meals.first?.id else {
-                XCTFail("Meal not created")
-                return
-            }
-
-            // First, run AI analysis to set isAIAnalyzed = true
-            self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
-                score: 0.8,
-                mood: .serene,
-                sound: "chime",
-                insight: nil,
-                estimatedCalories: nil
-            )
-            await self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
-            XCTAssertTrue(self.sut.meals.first?.isAIAnalyzed ?? false, "Should be marked as AI analyzed")
-            let aiScore = self.sut.meals.first?.healthScore ?? 0
-
-            // When: Update using local-only method WITH DIFFERENT CONTENT
-            self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple Pie"])
-
-            // Then: isAIAnalyzed should be reset (content changed, needs re-analysis)
-            // But the AI score should be preserved until next "done" action
-            XCTAssertFalse(
-                self.sut.meals.first?.isAIAnalyzed ?? true,
-                "isAIAnalyzed should be reset when content changes"
-            )
-            XCTAssertEqual(
-                self.sut.meals.first?.healthScore ?? 0,
-                aiScore,
-                "AI score should be preserved during local updates (not recalculated)"
-            )
-        }
-
-        // MARK: - Phase 2: Explicit AI Analysis Trigger Tests
+        // MARK: - Explicit AI Analysis Trigger Tests
 
         func test_triggerAIAnalysis_callsPerformDeepAnalysis() async throws {
-            // Given: Create a meal with content
+            // Given: Create a meal with content (set directly — no local-update path)
             self.sut.createNewMeal()
             guard let mealId = self.sut.meals.first?.id else {
                 XCTFail("Meal not created")
                 return
             }
 
-            // Set up meal with items
-            self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple Pie"])
+            self.sut.meals[0].items = ["Apple Pie"]
             self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
                 score: 0.8,
                 mood: .serene,
@@ -859,11 +790,12 @@
             await self.sut.performDeepAnalysis(for: mealId, items: ["Apple"])
             XCTAssertTrue(self.sut.meals.first?.isAIAnalyzed ?? false)
 
-            // Update content locally - this NOW resets the flag since content changed
-            self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple Pie with Ice Cream"])
+            // Change items directly to simulate user editing before re-submission
+            self.sut.meals[0].items = ["Apple Pie with Ice Cream"]
+            self.sut.meals[0].isAIAnalyzed = false
             XCTAssertFalse(
                 self.sut.meals.first?.isAIAnalyzed ?? true,
-                "Flag should be false after local update with different content"
+                "Flag should be false after content changes before re-submission"
             )
 
             // Reset mock
@@ -901,32 +833,17 @@
             XCTAssertFalse(self.mockAILogic.analyzeCalled, "AI analysis should be skipped for short content")
         }
 
-        // MARK: - Done Action Triggers AI Analysis After Local Updates
+        // MARK: - Checkmark Submission Triggers AI Analysis
 
-        func test_updateMeal_triggersAI_whenCalledAfterLocalOnlyUpdates() async throws {
-            // Given: Create a meal and update it via local-only (simulating typing)
+        func test_updateMeal_triggersAI_onCheckmarkSubmission() async throws {
             self.sut.createNewMeal()
             guard let mealId = self.sut.meals.first?.id else {
                 XCTFail("Meal not created")
                 return
             }
 
-            // Get the auto-detected meal type to use the same one in updateMeal
-            let originalMealType = self.sut.meals.first?.mealType ?? .lunch
+            XCTAssertFalse(self.mockAILogic.analyzeCalled, "AI must not fire before submission")
 
-            // Simulate typing - local updates (no AI)
-            self.sut.updateMealItemsLocalOnly(mealId, items: ["Apple Pie"])
-
-            // Verify local update happened but no AI
-            XCTAssertEqual(self.sut.meals.first?.items, ["Apple Pie"])
-            XCTAssertFalse(self.mockAILogic.analyzeCalled, "AI should not be called during local-only updates")
-            XCTAssertFalse(
-                self.sut.meals.first?.isAIAnalyzed ?? true,
-                "isAIAnalyzed should be false after local update"
-            )
-
-            // When: User triggers "done" action (focus loss / Done button)
-            // This calls updateMeal with the same items AND same meal type (content unchanged)
             self.mockAILogic.mockAnalysisResult = MealAnalysisResult(
                 score: 0.8,
                 mood: .serene,
@@ -934,13 +851,12 @@
                 insight: nil,
                 estimatedCalories: nil
             )
-            self.sut.updateMeal(mealId, mealType: originalMealType, items: ["Apple Pie"])
+            let mealType = self.sut.meals.first?.mealType ?? .lunch
+            self.sut.updateMeal(mealId, mealType: mealType, items: ["Apple Pie"])
 
-            // Wait for async AI analysis to complete
-            try await Task.sleep(nanoseconds: 200_000_000) // 200ms
+            try await Task.sleep(nanoseconds: 200_000_000)
 
-            // Then: AI analysis should be triggered despite content being "unchanged"
-            XCTAssertTrue(self.mockAILogic.analyzeCalled, "AI should be triggered on done action after local updates")
+            XCTAssertTrue(self.mockAILogic.analyzeCalled, "AI must fire on checkmark submission")
         }
 
         // MARK: - Production Wiring Tests
@@ -1024,6 +940,8 @@
         )
         var shouldThrowError: Bool = false
         var analyzeCalled: Bool = false
+        /// Total invocations — use when testing deduplication guards.
+        var analyzeCallCount: Int = 0
 
         func calculateHealthScore(for _: String) -> Double {
             0.5
@@ -1051,6 +969,7 @@
 
         func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
             self.analyzeCalled = true
+            self.analyzeCallCount += 1
 
             if self.shouldThrowError {
                 throw NSError(

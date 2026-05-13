@@ -22,30 +22,45 @@ extension MainViewModel {
         self.saveData()
     }
 
-    /// Updates an existing meal's description and recalculates health.
-    /// Legacy method for backward compatibility - converts to items array.
+    /// - Note: Prefer `updateMeal(_:mealType:items:)` — this overload bypasses meal-type tracking.
+    @available(*, deprecated, renamed: "updateMeal(_:mealType:items:)")
     func updateMeal(_ mealId: UUID, description: String) {
         self.updateMealItems(mealId, items: description.isEmpty ? [] : [description])
     }
 
     /// Updates an existing meal's items and recalculates health.
+    /// Validates and sanitizes input before persistence — mirrors the security contract of updateMeal.
     func updateMealItems(_ mealId: UUID, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
-        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: items)
+        let nonEmpty = items.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        guard !nonEmpty.isEmpty else { return }
 
+        let joined = nonEmpty.joined(separator: ", ")
+        switch InputValidator.validateMealDescription(joined) {
+        case let .failure(error):
+            self.lastValidationError = error
+            self.showValidationErrorAlert = true
+            return
+        case .success:
+            break
+        }
+
+        let sanitizedItems = InputValidator.sanitizeMealItems(nonEmpty)
+        guard !sanitizedItems.isEmpty else { return }
+
+        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: sanitizedItems)
         guard contentChanged else {
             crudLogger.debug("Skipping update - content unchanged after normalization")
             return
         }
 
-        let healthScore = self.logicService.calculateHealthScore(for: items)
-        self.meals[index].items = items
+        let healthScore = self.logicService.calculateHealthScore(for: sanitizedItems)
+        self.meals[index].items = sanitizedItems
         self.meals[index].healthScore = healthScore
         self.meals[index].isAIAnalyzed = false
 
         self.saveData()
-        crudLogger.debug("Local healthScore set to \(healthScore, privacy: .public)")
 
         if withFeedback, let profile = self.healthProfileService.getUserHealthProfile() {
             SensoryService.shared.playMealFeedbackHaptic(
@@ -56,51 +71,18 @@ extension MainViewModel {
         }
 
         self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
+        self.synthesisScheduler.schedule(.mealUpdated)
 
         self.aiCoordinator.analyzeIfNeeded(
             mealId: mealId,
-            items: items,
+            items: sanitizedItems,
             in: self.makeAnalysisContext(mealId: mealId)
         )
     }
 
-    /// Updates meal items locally WITHOUT triggering AI analysis.
-    /// Use this for real-time updates during typing to provide immediate local feedback.
-    /// AI analysis should be triggered separately via explicit user action (Done button, focus loss).
-    func updateMealItemsLocalOnly(_ mealId: UUID, items: [String]) {
-        guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
-
-        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: items)
-        guard contentChanged else { return }
-
-        let joinedDescription = items.joined(separator: ", ")
-        if !joinedDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            switch InputValidator.validateMealDescription(joinedDescription) {
-            case let .failure(error):
-                self.lastValidationError = error
-                self.showValidationErrorAlert = true
-                return
-            case .success:
-                break
-            }
-        }
-
-        self.meals[index].items = items
-
-        if !self.meals[index].isAIAnalyzed {
-            let healthScore = self.logicService.calculateHealthScore(for: items)
-            self.meals[index].healthScore = healthScore
-            crudLogger.debug("Local-only update: healthScore set to \(healthScore, privacy: .public)")
-        } else {
-            self.meals[index].isAIAnalyzed = false
-            crudLogger.debug("Local-only update: items changed, AI score invalidated")
-        }
-
-        self.saveData()
-    }
-
-    /// Explicitly triggers AI analysis for a meal.
-    /// Call this when user performs a "done" action (focus loss, Done button, Return key).
+    /// Explicitly triggers AI analysis for a meal using its currently-stored items.
+    /// Items are read from the ViewModel (already validated/sanitized on write).
+    /// `performDeepAnalysis` re-validates length and pattern before the Firebase call.
     func triggerAIAnalysisForMeal(_ mealId: UUID) async {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
@@ -112,22 +94,40 @@ extension MainViewModel {
     }
 
     /// Updates meal type and items together.
-    /// Called on "done" actions (focus loss, Done button, Return key) - always triggers AI analysis
-    /// if the meal hasn't been AI-analyzed yet.
+    /// Called on checkmark tap — the sole submission path. Validates input, then saves and triggers AI.
     func updateMeal(_ mealId: UUID, mealType: MealType, items: [String], withFeedback: Bool = false) {
         guard let index = meals.firstIndex(where: { $0.id == mealId }) else { return }
 
-        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: items)
+        // Pre-filter: whitespace-only strings are treated as empty (no alert, silent no-op).
+        let nonEmpty = items.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        guard !nonEmpty.isEmpty else { return }
+
+        let joined = nonEmpty.joined(separator: ", ")
+        switch InputValidator.validateMealDescription(joined) {
+        case let .failure(error):
+            self.lastValidationError = error
+            self.showValidationErrorAlert = true
+            return
+        case .success:
+            break
+        }
+
+        // Sanitize each item individually so stored data matches what was validated.
+        // This strips null bytes and C0/C1 control characters that pass pattern checks.
+        let sanitizedItems = InputValidator.sanitizeMealItems(nonEmpty)
+        guard !sanitizedItems.isEmpty else { return }
+
+        let contentChanged = Self.contentMeaningfullyChanged(old: self.meals[index].items, new: sanitizedItems)
         let mealTypeChanged = self.meals[index].mealType != mealType
-        let needsAIAnalysis = !self.meals[index].isAIAnalyzed && !items.isEmpty
+        let needsAIAnalysis = !self.meals[index].isAIAnalyzed
 
         if mealTypeChanged {
             self.meals[index].mealType = mealType
         }
 
         if contentChanged {
-            let healthScore = self.logicService.calculateHealthScore(for: items)
-            self.meals[index].items = items
+            let healthScore = self.logicService.calculateHealthScore(for: sanitizedItems)
+            self.meals[index].items = sanitizedItems
             self.meals[index].healthScore = healthScore
             self.meals[index].isAIAnalyzed = false
 
@@ -142,16 +142,17 @@ extension MainViewModel {
             }
 
             self.updateSmileyStateFromAllMeals(withFeedback: withFeedback)
+            self.synthesisScheduler.schedule(.mealUpdated)
 
             self.aiCoordinator.analyzeIfNeeded(
                 mealId: mealId,
-                items: items,
+                items: sanitizedItems,
                 in: self.makeAnalysisContext(mealId: mealId)
             )
         } else if mealTypeChanged {
             self.saveData()
         } else if needsAIAnalysis {
-            crudLogger.debug("Triggering AI analysis for meal updated locally")
+            crudLogger.debug("Triggering AI analysis for unchanged meal content")
             self.aiCoordinator.analyzeIfNeeded(
                 mealId: mealId,
                 items: self.meals.first(where: { $0.id == mealId })?.items ?? [],
@@ -214,19 +215,30 @@ extension MainViewModel {
         }
     }
 
-    /// Updates smiley state based on all current meals' health scores.
+    /// Updates smiley state using the DailySynthesisEngine (all four data streams).
+    /// Falls back to neutral if no data is present.
     func updateSmileyStateFromAllMeals(withFeedback: Bool = false) {
-        guard !self.meals.isEmpty else {
-            withAnimation(.spring()) {
-                self.smileyState = .neutral
+        let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
+        let synthesis = self.synthesisEngine.synthesize(
+            meals: self.meals,
+            highlightData: snapshot?.highlightData,
+            reflectData: snapshot?.reflectData,
+            appleSleepData: self.appleSleepData,
+            yesterday: nil
+        )
+
+        if withFeedback {
+            let hapticsEnabled = UserDefaults.standard.object(forKey: StorageKeys.hapticsEnabled) as? Bool ?? true
+            if hapticsEnabled {
+                let overall = synthesis.dimensions.overall
+                SensoryService.shared
+                    .playNudge(style: overall < SynthesisThresholds.overallThoughtful ? .heavy : .light)
             }
-            return
         }
 
-        let totalScore = self.meals.map(\.healthScore).reduce(0.0, +)
-        let avgScore = totalScore / Double(self.meals.count)
-
-        self.updateSmileyState(with: avgScore, withFeedback: withFeedback)
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+            self.smileyState = synthesis.smileySuggestion
+        }
     }
 
     // MARK: - Day Reset
@@ -261,6 +273,13 @@ extension MainViewModel {
         self.currentBriefing = nil
 
         self.saveData()
+
+        // Auto-sync the just-archived day to Firebase in the background.
+        // Fire-and-forget: sync failure is silently ignored so it never blocks the day reset.
+        Task { [weak self] in
+            guard let self else { return }
+            try? await self.historicalService.syncToFirebase()
+        }
     }
 
     /// Completely deletes all app data including meals, history, and resets to factory state.
@@ -274,6 +293,10 @@ extension MainViewModel {
 
         self.historicalService.clearAllData()
         self.persistenceService.deleteAll()
+
+        // Write an empty-but-valid persistence file so the next cold launch does not
+        // mistake the missing file for a "fresh install" and restore the just-deleted data.
+        self.saveData()
 
         for key in StorageKeys.allKeys {
             UserDefaults.standard.removeObject(forKey: key)

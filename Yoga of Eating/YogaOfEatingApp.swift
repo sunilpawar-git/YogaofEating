@@ -8,6 +8,14 @@ import SwiftUI
 
 private let appLogger = Logger(subsystem: "com.yogaofeating", category: "App")
 
+// MARK: - Console Output Filters (For Development)
+
+// NOTE: The following warnings are benign UIKit system noise and do NOT affect app functionality:
+// - "The variant selector cell index number could not be found" — UIKit keyboard autocorrect/predictive text
+// - "Could not find cached accumulator for token=..." — Autocorrect state management
+// - "Attempted to update accumulator after completion..." — Text input event synchronization
+// These are filtered by the build scheme's OS_ACTIVITY_DT_MODE setting to reduce console clutter.
+
 @MainActor
 @main
 struct YogaOfEatingApp: App {
@@ -19,6 +27,8 @@ struct YogaOfEatingApp: App {
 
     // Shared state across the app
     @StateObject private var viewModel = MainViewModel()
+    @Environment(\.scenePhase)
+    private var scenePhase
 
     @AppStorage("app_theme")
     private var theme: Int = 0 // 0: System, 1: Light, 2: Dark
@@ -32,19 +42,12 @@ struct YogaOfEatingApp: App {
 
         appLogger.info("Yoga of Eating app starting")
 
-        // Initialize Firebase FIRST, before any other code that might use it
-        // This prevents the "default Firebase app has not yet been configured" warning
-        // that occurs when MainViewModel (created as @StateObject) initializes AILogicService
-        let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
-        if !isCIEnvironment {
-            // Configure Firebase unconditionally (it's safe to call multiple times)
-            // Check if already configured to avoid unnecessary work
-            if FirebaseApp.app() == nil {
-                FirebaseApp.configure()
-                appLogger.info("Firebase initialized (App init)")
-            } else {
-                appLogger.debug("Firebase already configured")
-            }
+        // Configure Firebase here in App.init() — this is earlier than AppDelegate.didFinishLaunchingWithOptions
+        // and guarantees Firebase is ready before any @StateObject or service singleton accesses it.
+        let isCIForFirebase = ProcessInfo.processInfo.environment["CI"] == "true"
+        if !isCIForFirebase, FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+            appLogger.info("Firebase initialized (App.init)")
         }
 
         // Check if running UI tests and reset data if needed
@@ -60,16 +63,25 @@ struct YogaOfEatingApp: App {
             // Clear persisted JSON data file
             if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                 let dataFileURL = documentsURL.appendingPathComponent("yoga_of_eating_data.json")
-                try? FileManager.default.removeItem(at: dataFileURL)
-                appLogger.debug("Removed persisted data file for UI test run")
+                do {
+                    try FileManager.default.removeItem(at: dataFileURL)
+                    appLogger.debug("Removed persisted data file for UI test run")
+                } catch {
+                    appLogger
+                        .error("Failed to remove persisted data file: \(error.localizedDescription, privacy: .public)")
+                }
             }
         }
 
-        // Request permissions and schedule daily nudges on startup
-        NotificationManager.shared.requestPermissions()
-        NotificationManager.shared.scheduleMorningNudge()
-        NotificationManager.shared.scheduleDefaultMealReminders()
-        appLogger.info("Notifications configured")
+        // Request permissions and schedule daily nudges on startup.
+        // Skipped in CI environments to prevent permission popups causing test flakiness.
+        let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
+        if !isCIEnvironment {
+            NotificationManager.shared.requestPermissions()
+            NotificationManager.shared.scheduleMorningNudge()
+            NotificationManager.shared.scheduleDefaultMealReminders()
+            appLogger.info("Notifications configured")
+        }
     }
 
     var body: some Scene {
@@ -84,6 +96,11 @@ struct YogaOfEatingApp: App {
                     .onOpenURL { url in
                         GIDSignIn.sharedInstance.handle(url)
                     }
+            }
+        }
+        .onChange(of: self.scenePhase) { _, newPhase in
+            if newPhase == .active {
+                self.viewModel.refreshActivityDataIfNeeded()
             }
         }
     }
@@ -114,11 +131,11 @@ struct YogaOfEatingApp: App {
             let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
 
             if !isTestEnvironment, !isCIEnvironment {
-                // Ensure Firebase is configured early in app lifecycle
-                // This runs before SwiftUI's @main init, providing an early initialization point
+                // Firebase is configured in YogaOfEatingApp.init() before this runs.
+                // The guard here is a safety net in case of unexpected execution order.
                 if FirebaseApp.app() == nil {
                     FirebaseApp.configure()
-                    appLogger.info("Firebase initialized (AppDelegate)")
+                    appLogger.info("Firebase initialized (AppDelegate fallback)")
                 }
 
                 // Initialize AuthService
