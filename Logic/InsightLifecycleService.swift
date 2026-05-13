@@ -72,6 +72,17 @@ final class InsightLifecycleService: InsightLifecycling {
         return insight
     }
 
+    // MARK: - Snapshot gathering
+
+    private func gatherRecentSnapshots(relativeTo referenceDate: Date) -> [DailySmileySnapshot] {
+        let calendar = Calendar.current
+        return (0..<lookbackDays).compactMap { daysAgo -> DailySmileySnapshot? in
+            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: referenceDate) else { return nil }
+            let snap = self.historicalService.getSnapshot(for: date)
+            return snap?.isEmpty == false ? snap : nil
+        }
+    }
+
     // MARK: - Morning briefing (triggered by triggerBriefingGeneration)
 
     /// Generates a morning briefing as a unified `DailyInsight`.
@@ -160,17 +171,6 @@ final class InsightLifecycleService: InsightLifecycling {
         } catch {
             lifecycleLogger.error("Briefing server call failed: \(error.localizedDescription, privacy: .public)")
             return nil
-        }
-    }
-
-    // MARK: - Snapshot gathering
-
-    func gatherRecentSnapshots(relativeTo referenceDate: Date) -> [DailySmileySnapshot] {
-        let calendar = Calendar.current
-        return (0..<lookbackDays).compactMap { daysAgo -> DailySmileySnapshot? in
-            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: referenceDate) else { return nil }
-            let snap = self.historicalService.getSnapshot(for: date)
-            return snap?.isEmpty == false ? snap : nil
         }
     }
 }
