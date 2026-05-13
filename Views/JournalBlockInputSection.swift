@@ -76,7 +76,7 @@ extension JournalBlockView {
     @ViewBuilder
     var itemCountFooter: some View {
         HStack {
-            if !self.recentMeals.isEmpty {
+            if !self.isFocused {
                 self.recentMealsButton
             }
 
