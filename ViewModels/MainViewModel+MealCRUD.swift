@@ -270,7 +270,6 @@ extension MainViewModel {
         }
 
         self.currentInsight = nil
-        self.currentBriefing = nil
 
         self.saveData()
 

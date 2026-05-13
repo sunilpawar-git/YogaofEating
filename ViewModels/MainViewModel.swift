@@ -28,16 +28,13 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Entries being edited (nil when creating new entries)
     @Published var editingMorningEntries: [MindCheckEntry]?
 
-    // MARK: - Insights (Phase 6 - Peekaboo Star)
+    // MARK: - Insights
 
     /// Controls visibility of the insight bottom sheet
     @Published var showInsightSheet: Bool = false
 
-    /// The current legacy text-only insight. Replaced by `currentEnrichedInsight` in Phase 4.
-    @Published var currentInsight: LegacyDailyInsight?
-
-    /// The current morning briefing for today
-    @Published var currentBriefing: DailyBriefing?
+    /// The unified daily insight (replaces legacy DailyInsight + DailyBriefing).
+    @Published var currentInsight: DailyInsight?
 
     /// Whether the briefing detail sheet is shown
     @Published var showBriefingSheet: Bool = false
@@ -65,9 +62,8 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// never holds a direct reference to MainViewModel (DIP-compliant).
     let aiCoordinator: any AIAnalysisCoordinating
 
-    /// Prevents concurrent briefing generation calls from triggering duplicate Firebase requests.
-    /// Guards `triggerBriefingGeneration()` to ensure only one async briefing generation runs at a time.
-    var isBriefingGenerationInProgress: Bool = false
+    /// Prevents concurrent insight generation calls.
+    var isInsightGenerationInProgress: Bool = false
 
     /// Tracked task for background sleep badge fetching. Stored so it can be observed in tests
     /// and cancelled if the VM is deallocated before the request completes.
@@ -75,10 +71,6 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
 
     /// Tracked task for the background day-reset monitoring loop. Cancelled on deinit.
     var resetMonitorTask: Task<Void, Never>?
-
-    /// Tracked task for the in-flight briefing generation request.
-    /// Cancelled when the selected date changes during generation.
-    var briefingTask: Task<Void, Never>?
 
     /// Tracked task for the in-flight insight generation request.
     /// Cancelled and replaced if triggered again before the previous completes.
@@ -112,7 +104,6 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     let persistenceService: PersistenceServiceProtocol
     let historicalService: any HistoricalDataServiceProtocol
     let healthProfileService: HealthProfileServiceProtocol
-    let insightService: InsightGenerationServiceProtocol
     let activityProvider: ActivityDataProvider
     let textSignalExtractor: any TextSignalExtracting
     let synthesisEngine: any DailySynthesizing
@@ -150,7 +141,6 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         logicService: MealLogicProvider? = nil,
         persistenceService: PersistenceServiceProtocol? = nil,
         historicalService: (any HistoricalDataServiceProtocol)? = nil,
-        insightService: InsightGenerationServiceProtocol? = nil,
         aiCoordinator: (any AIAnalysisCoordinating)? = nil,
         activityProvider: ActivityDataProvider? = nil,
         textSignalExtractor: (any TextSignalExtracting)? = nil,
@@ -165,7 +155,6 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         self.logicService = logicService ?? AILogicService()
         self.persistenceService = persistenceService ?? PersistenceService.shared
         self.historicalService = historicalSvc
-        self.insightService = insightService ?? InsightGenerationService(historicalService: historicalSvc)
         self.aiCoordinator = aiCoordinator ?? AIAnalysisCoordinator()
         self.activityProvider = activityProvider ?? HealthKitService.shared
         self.textSignalExtractor = textSignalExtractor ?? TextSignalExtractor()
@@ -200,7 +189,6 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     deinit {
         self.resetMonitorTask?.cancel()
         self.sleepBadgeTask?.cancel()
-        self.briefingTask?.cancel()
         self.insightTask?.cancel()
         self.sleepHighlightTask?.cancel()
         self.activityRefreshTask?.cancel()

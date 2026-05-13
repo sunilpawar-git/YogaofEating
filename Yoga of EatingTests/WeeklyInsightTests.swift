@@ -159,13 +159,12 @@ final class WeeklyInsightTests: XCTestCase {
     // MARK: - Service Tests
 
     @MainActor
-    func test_insightService_generatesWeeklyInsight() async {
-        // Phase 3: generateWeeklyInsight is suppressed (returns nil).
-        // WeeklyInsight model is deleted in Phase 5.
-        let mockHistorical = MockHistoricalDataService()
-        let service = InsightGenerationService(historicalService: mockHistorical)
-        let weeklyInsight = await service.generateWeeklyInsight()
-        XCTAssertNil(weeklyInsight, "generateWeeklyInsight suppressed in Phase 3")
+    func test_weeklyInsight_model_encodesAndDecodes() throws {
+        // WeeklyInsight model is deleted in Phase 5. Test that the model type is still Codable.
+        let weekly = WeeklyInsight(weekStartDate: Date(), weekEndDate: Date(), summaryText: "Good week")
+        let data = try JSONEncoder().encode(weekly)
+        let decoded = try JSONDecoder().decode(WeeklyInsight.self, from: data)
+        XCTAssertEqual(decoded.summaryText, "Good week")
     }
 
     // MARK: - Strings Tests
