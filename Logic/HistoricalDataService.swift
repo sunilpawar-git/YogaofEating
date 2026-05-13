@@ -38,8 +38,8 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// Updates or adds a morning briefing for a specific date.
     func updateBriefing(for date: Date, briefing: DailyBriefing)
 
-    /// Updates or adds a daily insight for a specific date.
-    func updateInsight(for date: Date, insight: DailyInsight)
+    /// Updates or adds a legacy text-only insight for a specific date.
+    func updateInsight(for date: Date, insight: LegacyDailyInsight)
 
     /// Updates or adds wellbeing dimensions and text signals for a specific date.
     func updateWellbeingDimensions(for date: Date, dimensions: WellbeingDimensions, textSignals: [TextSignal])

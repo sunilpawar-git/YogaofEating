@@ -106,10 +106,10 @@ final class ConcurrencyTests: XCTestCase {
 private final class SlowMockInsightGenerationService: InsightGenerationServiceProtocol {
     func gatherDataForInsight() -> [DailySmileySnapshot] { [] }
     func createInsightPrompt(from _: [DailySmileySnapshot]) -> String { "" }
-    func saveInsight(_: DailyInsight, for _: Date) {}
+    func saveInsight(_: LegacyDailyInsight, for _: Date) {}
     func shouldGenerateInsight(for _: Date) -> Bool { true }
 
-    func generateInsight(for _: Date, healthKitSleepData _: [Date: SleepData]) async throws -> DailyInsight? {
+    func generateInsight(for _: Date, healthKitSleepData _: [Date: SleepData]) async throws -> LegacyDailyInsight? {
         // Suspend indefinitely so the task is always cancellable
         try await Task.sleep(nanoseconds: .max)
         return nil

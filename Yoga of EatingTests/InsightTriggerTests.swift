@@ -93,7 +93,7 @@ final class InsightTriggerTests: XCTestCase {
     func test_saveSleepQuality_assignsGeneratedInsight_toCurrentInsight() async {
         // Given: Setup data and mock insight
         self.setupHistoricalDataForInsight()
-        let expectedInsight = DailyInsight(
+        let expectedInsight = LegacyDailyInsight(
             date: Date(),
             insightText: "Test insight text",
             insightType: .foodSleep,
@@ -119,7 +119,7 @@ final class InsightTriggerTests: XCTestCase {
     func test_currentInsight_makesInsightAvailable() async {
         // Given: Setup data and mock insight
         self.setupHistoricalDataForInsight()
-        self.mockInsightService.mockInsight = DailyInsight(
+        self.mockInsightService.mockInsight = LegacyDailyInsight(
             date: Date(),
             insightText: "Your patterns show...",
             insightType: .encouragement,
@@ -145,7 +145,7 @@ final class InsightTriggerTests: XCTestCase {
     func test_newInsight_hasUnreadIndicator() async {
         // Given: Setup data and mock insight (not viewed)
         self.setupHistoricalDataForInsight()
-        self.mockInsightService.mockInsight = DailyInsight(
+        self.mockInsightService.mockInsight = LegacyDailyInsight(
             date: Date(),
             insightText: "New insight",
             insightType: .pattern,
@@ -171,7 +171,7 @@ final class InsightTriggerTests: XCTestCase {
     func test_saveSleepQuality_doesNotRegenerateInsight_ifAlreadyExists() async {
         // Given: Already have an insight
         self.setupHistoricalDataForInsight()
-        let existingInsight = DailyInsight(
+        let existingInsight = LegacyDailyInsight(
             date: Date(),
             insightText: "Existing insight",
             insightType: .foodSleep,
@@ -193,7 +193,7 @@ final class InsightTriggerTests: XCTestCase {
 
     func test_newDay_clearsCurrentInsight() {
         // Given: Have an insight from previous day
-        self.sut.currentInsight = DailyInsight(
+        self.sut.currentInsight = LegacyDailyInsight(
             date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
             insightText: "Yesterday's insight",
             insightType: .encouragement,
@@ -211,7 +211,7 @@ final class InsightTriggerTests: XCTestCase {
 
     func test_handleSmileyLongPress_whenInsightAvailable_showsInsightSheet() {
         // Given: Have an insight available
-        self.sut.currentInsight = DailyInsight(
+        self.sut.currentInsight = LegacyDailyInsight(
             date: Date(),
             insightText: "Test insight",
             insightType: .encouragement,
@@ -240,7 +240,7 @@ final class InsightTriggerTests: XCTestCase {
 
     func test_smileyTap_stillCreatesNewMeal() {
         // Given: Have an insight available (should not interfere with tap)
-        self.sut.currentInsight = DailyInsight(
+        self.sut.currentInsight = LegacyDailyInsight(
             date: Date(),
             insightText: "Test insight",
             insightType: .pattern,
@@ -285,7 +285,7 @@ class MockInsightGenerationService: InsightGenerationServiceProtocol {
     private let historicalService: any HistoricalDataServiceProtocol
 
     var generateInsightCalled = false
-    var mockInsight: DailyInsight?
+    var mockInsight: LegacyDailyInsight?
     var generateWeeklyInsightCalled = false
     var mockWeeklyInsight: WeeklyInsight?
 
@@ -309,7 +309,7 @@ class MockInsightGenerationService: InsightGenerationServiceProtocol {
         "Mock prompt for \(snapshots.count) snapshots"
     }
 
-    func saveInsight(_: DailyInsight, for _: Date) {
+    func saveInsight(_: LegacyDailyInsight, for _: Date) {
         // No-op for mock
     }
 
@@ -324,7 +324,10 @@ class MockInsightGenerationService: InsightGenerationServiceProtocol {
         return data.count >= 2
     }
 
-    func generateInsight(for date: Date, healthKitSleepData _: [Date: SleepData] = [:]) async throws -> DailyInsight? {
+    func generateInsight(
+        for date: Date,
+        healthKitSleepData _: [Date: SleepData] = [:]
+    ) async throws -> LegacyDailyInsight? {
         self.generateInsightCalled = true
         guard self.shouldGenerateInsight(for: date) else {
             return nil

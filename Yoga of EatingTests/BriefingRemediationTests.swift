@@ -71,7 +71,7 @@ final class BriefingRemediationTests: XCTestCase {
 
     func test_dismissInsight_setsIsViewedTrue() {
         let (vm, _, _) = self.makeViewModel()
-        vm.currentInsight = DailyInsight(
+        vm.currentInsight = LegacyDailyInsight(
             date: Date(),
             insightText: "Test insight",
             insightType: .encouragement,

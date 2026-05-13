@@ -69,7 +69,7 @@ extension HistoricalDataService {
         self.saveHistoricalData()
     }
 
-    func updateInsight(for date: Date, insight: DailyInsight) {
+    func updateInsight(for date: Date, insight: LegacyDailyInsight) {
         let normalizedDate = Calendar.current.startOfDay(for: date)
         if let existing = self.historicalData.snapshot(for: normalizedDate) {
             self.historicalData.addOrUpdate(snapshot: existing.withInsight(insight))
@@ -120,7 +120,7 @@ extension HistoricalDataService {
         highlightData: HighlightData? = nil,
         reflectData: ReflectData? = nil,
         briefing: DailyBriefing? = nil,
-        insight: DailyInsight? = nil,
+        insight: LegacyDailyInsight? = nil,
         wellbeingDimensions: WellbeingDimensions? = nil,
         textSignals: [TextSignal]? = nil,
         enrichedInsight: EnrichedDailyInsight? = nil

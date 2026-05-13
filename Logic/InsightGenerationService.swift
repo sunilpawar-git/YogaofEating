@@ -16,9 +16,9 @@ enum InsightPayloadConstants {
 protocol InsightGenerationServiceProtocol {
     func gatherDataForInsight() -> [DailySmileySnapshot]
     func createInsightPrompt(from snapshots: [DailySmileySnapshot]) -> String
-    func saveInsight(_ insight: DailyInsight, for date: Date)
+    func saveInsight(_ insight: LegacyDailyInsight, for date: Date)
     func shouldGenerateInsight(for date: Date) -> Bool
-    func generateInsight(for date: Date, healthKitSleepData: [Date: SleepData]) async throws -> DailyInsight?
+    func generateInsight(for date: Date, healthKitSleepData: [Date: SleepData]) async throws -> LegacyDailyInsight?
     func generateWeeklyInsight() async -> WeeklyInsight?
     func generateBriefing(for date: Date, healthKitSleepData: [Date: SleepData]) async -> DailyBriefing?
 }
@@ -135,7 +135,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
     // MARK: - Insight Storage
 
-    func saveInsight(_ insight: DailyInsight, for date: Date) {
+    func saveInsight(_ insight: LegacyDailyInsight, for date: Date) {
         self.historicalService.updateInsight(for: date, insight: insight)
         briefingLogger.info("Insight saved for date \(date, privacy: .public)")
     }
@@ -151,7 +151,10 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
     // MARK: - Insight Generation
 
-    func generateInsight(for date: Date, healthKitSleepData: [Date: SleepData] = [:]) async throws -> DailyInsight? {
+    func generateInsight(
+        for date: Date,
+        healthKitSleepData: [Date: SleepData] = [:]
+    ) async throws -> LegacyDailyInsight? {
         guard self.shouldGenerateInsight(for: date) else { return nil }
 
         let snapshots = self.gatherDataForInsight(relativeTo: date)
@@ -172,7 +175,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         let (insightText, insightType, references, confidence) = self.generateRichInsight(
             from: snapshots, patterns: patterns
         )
-        let insight = DailyInsight(
+        let insight = LegacyDailyInsight(
             date: date,
             insightText: insightText,
             insightType: insightType,
@@ -222,7 +225,7 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
         snapshots: [DailySmileySnapshot],
         date: Date,
         healthKitSleepData: [Date: SleepData]
-    ) async -> DailyInsight? {
+    ) async -> LegacyDailyInsight? {
         guard let functions = self.functions else {
             briefingLogger.info("Firebase Functions not available — skipping server insight")
             return nil

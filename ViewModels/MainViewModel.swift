@@ -33,8 +33,8 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Controls visibility of the insight bottom sheet
     @Published var showInsightSheet: Bool = false
 
-    /// The current insight to display (generated when sleep is logged)
-    @Published var currentInsight: DailyInsight?
+    /// The current legacy text-only insight. Replaced by `currentEnrichedInsight` in Phase 4.
+    @Published var currentInsight: LegacyDailyInsight?
 
     /// The current morning briefing for today
     @Published var currentBriefing: DailyBriefing?

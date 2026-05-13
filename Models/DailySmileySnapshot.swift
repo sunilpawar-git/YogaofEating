@@ -16,7 +16,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
     let highlightData: HighlightData?
     let reflectData: ReflectData?
     let briefing: DailyBriefing?
-    let insight: DailyInsight?
+    let insight: LegacyDailyInsight?
     let totalCalories: Int?
     let hasCompleteCalorieData: Bool
 
@@ -44,7 +44,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
         highlightData: HighlightData? = nil,
         reflectData: ReflectData? = nil,
         briefing: DailyBriefing? = nil,
-        insight: DailyInsight? = nil,
+        insight: LegacyDailyInsight? = nil,
         totalCalories: Int? = nil,
         hasCompleteCalorieData: Bool = false,
         wellbeingDimensions: WellbeingDimensions? = nil,
@@ -97,7 +97,7 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.highlightData = try c.decodeIfPresent(HighlightData.self, forKey: .highlightData)
         self.reflectData = try c.decodeIfPresent(ReflectData.self, forKey: .reflectData)
         self.briefing = try c.decodeIfPresent(DailyBriefing.self, forKey: .briefing)
-        self.insight = try c.decodeIfPresent(DailyInsight.self, forKey: .insight)
+        self.insight = try c.decodeIfPresent(LegacyDailyInsight.self, forKey: .insight)
         self.totalCalories = try c.decodeIfPresent(Int.self, forKey: .totalCalories)
         self.hasCompleteCalorieData = try c.decodeIfPresent(Bool.self, forKey: .hasCompleteCalorieData) ?? false
         self.wellbeingDimensions = try c.decodeIfPresent(WellbeingDimensions.self, forKey: .wellbeingDimensions)

@@ -79,7 +79,7 @@
             let confidence = 0.85
 
             // Act
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: id,
                 date: date,
                 insightText: insightText,
@@ -99,7 +99,7 @@
 
         func test_dailyInsight_isViewed_defaultsToFalse() {
             // Arrange & Act
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "Test insight",
@@ -114,7 +114,7 @@
 
         func test_dailyInsight_markAsViewed_updatesFlag() {
             // Arrange
-            var insight = DailyInsight(
+            var insight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "Test insight",
@@ -134,7 +134,7 @@
 
         func test_dailyInsight_codable_encodesAndDecodes() throws {
             // Arrange
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "When you log gratitude in the morning, you feel calmer by evening.",
@@ -147,7 +147,7 @@
             let encoder = JSONEncoder()
             let data = try encoder.encode(insight)
             let decoder = JSONDecoder()
-            let decoded = try decoder.decode(DailyInsight.self, from: data)
+            let decoded = try decoder.decode(LegacyDailyInsight.self, from: data)
 
             // Assert
             XCTAssertEqual(decoded.id, insight.id)
@@ -164,7 +164,7 @@
 
         func test_dailyInsight_codable_withViewedTrue() throws {
             // Arrange
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "Test",
@@ -177,7 +177,7 @@
             let encoder = JSONEncoder()
             let data = try encoder.encode(insight)
             let decoder = JSONDecoder()
-            let decoded = try decoder.decode(DailyInsight.self, from: data)
+            let decoded = try decoder.decode(LegacyDailyInsight.self, from: data)
 
             // Assert
             XCTAssertTrue(decoded.isViewed)
@@ -189,7 +189,7 @@
             // Arrange
             let id = UUID()
             let date = self.testDate!
-            let insight1 = DailyInsight(
+            let insight1 = LegacyDailyInsight(
                 id: id,
                 date: date,
                 insightText: "Test",
@@ -197,7 +197,7 @@
                 confidence: 0.8,
                 isViewed: false
             )
-            let insight2 = DailyInsight(
+            let insight2 = LegacyDailyInsight(
                 id: id,
                 date: date,
                 insightText: "Test",
@@ -212,7 +212,7 @@
 
         func test_dailyInsight_equatable_returnsFalseForDifferentIds() {
             // Arrange
-            let insight1 = DailyInsight(
+            let insight1 = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "Test",
@@ -220,7 +220,7 @@
                 confidence: 0.8,
                 isViewed: false
             )
-            let insight2 = DailyInsight(
+            let insight2 = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "Test",
@@ -237,7 +237,7 @@
 
         func test_dailyInsight_confidence_acceptsValidRange() {
             // Test minimum
-            let minInsight = DailyInsight(
+            let minInsight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "Low confidence",
@@ -248,7 +248,7 @@
             XCTAssertEqual(minInsight.confidence, 0.0)
 
             // Test maximum
-            let maxInsight = DailyInsight(
+            let maxInsight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "High confidence",
@@ -259,7 +259,7 @@
             XCTAssertEqual(maxInsight.confidence, 1.0)
 
             // Test middle
-            let midInsight = DailyInsight(
+            let midInsight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "Medium confidence",
@@ -274,7 +274,7 @@
 
         func test_dailyInsight_withEmptyText_handlesCorrectly() throws {
             // Arrange
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: "",
@@ -287,7 +287,7 @@
             let encoder = JSONEncoder()
             let data = try encoder.encode(insight)
             let decoder = JSONDecoder()
-            let decoded = try decoder.decode(DailyInsight.self, from: data)
+            let decoded = try decoder.decode(LegacyDailyInsight.self, from: data)
 
             // Assert
             XCTAssertEqual(decoded.insightText, "")
@@ -296,7 +296,7 @@
         func test_dailyInsight_withSpecialCharacters_handlesCorrectly() throws {
             // Arrange
             let specialText = "You're doing great! 🌟 Keep it up! <test> & \"quotes\""
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: specialText,
@@ -309,7 +309,7 @@
             let encoder = JSONEncoder()
             let data = try encoder.encode(insight)
             let decoder = JSONDecoder()
-            let decoded = try decoder.decode(DailyInsight.self, from: data)
+            let decoded = try decoder.decode(LegacyDailyInsight.self, from: data)
 
             // Assert
             XCTAssertEqual(decoded.insightText, specialText)
@@ -318,7 +318,7 @@
         func test_dailyInsight_withLongText_handlesCorrectly() throws {
             // Arrange
             let longText = String(repeating: "This is an insight about your patterns. ", count: 10)
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: UUID(),
                 date: self.testDate,
                 insightText: longText,
@@ -331,7 +331,7 @@
             let encoder = JSONEncoder()
             let data = try encoder.encode(insight)
             let decoder = JSONDecoder()
-            let decoded = try decoder.decode(DailyInsight.self, from: data)
+            let decoded = try decoder.decode(LegacyDailyInsight.self, from: data)
 
             // Assert
             XCTAssertEqual(decoded.insightText, longText)
@@ -342,7 +342,7 @@
         func test_dailyInsight_identifiable_conformance() {
             // Arrange
             let id = UUID()
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: id,
                 date: self.testDate,
                 insightText: "Test",
@@ -359,7 +359,7 @@
 
         func test_dailyInsight_allTypes_encodeAndDecode() throws {
             for type in InsightType.allCases {
-                let insight = DailyInsight(
+                let insight = LegacyDailyInsight(
                     id: UUID(),
                     date: self.testDate,
                     insightText: "Test for \(type)",
@@ -371,7 +371,7 @@
                 let encoder = JSONEncoder()
                 let data = try encoder.encode(insight)
                 let decoder = JSONDecoder()
-                let decoded = try decoder.decode(DailyInsight.self, from: data)
+                let decoded = try decoder.decode(LegacyDailyInsight.self, from: data)
 
                 XCTAssertEqual(decoded.insightType, type, "Failed for type: \(type)")
             }
