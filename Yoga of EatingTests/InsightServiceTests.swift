@@ -8,13 +8,12 @@ import XCTest
 /// 2. `PatternAnalysisEngine` produces the same output as the pre-split `PatternAnalyzer`.
 @MainActor
 final class InsightServiceTests: XCTestCase {
-    // MARK: - BriefingService isolation
+    // MARK: - InsightLifecycleService.generateBriefing (replaces BriefingService)
 
-    func test_briefingService_generatesLocalBriefing_independently() async {
+    func test_insightLifecycleService_generatesLocalBriefing_independently() async {
         let mockHistorical = MockHistoricalDataService()
-        let briefingService = BriefingService(historicalService: mockHistorical)
+        let service = InsightLifecycleService(historicalService: mockHistorical, functions: nil)
 
-        // Provide at least 2 snapshots (minimum required by generateBriefing)
         let snapshots = [
             Self.makeSnapshot(daysAgo: 1, score: 0.7),
             Self.makeSnapshot(daysAgo: 2, score: 0.6)
@@ -23,19 +22,18 @@ final class InsightServiceTests: XCTestCase {
             mockHistorical.historicalData.addOrUpdate(snapshot: snap)
         }
 
-        let briefing = await briefingService.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let insight = await service.generateBriefing(for: Date(), healthKitSleepData: [:])
 
-        XCTAssertNotNil(briefing, "BriefingService must generate a local briefing when Firebase is unavailable")
+        XCTAssertNotNil(insight, "InsightLifecycleService must generate a local briefing when Firebase unavailable")
     }
 
-    func test_briefingService_returnsNil_whenInsufficientData() async {
+    func test_insightLifecycleService_returnsNil_whenInsufficientData() async {
         let mockHistorical = MockHistoricalDataService()
-        let briefingService = BriefingService(historicalService: mockHistorical)
-        // No snapshots added — below the 2-snapshot minimum
+        let service = InsightLifecycleService(historicalService: mockHistorical, functions: nil)
 
-        let briefing = await briefingService.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let insight = await service.generateBriefing(for: Date(), healthKitSleepData: [:])
 
-        XCTAssertNil(briefing, "BriefingService must return nil when fewer than 2 snapshots are available")
+        XCTAssertNil(insight, "InsightLifecycleService must return nil when fewer than 2 snapshots available")
     }
 
     // MARK: - PatternAnalysisEngine parity

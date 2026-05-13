@@ -107,16 +107,25 @@ final class MockActivityDataProvider: ActivityDataProvider {
 
 @MainActor
 final class MockInsightLifecycleService: InsightLifecycling {
-    var stubbedResult: EnrichedDailyInsight?
+    var stubbedResult: DailyInsight?
     var generateEnrichedInsightCalled = false
+    var generateBriefingCalled = false
 
     func generateEnrichedInsight(
         for _: Date,
         synthesis _: DailySynthesis,
         recentSnapshots _: [DailySmileySnapshot],
         healthKitSleepData _: [Date: SleepData]
-    ) async -> EnrichedDailyInsight? {
+    ) async -> DailyInsight? {
         self.generateEnrichedInsightCalled = true
+        return self.stubbedResult
+    }
+
+    func generateBriefing(
+        for _: Date,
+        healthKitSleepData _: [Date: SleepData]
+    ) async -> DailyInsight? {
+        self.generateBriefingCalled = true
         return self.stubbedResult
     }
 }
