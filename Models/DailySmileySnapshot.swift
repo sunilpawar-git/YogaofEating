@@ -72,8 +72,43 @@ struct DailySmileySnapshot: Codable, Identifiable {
         case wellbeingDimensions, textSignals
         // Current storage key for unified DailyInsight
         case insight
-        // Migration-only key (read-only; enrichedInsight written by pre-Phase-3 builds)
+        // Migration-only keys (read-only; written by pre-Phase-3/5 builds)
         case enrichedInsight
+        case briefing
+    }
+
+    /// Minimal decoder for the legacy `DailyBriefing` format stored under the `briefing` key.
+    /// Only decodes fields that were present in old builds; missing fields get safe defaults.
+    private struct LegacyBriefingPayload: Decodable {
+        let id: UUID
+        let date: Date
+        let generatedAt: Date
+        let headline: String
+        let correlationCards: [CorrelationCard]
+        let nudge: ActionableNudge
+        let isViewed: Bool
+
+        func asDailyInsight() -> DailyInsight {
+            DailyInsight(
+                id: self.id,
+                date: self.date,
+                generatedAt: self.generatedAt,
+                headline: self.headline,
+                dimensions: WellbeingDimensions(
+                    physicalLoad: 0.5,
+                    emotionalTone: 0.5,
+                    cognitiveClarity: 0.5,
+                    behavioralMomentum: 0.5
+                ),
+                dominantInsight: "",
+                correlationCards: self.correlationCards,
+                nudge: self.nudge,
+                causalExplanation: "",
+                textSignals: [],
+                confidence: 0.5,
+                isViewed: self.isViewed
+            )
+        }
     }
 
     init(from decoder: Decoder) throws {
@@ -96,11 +131,13 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.wellbeingDimensions = try c.decodeIfPresent(WellbeingDimensions.self, forKey: .wellbeingDimensions)
         self.textSignals = try c.decodeIfPresent([TextSignal].self, forKey: .textSignals)
 
-        // Migration priority: new `insight` (DailyInsight) → `enrichedInsight` → converted `briefing`
+        // Migration priority: new `insight` → `enrichedInsight` → converted `briefing`
         if let unified = try? c.decodeIfPresent(DailyInsight.self, forKey: .insight) {
             self.insight = unified
         } else if let enriched = try? c.decodeIfPresent(DailyInsight.self, forKey: .enrichedInsight) {
             self.insight = enriched
+        } else if let legacy = try? c.decodeIfPresent(LegacyBriefingPayload.self, forKey: .briefing) {
+            self.insight = legacy.asDailyInsight()
         } else {
             self.insight = nil
         }

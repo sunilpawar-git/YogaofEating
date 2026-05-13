@@ -40,7 +40,7 @@ struct CaloriePillView: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color.white.opacity(0.12))
+                            .fill(AppTheme.CaloriePill.pillBackground)
                         Capsule()
                             .fill(self.data.fillColor)
                             .frame(width: max(0, self.data.progressFraction * geo.size.width))
