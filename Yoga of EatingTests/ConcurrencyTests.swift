@@ -50,78 +50,61 @@ final class ConcurrencyTests: XCTestCase {
         XCTAssertNil(vm.sleepBadgeTask, "sleepBadgeTask should be nil before any fetch is requested")
     }
 
-    // MARK: - briefingTask lifecycle
+    // MARK: - insightTask lifecycle
 
-    func test_briefingTask_isStoredDuringGeneration() async {
+    func test_insightTask_isStoredDuringGeneration() async {
         let vm = self.makeVM()
-        // Trigger briefing generation to confirm the task is captured
-        vm.triggerBriefingGeneration()
-        // After triggering, the task should be non-nil (generation in progress or just started)
-        XCTAssertNotNil(vm.briefingTask, "briefingTask must be stored when briefing generation is triggered")
+        vm.triggerInsightGeneration()
+        XCTAssertNotNil(vm.insightTask, "insightTask must be stored when insight generation is triggered")
     }
 
-    func test_briefingTask_isCancelledOnDateChange() async {
+    func test_insightTask_isCancelledOnRequest() async {
         let vm = self.makeVM()
-        vm.triggerBriefingGeneration()
-        let initialTask = vm.briefingTask
+        vm.triggerInsightGeneration()
+        let initialTask = vm.insightTask
 
-        // Simulating a date navigation change should cancel the in-flight briefing task
-        vm.cancelBriefingTask()
+        vm.cancelInsightTask()
 
         XCTAssertEqual(
             initialTask?.isCancelled,
             true,
-            "briefingTask must be cancelled when date changes during generation"
+            "insightTask must be cancellable"
         )
     }
 
-    // MARK: - briefingTask cancellation while in-flight (flake-proof with slow mock)
+    // MARK: - insightTask cancellation while in-flight (flake-proof with slow mock)
 
-    /// Uses a slow insight service to guarantee the task is in-flight when cancellation is tested.
-    /// Without this, the task may complete before the assertion fires (timing-sensitive false positive).
-    func test_briefingTask_isCancelledBeforeCompletion_withSlowInsightService() async throws {
+    func test_insightTask_isCancelledBeforeCompletion_withSlowLifecycleService() async throws {
+        let slowMock = SlowMockInsightLifecycleService()
         let vm = MainViewModel(
             persistenceService: MockPersistenceService(),
             historicalService: MockHistoricalDataService(),
-            insightService: SlowMockInsightGenerationService(),
+            insightLifecycleService: slowMock,
             skipDataLoading: true
         )
 
-        vm.triggerBriefingGeneration()
-        let task = vm.briefingTask
+        vm.triggerInsightGeneration()
+        let task = vm.insightTask
 
-        XCTAssertNotNil(task, "briefingTask must be in-flight when slow service is used")
+        XCTAssertNotNil(task, "insightTask must be in-flight when slow service is used")
 
-        vm.cancelBriefingTask()
+        vm.cancelInsightTask()
 
-        XCTAssertEqual(task?.isCancelled, true, "briefingTask must be cancelled before it can complete")
+        XCTAssertEqual(task?.isCancelled, true, "insightTask must be cancelled before it can complete")
     }
 }
 
-// MARK: - SlowMockInsightGenerationService
+// MARK: - SlowMockInsightLifecycleService
 
-/// An insight service that never completes, guaranteeing the briefingTask is always in-flight
-/// when cancellation tests run. Prevents false positives from timing-sensitive task completion.
 @MainActor
-private final class SlowMockInsightGenerationService: InsightGenerationServiceProtocol {
-    func gatherDataForInsight() -> [DailySmileySnapshot] { [] }
-    func createInsightPrompt(from _: [DailySmileySnapshot]) -> String { "" }
-    func saveInsight(_: LegacyDailyInsight, for _: Date) {}
-    func shouldGenerateInsight(for _: Date) -> Bool { true }
+private final class SlowMockInsightLifecycleService: InsightLifecycling {
+    func generateEnrichedInsight(
+        for _: Date, synthesis _: DailySynthesis,
+        recentSnapshots _: [DailySmileySnapshot],
+        healthKitSleepData _: [Date: SleepData]
+    ) async -> DailyInsight? { nil }
 
-    func generateInsight(for _: Date, healthKitSleepData _: [Date: SleepData]) async throws -> LegacyDailyInsight? {
-        // Suspend indefinitely so the task is always cancellable
-        try await Task.sleep(nanoseconds: .max)
-        return nil
-    }
-
-    func generateWeeklyInsight() async -> WeeklyInsight? {
-        try? await Task.sleep(nanoseconds: .max)
-        return nil
-    }
-
-    func generateBriefing(for _: Date, healthKitSleepData _: [Date: SleepData]) async -> DailyBriefing? {
-        // Suspend indefinitely so the briefingTask is always in-flight
+    func generateBriefing(for _: Date, healthKitSleepData _: [Date: SleepData]) async -> DailyInsight? {
         try? await Task.sleep(nanoseconds: .max)
         return nil
     }

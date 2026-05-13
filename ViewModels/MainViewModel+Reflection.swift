@@ -51,39 +51,10 @@ extension MainViewModel {
         self.updateSmileyStateFromAllMeals()
 
         if trigger == .sleepLogged {
-            self.triggerLegacyInsightGenerationIfNeeded(for: date)
-            self.triggerBriefingGeneration()
+            self.triggerInsightGeneration()
         }
 
         self.triggerEnrichedInsightGeneration(for: date)
-    }
-
-    /// Generates the legacy `DailyInsight` if one does not already exist for today.
-    /// Cancels any in-flight task before starting a new one.
-    private func triggerLegacyInsightGenerationIfNeeded(for date: Date) {
-        if let existingInsight = self.currentInsight,
-           Calendar.current.isDate(existingInsight.date, inSameDayAs: date)
-        {
-            return
-        }
-
-        self.insightTask?.cancel()
-        self.insightTask = Task {
-            do {
-                let healthKitSleepData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
-
-                guard !Task.isCancelled else { return }
-
-                if let insight = try await self.insightService.generateInsight(
-                    for: date,
-                    healthKitSleepData: healthKitSleepData
-                ) {
-                    self.currentInsight = insight
-                }
-            } catch {
-                reflectionLogger.error("Insight generation failed: \(error.localizedDescription, privacy: .public)")
-            }
-        }
     }
 
     /// Fetches HealthKit sleep data for the last N days for insight generation.

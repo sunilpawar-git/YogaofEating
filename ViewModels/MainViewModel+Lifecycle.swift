@@ -26,11 +26,11 @@ extension MainViewModel {
             self.triggerCloudRestoreIfNeeded()
         }
 
-        // Hydrate today's briefing from persisted unified insight (Phase 2 bridge)
-        if self.currentBriefing == nil,
+        // Hydrate today's insight from persisted snapshot
+        if self.currentInsight == nil,
            let persistedInsight = self.historicalService.getSnapshot(for: Date())?.insight
         {
-            self.currentBriefing = DailyBriefing(insight: persistedInsight)
+            self.currentInsight = persistedInsight
         }
 
         // Refresh today's activity data for a live TDEE in the calorie pill
@@ -74,9 +74,9 @@ extension MainViewModel {
         )
     }
 
-    func cancelBriefingTask() {
-        self.briefingTask?.cancel()
-        self.briefingTask = nil
+    func cancelInsightTask() {
+        self.insightTask?.cancel()
+        self.insightTask = nil
     }
 
     func checkAndResetIfNewDay() {

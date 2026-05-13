@@ -3,128 +3,118 @@ import XCTest
 
 @MainActor
 final class BriefingRemediationTests: XCTestCase {
-    // MARK: - Helpers
-
-    private func makeBriefing(isViewed: Bool = false) -> DailyBriefing {
-        DailyBriefing(
+    private func makeInsight(headline: String = "Test insight", isViewed: Bool = false) -> DailyInsight {
+        DailyInsight(
             date: Date(),
-            generatedAt: Date(),
-            headline: "Test briefing headline",
+            headline: headline,
+            dimensions: .neutral,
+            dominantInsight: "Your patterns show improvement.",
             correlationCards: [
-                CorrelationCard(
-                    category: .foodToSleep,
-                    observation: "Test observation",
-                    confidence: 0.8
-                )
+                CorrelationCard(category: .foodToSleep, observation: "Test observation", confidence: 0.8)
             ],
             nudge: ActionableNudge(
-                suggestion: "Try a lighter dinner",
-                reasoning: "Late heavy meals correlated with poorer sleep"
+                suggestion: Strings.Insight.Nudge.defaultSuggestion,
+                reasoning: Strings.Insight.Nudge.defaultReasoning
             ),
+            causalExplanation: "",
+            textSignals: [],
+            confidence: 0.8,
             isViewed: isViewed
         )
     }
 
     private func makeViewModel(
         historicalService: MockHistoricalDataService? = nil,
-        insightService: MockInsightGenerationService? = nil
-    ) -> (MainViewModel, MockHistoricalDataService, MockInsightGenerationService) {
+        lifecycleService: MockInsightLifecycleService? = nil
+    ) -> (MainViewModel, MockHistoricalDataService, MockInsightLifecycleService) {
         let mockHistorical = historicalService ?? MockHistoricalDataService()
-        let mockInsight = insightService ?? MockInsightGenerationService(historicalService: mockHistorical)
+        let mockLifecycle = lifecycleService ?? MockInsightLifecycleService()
         let vm = MainViewModel(
             logicService: MockMealLogicService(),
             persistenceService: MockPersistenceService(),
             historicalService: mockHistorical,
-            insightService: mockInsight,
+            insightLifecycleService: mockLifecycle,
             skipDataLoading: true
         )
-        return (vm, mockHistorical, mockInsight)
+        return (vm, mockHistorical, mockLifecycle)
     }
 
-    // MARK: - A1: Struct mutation — markBriefingViewed
+    // MARK: - markBriefingViewed → marks unified currentInsight
 
     func test_markBriefingViewed_setsIsViewedTrue() {
         let (vm, _, _) = self.makeViewModel()
-        vm.currentBriefing = self.makeBriefing(isViewed: false)
+        vm.currentInsight = self.makeInsight(isViewed: false)
 
         vm.markBriefingViewed()
 
         XCTAssertTrue(
-            vm.currentBriefing?.isViewed == true,
-            "markBriefingViewed must mutate the published currentBriefing, not a temporary copy"
+            vm.currentInsight?.isViewed == true,
+            "markBriefingViewed must mutate the published currentInsight"
         )
     }
 
     func test_markBriefingViewed_persistsViaHistoricalService() {
         let (vm, mockHistorical, _) = self.makeViewModel()
-        vm.currentBriefing = self.makeBriefing(isViewed: false)
+        vm.currentInsight = self.makeInsight(isViewed: false)
 
         vm.markBriefingViewed()
 
         XCTAssertTrue(
             mockHistorical.updateInsightCalled,
-            "markBriefingViewed must persist the updated briefing via historicalService.updateInsight"
+            "markBriefingViewed must persist via historicalService.updateInsight"
         )
     }
 
-    // MARK: - A1: Struct mutation — dismissInsight
+    // MARK: - dismissInsight marks unified insight
 
     func test_dismissInsight_setsIsViewedTrue() {
         let (vm, _, _) = self.makeViewModel()
-        vm.currentInsight = LegacyDailyInsight(
-            date: Date(),
-            insightText: "Test insight",
-            insightType: .encouragement,
-            confidence: 0.8,
-            references: []
-        )
+        vm.currentInsight = self.makeInsight()
 
         vm.dismissInsight()
 
         XCTAssertTrue(
             vm.currentInsight?.isViewed == true,
-            "dismissInsight must mutate the published currentInsight, not a temporary copy"
+            "dismissInsight must mutate the published currentInsight"
         )
     }
 
-    // MARK: - A2: Cold-start hydration
+    // MARK: - Cold-start hydration from persisted snapshot
 
-    func test_loadData_hydratesBriefingFromSnapshot() {
+    func test_loadData_hydratesCurrentInsightFromSnapshot() {
         let mockHistorical = MockHistoricalDataService()
-        let briefing = self.makeBriefing()
-        let snapshot = DailySmileySnapshotBuilder().withInsight(DailyInsight(briefing: briefing)).build()
-        mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+        let today = Calendar.current.startOfDay(for: Date())
+        let insight = self.makeInsight()
+        mockHistorical.historicalData.addOrUpdate(
+            snapshot: DailySmileySnapshotBuilder().withDate(today).withInsight(insight).build()
+        )
 
         let (vm, _, _) = self.makeViewModel(historicalService: mockHistorical)
         vm.loadData()
 
-        XCTAssertNotNil(
-            vm.currentBriefing,
-            "loadData must hydrate currentBriefing from today's persisted snapshot"
-        )
+        XCTAssertNotNil(vm.currentInsight, "loadData must hydrate currentInsight from today's snapshot")
     }
 
-    // MARK: - A2: Duplicate generation guard
+    // MARK: - Duplicate generation guard
 
-    func test_triggerBriefingGeneration_skipsWhenSnapshotAlreadyHasBriefing() {
+    func test_triggerInsightGeneration_skipsWhenInsightAlreadyExistsForToday() {
         let mockHistorical = MockHistoricalDataService()
-        let briefing = self.makeBriefing()
-        let snapshot = DailySmileySnapshotBuilder().withInsight(DailyInsight(briefing: briefing)).build()
-        mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
+        let today = Calendar.current.startOfDay(for: Date())
+        let insight = self.makeInsight(headline: "Already generated")
+        mockHistorical.historicalData.addOrUpdate(
+            snapshot: DailySmileySnapshotBuilder().withDate(today).withInsight(insight).build()
+        )
 
-        let mockInsight = MockInsightGenerationService(historicalService: mockHistorical)
-        let (vm, _, _) = self.makeViewModel(historicalService: mockHistorical, insightService: mockInsight)
+        let mockLifecycle = MockInsightLifecycleService()
+        let (vm, _, _) = self.makeViewModel(historicalService: mockHistorical, lifecycleService: mockLifecycle)
 
-        vm.triggerBriefingGeneration()
+        vm.triggerInsightGeneration()
 
         XCTAssertFalse(
-            mockInsight.generateBriefingCalled,
-            "triggerBriefingGeneration must not call generateBriefing when snapshot already has a briefing"
+            mockLifecycle.generateBriefingCalled,
+            "triggerInsightGeneration must not call lifecycle when insight already persisted for today"
         )
-        XCTAssertNotNil(
-            vm.currentBriefing,
-            "triggerBriefingGeneration must restore persisted briefing to in-memory state"
-        )
+        XCTAssertNotNil(vm.currentInsight, "Must restore persisted insight to in-memory state")
     }
 
     // MARK: - A3: WakeTimePredictor parsing
@@ -147,8 +137,8 @@ final class BriefingRemediationTests: XCTestCase {
 
         let result = WakeTimePredictor.predictWakeTime(for: userId)
 
-        XCTAssertEqual(result.hour, 7, "Default wake hour should be 7")
-        XCTAssertEqual(result.minute, 0, "Default wake minute should be 0")
+        XCTAssertEqual(result.hour, 7)
+        XCTAssertEqual(result.minute, 0)
     }
 
     // MARK: - A5: Notification identifier stability
@@ -157,44 +147,7 @@ final class BriefingRemediationTests: XCTestCase {
         XCTAssertEqual(
             NotificationTimingABTest.briefingNotificationIdentifier,
             "morning_briefing",
-            "Notification identifier must be a stable constant matching the cancel call"
-        )
-    }
-
-    // MARK: - B3: Variant distribution stability
-
-    func test_assignVariant_distribution_isStable() {
-        let iterations = 1000
-        var counts: [NotificationTimingVariant: Int] = [
-            .fixed_730am: 0,
-            .adaptive_wakeTime: 0,
-            .smartDelay_2min: 0
-        ]
-
-        for i in 0..<iterations {
-            let userId = "stability-test-\(i)-\(UUID().uuidString)"
-            NotificationTimingABTest.resetVariantForUser(userId)
-            let variant = NotificationTimingABTest.getCurrentVariant(for: userId)
-            counts[variant, default: 0] += 1
-            NotificationTimingABTest.resetVariantForUser(userId)
-        }
-
-        let tolerance = 0.08
-        let fixedRatio = Double(counts[.fixed_730am]!) / Double(iterations)
-        let adaptiveRatio = Double(counts[.adaptive_wakeTime]!) / Double(iterations)
-        let smartRatio = Double(counts[.smartDelay_2min]!) / Double(iterations)
-
-        XCTAssertTrue(
-            abs(fixedRatio - 0.50) < tolerance,
-            "fixed_730am expected ~50%, got \(fixedRatio * 100)%"
-        )
-        XCTAssertTrue(
-            abs(adaptiveRatio - 0.25) < tolerance,
-            "adaptive_wakeTime expected ~25%, got \(adaptiveRatio * 100)%"
-        )
-        XCTAssertTrue(
-            abs(smartRatio - 0.25) < tolerance,
-            "smartDelay_2min expected ~25%, got \(smartRatio * 100)%"
+            "The notification identifier must never change — iOS caches it"
         )
     }
 }

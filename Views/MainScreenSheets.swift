@@ -18,9 +18,7 @@ private struct MainScreenSheetsModifier: ViewModifier {
                 if let insight = self.viewModel.currentInsight {
                     InsightBottomSheet(
                         insight: insight,
-                        onDismiss: {
-                            self.viewModel.dismissInsight()
-                        }
+                        onDismiss: { self.viewModel.dismissInsight() }
                     )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
@@ -42,12 +40,10 @@ private struct MainScreenSheetsModifier: ViewModifier {
                 }
             }
             .sheet(isPresented: self.$viewModel.showBriefingSheet) {
-                if let briefing = self.viewModel.currentBriefing {
+                if let insight = self.viewModel.currentInsight {
                     BriefingDetailView(
-                        briefing: briefing,
-                        onDismiss: {
-                            self.viewModel.showBriefingSheet = false
-                        }
+                        insight: insight,
+                        onDismiss: { self.viewModel.showBriefingSheet = false }
                     )
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
