@@ -56,7 +56,8 @@ extension MainViewModel {
             todos: data?.todos ?? [],
             morningThoughts: data?.morningThoughts,
             healthKitSleepData: self.isViewingToday ? self.appleSleepData : nil,
-            isToday: self.isViewingToday
+            isToday: self.isViewingToday,
+            date: Calendar.current.startOfDay(for: self.selectedDate)
         )
     }
 
@@ -70,8 +71,44 @@ extension MainViewModel {
             journalText: data?.journalText,
             feeling: data?.feeling,
             morningTodos: highlightTodos,
-            isToday: self.isViewingToday
+            isToday: self.isViewingToday,
+            detectedSignals: data?.textSignals ?? [],
+            date: Calendar.current.startOfDay(for: self.selectedDate)
         )
+    }
+
+    // MARK: - Wellbeing Breakdown Contract
+
+    /// Minimal data contract for `WellbeingBreakdownSheet`.
+    /// Returns nil when no meals are logged today or when viewing a past day.
+    var wellbeingBreakdownContract: WellbeingBreakdownSheetContract? {
+        guard self.isViewingToday, !self.meals.isEmpty else { return nil }
+        let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
+        let synthesis = self.synthesisEngine.synthesize(
+            meals: self.meals,
+            highlightData: snapshot?.highlightData,
+            reflectData: snapshot?.reflectData,
+            appleSleepData: self.appleSleepData,
+            yesterday: nil
+        )
+        let weakDims: [WellbeingDimension] = WellbeingDimension.allCases
+            .map { ($0, $0.value(in: synthesis.dimensions)) }
+            .filter { $0.1 < SynthesisThresholds.overallNeutral }
+            .sorted { $0.1 < $1.1 }
+            .prefix(2)
+            .map(\.0)
+        return WellbeingBreakdownSheetContract(
+            dimensions: synthesis.dimensions,
+            dominantDimension: synthesis.dominantDimension,
+            causalNarrative: synthesis.causalNarrative,
+            weakDimensions: weakDims
+        )
+    }
+
+    /// Up to 2 weakest dimensions for the MorningBriefingCard subtext.
+    /// Derived from `wellbeingBreakdownContract` to share synthesis computation.
+    var briefingWeakDimensions: [WellbeingDimension] {
+        self.wellbeingBreakdownContract?.weakDimensions ?? []
     }
 
     // MARK: - Navigation Actions

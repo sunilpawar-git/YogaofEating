@@ -137,7 +137,7 @@ All async delays, debounce intervals, and polling periods live in `TimingConstan
 xcodebuild clean build \
   -project "Yoga of Eating.xcodeproj" \
   -scheme "Yoga of Eating" \
-  -destination "platform=iOS Simulator,name=iPhone 16"
+  -destination "platform=iOS Simulator,name=iPhone 17"
 ```
 
 ### Run All Tests
@@ -145,7 +145,7 @@ xcodebuild clean build \
 xcodebuild clean test \
   -project "Yoga of Eating.xcodeproj" \
   -scheme "Yoga of Eating" \
-  -destination "platform=iOS Simulator,name=iPhone 16" \
+  -destination "platform=iOS Simulator,name=iPhone 17" \
   -only-testing:"Yoga of EatingTests" \
   -configuration Debug
 ```
@@ -155,7 +155,7 @@ xcodebuild clean test \
 xcodebuild test \
   -project "Yoga of Eating.xcodeproj" \
   -scheme "Yoga of Eating" \
-  -destination "platform=iOS Simulator,name=iPhone 16" \
+  -destination "platform=iOS Simulator,name=iPhone 17" \
   -only-testing:"Yoga of EatingTests/AIAnalysisIntegrationTests"
 ```
 
@@ -164,7 +164,7 @@ xcodebuild test \
 xcodebuild test \
   -project "Yoga of Eating.xcodeproj" \
   -scheme "Yoga of Eating" \
-  -destination "platform=iOS Simulator,name=iPhone 16" \
+  -destination "platform=iOS Simulator,name=iPhone 17" \
   -only-testing:"Yoga of EatingTests/AIAnalysisIntegrationTests/test_defaultInit_logicServiceIsAIAnalysisProvider"
 ```
 
@@ -732,7 +732,7 @@ Zero warnings on merge to `main`. Current known clean state:
 - `AppStore.requestReview(in:)` — not the deprecated `SKStoreReviewController` variant
 - No unused imports
 
-Run `xcodebuild -scheme "Yoga of Eating" -destination "platform=iOS Simulator,name=iPhone 16" clean build 2>&1 | grep -E "warning:|error:"` to check before committing.
+Run `xcodebuild -scheme "Yoga of Eating" -destination "platform=iOS Simulator,name=iPhone 17" clean build 2>&1 | grep -E "warning:|error:"` to check before committing.
 
 ## Branch and commit conventions
 

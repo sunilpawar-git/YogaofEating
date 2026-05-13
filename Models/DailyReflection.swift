@@ -24,6 +24,18 @@ enum ReflectionFeeling: String, Codable, CaseIterable {
     var displayName: String {
         self.rawValue.capitalized
     }
+
+    /// Numeric score (0–1) used by synthesis engine.
+    /// SSOT: never duplicate this mapping in service or engine files.
+    var synthesisScore: Double {
+        switch self {
+        case .great: 0.9
+        case .calm: 0.75
+        case .ok: 0.5
+        case .tired: 0.3
+        case .heavy: 0.15
+        }
+    }
 }
 
 /// Represents the user's sleep quality for morning reflection.
@@ -46,6 +58,17 @@ enum SleepQuality: String, Codable, CaseIterable {
     /// Human-readable display name
     var displayName: String {
         self.rawValue.capitalized
+    }
+
+    /// Numeric score (0–1) used by synthesis and briefing services.
+    /// SSOT: never duplicate this mapping in service or engine files.
+    var synthesisScore: Double {
+        switch self {
+        case .great: 1.0
+        case .good: 0.75
+        case .poor: 0.25
+        case .terrible: 0.0
+        }
     }
 }
 

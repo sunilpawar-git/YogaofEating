@@ -7,6 +7,8 @@ struct MorningBriefingCard: View {
     let topCorrelation: String?
     let nudge: String
     let isViewed: Bool
+    /// Up to 2 weakest wellbeing dimensions — shown as a 1-line subtext below the headline.
+    var weakDimensions: [WellbeingDimension] = []
     var onTap: (() -> Void)?
 
     var body: some View {
@@ -37,6 +39,16 @@ struct MorningBriefingCard: View {
                     .fontWeight(.medium)
                     .foregroundStyle(.primary)
                     .lineLimit(2)
+
+                if !self.weakDimensions.isEmpty {
+                    Text(
+                        Strings.WellbeingBreakdown.weakDimensionPrefix + " "
+                            + self.weakDimensions.map(\.displayName).joined(separator: ", ")
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(AppTheme.textMuted)
+                    .lineLimit(1)
+                }
 
                 if let correlation = self.topCorrelation {
                     Text(correlation)

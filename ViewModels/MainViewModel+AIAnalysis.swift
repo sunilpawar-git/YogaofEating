@@ -124,16 +124,16 @@ extension MainViewModel {
         defer { self.aiCoordinator.clearInProgress(mealId: mealId) }
 
         do {
-            aiLogger.debug("AI analysis started (item count: \(items.count, privacy: .public))")
+            aiLogger.debug("AI analysis started (item count: \(items.count, privacy: .private))")
             try Task.checkCancellation()
 
             let result = try await aiService.analyzeMealQuality(description: sanitized)
             #if DEBUG
                 aiLogger.debug(
-                    "AI analysis complete — score: \(result.score, privacy: .public), mood: \(result.mood.rawValue, privacy: .public)"
+                    "AI analysis complete — score: \(result.score, privacy: .private), mood: \(result.mood.rawValue, privacy: .private)"
                 )
             #else
-                aiLogger.debug("AI analysis complete for meal \(mealId, privacy: .public)")
+                aiLogger.debug("AI analysis complete for meal \(mealId, privacy: .private)")
             #endif
 
             if let verifyIndex = meals.firstIndex(where: { $0.id == mealId }) {
@@ -153,7 +153,7 @@ extension MainViewModel {
             await self.reanalyzeAllMealsForSmileyState(withFeedback: false)
 
         } catch {
-            aiLogger.error("AI analysis failed: \(error.localizedDescription, privacy: .public)")
+            aiLogger.error("AI analysis failed (meal redacted for privacy)")
             await self.reanalyzeAllMealsForSmileyState(withFeedback: false)
         }
     }
@@ -161,7 +161,7 @@ extension MainViewModel {
     /// Reanalyzes all meals to update the smiley state.
     /// - Parameter withFeedback: Pass false when called from async AI completion to avoid
     ///   surprising the user with haptics while they are in a different context.
-    func reanalyzeAllMealsForSmileyState(withFeedback: Bool = false) async {
+    func reanalyzeAllMealsForSmileyState(withFeedback _: Bool = false) async {
         guard !meals.isEmpty else {
             withAnimation(.spring()) {
                 smileyState = .neutral
@@ -177,10 +177,17 @@ extension MainViewModel {
             return
         }
 
-        let totalScore = analyzedMeals.map(\.healthScore).reduce(0.0, +)
-        let avgScore = totalScore / Double(analyzedMeals.count)
-
-        updateSmileyState(with: avgScore, withFeedback: withFeedback)
+        let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
+        let synthesis = self.synthesisEngine.synthesize(
+            meals: analyzedMeals,
+            highlightData: snapshot?.highlightData,
+            reflectData: snapshot?.reflectData,
+            appleSleepData: self.appleSleepData,
+            yesterday: nil
+        )
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+            self.smileyState = synthesis.smileySuggestion
+        }
         saveData()
     }
 }

@@ -272,8 +272,81 @@ enum Strings {
         /// Hint explaining what the recent meals button does.
         static let addMealFromRecentHint = "Shows meals from the past 3 days"
 
+        /// Accessibility label for the green checkmark submit button on a meal card.
+        static let submitMealEntry = "Submit meal entry"
+
+        /// Accessibility hint for the green checkmark submit button.
+        static let submitMealHint = "Tap to save and analyze this meal"
+
         static func mindCheckEntries(_ count: Int) -> String {
             "\(count) entries"
+        }
+    }
+
+    // MARK: - Enriched Insight
+
+    enum EnrichedInsight {
+        static let sheetTitle = "Today's Intelligence"
+        static let causalHeading = "Why your smiley changed"
+        static let noDataHeadline = "Keep logging to unlock insights"
+        static let headlineStrong = "Strong day — all systems are working for you"
+        static let headlineSteady = "A steady day with room to grow"
+        static let headlineThoughtful = "A thoughtful day — something to reflect on"
+        static let headlineChallenging = "A challenging day — be gentle with yourself"
+    }
+
+    // MARK: - Correlation Category Display Names
+
+    enum Correlation {
+        static let foodToSleep = "Food & Sleep"
+        static let foodToMood = "Food & Mood"
+        static let focusToFeeling = "Focus & Feeling"
+        static let timingPattern = "Timing Pattern"
+        static let foodDebt = "Food & Momentum"
+        static let sleepRecoveryCarryover = "Sleep Recovery"
+        static let intentionFollowthrough = "Intention Gap"
+        static let journalTonePrediction = "Mood Forecast"
+        static let sleepMismatch = "Sleep Mismatch"
+        static let carryOverLoad = "Carry-Over Load"
+    }
+
+    // MARK: - Wellbeing Breakdown Sheet
+
+    enum WellbeingBreakdown {
+        static let sheetTitle = "Today's Wellbeing"
+        static let whyHeading = "Why did my smiley change?"
+        static let done = "Done"
+        static let overallLabel = "Overall"
+        static let weakDimensionPrefix = "Needs attention:"
+        static let detectedSignalsLabel = "Detected tone:"
+    }
+
+    // MARK: - Synthesis (WellbeingDimensions + TextSignal)
+
+    enum Synthesis {
+        enum Dimension {
+            static let physicalLoad = "Physical"
+            static let emotionalTone = "Emotional"
+            static let cognitiveClarity = "Clarity"
+            static let behavioralMomentum = "Momentum"
+        }
+
+        enum Signal {
+            static let stressed = "Stress detected"
+            static let clear = "Clear mindset"
+            static let overwhelmed = "Feeling overwhelmed"
+            static let grateful = "Gratitude day"
+            static let agentive = "Strong agency"
+            static let selfCompassionate = "Self-compassion"
+            static let neutral = "Neutral tone"
+        }
+
+        enum CausalNarrative {
+            static let physical = "Your food choices are driving today's state."
+            static let emotional = "Your mood and feelings are shaping today."
+            static let cognitive = "Sleep quality is influencing your clarity."
+            static let behavioral = "Your follow-through on intentions is leading today."
+            static let balanced = "All dimensions are contributing equally today."
         }
     }
 }

@@ -17,21 +17,31 @@ final class BriefingService {
     // MARK: - Properties
 
     private let historicalService: any HistoricalDataServiceProtocol
-    private let patternAnalyzer: PatternAnalyzer
+    let patternAnalyzer: PatternAnalyzer
     private var functions: Functions?
 
     /// Number of days to look back for briefing generation.
     private let lookbackDays: Int = 7
 
+    /// Tracks the date of the current in-flight briefing request to prevent concurrent duplicate calls.
+    /// Reset when request completes (success or failure).
+    private var inFlightDate: Date?
+
+    /// Debounce window for briefing requests (seconds). Prevents rapid re-triggering.
+    private let debounceInterval: TimeInterval = 2.0
+
+    /// Timestamp of the last completed briefing request. Used for debounce logic.
+    private var lastBriefingRequestTime: Date?
+
     // MARK: - Initialization
 
     init(
         historicalService: any HistoricalDataServiceProtocol,
-        patternAnalyzer: PatternAnalyzer = PatternAnalyzer(),
+        patternAnalyzer: PatternAnalyzer? = nil,
         functions: Functions? = nil
     ) {
         self.historicalService = historicalService
-        self.patternAnalyzer = patternAnalyzer
+        self.patternAnalyzer = patternAnalyzer ?? PatternAnalyzer()
 
         if let providedFunctions = functions {
             self.functions = providedFunctions
@@ -45,13 +55,42 @@ final class BriefingService {
     // MARK: - Public API
 
     /// Generates a structured `DailyBriefing` from historical data.
-    /// Returns `nil` if fewer than 2 snapshots are available.
+    /// Returns `nil` if fewer than 2 snapshots are available or if a request is already in flight for this date.
+    /// Includes debouncing to prevent rapid re-triggering (2-second window).
     func generateBriefing(
         for date: Date,
         healthKitSleepData: [Date: SleepData] = [:]
     ) async -> DailyBriefing? {
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        // Guard 1: Prevent concurrent requests for the same date
+        if let inFlight = self.inFlightDate,
+           calendar.isDate(inFlight, inSameDayAs: normalizedDate)
+        {
+            briefingServiceLogger.debug("Briefing request already in-flight for this date; skipping duplicate")
+            return nil
+        }
+
+        // Guard 2: Debounce rapid re-requests (within 2 seconds)
+        if let lastTime = self.lastBriefingRequestTime,
+           Date().timeIntervalSince(lastTime) < self.debounceInterval
+        {
+            briefingServiceLogger.debug(
+                "Briefing request debounced; too soon since last request (\(Date().timeIntervalSince(lastTime), privacy: .public)s)"
+            )
+            return nil
+        }
+
         let snapshots = self.gatherRecentSnapshots(relativeTo: date)
         guard snapshots.count >= 2 else { return nil }
+
+        // Mark this date as in-flight
+        self.inFlightDate = normalizedDate
+        defer {
+            self.inFlightDate = nil
+            self.lastBriefingRequestTime = Date()
+        }
 
         if let serverBriefing = await self.generateBriefingFromServer(
             snapshots: snapshots,
@@ -183,89 +222,5 @@ final class BriefingService {
             briefingServiceLogger.error("Briefing server call failed: \(error.localizedDescription, privacy: .public)")
             return nil
         }
-    }
-
-    // MARK: - Local Briefing Fallback
-
-    private func generateLocalBriefing(
-        from snapshots: [DailySmileySnapshot],
-        date: Date
-    ) -> DailyBriefing {
-        let correlationCards = self.patternAnalyzer.generateCorrelationCards(from: snapshots)
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        let dayName = formatter.string(from: date)
-
-        let avgScore = snapshots.map(\.averageHealthScore).average() ?? ScoringThresholds.neutral
-        let headline = if avgScore > ScoringThresholds.high {
-            "Great week! Your \(dayName) starts on a high note"
-        } else if avgScore > ScoringThresholds.neutral {
-            "Steady progress — here's your \(dayName) snapshot"
-        } else {
-            "Small shifts matter — your \(dayName) briefing"
-        }
-
-        let nudge = if let top = correlationCards.first {
-            ActionableNudge(
-                suggestion: "Focus on what worked: \(top.category.displayName.lowercased())",
-                reasoning: top.observation
-            )
-        } else {
-            ActionableNudge(
-                suggestion: "Log your meals today to unlock deeper patterns",
-                reasoning: "More data means richer insights tomorrow"
-            )
-        }
-
-        var trend: WeeklyTrendSnippet?
-        if snapshots.count >= 3 {
-            let avgSleep = self.computeAverageSleepQuality(from: snapshots)
-            let direction = self.computeTrendDirection(from: snapshots)
-            trend = WeeklyTrendSnippet(
-                averageFoodScore: avgScore,
-                averageSleepQuality: avgSleep,
-                daysLogged: snapshots.count,
-                trendDirection: direction
-            )
-        }
-
-        return DailyBriefing(
-            date: date,
-            generatedAt: Date(),
-            headline: headline,
-            correlationCards: correlationCards,
-            nudge: nudge,
-            weeklyTrend: trend
-        )
-    }
-
-    // MARK: - Private Helpers
-
-    private func computeAverageSleepQuality(from snapshots: [DailySmileySnapshot]) -> Double {
-        let sleepScores: [Double] = snapshots.compactMap { snap -> Double? in
-            guard let quality = snap.reflection?.sleepQuality else { return nil }
-            return switch quality {
-            case .great: 1.0
-            case .good: 0.75
-            case .poor: 0.25
-            case .terrible: 0.0
-            }
-        }
-        guard !sleepScores.isEmpty else { return 0.5 }
-        return sleepScores.reduce(0, +) / Double(sleepScores.count)
-    }
-
-    private func computeTrendDirection(from snapshots: [DailySmileySnapshot]) -> TrendDirection {
-        guard snapshots.count >= 3 else { return .steady }
-        let scores = snapshots.reversed().map(\.averageHealthScore)
-        let firstHalf = scores.prefix(scores.count / 2)
-        let secondHalf = scores.suffix(scores.count / 2)
-        let avgFirst = firstHalf.reduce(0, +) / Double(firstHalf.count)
-        let avgSecond = secondHalf.reduce(0, +) / Double(secondHalf.count)
-        let delta = avgSecond - avgFirst
-        if delta > ScoringThresholds.trendSignificanceDelta { return .improving }
-        if delta < -ScoringThresholds.trendSignificanceDelta { return .declining }
-        return .steady
     }
 }

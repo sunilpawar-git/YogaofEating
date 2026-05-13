@@ -80,6 +80,8 @@ struct DayCell: View {
             return Color.green.opacity(baseOpacity + (score * opacityRange))
         case .neutral:
             return Color.blue.opacity(baseOpacity + (score * opacityRange))
+        case .thoughtful:
+            return Color.teal.opacity(baseOpacity + (score * opacityRange))
         case .concerned:
             return Color.yellow.opacity(baseOpacity + (score * opacityRange))
         case .overwhelmed:

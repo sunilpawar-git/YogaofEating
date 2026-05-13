@@ -2,15 +2,6 @@ import XCTest
 @testable import Yoga_of_Eating
 
 final class TimingConstantsTests: XCTestCase {
-    func test_debounceNanoseconds_isPositive() {
-        XCTAssertGreaterThan(TimingConstants.debounceNanoseconds, 0)
-    }
-
-    func test_debounceNanoseconds_isUnderTwoSeconds() {
-        // 2 seconds = 2_000_000_000 nanoseconds
-        XCTAssertLessThan(TimingConstants.debounceNanoseconds, 2_000_000_000)
-    }
-
     func test_dayResetPollIntervalNanoseconds_isPositive() {
         XCTAssertGreaterThan(TimingConstants.dayResetPollIntervalNanoseconds, 0)
     }

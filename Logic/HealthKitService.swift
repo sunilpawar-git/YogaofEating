@@ -5,6 +5,9 @@ import OSLog
 private let healthKitLogger = Logger(subsystem: "com.yogaofeating", category: "HealthKit")
 
 /// Service to handle HealthKit interactions for reading body metrics.
+/// `@MainActor` ensures all mutable state (sleepDataCache, enableSleepLogging) is accessed
+/// from a single actor, preventing data races from concurrent HealthKit callbacks.
+@MainActor
 class HealthKitService {
     static let shared = HealthKitService()
 
@@ -12,6 +15,13 @@ class HealthKitService {
 
     /// Enable debug logging for sleep data processing
     var enableSleepLogging = true
+
+    /// Cache for sleep data queries to prevent redundant HealthKit lookups.
+    /// Key: normalized date (start of day), Value: (cached SleepData, timestamp)
+    private var sleepDataCache: [Date: (data: SleepData?, timestamp: Date)] = [:]
+
+    /// Cache expiration interval. Sleep data from the same date won't be re-queried within this window.
+    private let sleepCacheExpiration: TimeInterval = TimingConstants.sleepCacheDuration
 
     private init() {
         if HKHealthStore.isHealthDataAvailable() {
@@ -29,13 +39,30 @@ class HealthKitService {
             throw HealthKitError.notAvailable
         }
 
-        let typesToRead: Set<HKObjectType> = [
-            HKObjectType.quantityType(forIdentifier: .bodyMass)!,
-            HKObjectType.quantityType(forIdentifier: .height)!,
-            HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!,
-            HKObjectType.characteristicType(forIdentifier: .biologicalSex)!,
-            HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+        let quantityIdentifiers: [HKQuantityTypeIdentifier] = [
+            .bodyMass, .height, .activeEnergyBurned, .basalEnergyBurned
         ]
+        let characteristicIdentifiers: [HKCharacteristicTypeIdentifier] = [
+            .dateOfBirth, .biologicalSex
+        ]
+
+        var typesToRead = Set<HKObjectType>()
+        for id in quantityIdentifiers {
+            guard let type = HKObjectType.quantityType(forIdentifier: id) else {
+                throw HealthKitError.notAvailable
+            }
+            typesToRead.insert(type)
+        }
+        for id in characteristicIdentifiers {
+            guard let type = HKObjectType.characteristicType(forIdentifier: id) else {
+                throw HealthKitError.notAvailable
+            }
+            typesToRead.insert(type)
+        }
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            throw HealthKitError.notAvailable
+        }
+        typesToRead.insert(sleepType)
 
         try await healthStore.requestAuthorization(toShare: [], read: typesToRead)
         return true
@@ -80,11 +107,16 @@ class HealthKitService {
     private func fetchLatestQuantity(for type: HKQuantityType, unit: HKUnit) async throws -> Double? {
         guard let healthStore else { return nil }
 
+        // Limit scan to the last 90 days — avoids a full historical table scan
+        // that would scan potentially years of data for a single "latest" value.
+        let ninetyDaysAgo = Calendar.current.date(byAdding: .day, value: -90, to: Date()) ?? .distantPast
+        let predicate = HKQuery.predicateForSamples(withStart: ninetyDaysAgo, end: Date(), options: .strictStartDate)
+
         return try await withCheckedThrowingContinuation { continuation in
             let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
             let query = HKSampleQuery(
                 sampleType: type,
-                predicate: nil,
+                predicate: predicate,
                 limit: 1,
                 sortDescriptors: [sortDescriptor]
             ) { _, samples, error in
@@ -107,12 +139,32 @@ class HealthKitService {
     // MARK: - Sleep Data
 
     /// Fetches sleep analysis data for a specific date (last night's sleep).
+    /// Results are cached for 5 minutes to avoid redundant HealthKit queries.
     /// - Parameter date: The date to fetch sleep data for (defaults to today)
     /// - Returns: Sleep data including duration, time in bed, and quality score
     func fetchSleepData(for date: Date = Date()) async throws -> SleepData? {
         guard let healthStore else { return nil }
         guard let sleepType = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else {
             return nil
+        }
+
+        let calendar = Calendar.current
+        let normalizedDate = calendar.startOfDay(for: date)
+
+        // Check cache first
+        if let cached = self.sleepDataCache[normalizedDate] {
+            let timeSinceCached = Date().timeIntervalSince(cached.timestamp)
+            if timeSinceCached < self.sleepCacheExpiration {
+                if self.enableSleepLogging {
+                    healthKitLogger.debug(
+                        "Sleep data served from cache (age: \(Int(timeSinceCached), privacy: .public)s)"
+                    )
+                }
+                return cached.data
+            } else {
+                // Cache expired, remove it
+                self.sleepDataCache.removeValue(forKey: normalizedDate)
+            }
         }
 
         let (windowStart, windowEnd) = Self.sleepQueryWindow(for: date)
@@ -132,31 +184,35 @@ class HealthKitService {
             options: .strictStartDate
         )
 
-        return try await withCheckedThrowingContinuation { continuation in
+        // Fetch raw samples on HealthKit's background thread — no main-actor state touched here.
+        let rawSamples: [HKCategorySample]? = try await withCheckedThrowingContinuation { continuation in
             let query = HKSampleQuery(
                 sampleType: sleepType,
                 predicate: predicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
-            ) { [weak self] _, samples, error in
+            ) { _, samples, error in
                 if let error {
                     continuation.resume(throwing: error)
-                    return
+                } else {
+                    continuation.resume(returning: samples as? [HKCategorySample])
                 }
-
-                guard let samples = samples as? [HKCategorySample], !samples.isEmpty else {
-                    if self?.enableSleepLogging == true {
-                        healthKitLogger.debug("No sleep samples found in window")
-                    }
-                    continuation.resume(returning: nil)
-                    return
-                }
-
-                let sleepData = self?.processSamples(samples)
-                continuation.resume(returning: sleepData)
             }
             healthStore.execute(query)
         }
+
+        // Back on the main actor — safe to access all @MainActor-isolated state.
+        guard let samples = rawSamples, !samples.isEmpty else {
+            if self.enableSleepLogging {
+                healthKitLogger.debug("No sleep samples found in window")
+            }
+            self.sleepDataCache[normalizedDate] = (nil, Date())
+            return nil
+        }
+
+        let sleepData = self.processSamples(samples)
+        self.sleepDataCache[normalizedDate] = (sleepData, Date())
+        return sleepData
     }
 
     // MARK: - Private Helpers
@@ -252,6 +308,14 @@ class HealthKitService {
             endDate: sample.endDate,
             sleepStage: stage
         )
+    }
+
+    /// Clears the sleep data cache. Useful for forcing a fresh query or app cleanup.
+    func clearSleepCache() {
+        self.sleepDataCache.removeAll()
+        if self.enableSleepLogging {
+            healthKitLogger.debug("Sleep data cache cleared")
+        }
     }
 }
 

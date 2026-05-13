@@ -9,10 +9,21 @@ enum BriefingThresholds {
     static let minimumDataPoints: Int = 3
     /// Confidence threshold for surfacing a detected pattern.
     static let confidenceThreshold: Double = 0.6
-    /// Hour after which dinner is considered "late".
     static let lateDinnerHour: Int = 21
-    /// Maximum insight references shown per card.
     static let maximumInsightReferences: Int = 3
+
+    // MARK: - Synthesis-aware thresholds (Phase 4)
+
+    /// Minimum todo count before an intention-followthrough gap is detected.
+    static let minimumTodosForFollowthrough: Int = 2
+    /// Completion rate below this triggers the intention-followthrough card.
+    static let lowFollowthroughRate: Double = 0.3
+    /// Cognitive clarity below this, when paired with a "great" sleep rating, signals mismatch.
+    static let sleepMismatchClarityThreshold: Double = 0.45
+    /// Minimum low-wellbeing days in the window to fire the carry-over load card.
+    static let carryOverLoadDays: Int = 3
+    /// Overall wellbeing score below this counts as a "low" day for carryover detection.
+    static let carryOverLowThreshold: Double = 0.45
 }
 
 /// Dispatches pattern analysis requests to `PatternAnalysisEngine`.
@@ -75,5 +86,27 @@ class PatternAnalyzer {
 
     func analyzeTodoProductivity(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
         self.engine.analyzeTodoProductivity(from: snapshots)
+    }
+
+    // MARK: - Phase 4 Synthesis Correlations
+
+    func analyzeSleepRecoveryCarryover(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        self.engine.analyzeSleepRecoveryCarryover(from: snapshots)
+    }
+
+    func analyzeIntentionFollowthrough(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        self.engine.analyzeIntentionFollowthrough(from: snapshots)
+    }
+
+    func analyzeJournalTonePrediction(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        self.engine.analyzeJournalTonePrediction(from: snapshots)
+    }
+
+    func analyzeSleepMismatch(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        self.engine.analyzeSleepMismatch(from: snapshots)
+    }
+
+    func analyzeCarryOverLoad(from snapshots: [DailySmileySnapshot]) -> [CorrelationCard] {
+        self.engine.analyzeCarryOverLoad(from: snapshots)
     }
 }

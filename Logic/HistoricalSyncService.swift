@@ -42,6 +42,22 @@ final class HistoricalSyncService {
         self.onSyncCompleted = onSyncCompleted
     }
 
+    // MARK: - Restore
+
+    /// Downloads all snapshots from Firebase for the authenticated user.
+    /// - Throws: `AppError.syncAuthRequired` when no authenticated user exists.
+    /// - Returns: All stored snapshots, or an empty array when the cloud has no data.
+    func restore() async throws -> [DailySmileySnapshot] {
+        guard let userId = self.authService.currentUser?.uid else {
+            syncLogger.warning("Restore attempted without authenticated user")
+            throw AppError.syncAuthRequired
+        }
+
+        let snapshots = try await self.syncService.fetchAllSnapshots(userId: userId)
+        syncLogger.info("Restore: fetched \(snapshots.count) snapshots for user")
+        return snapshots
+    }
+
     // MARK: - Sync
 
     /// Uploads snapshots to Firebase.

@@ -57,14 +57,15 @@
             XCTAssertTrue(visibility.shouldShowRecentMealsButton)
         }
 
-        func test_recentMealsButton_hiddenWhenNoRecentMeals() {
+        // Button is visible even when recentMeals is empty — sheet shows "No recent meals".
+        func test_recentMealsButton_visibleWhenNotFocusedAndNoRecents() {
             let visibility = MealActionButtonVisibility(
                 isFocused: false,
                 hasContent: true,
                 hasRecentMeals: false
             )
 
-            XCTAssertFalse(visibility.shouldShowRecentMealsButton)
+            XCTAssertTrue(visibility.shouldShowRecentMealsButton)
         }
 
         // MARK: - Timestamp Button Visibility
@@ -199,9 +200,10 @@
             self.isFocused && self.hasContent
         }
 
-        /// Recent meals (+) button shown only when unfocused and has recent meals.
+        /// Recent meals (+) button shown whenever not focused.
+        /// The sheet handles the empty-data state with a "No recent meals" message.
         var shouldShowRecentMealsButton: Bool {
-            !self.isFocused && self.hasRecentMeals
+            !self.isFocused
         }
 
         /// Timestamp button always shown (critical for user awareness of meal time).

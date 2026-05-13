@@ -426,5 +426,38 @@
                 XCTFail("Expected no throw, but caught: \(error). \(message())")
             }
         }
+
+        // MARK: - Phase B RED: Control character allowlist hardening
+
+        /// Tab characters (0x09) serve no purpose in food descriptions and must be stripped.
+        /// Current bug: isControl explicitly allows 0x09, so tabs survive sanitisation.
+        func test_mealDescription_tabCharacter_isStripped() throws {
+            let withTab = "salad\tand\tdressing"
+            let sanitized = try InputValidator.validateMealDescription(withTab).get()
+            XCTAssertFalse(
+                sanitized.contains("\t"),
+                "Tab characters must be removed from sanitised meal descriptions"
+            )
+        }
+
+        /// Carriage return (0x0d) must be stripped — only LF (0x0a) is used internally for item splitting.
+        func test_mealDescription_carriageReturn_isStripped() throws {
+            let withCR = "salad\rdressing"
+            let sanitized = try InputValidator.validateMealDescription(withCR).get()
+            XCTAssertFalse(
+                sanitized.contains("\r"),
+                "Carriage returns must be removed from sanitised meal descriptions"
+            )
+        }
+
+        /// sanitizeMealItems must strip tab characters from individual items.
+        func test_sanitizeMealItems_stripsTabsFromItems() {
+            let items = ["salad\twith\ttabs", "water"]
+            let sanitized = InputValidator.sanitizeMealItems(items)
+            XCTAssertFalse(
+                sanitized.joined().contains("\t"),
+                "sanitizeMealItems must strip tab characters"
+            )
+        }
     }
 #endif

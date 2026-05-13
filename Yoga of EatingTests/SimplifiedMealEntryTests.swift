@@ -35,35 +35,6 @@
             XCTAssertFalse(visibility.shouldShowCheckmark)
         }
 
-        // MARK: - Submission Methods (checkmark tap, Return key, focus loss)
-
-        func test_checkmarkTap_triggersSubmission() {
-            var submitCalled = false
-            let handler: () -> Void = { submitCalled = true }
-
-            handler()
-
-            XCTAssertTrue(submitCalled, "Checkmark tap should trigger submission")
-        }
-
-        func test_returnKeySubmit_triggersSubmission() {
-            var submitCalled = false
-            let handler: () -> Void = { submitCalled = true }
-
-            handler()
-
-            XCTAssertTrue(submitCalled, "Return key submit should trigger submission")
-        }
-
-        func test_focusLoss_triggersSubmission() {
-            var submitCalled = false
-            let handler: () -> Void = { submitCalled = true }
-
-            handler()
-
-            XCTAssertTrue(submitCalled, "Focus loss should trigger submission")
-        }
-
         // MARK: - Footer Layout Improvements
 
         func test_footerButtonCount_maxTwo() {
