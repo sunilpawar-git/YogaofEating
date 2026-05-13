@@ -17,10 +17,19 @@ extension AppTheme {
         /// > 95% consumed — at or over goal (muted coral)
         static let fillOver = Color(red: 0.80, green: 0.36, blue: 0.36).opacity(0.55)
 
+        // MARK: - Pill Track (unfilled portion background)
+
+        /// Adaptive background for the unfilled portion of the pill capsule.
+        /// `Color.primary` resolves to near-white in dark mode and near-black in light mode,
+        /// so the pill outline is always visible regardless of the app's color scheme.
+        static let pillBackground = Color.primary.opacity(0.10)
+
         // MARK: - Text Colors
 
-        /// Primary text color on pill (white — readable over fill + material)
-        static let textPrimary = Color.white
+        /// Primary text color on pill — adapts to light/dark mode.
+        /// White in dark mode (readable over dark bg + colored fill);
+        /// near-black in light mode (readable over white bg + light colored fill).
+        static let textPrimary = Color.primary
 
         /// Flame icon tint color
         static let flameIcon = Color(red: 0.90, green: 0.55, blue: 0.15)
