@@ -1,11 +1,7 @@
 import XCTest
 @testable import Yoga_of_Eating
 
-/// Phase 3C — split tests.
-///
-/// Verifies that:
-/// 1. `BriefingService` can generate a briefing independently of `InsightGenerationService`.
-/// 2. `PatternAnalysisEngine` produces the same output as the pre-split `PatternAnalyzer`.
+/// Tests for InsightLifecycleService.generateBriefing and PatternAnalysisEngine.generateCorrelationCards.
 @MainActor
 final class InsightServiceTests: XCTestCase {
     // MARK: - InsightLifecycleService.generateBriefing (replaces BriefingService)
@@ -38,52 +34,15 @@ final class InsightServiceTests: XCTestCase {
 
     // MARK: - PatternAnalysisEngine parity
 
-    func test_patternAnalysisEngine_producesSameOutputAsPatternAnalyzer() {
+    func test_patternAnalysisEngine_generateCorrelationCards_producesValidOutput() {
         let snapshots = Self.makeSnapshotsForPatternAnalysis()
-
-        let analyzer = PatternAnalyzer()
         let engine = PatternAnalysisEngine()
-
-        let analyzerOutput = analyzer.generateCorrelationCards(from: snapshots)
-        let engineOutput = engine.generateCorrelationCards(from: snapshots)
-
-        XCTAssertEqual(
-            analyzerOutput.count,
-            engineOutput.count,
-            "PatternAnalysisEngine must produce the same number of correlation cards as the original PatternAnalyzer"
-        )
-
-        let analyzerCategories = analyzerOutput.map(\.category).sorted { $0.rawValue < $1.rawValue }
-        let engineCategories = engineOutput.map(\.category).sorted { $0.rawValue < $1.rawValue }
-        XCTAssertEqual(
-            analyzerCategories,
-            engineCategories,
-            "PatternAnalysisEngine must produce identical card categories as the original PatternAnalyzer"
-        )
-    }
-
-    func test_patternAnalysisEngine_matchesPatternAnalyzerPatterns() {
-        let snapshots = Self.makeSnapshotsForPatternAnalysis()
-
-        let analyzer = PatternAnalyzer()
-        let engine = PatternAnalysisEngine()
-
-        let analyzerPatterns = analyzer.analyzePatterns(from: snapshots)
-        let enginePatterns = engine.analyzePatterns(from: snapshots)
-
-        XCTAssertEqual(
-            analyzerPatterns.count,
-            enginePatterns.count,
-            "PatternAnalysisEngine.analyzePatterns must match the original PatternAnalyzer output count"
-        )
-
-        let analyzerTypes = analyzerPatterns.map(\.type).sorted { $0.rawValue < $1.rawValue }
-        let engineTypes = enginePatterns.map(\.type).sorted { $0.rawValue < $1.rawValue }
-        XCTAssertEqual(
-            analyzerTypes,
-            engineTypes,
-            "PatternAnalysisEngine.analyzePatterns must produce identical pattern types as the original PatternAnalyzer"
-        )
+        let cards = engine.generateCorrelationCards(from: snapshots)
+        for card in cards {
+            XCTAssertGreaterThanOrEqual(card.confidence, 0.0)
+            XCTAssertLessThanOrEqual(card.confidence, 1.0)
+            XCTAssertFalse(card.observation.isEmpty)
+        }
     }
 
     // MARK: - Helpers

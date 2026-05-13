@@ -20,11 +20,11 @@ struct BriefingDetailView: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Morning Briefing")
+            .navigationTitle(Strings.Briefing.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { self.onDismiss?() }
+                    Button(Strings.Briefing.doneButton) { self.onDismiss?() }
                 }
             }
         }
@@ -56,7 +56,7 @@ struct BriefingDetailView: View {
     private var correlationCardsSection: some View {
         if !self.insight.correlationCards.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Patterns")
+                Text(Strings.Briefing.patternsSection)
                     .font(.system(.caption, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundStyle(.secondary)
@@ -119,7 +119,7 @@ struct BriefingDetailView: View {
 
     private var nudgeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Today's Nudge")
+            Text(Strings.Briefing.nudgeSection)
                 .font(.system(.caption, design: .monospaced))
                 .fontWeight(.bold)
                 .foregroundStyle(.secondary)
@@ -139,7 +139,7 @@ struct BriefingDetailView: View {
                     .foregroundStyle(.secondary)
 
                 if let meal = self.insight.nudge.relatedMeal {
-                    Text("Related: \(meal)")
+                    Text(Strings.Briefing.relatedMealPrefix + meal)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .italic()
@@ -160,7 +160,7 @@ struct BriefingDetailView: View {
     private var weeklyTrendSection: some View {
         if let trend = self.insight.weeklyTrend {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Weekly Trend")
+                Text(Strings.Briefing.weeklyTrendSection)
                     .font(.system(.caption, design: .monospaced))
                     .fontWeight(.bold)
                     .foregroundStyle(.secondary)
@@ -168,22 +168,22 @@ struct BriefingDetailView: View {
 
                 HStack(spacing: 20) {
                     self.trendStat(
-                        label: "Food",
+                        label: Strings.Briefing.TrendLabel.food,
                         value: "\(Int(trend.averageFoodScore * 100))%",
                         icon: "fork.knife"
                     )
                     self.trendStat(
-                        label: "Sleep",
+                        label: Strings.Briefing.TrendLabel.sleep,
                         value: "\(Int(trend.averageSleepQuality * 100))%",
                         icon: "moon.zzz.fill"
                     )
                     self.trendStat(
-                        label: "Days",
+                        label: Strings.Briefing.TrendLabel.days,
                         value: "\(trend.daysLogged)",
                         icon: "calendar"
                     )
                     self.trendStat(
-                        label: "Trend",
+                        label: Strings.Briefing.TrendLabel.trend,
                         value: trend.trendDirection.rawValue.capitalized,
                         icon: self.trendIcon(trend.trendDirection)
                     )
@@ -207,7 +207,7 @@ struct BriefingDetailView: View {
                 .font(.system(.caption, design: .monospaced))
                 .fontWeight(.bold)
             Text(label)
-                .font(.system(size: 9))
+                .font(FontTheme.caption)
                 .foregroundStyle(.secondary)
         }
     }
@@ -226,10 +226,10 @@ struct BriefingDetailView: View {
         case .foodToMood: .green
         case .focusToFeeling: .purple
         case .timingPattern: .orange
-        case .foodDebt: Color(red: 0.95, green: 0.65, blue: 0.0)
+        case .foodDebt: AppTheme.foodDebtColor
         case .sleepRecoveryCarryover: .teal
         case .intentionFollowthrough: .blue
-        case .journalTonePrediction: Color(red: 0.6, green: 0.4, blue: 0.8)
+        case .journalTonePrediction: AppTheme.journalToneColor
         case .sleepMismatch: .yellow
         case .carryOverLoad: .red
         }

@@ -253,68 +253,6 @@ final class MindCheckEntryBuilder {
     }
 }
 
-// MARK: - LegacyDailyInsightBuilder
-
-/// Fluent builder for `LegacyDailyInsight` test fixtures.
-/// Use `DailyInsightBuilder` (Phase 4) for the unified type.
-final class LegacyDailyInsightBuilder {
-    private var id = UUID()
-    private var date = Date()
-    private var insightText = "Your eating patterns look balanced."
-    private var insightType: InsightType = .encouragement
-    private var confidence: Double = 0.8
-    private var isViewed = false
-    private var references: [InsightReference] = []
-
-    @discardableResult
-    func withID(_ id: UUID) -> Self {
-        self.id = id
-        return self
-    }
-
-    @discardableResult
-    func withDate(_ date: Date) -> Self {
-        self.date = date
-        return self
-    }
-
-    @discardableResult
-    func withText(_ text: String) -> Self {
-        self.insightText = text
-        return self
-    }
-
-    @discardableResult
-    func withType(_ type: InsightType) -> Self {
-        self.insightType = type
-        return self
-    }
-
-    @discardableResult
-    func withConfidence(_ confidence: Double) -> Self {
-        self.confidence = confidence
-        return self
-    }
-
-    @discardableResult
-    func viewed() -> Self {
-        self.isViewed = true
-        return self
-    }
-
-    func build() -> LegacyDailyInsight {
-        LegacyDailyInsight(
-            id: self.id,
-            date: self.date,
-            insightText: self.insightText,
-            insightType: self.insightType,
-            confidence: self.confidence,
-            isViewed: self.isViewed,
-            references: self.references
-        )
-    }
-}
-
 // MARK: - HealthProfileBuilder
 
 /// Fluent builder for `UserHealthProfile` test fixtures.

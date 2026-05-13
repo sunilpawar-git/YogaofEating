@@ -1,127 +1,64 @@
 import XCTest
 @testable import Yoga_of_Eating
 
-/// Tests for Insight functionality via Smiley long-press.
-/// Updated: Peekaboo star removed, insights now accessed via smiley long-press.
+/// Tests for insight availability and viewed state via unified DailyInsight.
 @MainActor
 final class InsightPeekabooTests: XCTestCase {
     // MARK: - Insight Availability Tests
 
-    func test_insight_isAvailable_whenInsightTextNotEmpty() {
-        // Given
-        let insight = LegacyDailyInsight(
-            date: Date(),
-            insightText: "Test insight",
-            insightType: .encouragement,
-            confidence: 0.8
-        )
-
-        // When - check if insight has content
-        let hasInsight = insight.insightText.isEmpty == false
-
-        // Then
-        XCTAssertTrue(hasInsight)
+    func test_insight_isAvailable_whenDominantInsightNotEmpty() {
+        let insight = self.makeDailyInsight()
+        XCTAssertFalse(insight.dominantInsight.isEmpty)
     }
 
     func test_insight_isNotAvailable_whenNil() {
-        // Given
-        let insight: LegacyDailyInsight? = nil
-
-        // When
-        let hasInsight = insight != nil
-
-        // Then
-        XCTAssertFalse(hasInsight)
+        let insight: DailyInsight? = nil
+        XCTAssertFalse(insight != nil)
     }
 
     func test_insight_unreadIndicator_tracksViewedState() {
-        // Given
-        var insight = LegacyDailyInsight(
-            date: Date(),
-            insightText: "Test insight",
-            insightType: .encouragement,
-            confidence: 0.8,
-            isViewed: false
-        )
-
-        // Then - unread should show indicator
+        var insight = self.makeDailyInsight()
         XCTAssertFalse(insight.isViewed)
-
-        // When - mark as viewed
         insight.markAsViewed()
-
-        // Then - no longer unread
         XCTAssertTrue(insight.isViewed)
     }
 
     // MARK: - ViewModel Tests
 
     func test_viewModel_showInsightSheet_defaultsFalse() {
-        // Given
-        let viewModel = MainViewModel()
-
-        // Then
+        let viewModel = MainViewModel(skipDataLoading: true)
         XCTAssertFalse(viewModel.showInsightSheet)
     }
 
     func test_viewModel_hasUnreadInsight_defaultsFalse() {
-        // Given
-        let viewModel = MainViewModel()
-
-        // Then
+        let viewModel = MainViewModel(skipDataLoading: true)
         XCTAssertFalse(viewModel.hasUnreadInsight)
     }
 
     func test_viewModel_toggleInsightSheet_changesState() {
-        // Given
-        let viewModel = MainViewModel()
+        let viewModel = MainViewModel(skipDataLoading: true)
         XCTAssertFalse(viewModel.showInsightSheet)
-
-        // When
         viewModel.showInsightSheet = true
-
-        // Then
         XCTAssertTrue(viewModel.showInsightSheet)
     }
 
     // MARK: - Insight Bottom Sheet Tests
 
-    func test_insightBottomSheet_displaysLegacyDailyInsight() {
-        // Given
-        let insight = LegacyDailyInsight(
-            date: Date(),
-            insightText: "Your late dinner on 12 Jan may have affected your sleep.",
-            insightType: .foodSleep,
-            confidence: 0.85,
-            references: [
-                InsightReference(
-                    date: Date(),
-                    description: "Late dinner at 10pm",
-                    category: .food
-                )
-            ]
+    func test_insightBottomSheet_displaysUnifiedDailyInsight() {
+        let card = CorrelationCard(
+            category: .foodToSleep,
+            observation: "Late dinners affect your sleep",
+            confidence: 0.85, dataPoints: []
         )
-
-        // Then
-        XCTAssertEqual(insight.insightType, .foodSleep)
-        XCTAssertFalse(insight.insightText.isEmpty)
-        XCTAssertEqual(insight.references.count, 1)
+        let insight = self.makeDailyInsight(cards: [card])
+        XCTAssertFalse(insight.dominantInsight.isEmpty)
+        XCTAssertEqual(insight.correlationCards.count, 1)
     }
 
     func test_insightBottomSheet_dismissMarksAsRead() {
-        // Given
-        var insight = LegacyDailyInsight(
-            date: Date(),
-            insightText: "Test",
-            insightType: .encouragement,
-            confidence: 0.7,
-            isViewed: false
-        )
-
-        // When - simulate dismiss
+        var insight = self.makeDailyInsight()
+        XCTAssertFalse(insight.isViewed)
         insight.markAsViewed()
-
-        // Then
         XCTAssertTrue(insight.isViewed)
     }
 
@@ -131,5 +68,23 @@ final class InsightPeekabooTests: XCTestCase {
         XCTAssertFalse(Strings.Insight.dailyTitle.isEmpty)
         XCTAssertFalse(Strings.Insight.gotIt.isEmpty)
         XCTAssertFalse(Strings.Insight.basedOnPatterns.isEmpty)
+    }
+
+    // MARK: - Helpers
+
+    private func makeDailyInsight(cards: [CorrelationCard] = []) -> DailyInsight {
+        DailyInsight(
+            date: Date(),
+            headline: Strings.Insight.Headline.strong,
+            dimensions: .neutral,
+            dominantInsight: "Your late dinner on 12 Jan may have affected your sleep.",
+            correlationCards: cards,
+            nudge: ActionableNudge(
+                suggestion: Strings.Insight.Nudge.defaultSuggestion,
+                reasoning: Strings.Insight.Nudge.defaultReasoning
+            ),
+            causalExplanation: "Food timing is the driver.",
+            textSignals: [], confidence: 0.85
+        )
     }
 }
