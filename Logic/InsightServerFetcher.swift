@@ -13,7 +13,7 @@ enum InsightServerFetcher {
         date: Date,
         healthKitSleepData: [Date: SleepData],
         functions: Functions
-    ) async -> DailyInsight? {
+    ) async -> LegacyDailyInsight? {
         let calendar = Calendar.current
         let todayNormalized = calendar.startOfDay(for: date)
 
@@ -87,7 +87,12 @@ enum InsightServerFetcher {
             default: .encouragement
             }
 
-            return DailyInsight(date: date, insightText: insightText, insightType: insightType, confidence: confidence)
+            return LegacyDailyInsight(
+                date: date,
+                insightText: insightText,
+                insightType: insightType,
+                confidence: confidence
+            )
         } catch {
             fetcherLogger.error("Server insight generation failed: \(error.localizedDescription, privacy: .public)")
             return nil

@@ -32,19 +32,19 @@ final class WeeklyInsightTests: XCTestCase {
     func test_weeklyInsight_aggregatesMultipleDailyInsights() {
         // Given
         let dailyInsights = [
-            DailyInsight(
+            LegacyDailyInsight(
                 date: Date(),
                 insightText: "Day 1 insight",
                 insightType: .foodSleep,
                 confidence: 0.8
             ),
-            DailyInsight(
+            LegacyDailyInsight(
                 date: Date().addingTimeInterval(-86400),
                 insightText: "Day 2 insight",
                 insightType: .mindsetFeeling,
                 confidence: 0.7
             ),
-            DailyInsight(
+            LegacyDailyInsight(
                 date: Date().addingTimeInterval(-86400 * 2),
                 insightText: "Day 3 insight",
                 insightType: .pattern,
@@ -106,7 +106,7 @@ final class WeeklyInsightTests: XCTestCase {
         let today = Date()
 
         let dailyInsights = (0..<5).map { daysAgo in
-            DailyInsight(
+            LegacyDailyInsight(
                 date: calendar.date(byAdding: .day, value: -daysAgo, to: today)!,
                 insightText: "Insight for day \(daysAgo)",
                 insightType: daysAgo % 2 == 0 ? .foodSleep : .mindsetFeeling,

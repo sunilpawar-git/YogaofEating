@@ -8,7 +8,7 @@ extension MainViewModel {
     // MARK: - Computed Properties
 
     /// Returns today's generated insight if available, loaded from the persisted snapshot.
-    var todaysInsight: DailyInsight? {
+    var todaysInsight: LegacyDailyInsight? {
         self.historicalService.getSnapshot(for: Date())?.insight
     }
 

@@ -181,10 +181,10 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     // MARK: - Insight spy
 
     var updateInsightCalled = false
-    var lastUpdatedInsight: DailyInsight?
+    var lastUpdatedInsight: LegacyDailyInsight?
     var lastInsightDate: Date?
 
-    func updateInsight(for date: Date, insight: DailyInsight) {
+    func updateInsight(for date: Date, insight: LegacyDailyInsight) {
         self.updateInsightCalled = true
         self.lastUpdatedInsight = insight
         self.lastInsightDate = date
@@ -202,9 +202,9 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     // MARK: - EnrichedInsight spy
 
     var updateEnrichedInsightCalled = false
-    var lastEnrichedInsight: EnrichedDailyInsight?
+    var lastEnrichedInsight: DailyInsight?
 
-    func updateEnrichedInsight(for date: Date, insight: EnrichedDailyInsight) {
+    func updateEnrichedInsight(for date: Date, insight: DailyInsight) {
         self.updateEnrichedInsightCalled = true
         self.lastEnrichedInsight = insight
         let normalizedDate = Calendar.current.startOfDay(for: date)

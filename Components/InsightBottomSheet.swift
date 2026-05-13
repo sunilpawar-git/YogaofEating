@@ -6,7 +6,7 @@ struct InsightBottomSheet: View {
     // MARK: - Properties
 
     /// The insight to display
-    let insight: DailyInsight
+    let insight: LegacyDailyInsight
 
     /// Callback when user dismisses the sheet
     let onDismiss: () -> Void
@@ -198,7 +198,7 @@ struct InsightBottomSheet: View {
 #if DEBUG
     #Preview("Food & Sleep") {
         InsightBottomSheet(
-            insight: DailyInsight(
+            insight: LegacyDailyInsight(
                 date: Date(),
                 insightText: "On 12 Jan, late evening coffee may have disturbed your sleep. On 14 Jan, three todo completions and good overall diet led to good 'End of Day' feeling and good sleep. Consider finishing dinner earlier for better sleep.",
                 insightType: .foodSleep,
@@ -223,7 +223,7 @@ struct InsightBottomSheet: View {
 
     #Preview("Encouragement") {
         InsightBottomSheet(
-            insight: DailyInsight(
+            insight: LegacyDailyInsight(
                 date: Date(),
                 insightText: "Great job! Your healthy eating choices over the past week are likely contributing to better energy and sleep. Keep it up!",
                 insightType: .encouragement,

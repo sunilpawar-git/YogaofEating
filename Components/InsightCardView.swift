@@ -6,7 +6,7 @@ struct InsightCardView: View {
     // MARK: - Properties
 
     /// The insight to display
-    let insight: DailyInsight
+    let insight: LegacyDailyInsight
 
     /// Callback when the card is dismissed
     var onDismiss: (() -> Void)?
@@ -121,7 +121,7 @@ struct InsightCardView: View {
 #if DEBUG
     #Preview("Food & Sleep") {
         InsightCardView(
-            insight: DailyInsight(
+            insight: LegacyDailyInsight(
                 date: Date(),
                 insightText: "Your late dinner yesterday (pasta at 9pm) may have affected your sleep. Try eating dinner earlier for better rest.",
                 insightType: .foodSleep,
@@ -133,7 +133,7 @@ struct InsightCardView: View {
 
     #Preview("Encouragement") {
         InsightCardView(
-            insight: DailyInsight(
+            insight: LegacyDailyInsight(
                 date: Date(),
                 insightText: "Great job maintaining healthy eating patterns this week! Your energy levels seem to reflect your balanced choices. 💪",
                 insightType: .encouragement,

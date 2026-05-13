@@ -105,7 +105,7 @@ final class SetMainViewModelTrackingService: ObservableObject, HistoricalDataSer
     func updateHighlightData(for _: Date, data _: HighlightData) {}
     func updateReflectData(for _: Date, data _: ReflectData) {}
     func updateBriefing(for _: Date, briefing _: DailyBriefing) {}
-    func updateInsight(for _: Date, insight _: DailyInsight) {}
+    func updateInsight(for _: Date, insight _: LegacyDailyInsight) {}
     func updateWellbeingDimensions(for _: Date, dimensions _: WellbeingDimensions, textSignals _: [TextSignal]) {}
     func updateEnrichedInsight(for _: Date, insight _: EnrichedDailyInsight) {}
     func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] { [] }

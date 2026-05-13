@@ -32,7 +32,7 @@
         }
 
         func test_enrichedInsight_codableRoundTrip() throws {
-            let enriched = EnrichedDailyInsight(
+            let enriched = DailyInsight(
                 date: Date(),
                 headline: "Great day ahead",
                 dimensions: .neutral,
@@ -76,8 +76,8 @@
         // MARK: - Legacy fields coexist with enriched insight
 
         func test_snapshot_canHoldBothLegacyAndEnrichedInsight() throws {
-            let legacyInsight = DailyInsightBuilder().build()
-            let enriched = EnrichedDailyInsight(
+            let legacyInsight = LegacyDailyInsightBuilder().build()
+            let enriched = DailyInsight(
                 date: Date(),
                 headline: "Enriched headline",
                 dimensions: .neutral,
@@ -105,7 +105,7 @@
 
         func test_updateEnrichedInsight_storesInSnapshot() {
             let today = Date()
-            let enriched = EnrichedDailyInsight(
+            let enriched = DailyInsight(
                 date: today,
                 headline: "Test headline",
                 dimensions: .neutral,
@@ -127,10 +127,10 @@
 
         func test_updateEnrichedInsight_preservesExistingFields() {
             let today = Date()
-            let legacyInsight = DailyInsightBuilder().build()
+            let legacyInsight = LegacyDailyInsightBuilder().build()
             self.mockHistorical.updateInsight(for: today, insight: legacyInsight)
 
-            let enriched = EnrichedDailyInsight(
+            let enriched = DailyInsight(
                 date: today,
                 headline: "Enriched",
                 dimensions: .neutral,

@@ -97,7 +97,7 @@ extension DailySmileySnapshot {
         )
     }
 
-    func withInsight(_ insight: DailyInsight) -> DailySmileySnapshot {
+    func withInsight(_ insight: LegacyDailyInsight) -> DailySmileySnapshot {
         DailySmileySnapshot(
             id: id, date: date, smileyState: smileyState, meals: meals,
             mealCount: mealCount, averageHealthScore: averageHealthScore,

@@ -9,7 +9,7 @@ final class InsightPeekabooTests: XCTestCase {
 
     func test_insight_isAvailable_whenInsightTextNotEmpty() {
         // Given
-        let insight = DailyInsight(
+        let insight = LegacyDailyInsight(
             date: Date(),
             insightText: "Test insight",
             insightType: .encouragement,
@@ -25,7 +25,7 @@ final class InsightPeekabooTests: XCTestCase {
 
     func test_insight_isNotAvailable_whenNil() {
         // Given
-        let insight: DailyInsight? = nil
+        let insight: LegacyDailyInsight? = nil
 
         // When
         let hasInsight = insight != nil
@@ -36,7 +36,7 @@ final class InsightPeekabooTests: XCTestCase {
 
     func test_insight_unreadIndicator_tracksViewedState() {
         // Given
-        var insight = DailyInsight(
+        var insight = LegacyDailyInsight(
             date: Date(),
             insightText: "Test insight",
             insightType: .encouragement,
@@ -86,9 +86,9 @@ final class InsightPeekabooTests: XCTestCase {
 
     // MARK: - Insight Bottom Sheet Tests
 
-    func test_insightBottomSheet_displaysDailyInsight() {
+    func test_insightBottomSheet_displaysLegacyDailyInsight() {
         // Given
-        let insight = DailyInsight(
+        let insight = LegacyDailyInsight(
             date: Date(),
             insightText: "Your late dinner on 12 Jan may have affected your sleep.",
             insightType: .foodSleep,
@@ -110,7 +110,7 @@ final class InsightPeekabooTests: XCTestCase {
 
     func test_insightBottomSheet_dismissMarksAsRead() {
         // Given
-        var insight = DailyInsight(
+        var insight = LegacyDailyInsight(
             date: Date(),
             insightText: "Test",
             insightType: .encouragement,

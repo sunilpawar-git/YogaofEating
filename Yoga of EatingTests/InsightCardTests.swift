@@ -25,7 +25,7 @@
 
         func test_dailyInsight_hasValidConfidence() {
             // Arrange
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 date: Date(),
                 insightText: "Test insight",
                 insightType: .foodSleep,
@@ -39,7 +39,7 @@
 
         func test_dailyInsight_isViewed_defaultsFalse() {
             // Arrange
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 date: Date(),
                 insightText: "Test insight",
                 insightType: .pattern,
@@ -52,7 +52,7 @@
 
         func test_dailyInsight_markAsViewed_updatesFlag() {
             // Arrange
-            var insight = DailyInsight(
+            var insight = LegacyDailyInsight(
                 date: Date(),
                 insightText: "Test insight",
                 insightType: .encouragement,

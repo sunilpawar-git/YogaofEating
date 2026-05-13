@@ -166,7 +166,7 @@
             let snapshot = self.makeSnapshot(score: 0.8, items: ["Eggs"], mealType: .breakfast)
             self.mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
 
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 date: today,
                 insightText: "Your eating patterns suggest a connection.",
                 insightType: .foodSleep,
@@ -450,7 +450,7 @@
         func test_saveInsight_persistsToHistoricalService() {
             // Arrange
             let today = Date()
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: UUID(),
                 date: today,
                 insightText: "You sleep better on days with less sugar.",
@@ -469,7 +469,7 @@
         func test_saveInsight_savedInsightIsRecoverable() {
             // Arrange
             let today = Date()
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: UUID(),
                 date: today,
                 insightText: "Gratitude practice correlates with better mood.",
@@ -492,7 +492,7 @@
             // Verified by code review — briefingLogger.info logs date only (privacy: .public).
             // Sensitive field insightText has no Logger call after Phase A4 fix.
             let today = Date()
-            let insight = DailyInsight(
+            let insight = LegacyDailyInsight(
                 id: UUID(),
                 date: today,
                 insightText: "SENSITIVE: high cholesterol detected",

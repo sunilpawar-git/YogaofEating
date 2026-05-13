@@ -85,7 +85,7 @@ final class DailySmileySnapshotBuilder {
     private var highlightData: HighlightData?
     private var reflectData: ReflectData?
     private var briefing: DailyBriefing?
-    private var insight: DailyInsight?
+    private var insight: LegacyDailyInsight?
     private var wellbeingDimensions: WellbeingDimensions?
     private var textSignals: [TextSignal]?
     private var enrichedInsight: EnrichedDailyInsight?
@@ -122,7 +122,7 @@ final class DailySmileySnapshotBuilder {
     }
 
     @discardableResult
-    func withInsight(_ insight: DailyInsight) -> Self {
+    func withInsight(_ insight: LegacyDailyInsight) -> Self {
         self.insight = insight
         return self
     }
@@ -269,10 +269,11 @@ final class MindCheckEntryBuilder {
     }
 }
 
-// MARK: - DailyInsightBuilder
+// MARK: - LegacyDailyInsightBuilder
 
-/// Fluent builder for `DailyInsight` test fixtures.
-final class DailyInsightBuilder {
+/// Fluent builder for `LegacyDailyInsight` test fixtures.
+/// Use `DailyInsightBuilder` (Phase 4) for the unified type.
+final class LegacyDailyInsightBuilder {
     private var id = UUID()
     private var date = Date()
     private var insightText = "Your eating patterns look balanced."
@@ -317,8 +318,8 @@ final class DailyInsightBuilder {
         return self
     }
 
-    func build() -> DailyInsight {
-        DailyInsight(
+    func build() -> LegacyDailyInsight {
+        LegacyDailyInsight(
             id: self.id,
             date: self.date,
             insightText: self.insightText,

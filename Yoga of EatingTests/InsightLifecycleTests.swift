@@ -148,7 +148,7 @@
 
         func test_enrichedInsight_doesNotAffectLegacyInsightField() async {
             let today = Date()
-            let legacyInsight = DailyInsightBuilder().build()
+            let legacyInsight = LegacyDailyInsightBuilder().build()
             self.mockHistorical.updateInsight(for: today, insight: legacyInsight)
 
             _ = await self.sut.generateEnrichedInsight(

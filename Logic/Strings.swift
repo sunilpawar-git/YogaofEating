@@ -77,6 +77,24 @@ enum Strings {
         static let basedOnPatterns = "Based on your patterns"
         static let gotIt = "Got it"
         static let dismiss = "Dismiss"
+        static let unread = "Unread insight"
+        static let viewed = "Insight viewed"
+        static let noInsightAvailable = "No insight available"
+        static let generatingInsight = "Generating your insight…"
+
+        // Headline fallbacks (used when server is unavailable)
+        enum Headline {
+            static let strong = "Strong day ahead"
+            static let steady = "Steady progress"
+            static let thoughtful = "Thoughtful choices today"
+            static let challenging = "Every step counts"
+        }
+
+        // Nudge defaults
+        enum Nudge {
+            static let defaultSuggestion = "Log your meals today to unlock deeper patterns"
+            static let defaultReasoning = "More data means richer insights tomorrow"
+        }
 
         // Insight types
         enum InsightType {

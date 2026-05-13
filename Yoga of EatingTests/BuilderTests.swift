@@ -100,7 +100,7 @@ final class BuilderTests: XCTestCase {
     }
 
     func test_snapshotBuilder_withInsight_setsInsight() {
-        let insight = DailyInsightBuilder().build()
+        let insight = LegacyDailyInsightBuilder().build()
         let snapshot = DailySmileySnapshotBuilder().withInsight(insight).build()
         XCTAssertNotNil(snapshot.insight)
     }
@@ -152,7 +152,7 @@ final class BuilderTests: XCTestCase {
     // MARK: - DailyInsightBuilder defaults
 
     func test_dailyInsightBuilder_build_hasExpectedDefaults() {
-        let insight = DailyInsightBuilder().build()
+        let insight = LegacyDailyInsightBuilder().build()
         XCTAssertFalse(insight.insightText.isEmpty)
         XCTAssertEqual(insight.insightType, .encouragement)
         XCTAssertGreaterThan(insight.confidence, 0.0)
@@ -161,23 +161,23 @@ final class BuilderTests: XCTestCase {
     }
 
     func test_dailyInsightBuilder_withText_setsInsightText() {
-        let insight = DailyInsightBuilder().withText("You slept better after lighter dinners.").build()
+        let insight = LegacyDailyInsightBuilder().withText("You slept better after lighter dinners.").build()
         XCTAssertEqual(insight.insightText, "You slept better after lighter dinners.")
     }
 
     func test_dailyInsightBuilder_withType_setsInsightType() {
-        let insight = DailyInsightBuilder().withType(.foodSleep).build()
+        let insight = LegacyDailyInsightBuilder().withType(.foodSleep).build()
         XCTAssertEqual(insight.insightType, .foodSleep)
     }
 
     func test_dailyInsightBuilder_viewed_setsIsViewed() {
-        let insight = DailyInsightBuilder().viewed().build()
+        let insight = LegacyDailyInsightBuilder().viewed().build()
         XCTAssertTrue(insight.isViewed)
     }
 
     func test_dailyInsightBuilder_build_producesUniqueIDs() {
-        let id1 = DailyInsightBuilder().build().id
-        let id2 = DailyInsightBuilder().build().id
+        let id1 = LegacyDailyInsightBuilder().build().id
+        let id2 = LegacyDailyInsightBuilder().build().id
         XCTAssertNotEqual(id1, id2)
     }
 

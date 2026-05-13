@@ -19,7 +19,7 @@ struct WeeklyInsight: Codable, Identifiable, Equatable {
     let topPatterns: [InsightPattern]
 
     /// Individual daily insights that make up this weekly summary
-    let dailyInsights: [DailyInsight]
+    let dailyInsights: [LegacyDailyInsight]
 
     /// Areas where the user could improve
     let improvementAreas: [String]
@@ -35,7 +35,7 @@ struct WeeklyInsight: Codable, Identifiable, Equatable {
         weekEndDate: Date,
         summaryText: String,
         topPatterns: [InsightPattern] = [],
-        dailyInsights: [DailyInsight] = [],
+        dailyInsights: [LegacyDailyInsight] = [],
         improvementAreas: [String] = [],
         wins: [String] = []
     ) {
@@ -69,12 +69,8 @@ struct WeeklyInsight: Codable, Identifiable, Equatable {
         return self.dailyInsights.map(\.confidence).reduce(0, +) / Double(self.dailyInsights.count)
     }
 
-    /// Most common insight type this week
-    var dominantInsightType: InsightType? {
-        let typeCounts = Dictionary(grouping: self.dailyInsights, by: \.insightType)
-            .mapValues(\.count)
-        return typeCounts.max(by: { $0.value < $1.value })?.key
-    }
+    /// Most common insight type this week. Stubbed in Phase 1 — WeeklyInsight deleted in Phase 5.
+    var dominantInsightType: InsightType? { nil }
 
     /// Whether this was a good week (more wins than improvement areas)
     var isPositiveWeek: Bool {
