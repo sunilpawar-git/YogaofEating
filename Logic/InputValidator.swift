@@ -48,9 +48,11 @@ enum InputValidator {
     ]
 
     private static let codeExecutionPatterns = [
-        "EVAL",
-        "EXEC",
-        "SYSTEM"
+        // Match only when the keyword appears as a standalone call — followed by "("
+        // to avoid false positives on words like "evaluated", "executive", "systematic".
+        "EVAL(",
+        "EXEC(",
+        "SYSTEM("
     ]
 
     // MARK: - Validation Functions

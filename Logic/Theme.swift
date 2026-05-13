@@ -18,20 +18,6 @@ enum AppTheme {
     /// Secondary background for subtle sections
     static let secondaryBackground = Color(.secondarySystemBackground)
 
-    // MARK: - Accent Colors
-
-    /// Warm accent for positive actions (orange-tinted)
-    static let warmAccent = Color.orange.opacity(0.15)
-
-    /// Success accent (green)
-    static let successAccent = Color.green.opacity(0.15)
-
-    /// Warning accent (yellow-orange)
-    static let warningAccent = Color.yellow.opacity(0.2)
-
-    /// Primary accent (app tint)
-    static let primaryAccent = Color.accentColor
-
     // MARK: - Text Colors
 
     /// Primary text color
@@ -55,12 +41,6 @@ enum AppTheme {
 
     /// Subtle border color
     static let borderSubtle = Color.primary.opacity(0.08)
-
-    /// Medium border color
-    static let borderMedium = Color.primary.opacity(0.12)
-
-    /// Accent border color
-    static let borderAccent = Color.accentColor.opacity(0.3)
 
     // MARK: - Spacing
 
@@ -97,41 +77,12 @@ enum AppTheme {
         static let pill: CGFloat = 100
     }
 
-    // MARK: - Typography
+    // MARK: - Layout
 
-    enum Typography {
-        /// Large title font
-        static let largeTitle = Font.system(size: 34, weight: .bold, design: .rounded)
-
-        /// Title font
-        static let title = Font.system(size: 28, weight: .bold, design: .rounded)
-
-        /// Headline font
-        static let headline = Font.system(size: 17, weight: .semibold, design: .rounded)
-
-        /// Body font
-        static let body = Font.system(size: 17, weight: .regular, design: .default)
-
-        /// Callout font
-        static let callout = Font.system(size: 16, weight: .regular, design: .default)
-
-        /// Subheadline font
-        static let subheadline = Font.system(size: 15, weight: .regular, design: .default)
-
-        /// Footnote font
-        static let footnote = Font.system(size: 13, weight: .regular, design: .default)
-
-        /// Caption font
-        static let caption = Font.system(size: 12, weight: .regular, design: .default)
-    }
-
-    // MARK: - Shadows
-
-    enum Shadow {
-        /// Subtle shadow for cards
-        static let subtle = Color.black.opacity(0.05)
-
-        /// Medium shadow for elevated elements
-        static let medium = Color.black.opacity(0.1)
+    /// Screen-level layout constants. Centralise these to avoid magic numbers in views
+    /// and to allow design-system-wide adjustments in one place.
+    enum Layout {
+        /// Height of the invisible spacer anchoring the scroll-to-bottom proxy.
+        static let bottomScrollBuffer: CGFloat = 100
     }
 }

@@ -41,13 +41,13 @@ struct CaloriePillData: Equatable {
     // MARK: - Derived: Fill Color
 
     /// Color of the liquid fill behind the pill text.
-    /// Driven by `AppTheme.CaloriePill` thresholds — never hardcoded.
+    /// Color constants come from `AppTheme.CaloriePill`; thresholds (business logic) come from `ScoringThresholds`.
     /// Falls back to `fillOnTrack` when TDEE is nil (no fill shown since progressFraction == 0).
     var fillColor: Color {
         guard self.tdee != nil else { return AppTheme.CaloriePill.fillOnTrack }
-        if self.progressFraction >= AppTheme.CaloriePill.overThreshold {
+        if self.progressFraction >= ScoringThresholds.caloriePillOverFraction {
             return AppTheme.CaloriePill.fillOver
-        } else if self.progressFraction >= AppTheme.CaloriePill.approachingThreshold {
+        } else if self.progressFraction >= ScoringThresholds.caloriePillApproachingFraction {
             return AppTheme.CaloriePill.fillApproaching
         } else {
             return AppTheme.CaloriePill.fillOnTrack
