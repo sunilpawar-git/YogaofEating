@@ -117,14 +117,31 @@ extension JournalBlockView {
 
     // MARK: - Timestamp Button
 
+    /// Neutral pill color — matches the visual family of MealScoreBadge without being score-dependent.
+    private static let timePillColor = Color(red: 0.45, green: 0.5, blue: 0.55)
+
     var timestampButton: some View {
         Button {
             self.editedTimestamp = self.meal.timestamp
             self.showTimePicker = true
         } label: {
-            Text(Self.timeFormatter.string(from: self.meal.timestamp))
-                .font(FontTheme.iconSmall)
-                .foregroundColor(.secondary.opacity(0.6))
+            HStack(spacing: 3) {
+                Text(Self.timeFormatter.string(from: self.meal.timestamp))
+                    .font(FontTheme.textEntry(size: 12, weight: .semibold))
+                Image(systemName: "chevron.right")
+                    .font(FontTheme.textEntry(size: 9, weight: .semibold))
+            }
+            .foregroundStyle(Color(.systemBackground))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(Self.timePillColor)
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(Self.timePillColor.opacity(0.7), lineWidth: 1.2)
+            )
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("meal-time-button-\(self.meal.id)")
