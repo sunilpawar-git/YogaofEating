@@ -15,19 +15,14 @@ struct DailySmileySnapshot: Codable, Identifiable {
     let eveningMindCheck: [MindCheckEntry]?
     let highlightData: HighlightData?
     let reflectData: ReflectData?
-    let briefing: DailyBriefing?
-    let insight: LegacyDailyInsight?
     let totalCalories: Int?
     let hasCompleteCalorieData: Bool
-
-    /// Four-dimension holistic wellbeing model. Added in Synthesis Layer phase.
     let wellbeingDimensions: WellbeingDimensions?
-
-    /// Structured emotional signals extracted from free text. Added in Synthesis Layer phase.
     let textSignals: [TextSignal]?
 
-    /// Unified enriched insight combining synthesis + correlations + causal narrative. Added in Phase 5.
-    let enrichedInsight: EnrichedDailyInsight?
+    /// Single SSOT insight for this day. Replaces the legacy `briefing`, `insight`,
+    /// and `enrichedInsight` fields. Migration decoder reads those old keys on first load.
+    let insight: DailyInsight?
 
     // MARK: - Initialization
 
@@ -43,13 +38,11 @@ struct DailySmileySnapshot: Codable, Identifiable {
         eveningMindCheck: [MindCheckEntry]? = nil,
         highlightData: HighlightData? = nil,
         reflectData: ReflectData? = nil,
-        briefing: DailyBriefing? = nil,
-        insight: LegacyDailyInsight? = nil,
         totalCalories: Int? = nil,
         hasCompleteCalorieData: Bool = false,
         wellbeingDimensions: WellbeingDimensions? = nil,
         textSignals: [TextSignal]? = nil,
-        enrichedInsight: EnrichedDailyInsight? = nil
+        insight: DailyInsight? = nil
     ) {
         self.id = id
         self.date = Calendar(identifier: .gregorian).startOfDay(for: date)
@@ -62,23 +55,25 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.eveningMindCheck = eveningMindCheck
         self.highlightData = highlightData
         self.reflectData = reflectData
-        self.briefing = briefing
-        self.insight = insight
         self.totalCalories = totalCalories
         self.hasCompleteCalorieData = hasCompleteCalorieData
         self.wellbeingDimensions = wellbeingDimensions
         self.textSignals = textSignals
-        self.enrichedInsight = enrichedInsight
+        self.insight = insight
     }
 
-    // MARK: - Codable (Backward Compatible)
+    // MARK: - Codable (Backward Compatible — Phase 2 migration)
 
     enum CodingKeys: String, CodingKey {
         case id, date, smileyState, meals, mealCount, averageHealthScore
         case reflection, morningMindCheck, eveningMindCheck
-        case highlightData, reflectData, briefing, insight
+        case highlightData, reflectData
         case totalCalories, hasCompleteCalorieData
-        case wellbeingDimensions, textSignals, enrichedInsight
+        case wellbeingDimensions, textSignals
+        // Current storage key for unified DailyInsight
+        case insight
+        // Migration-only keys (read-only; never written)
+        case enrichedInsight, briefing
     }
 
     init(from decoder: Decoder) throws {
@@ -96,13 +91,21 @@ struct DailySmileySnapshot: Codable, Identifiable {
         self.eveningMindCheck = try c.decodeIfPresent([MindCheckEntry].self, forKey: .eveningMindCheck)
         self.highlightData = try c.decodeIfPresent(HighlightData.self, forKey: .highlightData)
         self.reflectData = try c.decodeIfPresent(ReflectData.self, forKey: .reflectData)
-        self.briefing = try c.decodeIfPresent(DailyBriefing.self, forKey: .briefing)
-        self.insight = try c.decodeIfPresent(LegacyDailyInsight.self, forKey: .insight)
         self.totalCalories = try c.decodeIfPresent(Int.self, forKey: .totalCalories)
         self.hasCompleteCalorieData = try c.decodeIfPresent(Bool.self, forKey: .hasCompleteCalorieData) ?? false
         self.wellbeingDimensions = try c.decodeIfPresent(WellbeingDimensions.self, forKey: .wellbeingDimensions)
         self.textSignals = try c.decodeIfPresent([TextSignal].self, forKey: .textSignals)
-        self.enrichedInsight = try c.decodeIfPresent(EnrichedDailyInsight.self, forKey: .enrichedInsight)
+
+        // Migration priority: new `insight` (DailyInsight) → `enrichedInsight` → converted `briefing`
+        if let unified = try? c.decodeIfPresent(DailyInsight.self, forKey: .insight) {
+            self.insight = unified
+        } else if let enriched = try? c.decodeIfPresent(DailyInsight.self, forKey: .enrichedInsight) {
+            self.insight = enriched
+        } else if let briefing = try? c.decodeIfPresent(DailyBriefing.self, forKey: .briefing) {
+            self.insight = DailyInsight(briefing: briefing)
+        } else {
+            self.insight = nil
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -118,13 +121,12 @@ struct DailySmileySnapshot: Codable, Identifiable {
         try c.encodeIfPresent(self.eveningMindCheck, forKey: .eveningMindCheck)
         try c.encodeIfPresent(self.highlightData, forKey: .highlightData)
         try c.encodeIfPresent(self.reflectData, forKey: .reflectData)
-        try c.encodeIfPresent(self.briefing, forKey: .briefing)
-        try c.encodeIfPresent(self.insight, forKey: .insight)
         try c.encodeIfPresent(self.totalCalories, forKey: .totalCalories)
         try c.encode(self.hasCompleteCalorieData, forKey: .hasCompleteCalorieData)
         try c.encodeIfPresent(self.wellbeingDimensions, forKey: .wellbeingDimensions)
         try c.encodeIfPresent(self.textSignals, forKey: .textSignals)
-        try c.encodeIfPresent(self.enrichedInsight, forKey: .enrichedInsight)
+        try c.encodeIfPresent(self.insight, forKey: .insight)
+        // Do NOT write `enrichedInsight` or `briefing` — legacy keys are read-only migration paths
     }
 
     // MARK: - Computed Properties
@@ -141,6 +143,5 @@ struct DailySmileySnapshot: Codable, Identifiable {
 
     var hasMorningMindCheck: Bool { !(self.morningMindCheck ?? []).isEmpty }
     var hasEveningMindCheck: Bool { !(self.eveningMindCheck ?? []).isEmpty }
-    var hasBriefing: Bool { self.briefing != nil }
     var hasInsight: Bool { self.insight != nil }
 }

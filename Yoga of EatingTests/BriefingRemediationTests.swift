@@ -62,8 +62,8 @@ final class BriefingRemediationTests: XCTestCase {
         vm.markBriefingViewed()
 
         XCTAssertTrue(
-            mockHistorical.updateBriefingCalled,
-            "markBriefingViewed must persist the updated briefing via historicalService"
+            mockHistorical.updateInsightCalled,
+            "markBriefingViewed must persist the updated briefing via historicalService.updateInsight"
         )
     }
 
@@ -92,7 +92,7 @@ final class BriefingRemediationTests: XCTestCase {
     func test_loadData_hydratesBriefingFromSnapshot() {
         let mockHistorical = MockHistoricalDataService()
         let briefing = self.makeBriefing()
-        let snapshot = DailySmileySnapshotBuilder().withBriefing(briefing).build()
+        let snapshot = DailySmileySnapshotBuilder().withInsight(DailyInsight(briefing: briefing)).build()
         mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
 
         let (vm, _, _) = self.makeViewModel(historicalService: mockHistorical)
@@ -109,7 +109,7 @@ final class BriefingRemediationTests: XCTestCase {
     func test_triggerBriefingGeneration_skipsWhenSnapshotAlreadyHasBriefing() {
         let mockHistorical = MockHistoricalDataService()
         let briefing = self.makeBriefing()
-        let snapshot = DailySmileySnapshotBuilder().withBriefing(briefing).build()
+        let snapshot = DailySmileySnapshotBuilder().withInsight(DailyInsight(briefing: briefing)).build()
         mockHistorical.historicalData.addOrUpdate(snapshot: snapshot)
 
         let mockInsight = MockInsightGenerationService(historicalService: mockHistorical)

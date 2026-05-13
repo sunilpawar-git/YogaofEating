@@ -168,4 +168,20 @@ struct DailyBriefing: Codable, Identifiable, Equatable {
     mutating func markAsViewed() {
         self.isViewed = true
     }
+
+    // MARK: - Phase 2 bridge: extracts briefing subset from unified insight.
+
+    // Removed in Phase 4 when currentBriefing is deleted from MainViewModel.
+    init(insight: DailyInsight) {
+        self.init(
+            id: insight.id,
+            date: insight.date,
+            generatedAt: insight.generatedAt,
+            headline: insight.headline,
+            correlationCards: insight.correlationCards,
+            nudge: insight.nudge,
+            weeklyTrend: insight.weeklyTrend,
+            isViewed: insight.isViewed
+        )
+    }
 }

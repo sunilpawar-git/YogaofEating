@@ -26,7 +26,11 @@
       "Bash(sort -k2)",
       "Bash(awk '{print $2}')",
       "Bash(ruby -e ' *)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "Bash(sed -i '' 's/\\\\.enrichedInsight/.insight/g' 'Yoga of EatingTests/InsightLifecycleIntegrationTests.swift' 'Yoga of EatingTests/InsightLifecycleTests.swift')",
+      "Bash(sed -i '' s/withEnrichedInsight/withInsight/g 'Yoga of EatingTests/InsightLifecycleIntegrationTests.swift' 'Yoga of EatingTests/InsightLifecycleTests.swift')",
+      "Bash(sed -i '' s/updateEnrichedInsightCalled/updateInsightCalled/g 'Yoga of EatingTests/InsightLifecycleTests.swift')",
+      "Bash(sed -i '' 's/updateEnrichedInsight\\(/updateInsight\\(/g' 'Yoga of EatingTests/InsightLifecycleIntegrationTests.swift' 'Yoga of EatingTests/InsightLifecycleTests.swift')"
     ]
   }
 }

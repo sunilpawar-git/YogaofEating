@@ -135,9 +135,10 @@ class InsightGenerationService: InsightGenerationServiceProtocol {
 
     // MARK: - Insight Storage
 
-    func saveInsight(_ insight: LegacyDailyInsight, for date: Date) {
-        self.historicalService.updateInsight(for: date, insight: insight)
-        briefingLogger.info("Insight saved for date \(date, privacy: .public)")
+    func saveInsight(_: LegacyDailyInsight, for date: Date) {
+        // Legacy pipeline suppressed in Phase 2 — InsightLifecycleService owns persistence.
+        // Deleted with this class in Phase 3.
+        briefingLogger.info("Legacy insight not persisted (Phase 2); date \(date, privacy: .public)")
     }
 
     // MARK: - Check Methods

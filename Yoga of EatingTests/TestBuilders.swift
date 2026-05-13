@@ -84,11 +84,9 @@ final class DailySmileySnapshotBuilder {
     private var eveningMindCheck: [MindCheckEntry]?
     private var highlightData: HighlightData?
     private var reflectData: ReflectData?
-    private var briefing: DailyBriefing?
-    private var insight: LegacyDailyInsight?
+    private var insight: DailyInsight?
     private var wellbeingDimensions: WellbeingDimensions?
     private var textSignals: [TextSignal]?
-    private var enrichedInsight: EnrichedDailyInsight?
 
     @discardableResult
     func withID(_ id: UUID) -> Self {
@@ -122,14 +120,8 @@ final class DailySmileySnapshotBuilder {
     }
 
     @discardableResult
-    func withInsight(_ insight: LegacyDailyInsight) -> Self {
+    func withInsight(_ insight: DailyInsight) -> Self {
         self.insight = insight
-        return self
-    }
-
-    @discardableResult
-    func withBriefing(_ briefing: DailyBriefing) -> Self {
-        self.briefing = briefing
         return self
     }
 
@@ -164,12 +156,6 @@ final class DailySmileySnapshotBuilder {
     }
 
     @discardableResult
-    func withEnrichedInsight(_ insight: EnrichedDailyInsight) -> Self {
-        self.enrichedInsight = insight
-        return self
-    }
-
-    @discardableResult
     func withWellbeingDimensions(_ dimensions: WellbeingDimensions) -> Self {
         self.wellbeingDimensions = dimensions
         return self
@@ -199,11 +185,9 @@ final class DailySmileySnapshotBuilder {
             eveningMindCheck: self.eveningMindCheck,
             highlightData: self.highlightData,
             reflectData: self.reflectData,
-            briefing: self.briefing,
-            insight: self.insight,
             wellbeingDimensions: self.wellbeingDimensions,
             textSignals: self.textSignals,
-            enrichedInsight: self.enrichedInsight
+            insight: self.insight
         )
     }
 }

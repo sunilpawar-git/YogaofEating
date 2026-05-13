@@ -26,11 +26,11 @@ extension MainViewModel {
             self.triggerCloudRestoreIfNeeded()
         }
 
-        // Hydrate today's briefing from persisted snapshot (independent of persistence load)
+        // Hydrate today's briefing from persisted unified insight (Phase 2 bridge)
         if self.currentBriefing == nil,
-           let todayBriefing = self.historicalService.getSnapshot(for: Date())?.briefing
+           let persistedInsight = self.historicalService.getSnapshot(for: Date())?.insight
         {
-            self.currentBriefing = todayBriefing
+            self.currentBriefing = DailyBriefing(insight: persistedInsight)
         }
 
         // Refresh today's activity data for a live TDEE in the calorie pill
