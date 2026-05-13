@@ -103,19 +103,34 @@ Custom sizes: `FontTheme.textEntry(size: 14, weight: .semibold)`
 
 **Design principle**: Changing fonts app-wide requires edits in ONE file. Never search/replace fonts across views.
 
-### Colors & Theming (Logic/Theme.swift)
+### Colors & Theming (Logic/Theme.swift + Logic/ThemeComponents.swift)
 
-Color theming is centralized in `AppTheme` (enum in `Theme.swift`). Use it instead of hardcoding `Color.*`:
+The theming system is split across exactly **two** files. Do not create additional theme files.
+
+| File | Responsibility |
+|---|---|
+| `Logic/Theme.swift` | Base design tokens: background/accent/text/border colors, `Spacing`, `CornerRadius`, `Typography`, `Shadow`, `Layout` |
+| `Logic/ThemeComponents.swift` | Component/domain tokens: `MealCard`, `ScoreBadge`, `ScoreColors`, `Animation`, `Background` glow, `Timeline`, `Dimension`, `TextEntry`, `CaloriePill`, `Fasting`, `DateContext`; plus `View` extension helpers (`cardStyle`, `subtleBorder`, `pillStyle`) |
+
+Use `AppTheme.*` instead of hardcoding `Color.*`:
 
 ```swift
 // ✅ CORRECT
 view.background(AppTheme.cardBackground)
+view.padding(AppTheme.Spacing.medium)
+view.cornerRadius(AppTheme.CornerRadius.medium)
 
 // ❌ WRONG
 view.background(Color(.systemGray6).opacity(0.5))
 ```
 
-Key tokens: `AppTheme.background`, `AppTheme.cardBackground`, `AppTheme.sheetBackground`, `AppTheme.secondaryBackground`.
+Key tokens by file:
+
+**Theme.swift**: `AppTheme.background`, `AppTheme.cardBackground`, `AppTheme.sheetBackground`, `AppTheme.secondaryBackground`, `AppTheme.Spacing.*`, `AppTheme.CornerRadius.*`, `AppTheme.Typography.*`, `AppTheme.Layout.*`
+
+**ThemeComponents.swift**: `AppTheme.CaloriePill.*`, `AppTheme.ScoreBadge.*`, `AppTheme.Animation.*`, `AppTheme.Timeline.*`, `AppTheme.Fasting.*`, `AppTheme.DateContext.*`
+
+> **Note on timing:** The text-entry settle delay (`500 ms`) lives in `TimingConstants.textEntryDebounceNanoseconds`, not in `AppTheme.TextEntry`. `AppTheme.TextEntry.maxCharacters` remains as the UI-layer alias for `ValidationLimits.universal`.
 
 ### Validation Limits (Logic/ValidationLimits.swift)
 
@@ -777,7 +792,7 @@ Every PR must satisfy all of these before merge:
 ### ✅ Centralized Resources & Theming
 - [ ] All user-facing strings defined in `Strings.swift` (never hardcoded in views)
 - [ ] All fonts use `FontTheme.*` (never hardcoded `.system(...)` or `.serif`)
-- [ ] No hardcoded `Color` values — use `AppTheme.*` from `Logic/Theme.swift`
+- [ ] No hardcoded `Color` values — use `AppTheme.*` from `Logic/Theme.swift` or `Logic/ThemeComponents.swift`
 - [ ] String enums organized by feature area for localization readiness
 - [ ] FontTheme changes don't require view edits (SSOT principle)
 

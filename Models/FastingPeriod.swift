@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// Represents a fasting period between two consecutive meals.
 struct FastingPeriod: Identifiable, Equatable {
@@ -17,17 +16,17 @@ struct FastingPeriod: Identifiable, Equatable {
 
     /// Duration in hours (for display and calculations)
     var durationInHours: Double {
-        self.duration / AppTheme.Fasting.secondsPerHour
+        self.duration / FastingConstants.secondsPerHour
     }
 
     /// Formatted duration string for display (e.g., "45m", "1h", "16h 30m").
     /// Returns "0m" for invalid/zero-length periods.
     var formattedDuration: String {
         guard self.duration > 0 else { return "0m" }
-        let hours = Int(self.duration / AppTheme.Fasting.secondsPerHour)
+        let hours = Int(self.duration / FastingConstants.secondsPerHour)
         let minutes = Int(
-            self.duration.truncatingRemainder(dividingBy: AppTheme.Fasting.secondsPerHour)
-                / AppTheme.Fasting.secondsPerMinute
+            self.duration.truncatingRemainder(dividingBy: FastingConstants.secondsPerHour)
+                / FastingConstants.secondsPerMinute
         )
         if hours == 0 {
             // Sub-hour gaps: show minutes only (e.g. "32m", "45m")
@@ -39,9 +38,9 @@ struct FastingPeriod: Identifiable, Equatable {
         }
     }
 
-    /// Whether this is a significant fasting period (12+ hours per `AppTheme.Fasting.significanceHoursThreshold`)
+    /// Whether this is a significant fasting period (12+ hours per `FastingConstants.significanceHoursThreshold`)
     var isSignificant: Bool {
-        self.durationInHours >= AppTheme.Fasting.significanceHoursThreshold
+        self.durationInHours >= FastingConstants.significanceHoursThreshold
     }
 
     /// Glow intensity based on fasting duration (0.0 to 1.0)
@@ -49,7 +48,7 @@ struct FastingPeriod: Identifiable, Equatable {
     /// Returns 0.0 for zero-duration periods.
     var glowIntensity: Double {
         guard self.isSignificant else { return 0.0 }
-        let minHours = AppTheme.Fasting.significanceHoursThreshold
+        let minHours = FastingConstants.significanceHoursThreshold
         let maxHours = 20.0
         let normalized = (self.durationInHours - minHours) / (maxHours - minHours)
         return min(max(normalized, 0.3), 1.0)

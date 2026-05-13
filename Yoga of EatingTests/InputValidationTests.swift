@@ -459,5 +459,48 @@
                 "sanitizeMealItems must strip tab characters"
             )
         }
+
+        // MARK: - Phase 6 RED: Word-boundary false-positive fixes
+
+        /// "Evaluated" contains "EVAL" — bare substring match incorrectly blocks common English words.
+        func test_mealDescription_evaluatedIsValid() {
+            let result = InputValidator.validateMealDescription("I evaluated my meal plan")
+            self.XCTAssertNoThrow(try result.get(), "Common English word 'evaluated' must not be rejected")
+        }
+
+        /// "Systematic" contains "SYSTEM" — bare substring match blocks legitimate food context.
+        func test_mealDescription_systematicFastingIsValid() {
+            let result = InputValidator.validateMealDescription("Systematic fasting approach")
+            self.XCTAssertNoThrow(try result.get(), "Common English word 'systematic' must not be rejected")
+        }
+
+        /// "Executive" contains "EXEC" — bare substring match false-positive.
+        func test_mealDescription_executiveLunchIsValid() {
+            let result = InputValidator.validateMealDescription("Executive lunch meeting")
+            self.XCTAssertNoThrow(try result.get(), "Common English word 'executive' must not be rejected")
+        }
+
+        /// "Delete from my diet" — natural English phrase, not SQL injection.
+        func test_mealDescription_deleteFromNaturalSentenceIsValid() {
+            let result = InputValidator.validateMealDescription("I want to delete junk food from my diet")
+            self.XCTAssertNoThrow(try result.get(), "Natural sentence with 'delete from' must not be rejected")
+        }
+
+        // Real injections must still be blocked (regression guard):
+
+        func test_mealDescription_realSqlDropTableIsStillBlocked() {
+            let result = InputValidator.validateMealDescription("'; DROP TABLE meals; --")
+            XCTAssertThrowsError(try result.get(), "SQL DROP TABLE injection must still be blocked")
+        }
+
+        func test_mealDescription_realCodeExecInjectionIsStillBlocked() {
+            let result = InputValidator.validateMealDescription("SYSTEM('rm -rf /')")
+            XCTAssertThrowsError(try result.get(), "SYSTEM() call injection must still be blocked")
+        }
+
+        func test_mealDescription_evalCallInjectionIsStillBlocked() {
+            let result = InputValidator.validateMealDescription("eval(maliciousCode)")
+            XCTAssertThrowsError(try result.get(), "eval() call injection must still be blocked")
+        }
     }
 #endif
