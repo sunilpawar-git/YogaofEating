@@ -100,7 +100,12 @@ final class BuilderTests: XCTestCase {
     }
 
     func test_snapshotBuilder_withInsight_setsInsight() {
-        let insight = LegacyDailyInsightBuilder().build()
+        let insight = DailyInsight(
+            date: Date(), headline: "Test", dimensions: .neutral,
+            dominantInsight: "Test.", correlationCards: [],
+            nudge: ActionableNudge(suggestion: "A", reasoning: "B"),
+            causalExplanation: "", textSignals: [], confidence: 0.7
+        )
         let snapshot = DailySmileySnapshotBuilder().withInsight(insight).build()
         XCTAssertNotNil(snapshot.insight)
     }

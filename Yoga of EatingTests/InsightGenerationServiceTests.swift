@@ -447,61 +447,52 @@
 
         // MARK: - Phase A4: saveInsight Persistence Tests
 
-        func test_saveInsight_persistsToHistoricalService() {
-            // Arrange
+        func test_saveInsight_isNoOp_inPhase2_legacyPipelineSuppressed() {
+            // Phase 2: saveInsight is deliberately a no-op.
+            // InsightLifecycleService owns persistence via updateInsight(DailyInsight).
+            // InsightGenerationService and this method are deleted in Phase 3.
             let today = Date()
             let insight = LegacyDailyInsight(
-                id: UUID(),
-                date: today,
+                id: UUID(), date: today,
                 insightText: "You sleep better on days with less sugar.",
-                insightType: .foodSleep,
-                confidence: 0.8
+                insightType: .foodSleep, confidence: 0.8
             )
-
-            // Act
             self.sut.saveInsight(insight, for: today)
-
-            // Assert: mock spy should have recorded the call
-            XCTAssertTrue(self.mockHistorical.updateInsightCalled)
-            XCTAssertEqual(self.mockHistorical.lastUpdatedInsight?.id, insight.id)
+            XCTAssertFalse(
+                self.mockHistorical.updateInsightCalled,
+                "saveInsight is a no-op in Phase 2; InsightLifecycleService owns persistence"
+            )
         }
 
         func test_saveInsight_savedInsightIsRecoverable() {
-            // Arrange
+            // Phase 2: legacy save is suppressed; snapshot has no legacy insight.
             let today = Date()
             let insight = LegacyDailyInsight(
-                id: UUID(),
-                date: today,
+                id: UUID(), date: today,
                 insightText: "Gratitude practice correlates with better mood.",
-                insightType: .mindsetFeeling,
-                confidence: 0.75
+                insightType: .mindsetFeeling, confidence: 0.75
             )
-
-            // Act
             self.sut.saveInsight(insight, for: today)
-
-            // Assert: retrieving snapshot for today should surface the insight
+            // Legacy insight is no longer written — unified insight is nil
             let recovered = self.mockHistorical.getSnapshot(for: today)?.insight
-            XCTAssertNotNil(recovered)
-            XCTAssertEqual(recovered?.id, insight.id)
+            XCTAssertNil(recovered, "Legacy saveInsight no longer persists in Phase 2")
         }
 
         func test_saveInsight_doesNotLogInsightText() {
-            // This test documents the security requirement: insightText (sensitive health data)
-            // must not be logged. saveInsight only logs date metadata, never the text content.
-            // Verified by code review — briefingLogger.info logs date only (privacy: .public).
-            // Sensitive field insightText has no Logger call after Phase A4 fix.
+            // Security: sensitive insightText is never logged.
+            // Phase 2: saveInsight only logs date metadata (privacy: .public); no content logged.
             let today = Date()
             let insight = LegacyDailyInsight(
-                id: UUID(),
-                date: today,
+                id: UUID(), date: today,
                 insightText: "SENSITIVE: high cholesterol detected",
-                insightType: .pattern,
-                confidence: 0.9
+                insightType: .pattern, confidence: 0.9
             )
-            // Should not throw or crash — functional contract
+            // Should not throw or crash — functional contract verified
             self.sut.saveInsight(insight, for: today)
-            XCTAssertTrue(self.mockHistorical.updateInsightCalled)
+            XCTAssertFalse(
+                self.mockHistorical.updateInsightCalled,
+                "Sensitive insightText must not be passed to storage in Phase 2"
+            )
         }
 
         // MARK: - Phase 5: Server Fallback Tests

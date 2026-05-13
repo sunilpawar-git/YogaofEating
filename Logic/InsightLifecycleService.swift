@@ -57,7 +57,7 @@ final class InsightLifecycleService: InsightLifecycling {
             recentSnapshots: recentSnapshots
         )
 
-        self.historicalService.updateEnrichedInsight(for: date, insight: insight)
+        self.historicalService.updateInsight(for: date, insight: insight)
         lifecycleLogger.info("Enriched insight generated for \(date, privacy: .public)")
         return insight
     }

@@ -35,17 +35,11 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// Updates or adds reflect data for a specific date.
     func updateReflectData(for date: Date, data: ReflectData)
 
-    /// Updates or adds a morning briefing for a specific date.
-    func updateBriefing(for date: Date, briefing: DailyBriefing)
-
-    /// Updates or adds a legacy text-only insight for a specific date.
-    func updateInsight(for date: Date, insight: LegacyDailyInsight)
+    /// Updates or stores the unified daily insight for a specific date.
+    func updateInsight(for date: Date, insight: DailyInsight)
 
     /// Updates or adds wellbeing dimensions and text signals for a specific date.
     func updateWellbeingDimensions(for date: Date, dimensions: WellbeingDimensions, textSignals: [TextSignal])
-
-    /// Updates or adds the enriched insight for a specific date.
-    func updateEnrichedInsight(for date: Date, insight: EnrichedDailyInsight)
 
     /// Downloads all snapshots from Firebase and merges them into local storage.
     /// Throws `AppError.syncAuthRequired` when not authenticated.
@@ -170,11 +164,10 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             eveningMindCheck: existing?.eveningMindCheck,
             highlightData: existing?.highlightData,
             reflectData: existing?.reflectData,
-            briefing: existing?.briefing,
-            insight: existing?.insight,
             totalCalories: hasAnyCalorieData ? totalCalories : existing?.totalCalories,
             hasCompleteCalorieData: hasAnyCalorieData ? hasCompleteCalorieData : existing?
-                .hasCompleteCalorieData ?? false
+                .hasCompleteCalorieData ?? false,
+            insight: existing?.insight
         )
 
         // Add or update in historical data

@@ -48,6 +48,34 @@ struct DailyInsight: Codable, Identifiable, Equatable {
         self.isViewed = isViewed
     }
 
+    // MARK: - Phase 2 bridge: converts DailyBriefing to unified insight.
+
+    // Removed in Phase 4 when currentBriefing is deleted from MainViewModel.
+    init(briefing: DailyBriefing) {
+        self.init(
+            id: briefing.id,
+            date: briefing.date,
+            generatedAt: briefing.generatedAt,
+            headline: briefing.headline,
+            dimensions: WellbeingDimensions(
+                physicalLoad: 0.5,
+                emotionalTone: 0.5,
+                cognitiveClarity: 0.5,
+                behavioralMomentum: 0.5
+            ),
+            dominantInsight: briefing.nudge.reasoning.isEmpty
+                ? briefing.topCorrelation?.observation ?? briefing.headline
+                : briefing.nudge.reasoning,
+            correlationCards: briefing.correlationCards,
+            nudge: briefing.nudge,
+            weeklyTrend: briefing.weeklyTrend,
+            causalExplanation: briefing.nudge.reasoning,
+            textSignals: [.neutral],
+            confidence: briefing.topCorrelation?.confidence ?? 0.5,
+            isViewed: briefing.isViewed
+        )
+    }
+
     // MARK: - Computed
 
     var hasCorrelations: Bool { !self.correlationCards.isEmpty }
