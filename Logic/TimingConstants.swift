@@ -51,4 +51,11 @@ enum TimingConstants {
     /// before asserting. Prefer structural alternatives (await on direct method calls)
     /// but use this constant when a small sleep is truly unavoidable.
     static let testSettleDelayNanoseconds: UInt64 = 200_000_000
+
+    // MARK: - Text Entry Debounce
+
+    /// Settle delay used in Highlight and Reflect text-entry async Tasks.
+    /// After the user stops typing, the ViewModel waits this long before persisting/analysing.
+    /// 500 ms balances responsiveness against unnecessary saves on every keystroke.
+    static let textEntryDebounceNanoseconds: UInt64 = 500_000_000
 }
