@@ -72,8 +72,8 @@ struct DailySmileySnapshot: Codable, Identifiable {
         case wellbeingDimensions, textSignals
         // Current storage key for unified DailyInsight
         case insight
-        // Migration-only keys (read-only; never written)
-        case enrichedInsight, briefing
+        // Migration-only key (read-only; enrichedInsight written by pre-Phase-3 builds)
+        case enrichedInsight
     }
 
     init(from decoder: Decoder) throws {
@@ -101,24 +101,6 @@ struct DailySmileySnapshot: Codable, Identifiable {
             self.insight = unified
         } else if let enriched = try? c.decodeIfPresent(DailyInsight.self, forKey: .enrichedInsight) {
             self.insight = enriched
-        } else if let briefing = try? c.decodeIfPresent(DailyBriefing.self, forKey: .briefing) {
-            // Inline migration: DailyBriefing → DailyInsight (bridge init removed in Phase 4)
-            self.insight = DailyInsight(
-                id: briefing.id,
-                date: briefing.date,
-                generatedAt: briefing.generatedAt,
-                headline: briefing.headline,
-                dimensions: .neutral,
-                dominantInsight: briefing.nudge.reasoning.isEmpty
-                    ? briefing.headline : briefing.nudge.reasoning,
-                correlationCards: briefing.correlationCards,
-                nudge: briefing.nudge,
-                weeklyTrend: briefing.weeklyTrend,
-                causalExplanation: briefing.nudge.reasoning,
-                textSignals: [.neutral],
-                confidence: briefing.topCorrelation?.confidence ?? 0.5,
-                isViewed: briefing.isViewed
-            )
         } else {
             self.insight = nil
         }

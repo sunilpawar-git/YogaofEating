@@ -43,6 +43,14 @@ enum AppTheme {
     /// Muted text color
     static let textMuted = Color.secondary.opacity(0.7)
 
+    // MARK: - Correlation Category Colors
+
+    /// Amber tone for food-debt correlation cards
+    static let foodDebtColor = Color.orange.opacity(0.9)
+
+    /// Soft purple for journal-tone prediction cards
+    static let journalToneColor = Color.purple.opacity(0.7)
+
     // MARK: - Border Colors
 
     /// Subtle border color

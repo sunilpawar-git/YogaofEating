@@ -154,36 +154,35 @@ final class BuilderTests: XCTestCase {
         XCTAssertNotEqual(id1, id2)
     }
 
-    // MARK: - DailyInsightBuilder defaults
+    // MARK: - DailyInsight defaults (unified type)
 
-    func test_dailyInsightBuilder_build_hasExpectedDefaults() {
-        let insight = LegacyDailyInsightBuilder().build()
-        XCTAssertFalse(insight.insightText.isEmpty)
-        XCTAssertEqual(insight.insightType, .encouragement)
+    func test_dailyInsight_hasExpectedDefaults() {
+        let insight = self.makeDailyInsight()
+        XCTAssertFalse(insight.dominantInsight.isEmpty)
         XCTAssertGreaterThan(insight.confidence, 0.0)
         XCTAssertFalse(insight.isViewed)
-        XCTAssertTrue(insight.references.isEmpty)
     }
 
-    func test_dailyInsightBuilder_withText_setsInsightText() {
-        let insight = LegacyDailyInsightBuilder().withText("You slept better after lighter dinners.").build()
-        XCTAssertEqual(insight.insightText, "You slept better after lighter dinners.")
-    }
-
-    func test_dailyInsightBuilder_withType_setsInsightType() {
-        let insight = LegacyDailyInsightBuilder().withType(.foodSleep).build()
-        XCTAssertEqual(insight.insightType, .foodSleep)
-    }
-
-    func test_dailyInsightBuilder_viewed_setsIsViewed() {
-        let insight = LegacyDailyInsightBuilder().viewed().build()
+    func test_dailyInsight_markAsViewed_setsFlag() {
+        var insight = self.makeDailyInsight()
+        insight.markAsViewed()
         XCTAssertTrue(insight.isViewed)
     }
 
-    func test_dailyInsightBuilder_build_producesUniqueIDs() {
-        let id1 = LegacyDailyInsightBuilder().build().id
-        let id2 = LegacyDailyInsightBuilder().build().id
+    func test_dailyInsight_producesUniqueIDs() {
+        let id1 = self.makeDailyInsight().id
+        let id2 = self.makeDailyInsight().id
         XCTAssertNotEqual(id1, id2)
+    }
+
+    private func makeDailyInsight() -> DailyInsight {
+        DailyInsight(
+            date: Date(), headline: "Test", dimensions: .neutral,
+            dominantInsight: "You slept better after lighter dinners.",
+            correlationCards: [],
+            nudge: ActionableNudge(suggestion: "Test suggestion", reasoning: "Test reason"),
+            causalExplanation: "", textSignals: [], confidence: 0.8
+        )
     }
 
     // MARK: - HealthProfileBuilder defaults

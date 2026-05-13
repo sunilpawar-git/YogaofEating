@@ -95,13 +95,22 @@ enum Strings {
             static let defaultSuggestion = "Log your meals today to unlock deeper patterns"
             static let defaultReasoning = "More data means richer insights tomorrow"
         }
+    }
 
-        // Insight types
-        enum InsightType {
-            static let foodSleep = "Food & Sleep"
-            static let mindsetFeeling = "Mindset & Feeling"
-            static let pattern = "Pattern"
-            static let encouragement = "Encouragement"
+    // MARK: - Briefing Detail View
+
+    enum Briefing {
+        static let navigationTitle = "Morning Briefing"
+        static let doneButton = "Done"
+        static let patternsSection = "Patterns"
+        static let nudgeSection = "Today's Nudge"
+        static let weeklyTrendSection = "Weekly Trend"
+        static let relatedMealPrefix = "Related: "
+        enum TrendLabel {
+            static let food = "Food"
+            static let sleep = "Sleep"
+            static let days = "Days"
+            static let trend = "Trend"
         }
     }
 
