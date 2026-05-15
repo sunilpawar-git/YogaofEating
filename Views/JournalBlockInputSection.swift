@@ -130,7 +130,7 @@ extension JournalBlockView {
                 Image(systemName: "chevron.right")
                     .font(FontTheme.textEntry(size: 9, weight: .semibold))
             }
-            .foregroundStyle(Color(.systemBackground))
+            .foregroundStyle(pillColor)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .coloredCapsulePill(color: pillColor)

@@ -204,7 +204,7 @@ extension View {
 
     func coloredCapsulePill(color: Color) -> some View {
         self
-            .background(Capsule().fill(color))
-            .overlay(Capsule().strokeBorder(color.opacity(0.7), lineWidth: 1.2))
+            .background(Capsule().fill(color.opacity(0.15)))
+            .overlay(Capsule().strokeBorder(color.opacity(0.3), lineWidth: 0.5))
     }
 }
