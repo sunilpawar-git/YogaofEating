@@ -13,19 +13,32 @@ SwiftUI iOS app for mindful eating. Users log meals via a journal-style interfac
 ```
 YogaOfEatingApp (entry point)
   └── MainViewModel (@StateObject, @MainActor)
-        ├── logicService: MealLogicProvider   ← AILogicService in production
-        ├── persistenceService                ← PersistenceService (JSON on disk)
-        ├── historicalService                 ← HistoricalDataService + Firestore sync
-        ├── insightService                    ← InsightGenerationService (Claude API)
-        └── healthProfileService              ← HealthProfileService (UserDefaults)
+        ├── logicService: MealLogicProvider              ← AILogicService in production
+        ├── persistenceService                            ← PersistenceService (JSON on disk)
+        ├── historicalService                             ← HistoricalDataService + Firestore sync
+        ├── aiCoordinator: AIAnalysisCoordinating         ← AIAnalysisCoordinator (task lifecycle)
+        ├── activityProvider: ActivityDataProvider        ← HealthKitService.shared (TDEE data)
+        ├── textSignalExtractor: TextSignalExtracting     ← TextSignalExtractor
+        ├── synthesisEngine: DailySynthesizing            ← DailySynthesisEngine
+        ├── insightLifecycleService: InsightLifecycling   ← InsightLifecycleService (Claude API)
+        ├── synthesisScheduler: SynthesisScheduling       ← SynthesisScheduler (debounced trigger)
+        ├── healthProfileService: HealthProfileServiceProtocol ← HealthProfileService
+        └── authService: AuthServiceProtocol?             ← nil in tests
 ```
 
 **Key protocols — always inject via protocol, never concrete type:**
 - `MealLogicProvider` — synchronous scoring + smiley state transitions
 - `AIAnalysisProvider: MealLogicProvider` — adds async `analyzeMealQuality`
+- `AIAnalysisCoordinating` — task lifecycle for AI analysis (owned by `AIAnalysisCoordinator`)
 - `PersistenceServiceProtocol` — load/save app data
 - `HistoricalDataServiceProtocol` — daily snapshots + Firestore sync
-- `InsightGenerationServiceProtocol` — AI daily insight generation
+- `InsightLifecycling` — AI daily insight generation (replaces `InsightGenerationServiceProtocol`)
+- `DailySynthesizing` — wellbeing synthesis from meals/sleep/journal/todos
+- `SynthesisScheduling` — debounced trigger for the synthesis pipeline
+- `TextSignalExtracting` — keyword/signal extraction from meal descriptions
+- `ActivityDataProvider` — TDEE/activity calorie data from HealthKit
+- `AuthServiceProtocol` — current user identity (auth guard, account-switch detection)
+- `HealthProfileServiceProtocol` — persisted user health profile
 
 **Default logicService must be `AILogicService`** (not `MealLogicService`). See regression below.
 
@@ -36,6 +49,7 @@ YogaOfEatingApp (entry point)
 | File | Responsibility |
 |------|---|
 | `MainViewModel.swift` | Core state, smiley logic, `@Published` properties |
+| `MainViewModel+Lifecycle.swift` | `loadData`, `saveData`, day-reset monitor, account-switch detection, cloud restore, activity data refresh |
 | `MainViewModel+MealCRUD.swift` | Add/update/delete meals, local score updates |
 | `MainViewModel+AIAnalysis.swift` | AI analysis pipeline, scoring guards, async analysis flow |
 | `MainViewModel+Insights.swift` | Daily briefing generation, insight notifications |
@@ -649,6 +663,20 @@ User hits "done"    → updateMeal                → if !isAIAnalyzed: triggerA
 3. `!analysisInProgress.contains(mealId)` — prevent concurrent duplicates
 4. Description must be ≥ 5 characters
 5. `logicService as? AIAnalysisProvider` — skip if not AI-capable (must never fire in prod)
+
+## Insight / Synthesis pipeline
+
+```
+Data change → SynthesisScheduler.schedule(_:)
+           → debounce (non-sleep) or immediate (.sleepLogged)
+           → MainViewModel.performInsightLifecycle(trigger:)
+           → DailySynthesisEngine.synthesize(...)          → DailySynthesis
+           → InsightLifecycleService.generateEnrichedInsight(...) → DailyInsight
+           → historicalService.updateInsight(...)
+           → MainViewModel.$currentInsight updated
+```
+
+`SynthesisTrigger` cases: `.mealChanged`, `.sleepLogged`, `.journalUpdated`, `.todoChanged`, `.feelingChanged`, `.morningThoughtsUpdated`. Sleep bypasses the debounce window and fires immediately; all other triggers are collapsed via `TimingConstants.synthesisDebounceNanoseconds`.
 
 ## Scoring thresholds (`ScoringThresholds` — single source of truth)
 
