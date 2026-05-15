@@ -129,7 +129,7 @@
                 recentSnapshots: self.recentSnapshots(),
                 healthKitSleepData: [:]
             )
-            XCTAssertTrue(self.mockHistorical.updateEnrichedInsightCalled)
+            XCTAssertTrue(self.mockHistorical.updateInsightCalled)
         }
 
         func test_generateEnrichedInsight_persistsToSnapshotViaHistoricalService() async {
@@ -141,15 +141,13 @@
                 healthKitSleepData: [:]
             )
             let snap = self.mockHistorical.historicalData.snapshot(for: today)
-            XCTAssertNotNil(snap?.enrichedInsight)
+            XCTAssertNotNil(snap?.insight)
         }
 
         // MARK: - Legacy fields unaffected
 
-        func test_enrichedInsight_doesNotAffectLegacyInsightField() async {
+        func test_generateEnrichedInsight_overwritesPreviousInsight() async {
             let today = Date()
-            let legacyInsight = DailyInsightBuilder().build()
-            self.mockHistorical.updateInsight(for: today, insight: legacyInsight)
 
             _ = await self.sut.generateEnrichedInsight(
                 for: today,
@@ -159,8 +157,8 @@
             )
 
             let snap = self.mockHistorical.historicalData.snapshot(for: today)
-            XCTAssertNotNil(snap?.insight, "Legacy insight should still be readable")
-            XCTAssertNotNil(snap?.enrichedInsight, "Enriched insight should now be set too")
+            XCTAssertNotNil(snap?.insight, "Unified insight should be set")
+            XCTAssertTrue(self.mockHistorical.updateInsightCalled)
         }
 
         // MARK: - Correlation cards

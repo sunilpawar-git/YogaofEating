@@ -7,56 +7,44 @@ import SwiftUI
 extension MainViewModel {
     // MARK: - Computed Properties
 
-    /// Returns today's generated insight if available, loaded from the persisted snapshot.
+    /// Returns today's persisted unified insight from the snapshot store.
     var todaysInsight: DailyInsight? {
         self.historicalService.getSnapshot(for: Date())?.insight
     }
 
-    /// Returns true if the insight card should be shown.
-    /// Shows when: there's an unviewed insight for today.
+    /// Whether the insight card should be shown (unviewed insight available).
     var showInsightCard: Bool {
         guard let insight = self.todaysInsight else { return false }
         return !insight.isViewed
     }
 
-    /// Whether an unread insight is available (for smiley red dot indicator)
+    /// Whether an unread insight is available (drives the smiley red dot).
     var hasUnreadInsight: Bool {
         guard let insight = self.currentInsight else { return false }
         return !insight.isViewed
     }
 
-    /// Whether any insight is available (for enabling long-press on smiley)
+    /// Whether any insight is available (enables smiley long-press).
     var hasInsightAvailable: Bool {
         self.currentInsight != nil
     }
 
-    // MARK: - Briefing Computed Properties
-
-    /// Whether the current briefing has been viewed
-    var hasBriefingAvailable: Bool {
-        self.currentBriefing != nil
-    }
-
-    /// Whether there's an unread briefing
-    var hasUnreadBriefing: Bool {
-        guard let briefing = self.currentBriefing else { return false }
-        return !briefing.isViewed
-    }
-
-    /// Data contract for MorningBriefingCard — minimal exposure per tab guidelines.
+    /// Briefing card data contract — minimal fields for `MorningBriefingCard`.
     var briefingCardData: (headline: String, topCorrelation: String?, nudge: String, isViewed: Bool)? {
-        guard let briefing = self.currentBriefing else { return nil }
+        guard let insight = self.currentInsight else { return nil }
         return (
-            headline: briefing.headline,
-            topCorrelation: briefing.topCorrelation?.observation,
-            nudge: briefing.nudge.suggestion,
-            isViewed: briefing.isViewed
+            headline: insight.headline,
+            topCorrelation: insight.topCorrelation?.observation,
+            nudge: insight.nudge.suggestion,
+            isViewed: insight.isViewed
         )
     }
 
+    var hasBriefingAvailable: Bool { self.currentInsight != nil }
+    var hasUnreadBriefing: Bool { self.hasUnreadInsight }
+
     // MARK: - Insight Actions
 
-    /// Dismisses the current insight card.
     func dismissInsight() {
         self.showInsightSheet = false
         if var insight = self.currentInsight {
@@ -65,15 +53,11 @@ extension MainViewModel {
         }
     }
 
-    /// Opens the insight bottom sheet
     func showInsightDetails() {
         guard self.currentInsight != nil else { return }
         self.showInsightSheet = true
     }
 
-    /// Handles long-press on smiley.
-    /// Opens WellbeingBreakdownSheet when synthesis data is available;
-    /// falls back to InsightBottomSheet for legacy insight-only days.
     func handleSmileyLongPress() {
         guard self.wellbeingBreakdownContract != nil || self.hasInsightAvailable else { return }
         SensoryService.shared.playNudge(style: .heavy)
@@ -86,55 +70,53 @@ extension MainViewModel {
 
     // MARK: - Briefing Actions
 
-    /// Marks the current briefing as viewed and persists the change.
     func markBriefingViewed() {
-        guard var briefing = self.currentBriefing else { return }
-        briefing.markAsViewed()
-        self.currentBriefing = briefing
-        self.historicalService.updateBriefing(for: Date(), briefing: briefing)
+        guard var insight = self.currentInsight else { return }
+        insight.markAsViewed()
+        self.currentInsight = insight
+        self.historicalService.updateInsight(for: Date(), insight: insight)
     }
 
-    /// Triggers briefing generation for today.
-    /// Called after sleep quality is saved (the morning data trigger).
-    /// Guarded to prevent concurrent Firebase calls when triggered multiple times.
-    func triggerBriefingGeneration() {
-        guard !self.isBriefingGenerationInProgress else { return }
+    /// Triggers morning briefing generation via `InsightLifecycleService`.
+    /// Idempotent: skips if an insight already exists for today.
+    func triggerInsightGeneration() {
+        guard !self.isInsightGenerationInProgress else { return }
 
         let date = Date()
 
-        if let existing = self.currentBriefing,
+        if let existing = self.currentInsight,
            Calendar.current.isDate(existing.date, inSameDayAs: date)
         {
             return
         }
 
-        // Also check persisted snapshot to avoid duplicate Cloud Function calls after relaunch
+        // Restore from persisted snapshot without triggering a Cloud Function call
         if let snapshot = self.historicalService.getSnapshot(for: date),
-           let persisted = snapshot.briefing
+           let persisted = snapshot.insight,
+           Calendar.current.isDate(persisted.date, inSameDayAs: date)
         {
-            self.currentBriefing = persisted
+            self.currentInsight = persisted
             return
         }
 
-        self.isBriefingGenerationInProgress = true
-        self.briefingTask = Task {
-            defer { self.isBriefingGenerationInProgress = false }
+        self.isInsightGenerationInProgress = true
+        self.insightTask = Task {
+            defer { self.isInsightGenerationInProgress = false }
 
             let healthKitSleepData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
-            if let briefing = await self.insightService.generateBriefing(
+            guard let insight = await self.insightLifecycleService.generateBriefing(
                 for: date,
                 healthKitSleepData: healthKitSleepData
-            ) {
-                guard !Task.isCancelled else { return }
-                self.currentBriefing = briefing
-                self.historicalService.updateBriefing(for: date, briefing: briefing)
+            ) else { return }
 
-                let userId = Auth.auth().currentUser?.uid ?? "unknown"
-                NotificationManager.shared.scheduleBriefingNotification(
-                    headline: briefing.headline,
-                    userId: userId
-                )
-            }
+            guard !Task.isCancelled else { return }
+            self.currentInsight = insight
+
+            guard let userId = self.authService?.currentUser?.uid else { return }
+            NotificationManager.shared.scheduleBriefingNotification(
+                headline: insight.headline,
+                userId: userId
+            )
         }
     }
 }

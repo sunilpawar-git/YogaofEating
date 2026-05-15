@@ -61,15 +61,15 @@ class PersistenceService: PersistenceServiceProtocol {
     /// Handles migration from old data format (without historicalData field)
     func load() -> AppData? {
         guard let url = fileURL else { return nil }
+        // Read the file once and reuse the bytes for both decode attempts.
+        guard let rawData = try? Data(contentsOf: url) else { return nil }
         do {
-            let data = try Data(contentsOf: url)
-            let decoded = try JSONDecoder().decode(AppData.self, from: data)
+            let decoded = try JSONDecoder().decode(AppData.self, from: rawData)
             return decoded
         } catch let primaryError {
             // Migration fallback: attempt to decode old format without historicalData.
             logger.info("PersistenceService: primary decode failed (schema change?) — attempting migration")
             do {
-                let rawData = try Data(contentsOf: url)
                 let oldData = try JSONDecoder().decode(OldAppData.self, from: rawData)
                 logger.info("PersistenceService: migration from old format succeeded")
                 return AppData(

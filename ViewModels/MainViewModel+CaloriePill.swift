@@ -36,27 +36,37 @@ extension MainViewModel {
         self.meals.compactMap(\.estimatedCalories).reduce(0, +)
     }
 
-    /// Resolves today's TDEE using the best available data source.
+    /// Resolves today's TDEE using the MFP approach: stable base + real exercise on top.
+    ///
+    /// Resolution order:
+    /// 1. Profile TDEE + actual active calories (best: stable base, real exercise data)
+    /// 2. Projected basal + actual active (HealthKit-only fallback, no profile)
+    /// 3. nil (no data at all)
     private func resolvedTDEE() -> Int? {
         let profile = self.healthProfileService.getUserHealthProfile()
+        let activeCalories = self.todayActiveCalories ?? 0.0
 
-        // Tier 1: basal + active from HealthKit
-        if let basal = self.todayBasalCalories, let active = self.todayActiveCalories {
-            return Int((basal + active).rounded())
-        }
-
-        // Tier 2: profile BMR + active from HealthKit
-        if let active = self.todayActiveCalories, let profile {
-            return Int((profile.bmr + active).rounded())
-        }
-
-        // Tier 3: static TDEE from profile
+        // Tier 1: Profile TDEE is the stable full-day base; active calories stack on top
+        // as the user exercises — exactly the MyFitnessPal model.
         if let profile {
-            return Int(profile.tdee.rounded())
+            return Int((profile.tdee + activeCalories).rounded())
         }
 
-        // Tier 4: nothing
+        // Tier 2: No profile — project the partial basal reading to a full-day estimate,
+        // then add whatever active calories HealthKit has recorded.
+        if let basal = self.todayBasalCalories {
+            let fraction = max(0.1, Self.fractionOfDayElapsed())
+            let projectedBasal = basal / fraction
+            return Int((projectedBasal + activeCalories).rounded())
+        }
+
         return nil
+    }
+
+    private static func fractionOfDayElapsed() -> Double {
+        let cal = Calendar.current
+        let now = Date()
+        return now.timeIntervalSince(cal.startOfDay(for: now)) / 86400
     }
 
     // MARK: - CalorieDetailData (R5)
@@ -65,9 +75,12 @@ extension MainViewModel {
     var calorieDetailData: CalorieDetailData {
         let consumed = self.totalConsumedCalories
         let tdee = self.resolvedTDEE()
+        let profileBaseTdee = self.healthProfileService.getUserHealthProfile()
+            .map { Int($0.tdee.rounded()) }
         return CalorieDetailData(
             consumed: consumed,
             tdee: tdee,
+            profileBaseTdee: profileBaseTdee,
             meals: self.meals,
             basalCalories: self.todayBasalCalories,
             activeCalories: self.todayActiveCalories

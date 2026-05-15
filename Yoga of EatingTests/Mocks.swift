@@ -72,6 +72,11 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
         }
     }
 
+    // MARK: - Concurrency flags
+
+    var isRestoreInProgress: Bool = false
+    var isSyncInProgress: Bool = false
+
     // MARK: - Restore spy
 
     var restoreFromFirebaseCalled = false
@@ -159,26 +164,7 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
     func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] { self.stubbedCarriedTodos }
     func foodDebtStartingState(relativeTo _: Date) -> SmileyState { self.stubbedFoodDebtState }
 
-    // MARK: - Briefing spy
-
-    var updateBriefingCalled = false
-    var lastUpdatedBriefing: DailyBriefing?
-
-    func updateBriefing(for date: Date, briefing: DailyBriefing) {
-        self.updateBriefingCalled = true
-        self.lastUpdatedBriefing = briefing
-        let normalizedDate = Calendar.current.startOfDay(for: date)
-        if let existing = self.historicalData.snapshot(for: normalizedDate) {
-            self.historicalData.addOrUpdate(snapshot: existing.withBriefing(briefing))
-        } else {
-            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
-                id: UUID(), date: normalizedDate, smileyState: .neutral,
-                meals: [], mealCount: 0, averageHealthScore: 0.5, briefing: briefing
-            ))
-        }
-    }
-
-    // MARK: - Insight spy
+    // MARK: - Unified insight spy
 
     var updateInsightCalled = false
     var lastUpdatedInsight: DailyInsight?
@@ -195,26 +181,6 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
             self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
                 id: UUID(), date: normalizedDate, smileyState: .neutral,
                 meals: [], mealCount: 0, averageHealthScore: 0.5, insight: insight
-            ))
-        }
-    }
-
-    // MARK: - EnrichedInsight spy
-
-    var updateEnrichedInsightCalled = false
-    var lastEnrichedInsight: EnrichedDailyInsight?
-
-    func updateEnrichedInsight(for date: Date, insight: EnrichedDailyInsight) {
-        self.updateEnrichedInsightCalled = true
-        self.lastEnrichedInsight = insight
-        let normalizedDate = Calendar.current.startOfDay(for: date)
-        if let existing = self.historicalData.snapshot(for: normalizedDate) {
-            self.historicalData.addOrUpdate(snapshot: existing.withEnrichedInsight(insight))
-        } else {
-            self.historicalData.addOrUpdate(snapshot: DailySmileySnapshot(
-                id: UUID(), date: normalizedDate, smileyState: .neutral,
-                meals: [], mealCount: 0, averageHealthScore: 0.5,
-                enrichedInsight: insight
             ))
         }
     }

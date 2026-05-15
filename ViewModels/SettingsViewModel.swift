@@ -97,6 +97,10 @@ class SettingsViewModel: ObservableObject {
 
     @Published var syncStatus: SyncStatus = .idle
 
+    // MARK: - Cloud Restore Published Properties
+
+    @Published var restoreStatus: RestoreStatus = .idle
+
     // MARK: - Auth Published Properties
 
     /// Non-nil when a sign-in attempt fails. Cleared on successful sign-in.
@@ -109,6 +113,7 @@ class SettingsViewModel: ObservableObject {
     let historicalService: any HistoricalDataServiceProtocol
     let authService: any AuthServiceProtocol
     var syncTask: Task<Void, Never>?
+    var restoreTask: Task<Void, Never>?
     let networkMonitor: NWPathMonitor?
     var isNetworkAvailable = true
 
@@ -118,14 +123,21 @@ class SettingsViewModel: ObservableObject {
 
     let syncSuccessDisplayDuration = TimingConstants.syncSuccessDisplayNanoseconds
     let syncErrorDisplayDuration = TimingConstants.syncErrorDisplayNanoseconds
-    let syncMaxRetryAttempts = TimingConstants.syncMaxRetryAttempts
-    let syncRetryDelay = TimingConstants.syncRetryDelayNanoseconds
 
     // MARK: - Sync Status Enum
 
     enum SyncStatus: Equatable {
         case idle
         case syncing
+        case success
+        case error(String)
+    }
+
+    // MARK: - Restore Status Enum
+
+    enum RestoreStatus: Equatable {
+        case idle
+        case restoring
         case success
         case error(String)
     }

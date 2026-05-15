@@ -84,11 +84,9 @@ final class DailySmileySnapshotBuilder {
     private var eveningMindCheck: [MindCheckEntry]?
     private var highlightData: HighlightData?
     private var reflectData: ReflectData?
-    private var briefing: DailyBriefing?
     private var insight: DailyInsight?
     private var wellbeingDimensions: WellbeingDimensions?
     private var textSignals: [TextSignal]?
-    private var enrichedInsight: EnrichedDailyInsight?
 
     @discardableResult
     func withID(_ id: UUID) -> Self {
@@ -128,12 +126,6 @@ final class DailySmileySnapshotBuilder {
     }
 
     @discardableResult
-    func withBriefing(_ briefing: DailyBriefing) -> Self {
-        self.briefing = briefing
-        return self
-    }
-
-    @discardableResult
     func withMorningMindCheck(_ entries: [MindCheckEntry]) -> Self {
         self.morningMindCheck = entries
         return self
@@ -160,12 +152,6 @@ final class DailySmileySnapshotBuilder {
     @discardableResult
     func withReflectData(_ data: ReflectData) -> Self {
         self.reflectData = data
-        return self
-    }
-
-    @discardableResult
-    func withEnrichedInsight(_ insight: EnrichedDailyInsight) -> Self {
-        self.enrichedInsight = insight
         return self
     }
 
@@ -199,11 +185,9 @@ final class DailySmileySnapshotBuilder {
             eveningMindCheck: self.eveningMindCheck,
             highlightData: self.highlightData,
             reflectData: self.reflectData,
-            briefing: self.briefing,
-            insight: self.insight,
             wellbeingDimensions: self.wellbeingDimensions,
             textSignals: self.textSignals,
-            enrichedInsight: self.enrichedInsight
+            insight: self.insight
         )
     }
 }
@@ -265,67 +249,6 @@ final class MindCheckEntryBuilder {
             context: self.context,
             isAccomplished: self.isAccomplished,
             carriedOverCount: self.carriedOverCount
-        )
-    }
-}
-
-// MARK: - DailyInsightBuilder
-
-/// Fluent builder for `DailyInsight` test fixtures.
-final class DailyInsightBuilder {
-    private var id = UUID()
-    private var date = Date()
-    private var insightText = "Your eating patterns look balanced."
-    private var insightType: InsightType = .encouragement
-    private var confidence: Double = 0.8
-    private var isViewed = false
-    private var references: [InsightReference] = []
-
-    @discardableResult
-    func withID(_ id: UUID) -> Self {
-        self.id = id
-        return self
-    }
-
-    @discardableResult
-    func withDate(_ date: Date) -> Self {
-        self.date = date
-        return self
-    }
-
-    @discardableResult
-    func withText(_ text: String) -> Self {
-        self.insightText = text
-        return self
-    }
-
-    @discardableResult
-    func withType(_ type: InsightType) -> Self {
-        self.insightType = type
-        return self
-    }
-
-    @discardableResult
-    func withConfidence(_ confidence: Double) -> Self {
-        self.confidence = confidence
-        return self
-    }
-
-    @discardableResult
-    func viewed() -> Self {
-        self.isViewed = true
-        return self
-    }
-
-    func build() -> DailyInsight {
-        DailyInsight(
-            id: self.id,
-            date: self.date,
-            insightText: self.insightText,
-            insightType: self.insightType,
-            confidence: self.confidence,
-            isViewed: self.isViewed,
-            references: self.references
         )
     }
 }

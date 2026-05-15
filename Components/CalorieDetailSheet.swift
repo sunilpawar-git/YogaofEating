@@ -2,18 +2,15 @@ import SwiftUI
 
 // MARK: - CalorieDetailSheet
 
-/// A bottom sheet showing a full breakdown of daily calorie consumption vs TDEE,
-/// including a per-meal breakdown and optional Apple Watch activity data.
+/// A bottom sheet showing a full breakdown of daily calorie consumption vs TDEE.
+///
+/// Layout (top to bottom):
+///   1. Progress — Consumed + Remaining above bar, bar, Total Goal below
+///   2. Goal breakdown — Base Goal + Exercise = Total Goal (only when applicable)
+///   3. By meal — per-meal calorie breakdown
 ///
 /// Accepts only `CalorieDetailData` — never references `MainViewModel` directly.
 /// Follows the Principle of Least Privilege: receives only what it needs.
-///
-/// Usage:
-/// ```swift
-/// .sheet(isPresented: $showDetail) {
-///     CalorieDetailSheet(data: viewModel.calorieDetailData)
-/// }
-/// ```
 struct CalorieDetailSheet: View {
     let data: CalorieDetailData
 
@@ -24,10 +21,8 @@ struct CalorieDetailSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                self.summarySection
-                if let basal = self.data.basalCalories, let active = self.data.activeCalories {
-                    self.activitySection(basal: basal, active: active)
-                }
+                self.progressSection
+                self.goalSection
                 if !self.data.mealBreakdown.isEmpty {
                     self.mealBreakdownSection
                 }
@@ -46,54 +41,127 @@ struct CalorieDetailSheet: View {
         .presentationDragIndicator(.visible)
     }
 
-    // MARK: - Summary Section
+    // MARK: - Progress Section
 
-    private var summarySection: some View {
+    /// Row 1: Consumed (left) + Remaining (right)
+    /// Row 2: Progress bar
+    /// Row 3: Total Goal (right-aligned, secondary) — only when TDEE is known
+    private var progressSection: some View {
         Section {
-            self.summaryRow(
-                label: Strings.CaloriePill.rowConsumed,
-                value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(self.data.consumed)),
-                color: .primary
-            )
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.small) {
+                self.consumedRemainingRow
+                if self.data.tdee != nil {
+                    self.progressBar
+                    self.totalGoalRow
+                }
+            }
+            .padding(.vertical, AppTheme.Spacing.xSmall)
+        }
+    }
 
-            if let tdee = self.data.tdee {
-                self.summaryRow(
-                    label: Strings.CaloriePill.rowGoal,
-                    value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(tdee)),
-                    color: .secondary
-                )
-
-                if let remaining = self.data.remaining {
-                    let formattedRemaining = CaloriePillData.formatted(abs(remaining))
-                    self.summaryRow(
-                        label: Strings.CaloriePill.rowRemaining,
-                        value: Strings.CaloriePill.consumedOnly(formattedRemaining),
-                        color: remaining >= 0 ? AppTheme.CaloriePill.colorRemaining : AppTheme.CaloriePill.fillOver
-                    )
+    /// "Consumed  560 Cal"  ·  "Remaining  1,514 Cal" on a single line.
+    private var consumedRemainingRow: some View {
+        HStack {
+            HStack(spacing: AppTheme.Spacing.xSmall) {
+                Text(Strings.CaloriePill.rowConsumed)
+                    .font(FontTheme.body)
+                    .foregroundColor(.primary)
+                Text(Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(self.data.consumed)))
+                    .font(FontTheme.body)
+                    .foregroundColor(.primary)
+            }
+            Spacer()
+            if let remaining = self.data.remaining {
+                HStack(spacing: AppTheme.Spacing.xSmall) {
+                    Text(remaining >= 0 ? Strings.CaloriePill.rowRemaining : Strings.CaloriePill.rowOver)
+                        .font(FontTheme.body)
+                        .foregroundColor(remaining >= 0 ? AppTheme.CaloriePill.colorRemaining : AppTheme.CaloriePill
+                            .fillOver)
+                    Text(Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(abs(remaining))))
+                        .font(FontTheme.body)
+                        .fontWeight(remaining >= 0 ? .regular : .semibold)
+                        .foregroundColor(remaining >= 0 ? AppTheme.CaloriePill.colorRemaining : AppTheme.CaloriePill
+                            .fillOver)
                 }
             }
         }
     }
 
-    // MARK: - Activity Section
+    private var progressBar: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(AppTheme.CaloriePill.pillBackground)
+                Capsule()
+                    .fill(self.data.progressFillColor)
+                    .frame(width: max(0, self.data.progressFraction * geo.size.width))
+                    .animation(AppTheme.Animation.slow, value: self.data.progressFraction)
+            }
+        }
+        .frame(height: 8)
+        .accessibilityLabel(Strings.CaloriePill.progressBarAccessibilityLabel)
+        .accessibilityValue(
+            self.data.formattedTDEE.map {
+                Strings.CaloriePill.accessibilityLabel(
+                    consumed: CaloriePillData.formatted(self.data.consumed),
+                    tdee: $0
+                )
+            } ?? ""
+        )
+    }
 
-    private func activitySection(basal: Double, active: Double) -> some View {
-        Section(Strings.CaloriePill.sectionActivity) {
-            self.summaryRow(
-                label: Strings.CaloriePill.rowBasal,
-                value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(Int(basal.rounded()))),
-                color: .secondary
-            )
-            self.summaryRow(
-                label: Strings.CaloriePill.rowActive,
-                value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(Int(active.rounded()))),
-                color: .secondary
-            )
-            self.summaryRow(
-                label: Strings.CaloriePill.rowTotalTDEE,
-                value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(Int((basal + active).rounded()))),
-                color: .primary
-            )
+    /// "Total Goal  2,074 Cal" — right-aligned anchor below the bar.
+    @ViewBuilder
+    private var totalGoalRow: some View {
+        if let tdee = self.data.tdee {
+            HStack {
+                Spacer()
+                Text(Strings.CaloriePill.rowGoalTotal)
+                    .font(FontTheme.body)
+                    .foregroundColor(.secondary)
+                Text(Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(tdee)))
+                    .font(FontTheme.body)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Goal Section
+
+    /// Shows how the TDEE goal was calculated.
+    /// Expands to "Base Goal + Exercise = Total Goal" when exercise data is present;
+    /// collapses to a single "Goal" row otherwise — prevents empty sections.
+    @ViewBuilder
+    private var goalSection: some View {
+        if let tdee = self.data.tdee {
+            if self.data.hasGoalBreakdown, let base = self.data.profileBaseTdee {
+                let activeInt = self.data.activeCalories.map { Int($0.rounded()) } ?? 0
+                Section(Strings.CaloriePill.sectionGoalBreakdown) {
+                    self.detailRow(
+                        label: Strings.CaloriePill.rowGoalBase,
+                        value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(base)),
+                        color: .secondary
+                    )
+                    self.detailRow(
+                        label: Strings.CaloriePill.rowGoalExercise,
+                        value: Strings.CaloriePill.exerciseCalories(CaloriePillData.formatted(activeInt)),
+                        color: .secondary
+                    )
+                    self.detailRow(
+                        label: Strings.CaloriePill.rowGoalTotal,
+                        value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(tdee)),
+                        color: .primary
+                    )
+                }
+            } else {
+                Section(Strings.CaloriePill.sectionGoalBreakdown) {
+                    self.detailRow(
+                        label: Strings.CaloriePill.rowGoal,
+                        value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(tdee)),
+                        color: .secondary
+                    )
+                }
+            }
         }
     }
 
@@ -116,7 +184,7 @@ struct CalorieDetailSheet: View {
 
     // MARK: - Helpers
 
-    private func summaryRow(label: String, value: String, color: Color) -> some View {
+    private func detailRow(label: String, value: String, color: Color) -> some View {
         HStack {
             Text(label)
                 .font(FontTheme.body)
@@ -129,24 +197,84 @@ struct CalorieDetailSheet: View {
     }
 }
 
+// MARK: - CalorieDetailData helpers used by view
+
+private extension CalorieDetailData {
+    var formattedTDEE: String? {
+        self.tdee.map { CaloriePillData.formatted($0) }
+    }
+}
+
 // MARK: - Preview
 
-#Preview {
+#Preview("Full breakdown — morning (27% consumed)") {
     CalorieDetailSheet(
         data: CalorieDetailData(
-            consumed: 1150,
-            tdee: 2200,
+            consumed: 560,
+            tdee: 2074,
+            profileBaseTdee: 1910,
             meals: {
-                var lunch = Meal(mealType: .lunch, items: ["Brown rice", "Grilled chicken", "Broccoli"])
-                lunch.estimatedCalories = 620
+                var drinks = Meal(mealType: .drinks, items: ["Tea"])
+                drinks.estimatedCalories = 10
                 var breakfast = Meal(mealType: .breakfast, items: ["Oatmeal", "Banana"])
-                breakfast.estimatedCalories = 380
-                var snack = Meal(mealType: .snacks, items: ["Greek yogurt"])
-                snack.estimatedCalories = 150
-                return [breakfast, lunch, snack]
+                breakfast.estimatedCalories = 550
+                return [drinks, breakfast]
             }(),
-            basalCalories: 1450,
-            activeCalories: 750
+            basalCalories: 777,
+            activeCalories: 164
+        )
+    )
+}
+
+#Preview("Approaching goal (80% consumed)") {
+    CalorieDetailSheet(
+        data: CalorieDetailData(
+            consumed: 1650,
+            tdee: 2074,
+            profileBaseTdee: 1910,
+            meals: {
+                var lunch = Meal(mealType: .lunch, items: ["Brown rice", "Chicken"])
+                lunch.estimatedCalories = 620
+                var breakfast = Meal(mealType: .breakfast, items: ["Oatmeal"])
+                breakfast.estimatedCalories = 380
+                var snack = Meal(mealType: .snacks, items: ["Yogurt"])
+                snack.estimatedCalories = 150
+                var dinner = Meal(mealType: .dinner, items: ["Dal", "Roti"])
+                dinner.estimatedCalories = 500
+                return [breakfast, lunch, snack, dinner]
+            }(),
+            basalCalories: 1300,
+            activeCalories: 164
+        )
+    )
+}
+
+#Preview("Over goal") {
+    CalorieDetailSheet(
+        data: CalorieDetailData(
+            consumed: 2300,
+            tdee: 2074,
+            profileBaseTdee: 1910,
+            meals: {
+                var dinner = Meal(mealType: .dinner, items: ["Large meal"])
+                dinner.estimatedCalories = 2300
+                return [dinner]
+            }(),
+            activeCalories: 164
+        )
+    )
+}
+
+#Preview("No profile — consumed only") {
+    CalorieDetailSheet(
+        data: CalorieDetailData(
+            consumed: 850,
+            tdee: nil,
+            meals: {
+                var meal = Meal(mealType: .lunch, items: ["Salad"])
+                meal.estimatedCalories = 850
+                return [meal]
+            }()
         )
     )
 }

@@ -43,4 +43,31 @@ final class ScoringThresholdsTests: XCTestCase {
         _ = ScoringThresholds.high
         _ = ScoringThresholds.minimumConsistentDays
     }
+
+    // MARK: - CaloriePill Fraction Thresholds (SSOT guard — Phase 2 consolidation)
+
+    func test_caloriePillApproachingFraction_isExactlySeventyPercent() {
+        // SSOT guard: review CaloriePillData.fillColor if this changes
+        XCTAssertEqual(ScoringThresholds.caloriePillApproachingFraction, 0.70, accuracy: 0.001)
+    }
+
+    func test_caloriePillOverFraction_isExactlyNinetyFivePercent() {
+        // SSOT guard: review CaloriePillData.fillColor if this changes
+        XCTAssertEqual(ScoringThresholds.caloriePillOverFraction, 0.95, accuracy: 0.001)
+    }
+
+    func test_caloriePillThresholds_approachingIsLessThanOver() {
+        XCTAssertLessThan(
+            ScoringThresholds.caloriePillApproachingFraction,
+            ScoringThresholds.caloriePillOverFraction,
+            "approachingFraction must be below overFraction"
+        )
+    }
+
+    func test_caloriePillThresholds_areInValidRange() {
+        XCTAssertGreaterThan(ScoringThresholds.caloriePillApproachingFraction, 0.0)
+        XCTAssertLessThan(ScoringThresholds.caloriePillApproachingFraction, 1.0)
+        XCTAssertGreaterThan(ScoringThresholds.caloriePillOverFraction, 0.0)
+        XCTAssertLessThanOrEqual(ScoringThresholds.caloriePillOverFraction, 1.0)
+    }
 }

@@ -38,6 +38,15 @@ enum ScoringThresholds {
     /// required to classify a trend as improving or declining (vs. steady).
     static let trendSignificanceDelta: Double = 0.1
 
+    // MARK: - CaloriePill Fraction Thresholds
+
+    /// Progress fraction below which the pill shows the "on track" colour.
+    /// At or above this fraction the pill transitions to the "approaching" colour.
+    static let caloriePillApproachingFraction: Double = 0.70
+
+    /// Progress fraction at or above which the pill shows the "over goal" colour.
+    static let caloriePillOverFraction: Double = 0.95
+
     // MARK: - Input Validation (co-located with scoring domain to avoid a separate ValidationConstants file)
 
     /// Minimum character count in a meal description before AI analysis is triggered.

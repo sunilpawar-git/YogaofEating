@@ -77,13 +77,40 @@ enum Strings {
         static let basedOnPatterns = "Based on your patterns"
         static let gotIt = "Got it"
         static let dismiss = "Dismiss"
+        static let unread = "Unread insight"
+        static let viewed = "Insight viewed"
+        static let noInsightAvailable = "No insight available"
+        static let generatingInsight = "Generating your insight…"
 
-        // Insight types
-        enum InsightType {
-            static let foodSleep = "Food & Sleep"
-            static let mindsetFeeling = "Mindset & Feeling"
-            static let pattern = "Pattern"
-            static let encouragement = "Encouragement"
+        // Headline fallbacks (used when server is unavailable)
+        enum Headline {
+            static let strong = "Strong day ahead"
+            static let steady = "Steady progress"
+            static let thoughtful = "Thoughtful choices today"
+            static let challenging = "Every step counts"
+        }
+
+        // Nudge defaults
+        enum Nudge {
+            static let defaultSuggestion = "Log your meals today to unlock deeper patterns"
+            static let defaultReasoning = "More data means richer insights tomorrow"
+        }
+    }
+
+    // MARK: - Briefing Detail View
+
+    enum Briefing {
+        static let navigationTitle = "Morning Briefing"
+        static let doneButton = "Done"
+        static let patternsSection = "Patterns"
+        static let nudgeSection = "Today's Nudge"
+        static let weeklyTrendSection = "Weekly Trend"
+        static let relatedMealPrefix = "Related: "
+        enum TrendLabel {
+            static let food = "Food"
+            static let sleep = "Sleep"
+            static let days = "Days"
+            static let trend = "Trend"
         }
     }
 
@@ -256,6 +283,23 @@ enum Strings {
         /// Generic sync failure message shown to users when the underlying error is not user-actionable.
         /// Never expose provider-specific error strings (Firebase, NSError domains) to users.
         static let syncFailedGeneric = "Sync failed. Please check your connection and try again."
+
+        // MARK: - Restore button labels
+
+        /// Idle state — button is ready to be tapped.
+        static let restoreButtonIdle = "Restore from Cloud"
+
+        /// Active state — restore in progress.
+        static let restoreButtonRestoring = "Restoring..."
+
+        /// Completion state — restore finished successfully.
+        static let restoreButtonSuccess = "Restored!"
+
+        /// Error state — restore failed.
+        static let restoreButtonError = "Restore Failed"
+
+        /// Generic restore failure shown when the underlying error is not user-actionable.
+        static let restoreFailedGeneric = "Restore failed. Please check your connection and try again."
     }
 
     enum Accessibility {

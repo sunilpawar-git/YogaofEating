@@ -18,7 +18,6 @@ final class BlankTextRegressionTests: XCTestCase {
             logicService: mockAI,
             persistenceService: MockPersistenceService(),
             historicalService: mockHistorical,
-            insightService: MockInsightGenerationService(historicalService: mockHistorical),
             skipDataLoading: true
         )
     }

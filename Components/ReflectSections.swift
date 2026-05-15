@@ -112,7 +112,7 @@ struct ReflectJournalSection: View {
                     }
                     self.journalDebounce?.cancel()
                     self.journalDebounce = Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: AppTheme.TextEntry.debounceNanoseconds)
+                        try? await Task.sleep(nanoseconds: TimingConstants.textEntryDebounceNanoseconds)
                         guard !Task.isCancelled else { return }
                         self.onChanged?(newValue)
                     }

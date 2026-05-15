@@ -95,7 +95,7 @@ struct HighlightSleepSection: View {
                     }
                     self.sleepNotesDebounce?.cancel()
                     self.sleepNotesDebounce = Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: AppTheme.TextEntry.debounceNanoseconds)
+                        try? await Task.sleep(nanoseconds: TimingConstants.textEntryDebounceNanoseconds)
                         guard !Task.isCancelled else { return }
                         self.onNotesChanged?(newValue)
                     }
@@ -279,7 +279,7 @@ struct HighlightThoughtsSection: View {
                     }
                     self.thoughtsDebounce?.cancel()
                     self.thoughtsDebounce = Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: AppTheme.TextEntry.debounceNanoseconds)
+                        try? await Task.sleep(nanoseconds: TimingConstants.textEntryDebounceNanoseconds)
                         guard !Task.isCancelled else { return }
                         self.onChanged?(newValue)
                     }

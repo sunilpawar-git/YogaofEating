@@ -15,7 +15,7 @@
         private var mockPersistence: MockPersistenceService!
         private var mockAuth: MockAuthService!
         private var mockSync: MockCloudSyncService!
-        private var analyzer: PatternAnalyzer!
+        private var analyzer: PatternAnalysisEngine!
 
         // MARK: - Setup & Teardown
 
@@ -29,7 +29,7 @@
                 authService: self.mockAuth,
                 syncService: self.mockSync
             )
-            self.analyzer = PatternAnalyzer()
+            self.analyzer = PatternAnalysisEngine()
         }
 
         override func tearDown() {
@@ -149,7 +149,7 @@
             XCTAssertEqual(vm.smileyState.mood, .neutral, "One bad day should not trigger food debt")
         }
 
-        // MARK: - PatternAnalyzer.analyzeFoodDebt tests
+        // MARK: - PatternAnalysisEngine.analyzeFoodDebt tests
 
         func test_patternAnalyzer_foodDebt_cardGeneratedForTwoBadDays() {
             let snapshots = [
