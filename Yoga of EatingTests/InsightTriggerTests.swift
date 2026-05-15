@@ -11,6 +11,7 @@ final class InsightTriggerTests: XCTestCase {
     var mockLogic: MockMealLogicService!
     var mockLifecycle: MockInsightLifecycleService!
     var mockActivityProvider: MockActivityDataProvider!
+    var mockAuth: MockAuthService!
 
     override func setUp() {
         super.setUp()
@@ -19,12 +20,14 @@ final class InsightTriggerTests: XCTestCase {
         self.mockLogic = MockMealLogicService()
         self.mockLifecycle = MockInsightLifecycleService()
         self.mockActivityProvider = MockActivityDataProvider()
+        self.mockAuth = MockAuthService()
         self.sut = MainViewModel(
             logicService: self.mockLogic,
             persistenceService: self.mockPersistence,
             historicalService: self.mockHistorical,
             activityProvider: self.mockActivityProvider,
             insightLifecycleService: self.mockLifecycle,
+            authService: self.mockAuth,
             skipDataLoading: true
         )
     }
@@ -36,6 +39,7 @@ final class InsightTriggerTests: XCTestCase {
         self.mockLogic = nil
         self.mockLifecycle = nil
         self.mockActivityProvider = nil
+        self.mockAuth = nil
         super.tearDown()
     }
 
