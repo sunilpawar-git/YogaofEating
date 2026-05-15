@@ -79,6 +79,12 @@ extension Strings {
         /// Row label for remaining calories in the detail sheet.
         static let rowRemaining = "Remaining"
 
+        /// Row label when the user has exceeded their goal.
+        static let rowOver = "Over Goal"
+
+        /// Accessibility label for the progress bar in the detail sheet.
+        static let progressBarAccessibilityLabel = "Daily calorie progress"
+
         /// Section heading for the per-meal breakdown.
         static let sectionByMeal = "By meal"
 
@@ -87,18 +93,9 @@ extension Strings {
             "~\(formatted) \(self.calUnit)"
         }
 
-        // MARK: - Activity Section (Apple Watch / HealthKit)
+        // MARK: - Goal Breakdown Section
 
-        /// Section heading for the Apple Watch activity data.
-        static let sectionActivity = "Activity"
-
-        /// Row label for active (exercise) calories burned.
-        static let rowActive = "Active"
-
-        /// Row label for basal (resting) calories burned.
-        static let rowBasal = "Resting"
-
-        /// Row label for the total TDEE (basal + active).
-        static let rowTotalTDEE = "Total Burned"
+        /// Section heading when the goal is decomposed into base + exercise.
+        static let sectionGoalBreakdown = "How your goal is set"
     }
 }
