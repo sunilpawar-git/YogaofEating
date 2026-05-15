@@ -4,40 +4,9 @@ import SwiftUI
 struct MealTypeTag: View {
     let mealType: MealType
 
-    // Minimalist pastel colors
-    private var typeColor: Color {
-        switch self.mealType {
-        case .breakfast:
-            .orange
-        case .lunch:
-            .green
-        case .dinner:
-            .purple
-        case .snacks:
-            .pink
-        case .drinks:
-            .blue
-        }
-    }
-
-    private var icon: String {
-        switch self.mealType {
-        case .breakfast:
-            "sunrise.fill"
-        case .lunch:
-            "fork.knife"
-        case .dinner:
-            "moon.stars.fill"
-        case .snacks:
-            "popcorn.fill"
-        case .drinks:
-            "cup.and.saucer.fill"
-        }
-    }
-
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: self.icon)
+            Image(systemName: self.mealType.iconName)
                 .font(.system(size: 10, weight: .semibold))
             Text(self.mealType.displayName)
                 .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -46,12 +15,17 @@ struct MealTypeTag: View {
         .padding(.vertical, 6)
         .background(
             Capsule()
-                .fill(self.typeColor.opacity(0.15))
+                .fill(self.mealType.displayColor.opacity(0.15))
         )
-        .foregroundColor(self.typeColor)
+        .foregroundColor(self.mealType.displayColor)
         .overlay(
             Capsule()
-                .stroke(self.typeColor.opacity(0.3), lineWidth: 0.5)
+                .stroke(self.mealType.displayColor.opacity(0.3), lineWidth: 0.5)
+        )
+        .shadow(
+            color: AppTheme.MealCard.pillShadowColor,
+            radius: AppTheme.MealCard.pillShadowRadius,
+            y: AppTheme.MealCard.pillShadowY
         )
     }
 }

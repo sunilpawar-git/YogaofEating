@@ -11,6 +11,9 @@ extension AppTheme {
         static let background = Color(.secondarySystemBackground)
         static let accentBarWidth: CGFloat = 3.0
         static let accentBarCornerRadius: CGFloat = 2.0
+        static let pillShadowColor = Color.black.opacity(0.15)
+        static let pillShadowRadius: CGFloat = 2
+        static let pillShadowY: CGFloat = 1
     }
 
     // MARK: - Score Badge
@@ -19,18 +22,6 @@ extension AppTheme {
         static let background = Color(.secondarySystemBackground)
         static let textColor = Color.secondary
         static let borderWidth: CGFloat = 1.2
-
-        static func colorForScore(_ score: Double) -> Color {
-            if score > 0.75 {
-                Color(red: 0.5, green: 0.65, blue: 0.55)
-            } else if score >= 0.55 {
-                Color(red: 0.5, green: 0.6, blue: 0.7)
-            } else if score >= ScoringThresholds.unhealthy {
-                Color(red: 0.65, green: 0.6, blue: 0.55)
-            } else {
-                Color(red: 0.55, green: 0.55, blue: 0.55)
-            }
-        }
     }
 
     // MARK: - Score Category Colors
