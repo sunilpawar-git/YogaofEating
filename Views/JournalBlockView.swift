@@ -111,7 +111,7 @@ struct JournalBlockView: View {
             Spacer()
             MealScoreBadge(
                 score: self.meal.isAIAnalyzed ? self.meal.healthScore : nil,
-                mealTypeColor: self.selectedMealType.displayColor
+                mealType: self.selectedMealType
             ) {
                 self.showScoreBreakdown = true
             }

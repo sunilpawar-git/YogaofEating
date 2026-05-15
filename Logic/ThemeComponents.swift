@@ -193,4 +193,18 @@ extension View {
                     .fill(AppTheme.cardBackground)
             )
     }
+
+    func mealPillShadow() -> some View {
+        self.shadow(
+            color: AppTheme.MealCard.pillShadowColor,
+            radius: AppTheme.MealCard.pillShadowRadius,
+            y: AppTheme.MealCard.pillShadowY
+        )
+    }
+
+    func coloredCapsulePill(color: Color) -> some View {
+        self
+            .background(Capsule().fill(color))
+            .overlay(Capsule().strokeBorder(color.opacity(0.7), lineWidth: 1.2))
+    }
 }

@@ -133,19 +133,8 @@ extension JournalBlockView {
             .foregroundStyle(Color(.systemBackground))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(
-                Capsule()
-                    .fill(pillColor)
-            )
-            .overlay(
-                Capsule()
-                    .strokeBorder(pillColor.opacity(0.7), lineWidth: 1.2)
-            )
-            .shadow(
-                color: AppTheme.MealCard.pillShadowColor,
-                radius: AppTheme.MealCard.pillShadowRadius,
-                y: AppTheme.MealCard.pillShadowY
-            )
+            .coloredCapsulePill(color: pillColor)
+            .mealPillShadow()
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("meal-time-button-\(self.meal.id)")
