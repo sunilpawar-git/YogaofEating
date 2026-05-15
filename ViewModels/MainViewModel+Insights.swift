@@ -112,7 +112,7 @@ extension MainViewModel {
             guard !Task.isCancelled else { return }
             self.currentInsight = insight
 
-            guard let userId = self.authService?.currentUserID else { return }
+            guard let userId = self.authService?.currentUser?.uid else { return }
             NotificationManager.shared.scheduleBriefingNotification(
                 headline: insight.headline,
                 userId: userId
