@@ -9,14 +9,17 @@ import XCTest
 final class MainViewModelInsightUnificationTests: XCTestCase {
     private var mockHistorical: MockHistoricalDataService!
     private var mockLifecycle: MockInsightLifecycleService!
+    private var mockActivityProvider: MockActivityDataProvider!
     private var sut: MainViewModel!
 
     override func setUp() {
         super.setUp()
         self.mockHistorical = MockHistoricalDataService()
         self.mockLifecycle = MockInsightLifecycleService()
+        self.mockActivityProvider = MockActivityDataProvider()
         self.sut = MainViewModel(
             historicalService: self.mockHistorical,
+            activityProvider: self.mockActivityProvider,
             insightLifecycleService: self.mockLifecycle,
             skipDataLoading: true
         )
@@ -26,6 +29,7 @@ final class MainViewModelInsightUnificationTests: XCTestCase {
         self.sut = nil
         self.mockLifecycle = nil
         self.mockHistorical = nil
+        self.mockActivityProvider = nil
         super.tearDown()
     }
 
@@ -61,8 +65,9 @@ final class MainViewModelInsightUnificationTests: XCTestCase {
         self.seedSnapshots(count: 3)
 
         self.sut.triggerInsightGeneration()
-        // Allow Task to run
-        try? await Task.sleep(nanoseconds: 50_000_000)
+        // Increase delay to allow async task to complete and properly await
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        if let task = self.sut.insightTask { await task.value }
 
         XCTAssertTrue(self.mockLifecycle.generateBriefingCalled)
     }
@@ -73,7 +78,8 @@ final class MainViewModelInsightUnificationTests: XCTestCase {
         self.seedSnapshots(count: 3)
 
         self.sut.triggerInsightGeneration()
-        try? await Task.sleep(nanoseconds: 100_000_000)
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        if let task = self.sut.insightTask { await task.value }
 
         XCTAssertEqual(self.sut.currentInsight?.headline, "Today's insight")
     }
@@ -83,7 +89,7 @@ final class MainViewModelInsightUnificationTests: XCTestCase {
         self.sut.currentInsight = existing
 
         self.sut.triggerInsightGeneration()
-        try? await Task.sleep(nanoseconds: 50_000_000)
+        try? await Task.sleep(nanoseconds: 500_000_000)
 
         // Should not call lifecycle service again
         XCTAssertFalse(self.mockLifecycle.generateBriefingCalled)
