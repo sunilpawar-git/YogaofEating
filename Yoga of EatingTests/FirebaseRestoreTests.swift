@@ -193,4 +193,40 @@ final class FirebaseRestoreIntegrationTests: XCTestCase {
         XCTAssertTrue(sut.historicalData.dailySnapshots.contains { $0.id == localSnap.id })
         XCTAssertTrue(sut.historicalData.dailySnapshots.contains { $0.id == cloudSnap.id })
     }
+
+    // MARK: - Partial restore (A3 / G1)
+
+    func test_restoreFromFirebase_whenSomeDocumentsCorrupted_throwsRestorePartialData() async {
+        // Stub: 2 valid snapshots fetched but 1 cloud document was corrupted (skippedCount = 1).
+        self.mockAuth.currentUser = MockAuthUser(uid: "u1", displayName: nil, email: nil)
+        let snap1 = DailySmileySnapshotBuilder().daysAgo(1).build()
+        let snap2 = DailySmileySnapshotBuilder().daysAgo(2).build()
+        self.mockSync.stubbedFetchedSnapshots = [snap1, snap2]
+        self.mockSync.stubbedSkippedCount = 1
+        let sut = self.makeSut()
+
+        do {
+            try await sut.restoreFromFirebase()
+            XCTFail("Expected AppError.restorePartialData to be thrown")
+        } catch let AppError.restorePartialData(count) {
+            XCTAssertEqual(count, 1, "Skipped count must match the stubbed value")
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+    }
+
+    func test_restoreFromFirebase_whenSomeDocumentsCorrupted_stillMergesValidSnapshots() async {
+        // Even though a partial-data error is thrown, the valid snapshots must be committed.
+        self.mockAuth.currentUser = MockAuthUser(uid: "u1", displayName: nil, email: nil)
+        let snap1 = DailySmileySnapshotBuilder().daysAgo(1).build()
+        let snap2 = DailySmileySnapshotBuilder().daysAgo(2).build()
+        self.mockSync.stubbedFetchedSnapshots = [snap1, snap2]
+        self.mockSync.stubbedSkippedCount = 1
+        let sut = self.makeSut()
+
+        try? await sut.restoreFromFirebase() // partial error expected — swallow it here
+
+        XCTAssertEqual(sut.historicalData.dailySnapshots.count, 2, "Valid snapshots must be merged despite corruption")
+        XCTAssertTrue(self.mockPersistence.saveCalled, "Valid snapshots must be persisted even on partial restore")
+    }
 }

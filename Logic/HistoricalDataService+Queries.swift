@@ -3,32 +3,38 @@ import Foundation
 // MARK: - Persistence & Query Helpers
 
 extension HistoricalDataService {
-    /// Loads historical data from persistent storage.
-    /// Called automatically during initialization.
-    func loadHistoricalData() -> HistoricalData {
-        if let savedData = persistenceService.load() {
-            savedData.historicalData
-        } else {
-            HistoricalData()
-        }
-    }
-
     // MARK: - Cloud Sync
 
     func syncToFirebase() async throws {
+        // Block uploads while a restore is in progress to avoid overwriting incoming cloud data.
+        guard !self.isRestoreInProgress else { return }
+        self.isSyncInProgress = true
+        defer { self.isSyncInProgress = false }
         try await self.syncHandler.sync()
-        self.saveHistoricalData()
+        // No saveHistoricalData() here — sync is a read-only upload; local state is unchanged.
     }
 
     // MARK: - Cloud Restore
 
     func restoreFromFirebase() async throws {
+        // Guard against concurrent restore calls — second call returns immediately.
+        guard !self.isRestoreInProgress else { return }
+        self.isRestoreInProgress = true
+        defer { self.isRestoreInProgress = false }
         let snapshots = try await self.syncHandler.restore()
-        guard !snapshots.isEmpty else { return }
+        // Merge valid snapshots regardless of whether some documents were corrupted —
+        // partial data is more valuable to the user than no data.
         for snapshot in snapshots {
             self.historicalData.addOrUpdate(snapshot: snapshot)
         }
-        self.saveHistoricalData()
+        if !snapshots.isEmpty {
+            self.saveHistoricalData()
+        }
+        // Surface the partial-restore warning AFTER committing what was recovered.
+        let skipped = self.syncHandler.lastRestoreSkippedCount
+        if skipped > 0 {
+            throw AppError.restorePartialData(skippedCount: skipped)
+        }
     }
 
     func clearAllData() {

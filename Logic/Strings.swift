@@ -283,6 +283,23 @@ enum Strings {
         /// Generic sync failure message shown to users when the underlying error is not user-actionable.
         /// Never expose provider-specific error strings (Firebase, NSError domains) to users.
         static let syncFailedGeneric = "Sync failed. Please check your connection and try again."
+
+        // MARK: - Restore button labels
+
+        /// Idle state — button is ready to be tapped.
+        static let restoreButtonIdle = "Restore from Cloud"
+
+        /// Active state — restore in progress.
+        static let restoreButtonRestoring = "Restoring..."
+
+        /// Completion state — restore finished successfully.
+        static let restoreButtonSuccess = "Restored!"
+
+        /// Error state — restore failed.
+        static let restoreButtonError = "Restore Failed"
+
+        /// Generic restore failure shown when the underlying error is not user-actionable.
+        static let restoreFailedGeneric = "Restore failed. Please check your connection and try again."
     }
 
     enum Accessibility {

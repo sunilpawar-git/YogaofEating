@@ -45,7 +45,7 @@
                 return
             }
 
-            self.sut.updateMeal(mealId, description: "Salad")
+            self.sut.updateMeal(mealId, mealType: .breakfast, items: ["Salad"])
 
             XCTAssertEqual(self.sut.meals.count, 1)
             XCTAssertEqual(self.sut.meals.first?.items, ["Salad"])

@@ -26,7 +26,7 @@ struct YogaOfEatingApp: App {
     #endif
 
     // Shared state across the app
-    @StateObject private var viewModel = MainViewModel()
+    @StateObject private var viewModel = MainViewModel(authService: AuthService.shared)
     @Environment(\.scenePhase)
     private var scenePhase
 

@@ -7,10 +7,29 @@ private let lifecycleLogger = Logger(subsystem: "com.yogaofeating", category: "M
 extension MainViewModel {
     func loadData() {
         if let data = self.persistenceService.load() {
+            // Account-switch detection: if the signed-in user differs from the last stored user,
+            // discard the stale local data and restore the new user's cloud history.
+            let currentUID = self.authService?.currentUser?.uid
+            let storedUID = self.userDefaults.string(forKey: StorageKeys.lastSignedInUID)
+            if let currentUID, let storedUID, currentUID != storedUID {
+                self.historicalService.clearAllData()
+                self.saveData()
+                // A new user has signed in — clear the previous user's data-deletion flag
+                // so their cloud history can be restored without interference.
+                self.userDefaults.removeObject(forKey: StorageKeys.hasDeletedAllData)
+                self.triggerCloudRestoreIfNeeded()
+                return
+            }
+
             self.meals = data.meals
             self.smileyState = data.smileyState
             self.lastResetDate = data.lastResetDate
             self.historicalService.historicalData = data.historicalData
+
+            // Update stored UID so future launches can detect any subsequent account switch.
+            if let currentUID {
+                self.userDefaults.set(currentUID, forKey: StorageKeys.lastSignedInUID)
+            }
 
             // Still check if we need to reset for a new day since the last save
             self.checkAndResetIfNewDay()
@@ -39,10 +58,21 @@ extension MainViewModel {
 
     /// Kicks off a background restore from Firebase when no local persistence file exists.
     /// Fire-and-forget: throws `syncAuthRequired` (silently) when not signed in.
+    /// Stores the current user's UID after a successful restore so future launches
+    /// can detect account switches.
     func triggerCloudRestoreIfNeeded() {
+        // Respect an explicit user-initiated data deletion: do not automatically re-download
+        // cloud data the user chose to erase on this device.
+        guard !self.userDefaults.bool(forKey: StorageKeys.hasDeletedAllData) else {
+            lifecycleLogger.info("Cloud restore skipped — user has explicitly deleted all data on this device.")
+            return
+        }
         Task { [weak self] in
             guard let self else { return }
             try? await self.historicalService.restoreFromFirebase()
+            if let uid = self.authService?.currentUser?.uid {
+                self.userDefaults.set(uid, forKey: StorageKeys.lastSignedInUID)
+            }
         }
     }
 

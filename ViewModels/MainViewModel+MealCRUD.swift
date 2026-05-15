@@ -22,12 +22,6 @@ extension MainViewModel {
         self.saveData()
     }
 
-    /// - Note: Prefer `updateMeal(_:mealType:items:)` — this overload bypasses meal-type tracking.
-    @available(*, deprecated, renamed: "updateMeal(_:mealType:items:)")
-    func updateMeal(_ mealId: UUID, description: String) {
-        self.updateMealItems(mealId, items: description.isEmpty ? [] : [description])
-    }
-
     /// Updates an existing meal's items and recalculates health.
     /// Validates and sanitizes input before persistence — mirrors the security contract of updateMeal.
     func updateMealItems(_ mealId: UUID, items: [String], withFeedback: Bool = false) {
@@ -284,6 +278,11 @@ extension MainViewModel {
     /// Completely deletes all app data including meals, history, and resets to factory state.
     /// This is a destructive operation and cannot be undone.
     func deleteAllData() {
+        // Set the deletion flag FIRST — before any I/O — so that even if a subsequent
+        // disk write fails (disk full, I/O error), the flag prevents an accidental cloud
+        // restore on the next app launch.
+        self.userDefaults.set(true, forKey: StorageKeys.hasDeletedAllData)
+
         withAnimation(.easeOut) {
             self.smileyState = .neutral
             self.meals = []
@@ -298,7 +297,7 @@ extension MainViewModel {
         self.saveData()
 
         for key in StorageKeys.allKeys {
-            UserDefaults.standard.removeObject(forKey: key)
+            self.userDefaults.removeObject(forKey: key)
         }
 
         NotificationManager.shared.cancelAllNotifications()
