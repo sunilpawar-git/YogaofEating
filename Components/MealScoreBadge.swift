@@ -12,8 +12,8 @@ struct MealScoreBadge: View {
     /// The health score (0.0 to 1.0), nil if not yet analyzed
     let score: Double?
 
-    /// Color sourced from the meal type — unifies all three card pills visually
-    let mealTypeColor: Color
+    /// Drives color — keeps color derivation internal rather than requiring callers to pass a raw Color
+    let mealType: MealType
 
     /// Callback when badge is tapped (shows score breakdown sheet)
     let onTap: () -> Void
@@ -24,13 +24,11 @@ struct MealScoreBadge: View {
 
     // MARK: - Computed Properties
 
-    /// Whether the badge should be displayed
     var shouldDisplay: Bool {
         guard let score else { return false }
         return score > 0
     }
 
-    /// Formatted score as percentage string (e.g., "80%")
     var formattedScore: String {
         guard let score, score > 0 else { return "" }
         return "\(Int(score * 100))%"
@@ -52,19 +50,8 @@ struct MealScoreBadge: View {
                 .foregroundStyle(Color(.systemBackground))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(self.mealTypeColor)
-                )
-                .overlay(
-                    Capsule()
-                        .strokeBorder(self.mealTypeColor.opacity(0.7), lineWidth: 1.2)
-                )
-                .shadow(
-                    color: AppTheme.MealCard.pillShadowColor,
-                    radius: AppTheme.MealCard.pillShadowRadius,
-                    y: AppTheme.MealCard.pillShadowY
-                )
+                .coloredCapsulePill(color: self.mealType.displayColor)
+                .mealPillShadow()
             }
             .buttonStyle(.plain)
             .scaleEffect(self.isPressed ? 0.92 : 1.0)
@@ -83,17 +70,17 @@ struct MealScoreBadge: View {
 // MARK: - Preview
 
 #Preview("Score Badge - High Score") {
-    MealScoreBadge(score: 0.85, mealTypeColor: .green, onTap: {})
+    MealScoreBadge(score: 0.85, mealType: .lunch, onTap: {})
 }
 
 #Preview("Score Badge - Medium Score") {
-    MealScoreBadge(score: 0.55, mealTypeColor: .orange, onTap: {})
+    MealScoreBadge(score: 0.55, mealType: .snacks, onTap: {})
 }
 
 #Preview("Score Badge - Low Score") {
-    MealScoreBadge(score: 0.25, mealTypeColor: .purple, onTap: {})
+    MealScoreBadge(score: 0.25, mealType: .dinner, onTap: {})
 }
 
 #Preview("Score Badge - No Score") {
-    MealScoreBadge(score: nil, mealTypeColor: .blue, onTap: {})
+    MealScoreBadge(score: nil, mealType: .breakfast, onTap: {})
 }

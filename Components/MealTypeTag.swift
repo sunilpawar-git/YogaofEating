@@ -5,28 +5,19 @@ struct MealTypeTag: View {
     let mealType: MealType
 
     var body: some View {
+        let color = self.mealType.displayColor
         HStack(spacing: 4) {
             Image(systemName: self.mealType.iconName)
-                .font(.system(size: 10, weight: .semibold))
+                .font(FontTheme.textEntry(size: 10, weight: .semibold))
             Text(self.mealType.displayName)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(FontTheme.textEntry(size: 12, weight: .medium))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(
-            Capsule()
-                .fill(self.mealType.displayColor.opacity(0.15))
-        )
-        .foregroundColor(self.mealType.displayColor)
-        .overlay(
-            Capsule()
-                .stroke(self.mealType.displayColor.opacity(0.3), lineWidth: 0.5)
-        )
-        .shadow(
-            color: AppTheme.MealCard.pillShadowColor,
-            radius: AppTheme.MealCard.pillShadowRadius,
-            y: AppTheme.MealCard.pillShadowY
-        )
+        .background(Capsule().fill(color.opacity(0.15)))
+        .foregroundColor(color)
+        .overlay(Capsule().strokeBorder(color.opacity(0.3), lineWidth: 0.5))
+        .mealPillShadow()
     }
 }
 
