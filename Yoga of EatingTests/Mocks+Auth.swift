@@ -87,13 +87,26 @@ class MockCloudSyncService: CloudSyncServiceProtocol {
     var batchUploadedSnapshots: [[DailySmileySnapshot]] = []
     var batchUploadCalled = false
     var shouldFail = false
+    /// Total number of times `uploadBatch` was called (successes + failures).
+    var uploadCallCount = 0
+    /// Fail the first N calls to `uploadBatch` before succeeding.
+    var uploadFailFirstNTimes = 0
+
+    /// Total number of snapshots across all successfully batched uploads.
+    var batchUploadedSnapshotCount: Int { self.batchUploadedSnapshots.flatMap(\.self).count }
 
     // MARK: - Restore stubs
 
     /// Snapshots returned by `fetchAllSnapshots`. Empty by default.
     var stubbedFetchedSnapshots: [DailySmileySnapshot] = []
+    /// Simulated number of corrupted documents skipped during decoding. 0 by default.
+    var stubbedSkippedCount: Int = 0
     var fetchAllSnapshotsCalled = false
     var fetchShouldFail = false
+    /// Total number of times `fetchAllSnapshots` was called (successes + failures).
+    var fetchCallCount = 0
+    /// Fail the first N calls to `fetchAllSnapshots` before returning `stubbedFetchedSnapshots`.
+    var fetchFailFirstNTimes = 0
 
     func upload(snapshot: DailySmileySnapshot, userId _: String) async throws {
         self.uploadCalled = true
@@ -104,7 +117,16 @@ class MockCloudSyncService: CloudSyncServiceProtocol {
     }
 
     func uploadBatch(snapshots: [DailySmileySnapshot], userId _: String) async throws {
+        self.uploadCallCount += 1
         self.batchUploadCalled = true
+        if self.uploadFailFirstNTimes > 0 {
+            self.uploadFailFirstNTimes -= 1
+            throw NSError(
+                domain: "CloudSync",
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Batch upload failed (simulated transient)"]
+            )
+        }
         if self.shouldFail {
             throw NSError(domain: "CloudSync", code: 3, userInfo: [NSLocalizedDescriptionKey: "Batch upload failed"])
         }
@@ -117,8 +139,17 @@ class MockCloudSyncService: CloudSyncServiceProtocol {
         }
     }
 
-    func fetchAllSnapshots(userId _: String) async throws -> [DailySmileySnapshot] {
+    func fetchAllSnapshots(userId _: String) async throws -> SnapshotFetchResult {
+        self.fetchCallCount += 1
         self.fetchAllSnapshotsCalled = true
+        if self.fetchFailFirstNTimes > 0 {
+            self.fetchFailFirstNTimes -= 1
+            throw NSError(
+                domain: "CloudSync",
+                code: 4,
+                userInfo: [NSLocalizedDescriptionKey: "Fetch failed (simulated transient)"]
+            )
+        }
         if self.fetchShouldFail {
             throw NSError(
                 domain: "CloudSync",
@@ -126,6 +157,6 @@ class MockCloudSyncService: CloudSyncServiceProtocol {
                 userInfo: [NSLocalizedDescriptionKey: "Fetch failed"]
             )
         }
-        return self.stubbedFetchedSnapshots
+        return SnapshotFetchResult(snapshots: self.stubbedFetchedSnapshots, skippedCount: self.stubbedSkippedCount)
     }
 }

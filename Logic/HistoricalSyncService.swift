@@ -26,6 +26,10 @@ final class HistoricalSyncService {
     /// Called on successful upload with the new `lastSyncDate` value to write back.
     private let onSyncCompleted: @MainActor (Date) -> Void
 
+    /// Delay between consecutive retry attempts. Defaults to `TimingConstants.syncRetryDelayNanoseconds`.
+    /// Override in tests with `0` for instant retries.
+    private let retryDelayNanoseconds: UInt64
+
     // MARK: - Init
 
     init(
@@ -33,38 +37,51 @@ final class HistoricalSyncService {
         syncService: any CloudSyncServiceProtocol,
         snapshotsProvider: @escaping @MainActor () -> [DailySmileySnapshot],
         lastSyncDateProvider: @escaping @MainActor () -> Date?,
-        onSyncCompleted: @escaping @MainActor (Date) -> Void
+        onSyncCompleted: @escaping @MainActor (Date) -> Void,
+        retryDelayNanoseconds: UInt64 = TimingConstants.syncRetryDelayNanoseconds
     ) {
         self.authService = authService
         self.syncService = syncService
         self.snapshotsProvider = snapshotsProvider
         self.lastSyncDateProvider = lastSyncDateProvider
         self.onSyncCompleted = onSyncCompleted
+        self.retryDelayNanoseconds = retryDelayNanoseconds
     }
 
     // MARK: - Restore
 
     /// Downloads all snapshots from Firebase for the authenticated user.
-    /// - Throws: `AppError.syncAuthRequired` when no authenticated user exists.
+    /// Retries up to `TimingConstants.syncMaxRetryAttempts` times on transient failures.
+    /// - Throws: `AppError.syncAuthRequired` when no authenticated user exists (not retried).
     /// - Returns: All stored snapshots, or an empty array when the cloud has no data.
+    ///
+    /// After a successful call, `lastRestoreSkippedCount` reflects how many cloud documents
+    /// could not be decoded. Callers can inspect this value to surface partial-restore warnings.
+    private(set) var lastRestoreSkippedCount: Int = 0
+
     func restore() async throws -> [DailySmileySnapshot] {
         guard let userId = self.authService.currentUser?.uid else {
             syncLogger.warning("Restore attempted without authenticated user")
             throw AppError.syncAuthRequired
         }
 
-        let snapshots = try await self.syncService.fetchAllSnapshots(userId: userId)
-        syncLogger.info("Restore: fetched \(snapshots.count) snapshots for user")
-        return snapshots
+        let result = try await withRetry {
+            try await self.syncService.fetchAllSnapshots(userId: userId)
+        }
+        self.lastRestoreSkippedCount = result.skippedCount
+        syncLogger.info("Restore: fetched \(result.snapshots.count) snapshots for user")
+        return result.snapshots
     }
 
     // MARK: - Sync
 
     /// Uploads snapshots to Firebase.
-    /// - Performs a delta sync when `lastSyncDate` is set (only uploads since cutoff).
-    /// - Performs a full sync on first call (`lastSyncDate` is nil).
+    /// - Performs a delta sync when `lastSyncDate` is set and in the past (only uploads since cutoff).
+    /// - Performs a full sync on first call (`lastSyncDate` is nil) or when the stored date is
+    ///   in the future (clock skew guard — avoids silently skipping a full sync).
+    /// - Retries up to `TimingConstants.syncMaxRetryAttempts` times on transient upload failures.
     /// - Calls `onSyncCompleted` with the current timestamp on success.
-    /// - Throws `AppError.syncAuthRequired` when no authenticated user exists.
+    /// - Throws `AppError.syncAuthRequired` when no authenticated user exists (not retried).
     func sync() async throws {
         guard let userId = self.authService.currentUser?.uid else {
             syncLogger.warning("Sync attempted without authenticated user")
@@ -74,19 +91,56 @@ final class HistoricalSyncService {
         let allSnapshots = self.snapshotsProvider()
         let snapshotsToSync: [DailySmileySnapshot]
 
-        if let lastSyncDate = self.lastSyncDateProvider() {
-            let cutoff = Calendar.current.startOfDay(for: lastSyncDate)
+        // Guard against clock skew: if lastSyncDate is in the future (device clock was wrong),
+        // treat it as nil to force a full sync rather than a missed delta sync.
+        let rawSyncDate = self.lastSyncDateProvider()
+        let safeSyncDate = rawSyncDate.flatMap { $0 > Date() ? nil : $0 }
+
+        if let safeSyncDate {
+            let cutoff = Calendar.current.startOfDay(for: safeSyncDate)
             snapshotsToSync = allSnapshots.filter { $0.date >= cutoff }
-            syncLogger.info("Delta sync: \(snapshotsToSync.count) snapshots since \(lastSyncDate, privacy: .public)")
+            syncLogger.info("Delta sync: \(snapshotsToSync.count) snapshots since \(safeSyncDate, privacy: .public)")
         } else {
             snapshotsToSync = allSnapshots
             syncLogger.info("Full sync: \(snapshotsToSync.count) snapshots")
         }
 
-        try await self.syncService.uploadBatch(snapshots: snapshotsToSync, userId: userId)
+        try await self.withRetry {
+            try await self.syncService.uploadBatch(snapshots: snapshotsToSync, userId: userId)
+        }
 
         let completedAt = Date()
         self.onSyncCompleted(completedAt)
         syncLogger.info("Sync completed at \(completedAt, privacy: .public)")
+    }
+
+    // MARK: - Retry
+
+    /// Retries `operation` up to `TimingConstants.syncMaxRetryAttempts` times.
+    /// Waits `retryDelayNanoseconds` between consecutive attempts.
+    /// Rethrows `AppError.syncAuthRequired` immediately — auth failures are never retried.
+    private func withRetry<T>(_ operation: () async throws -> T) async throws -> T {
+        var attempt = 0
+        var lastError: Error?
+        while attempt < TimingConstants.syncMaxRetryAttempts {
+            attempt += 1
+            do {
+                return try await operation()
+            } catch AppError.syncAuthRequired {
+                throw AppError.syncAuthRequired
+            } catch {
+                lastError = error
+                if attempt < TimingConstants.syncMaxRetryAttempts {
+                    syncLogger.warning(
+                        "Attempt \(attempt)/\(TimingConstants.syncMaxRetryAttempts) failed: \(error.localizedDescription, privacy: .public). Retrying."
+                    )
+                    try? await Task.sleep(nanoseconds: self.retryDelayNanoseconds)
+                }
+            }
+        }
+        syncLogger.error("Operation failed after \(TimingConstants.syncMaxRetryAttempts) attempts")
+        throw lastError ?? AppError.syncUploadFailed(
+            underlying: NSError(domain: "HistoricalSync", code: -1, userInfo: nil)
+        )
     }
 }

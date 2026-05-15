@@ -109,6 +109,12 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     let synthesisEngine: any DailySynthesizing
     let insightLifecycleService: any InsightLifecycling
     let synthesisScheduler: any SynthesisScheduling
+    /// Authentication service used for account-switch detection on launch.
+    /// Nil in test contexts (prevents Firebase access from test-created ViewModels).
+    let authService: (any AuthServiceProtocol)?
+    /// UserDefaults store used for persistence flags (e.g. lastSignedInUID, hasDeletedAllData).
+    /// Injected so tests can use an isolated suite and avoid polluting UserDefaults.standard.
+    let userDefaults: UserDefaults
 
     // MARK: - Activity Data (R4: TDEE resolution chain)
 
@@ -147,12 +153,16 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
         synthesisEngine: (any DailySynthesizing)? = nil,
         insightLifecycleService: (any InsightLifecycling)? = nil,
         synthesisScheduler: (any SynthesisScheduling)? = nil,
+        authService: (any AuthServiceProtocol)? = nil,
+        userDefaults: UserDefaults = .standard,
         skipDataLoading: Bool = false
     ) {
         let healthService = healthProfileService ?? HealthProfileService()
         let historicalSvc = historicalService ?? HistoricalDataService()
         self.healthProfileService = healthService
         self.logicService = logicService ?? AILogicService()
+        self.authService = authService
+        self.userDefaults = userDefaults
         self.persistenceService = persistenceService ?? PersistenceService.shared
         self.historicalService = historicalSvc
         self.aiCoordinator = aiCoordinator ?? AIAnalysisCoordinator()

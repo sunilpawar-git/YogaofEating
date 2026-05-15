@@ -158,6 +158,20 @@ extension AppTheme {
         /// Hour of day (24 h) before which "Good morning" is shown when no sleep is logged.
         static let morningHourThreshold: Int = 10
     }
+
+    // MARK: - Cloud Sync / Restore Status Backgrounds
+
+    /// Background tint colours for the sync and restore status pills in `SettingsCloudSection`.
+    enum CloudSync {
+        /// Idle / not-started state.
+        static let idleBackground = Color.blue.opacity(0.1)
+        /// Active (syncing / restoring) state.
+        static let activeBackground = Color.blue.opacity(0.2)
+        /// Success state.
+        static let successBackground = Color.green.opacity(0.15)
+        /// Error state.
+        static let errorBackground = Color.red.opacity(0.1)
+    }
 }
 
 // MARK: - View Extensions

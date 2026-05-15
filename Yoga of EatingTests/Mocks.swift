@@ -72,6 +72,11 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
         }
     }
 
+    // MARK: - Concurrency flags
+
+    var isRestoreInProgress: Bool = false
+    var isSyncInProgress: Bool = false
+
     // MARK: - Restore spy
 
     var restoreFromFirebaseCalled = false

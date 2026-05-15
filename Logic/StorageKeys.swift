@@ -35,6 +35,20 @@ enum StorageKeys {
 
     static let insightCoachmarkSeen = "insight_coachmark_seen"
 
+    // MARK: - Session Continuity
+
+    /// UID of the most-recently authenticated user.
+    /// Compared on launch to detect account switches and prevent cross-user data leakage.
+    static let lastSignedInUID = "last_signed_in_uid"
+
+    // MARK: - Data Lifecycle
+
+    /// Set to `true` when the user explicitly deletes all data via Settings.
+    /// Checked in `triggerCloudRestoreIfNeeded()` to prevent re-downloading just-deleted data.
+    /// Intentionally NOT in `allKeys` — must survive the `deleteAll` UserDefaults loop.
+    /// Cleared when a new account signs in (account switch), allowing the new user's restore.
+    static let hasDeletedAllData = "has_deleted_all_data"
+
     // MARK: - All Keys (for bulk operations like deleteAll)
 
     //
@@ -55,6 +69,7 @@ enum StorageKeys {
         soundEnabled,
         healthSyncEnabled,
         showHealthInsights,
-        insightCoachmarkSeen
+        insightCoachmarkSeen,
+        lastSignedInUID
     ]
 }

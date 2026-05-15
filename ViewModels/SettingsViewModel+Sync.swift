@@ -102,7 +102,9 @@ extension SettingsViewModel {
         }
     }
 
-    func performSyncWithRetry(attempt: Int = 1) async {
+    /// Performs a single cloud sync attempt. Retries are handled at the
+    /// `HistoricalSyncService.withRetry` layer — no outer loop needed here.
+    func performSyncWithRetry() async {
         guard self.isNetworkAvailable else {
             await self.handleSyncError(AppError.syncUploadFailed(
                 underlying: NSError(
@@ -110,7 +112,7 @@ extension SettingsViewModel {
                     code: -1009,
                     userInfo: [NSLocalizedDescriptionKey: "No internet connection"]
                 )
-            ), shouldRetry: false)
+            ))
             return
         }
 
@@ -123,8 +125,7 @@ extension SettingsViewModel {
             }
         } catch {
             if !Task.isCancelled {
-                let shouldRetry = attempt < self.syncMaxRetryAttempts
-                await self.handleSyncError(error, shouldRetry: shouldRetry, attempt: attempt)
+                await self.handleSyncError(error)
             }
         }
     }
@@ -144,31 +145,22 @@ extension SettingsViewModel {
         }
     }
 
-    func handleSyncError(_ error: Error, shouldRetry: Bool, attempt: Int = 1) async {
-        if shouldRetry {
-            self.syncStatus = .error("Sync failed. Retrying... (Attempt \(attempt)/\(self.syncMaxRetryAttempts))")
-            // CancellationError from sleep is intentional (retry cancelled on sync task cancel) — no-op
-            try? await Task.sleep(nanoseconds: self.syncRetryDelay)
-            if !Task.isCancelled {
-                await self.performSyncWithRetry(attempt: attempt + 1)
-            }
-        } else {
-            // Use AppError description if available; fall back to a generic message to avoid
-            // exposing Firebase/NSError internals to the user. Detailed error logged above.
-            let userMessage = AppError.syncUploadFailed(underlying: error).errorDescription
-                ?? Strings.Settings.syncFailedGeneric
-            self.syncStatus = .error(userMessage)
+    func handleSyncError(_ error: Error) async {
+        // Use the typed AppError description when available; fall back to a generic message to
+        // avoid exposing Firebase/NSError internals to the user. Detailed error is logged by the service.
+        let userMessage = (error as? AppError)?.errorDescription
+            ?? Strings.Settings.syncFailedGeneric
+        self.syncStatus = .error(userMessage)
 
-            #if canImport(UIKit)
-                UINotificationFeedbackGenerator().notificationOccurred(.error)
-            #endif
+        #if canImport(UIKit)
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        #endif
 
-            // CancellationError from sleep is intentional (sync task cancelled) — status cleared by guard below
-            try? await Task.sleep(nanoseconds: self.syncErrorDisplayDuration)
+        // CancellationError from sleep is intentional (sync task cancelled) — status cleared by guard below
+        try? await Task.sleep(nanoseconds: self.syncErrorDisplayDuration)
 
-            if !Task.isCancelled {
-                self.syncStatus = .idle
-            }
+        if !Task.isCancelled {
+            self.syncStatus = .idle
         }
     }
 

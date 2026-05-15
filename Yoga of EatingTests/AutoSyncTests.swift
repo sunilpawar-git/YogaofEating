@@ -10,14 +10,18 @@ import XCTest
 final class AutoSyncTests: XCTestCase {
     private var mockHistorical: MockHistoricalDataService!
     private var mockPersistence: MockPersistenceService!
+    private var testDefaults: UserDefaults!
 
     override func setUp() {
         super.setUp()
+        self.testDefaults = UserDefaults(suiteName: "AutoSyncTests.\(UUID())")!
         self.mockHistorical = MockHistoricalDataService()
         self.mockPersistence = MockPersistenceService()
     }
 
     override func tearDown() {
+        self.testDefaults.removePersistentDomain(forName: self.testDefaults.description)
+        self.testDefaults = nil
         self.mockHistorical = nil
         self.mockPersistence = nil
         super.tearDown()
@@ -27,6 +31,7 @@ final class AutoSyncTests: XCTestCase {
         MainViewModel(
             persistenceService: self.mockPersistence,
             historicalService: self.mockHistorical,
+            userDefaults: self.testDefaults,
             skipDataLoading: true
         )
     }
