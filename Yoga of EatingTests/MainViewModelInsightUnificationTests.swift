@@ -10,6 +10,7 @@ final class MainViewModelInsightUnificationTests: XCTestCase {
     private var mockHistorical: MockHistoricalDataService!
     private var mockLifecycle: MockInsightLifecycleService!
     private var mockActivityProvider: MockActivityDataProvider!
+    private var mockAuth: MockAuthService!
     private var sut: MainViewModel!
 
     override func setUp() {
@@ -17,10 +18,12 @@ final class MainViewModelInsightUnificationTests: XCTestCase {
         self.mockHistorical = MockHistoricalDataService()
         self.mockLifecycle = MockInsightLifecycleService()
         self.mockActivityProvider = MockActivityDataProvider()
+        self.mockAuth = MockAuthService()
         self.sut = MainViewModel(
             historicalService: self.mockHistorical,
             activityProvider: self.mockActivityProvider,
             insightLifecycleService: self.mockLifecycle,
+            authService: self.mockAuth,
             skipDataLoading: true
         )
     }
@@ -30,6 +33,7 @@ final class MainViewModelInsightUnificationTests: XCTestCase {
         self.mockLifecycle = nil
         self.mockHistorical = nil
         self.mockActivityProvider = nil
+        self.mockAuth = nil
         super.tearDown()
     }
 
