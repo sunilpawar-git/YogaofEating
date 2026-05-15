@@ -24,15 +24,19 @@ struct CaloriePillView: View {
         if self.data.isVisible {
             // Label drives the size; liquid fill lives in the background so GeometryReader
             // receives the already-resolved content size (not the available space).
-            HStack(spacing: 4) {
-                Image(systemName: "flame.fill")
-                    .font(FontTheme.iconSmall)
-                    .foregroundColor(AppTheme.CaloriePill.flameIcon)
+            HStack(spacing: 2) {
+                Text(Strings.CaloriePill.pillLeadingChevron)
+                    .font(FontTheme.caption)
+                    .foregroundColor(AppTheme.CaloriePill.textChevron)
 
                 Text(self.pillLabel)
                     .font(FontTheme.caption)
                     .foregroundColor(AppTheme.CaloriePill.textPrimary)
                     .lineLimit(1)
+
+                Text(Strings.CaloriePill.pillTrailingChevron)
+                    .font(FontTheme.caption)
+                    .foregroundColor(AppTheme.CaloriePill.textChevron)
             }
             .padding(.vertical, AppTheme.CaloriePill.pillVerticalPadding)
             .padding(.horizontal, AppTheme.CaloriePill.pillHorizontalPadding)

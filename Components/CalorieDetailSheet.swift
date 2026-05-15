@@ -57,11 +57,7 @@ struct CalorieDetailSheet: View {
             )
 
             if let tdee = self.data.tdee {
-                self.summaryRow(
-                    label: Strings.CaloriePill.rowGoal,
-                    value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(tdee)),
-                    color: .secondary
-                )
+                self.goalRows(tdee: tdee)
 
                 if let remaining = self.data.remaining {
                     let formattedRemaining = CaloriePillData.formatted(abs(remaining))
@@ -72,6 +68,36 @@ struct CalorieDetailSheet: View {
                     )
                 }
             }
+        }
+    }
+
+    /// Renders either a single "Goal" row or a "Base Goal + Exercise = Total Goal" breakdown.
+    /// Breakdown appears only when a profile base and non-zero exercise calories both exist.
+    @ViewBuilder
+    private func goalRows(tdee: Int) -> some View {
+        let activeInt = self.data.activeCalories.map { Int($0.rounded()) } ?? 0
+        if let base = self.data.profileBaseTdee, activeInt > 0 {
+            self.summaryRow(
+                label: Strings.CaloriePill.rowGoalBase,
+                value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(base)),
+                color: .secondary
+            )
+            self.summaryRow(
+                label: Strings.CaloriePill.rowGoalExercise,
+                value: Strings.CaloriePill.exerciseCalories(CaloriePillData.formatted(activeInt)),
+                color: .secondary
+            )
+            self.summaryRow(
+                label: Strings.CaloriePill.rowGoalTotal,
+                value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(tdee)),
+                color: .secondary
+            )
+        } else {
+            self.summaryRow(
+                label: Strings.CaloriePill.rowGoal,
+                value: Strings.CaloriePill.consumedOnly(CaloriePillData.formatted(tdee)),
+                color: .secondary
+            )
         }
     }
 
