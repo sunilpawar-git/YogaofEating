@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 // MARK: - MealCalorieEntry
 
@@ -37,6 +37,37 @@ struct CalorieDetailData: Equatable {
 
     /// Calories remaining to reach TDEE. Negative when over goal. `nil` when TDEE is nil.
     var remaining: Int? { self.tdee.map { $0 - self.consumed } }
+
+    /// Total calories burned so far today (resting + active). `nil` when either value is unavailable.
+    var totalBurned: Int? {
+        guard let basal = self.basalCalories, let active = self.activeCalories else { return nil }
+        return Int((basal + active).rounded())
+    }
+
+    /// Whether the "Base Goal + Exercise = Total Goal" breakdown should be displayed.
+    /// Requires a profile base and non-zero exercise calories — otherwise a single "Goal" row suffices.
+    var hasGoalBreakdown: Bool {
+        guard self.profileBaseTdee != nil else { return false }
+        return (self.activeCalories ?? 0) > 0
+    }
+
+    /// Fraction of TDEE consumed, clamped to [0, 1]. Returns 0.0 when TDEE is nil.
+    var progressFraction: Double {
+        guard let tdee, tdee > 0 else { return 0.0 }
+        return min(1.0, Double(self.consumed) / Double(tdee))
+    }
+
+    /// Fill color for the progress bar — mirrors `CaloriePillData.fillColor` thresholds.
+    /// Thresholds are SSOT in `ScoringThresholds`; colors are SSOT in `AppTheme.CaloriePill`.
+    var progressFillColor: Color {
+        guard self.tdee != nil else { return AppTheme.CaloriePill.fillOnTrack }
+        if self.progressFraction >= ScoringThresholds.caloriePillOverFraction {
+            return AppTheme.CaloriePill.fillOver
+        } else if self.progressFraction >= ScoringThresholds.caloriePillApproachingFraction {
+            return AppTheme.CaloriePill.fillApproaching
+        }
+        return AppTheme.CaloriePill.fillOnTrack
+    }
 
     // MARK: - Initializer
 
