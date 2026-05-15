@@ -186,22 +186,44 @@
             return vm
         }
 
-        func test_caloriePillData_tdeeFromHealthKit_basalPlusActive() async {
+        // MARK: - MFP TDEE resolution (profile.tdee + actual active)
+
+        func test_resolvedTDEE_mfpApproach_profileTDEEPlusActive_basalIgnored() async {
+            // MFP model: base = profile.tdee (stable), not basal from HealthKit.
+            // Even when basal is available, it is NOT used as the base — profile.tdee is.
             let profile = self.makeProfile(tdee: 2000)
             let vm = self.makeViewModelWithActivity(profile: profile, basalCalories: 1400, activeCalories: 400)
             await vm.loadTodayActivityData()
-            // basal + active = 1800 overrides static TDEE
-            XCTAssertEqual(vm.caloriePillData.tdee, 1800)
+            // Expected: profile.tdee (2000) + active (400) = 2400, NOT basal+active (1800)
+            XCTAssertEqual(vm.caloriePillData.tdee, 2400)
         }
 
-        func test_caloriePillData_tdeeHybrid_profileBMRPlusActiveWhenBasalMissing() async {
-            // BMR = 2000 / 1.55 ≈ 1290; active = 350 → tdee ≈ 1640
+        func test_resolvedTDEE_mfpApproach_profileTDEEPlusActive_whenBasalMissing() async {
+            // Basal missing but profile exists — still uses profile.tdee as base.
             let profile = self.makeProfile(tdee: 2000)
             let vm = self.makeViewModelWithActivity(profile: profile, basalCalories: nil, activeCalories: 350)
             await vm.loadTodayActivityData()
-            let expectedBMR = Int((2000.0 / 1.55).rounded())
-            let expectedTDEE = expectedBMR + 350
-            XCTAssertEqual(vm.caloriePillData.tdee, expectedTDEE)
+            // Expected: profile.tdee (2000) + active (350) = 2350, NOT profileBMR + active
+            XCTAssertEqual(vm.caloriePillData.tdee, 2350)
+        }
+
+        func test_resolvedTDEE_nilActiveCalories_treatedAsZero_returnsProfileTDEE() async {
+            // When HealthKit active data is unavailable (nil), it defaults to 0.
+            // TDEE = profile.tdee + 0 = profile.tdee exactly.
+            let profile = self.makeProfile(tdee: 2100)
+            let vm = self.makeViewModelWithActivity(profile: profile, basalCalories: nil, activeCalories: nil)
+            await vm.loadTodayActivityData()
+            XCTAssertEqual(vm.caloriePillData.tdee, 2100)
+        }
+
+        func test_resolvedTDEE_noProfileWithHealthKit_projectsBasalToNonNil() async {
+            // No profile but HealthKit has basal data — Tier 2 projects basal to full-day.
+            // Exact value is time-of-day dependent; we assert structural guarantees only.
+            let vm = self.makeViewModelWithActivity(profile: nil, basalCalories: 800, activeCalories: 200)
+            await vm.loadTodayActivityData()
+            let tdee = vm.caloriePillData.tdee
+            XCTAssertNotNil(tdee, "With HealthKit basal data, TDEE must be projected (not nil)")
+            XCTAssertGreaterThanOrEqual(tdee ?? 0, 800 + 200, "Projected full-day TDEE must be >= actual burned so far")
         }
 
         func test_caloriePillData_tdeeFallback_profileStaticTDEEWhenNoHealthKit() async {
@@ -241,6 +263,32 @@
             let vm = self.makeViewModelWithActivity(profile: nil)
             await vm.loadTodayActivityData()
             XCTAssertNil(vm.calorieDetailData.remaining)
+        }
+
+        // MARK: - MFP: calorieDetailData.profileBaseTdee (breakdown regression)
+
+        func test_calorieDetailData_profileBaseTdee_populatedWhenProfileExists() async {
+            // When a profile exists, detail sheet must receive the base TDEE for breakdown display.
+            let profile = self.makeProfile(tdee: 1909)
+            let vm = self.makeViewModelWithActivity(profile: profile, basalCalories: 738, activeCalories: 151)
+            await vm.loadTodayActivityData()
+            XCTAssertEqual(vm.calorieDetailData.profileBaseTdee, 1909)
+        }
+
+        func test_calorieDetailData_profileBaseTdee_nilWhenNoProfile() async {
+            // No profile → no breakdown possible → profileBaseTdee must be nil.
+            let vm = self.makeViewModelWithActivity(profile: nil, basalCalories: 800, activeCalories: 100)
+            await vm.loadTodayActivityData()
+            XCTAssertNil(vm.calorieDetailData.profileBaseTdee)
+        }
+
+        func test_calorieDetailData_tdeeEqualsProflieTDEEPlusActive() async {
+            // Verifies the MFP arithmetic: detail.tdee must equal base + exercise, not basal + active.
+            let profile = self.makeProfile(tdee: 1909)
+            let vm = self.makeViewModelWithActivity(profile: profile, basalCalories: 738, activeCalories: 151)
+            await vm.loadTodayActivityData()
+            let detail = vm.calorieDetailData
+            XCTAssertEqual(detail.tdee, 2060, "TDEE must be 1909 + 151 = 2060, not 738 + 151 = 889")
         }
 
         func test_integration_snapshotPreservesTotalCalories() {

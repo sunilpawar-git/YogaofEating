@@ -19,7 +19,12 @@ struct CalorieDetailData: Equatable {
     let consumed: Int
 
     /// Total Daily Energy Expenditure — `nil` when no health profile is set up.
+    /// Equals `profileBaseTdee + activeCalories` when both are available (MFP model).
     let tdee: Int?
+
+    /// Profile-only TDEE before exercise is added. Non-nil only when a health profile
+    /// exists — drives the "Base Goal + Exercise = Total" breakdown in the detail sheet.
+    let profileBaseTdee: Int?
 
     /// Per-meal breakdown (only meals that have been AI-analyzed).
     let mealBreakdown: [MealCalorieEntry]
@@ -38,12 +43,14 @@ struct CalorieDetailData: Equatable {
     init(
         consumed: Int,
         tdee: Int?,
+        profileBaseTdee: Int? = nil,
         meals: [Meal],
         basalCalories: Double? = nil,
         activeCalories: Double? = nil
     ) {
         self.consumed = consumed
         self.tdee = tdee
+        self.profileBaseTdee = profileBaseTdee
         self.basalCalories = basalCalories
         self.activeCalories = activeCalories
         self.mealBreakdown = meals

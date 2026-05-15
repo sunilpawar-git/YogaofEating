@@ -127,6 +127,9 @@ extension AppTheme {
         /// Remaining-calories positive color (muted sage green — matches fillOnTrack family)
         static let colorRemaining = Color(red: 0.20, green: 0.62, blue: 0.35)
 
+        /// Dimmed color for the decorative ‹ › chevrons flanking the pill text
+        static let textChevron = Color.primary.opacity(0.45)
+
         // MARK: Pill Geometry
 
         /// Maximum width for the calorie pill (design spec: ~220pt)
