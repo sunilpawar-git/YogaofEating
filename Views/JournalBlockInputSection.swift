@@ -112,6 +112,7 @@ extension JournalBlockView {
         }
         self.rawText = mergedItems.joined(separator: "\n")
         self.showRecentMealsSheet = false
+        self.handleSubmit()
         SensoryService.shared.playNudge(style: .medium)
     }
 
