@@ -1,20 +1,15 @@
 import XCTest
 @testable import Yoga_of_Eating
 
-/// Phase 3C — split tests.
-///
-/// Verifies that:
-/// 1. `BriefingService` can generate a briefing independently of `InsightGenerationService`.
-/// 2. `PatternAnalysisEngine` produces the same output as the pre-split `PatternAnalyzer`.
+/// Tests for InsightLifecycleService.generateBriefing and PatternAnalysisEngine.generateCorrelationCards.
 @MainActor
 final class InsightServiceTests: XCTestCase {
-    // MARK: - BriefingService isolation
+    // MARK: - InsightLifecycleService.generateBriefing (replaces BriefingService)
 
-    func test_briefingService_generatesLocalBriefing_independently() async {
+    func test_insightLifecycleService_generatesLocalBriefing_independently() async {
         let mockHistorical = MockHistoricalDataService()
-        let briefingService = BriefingService(historicalService: mockHistorical)
+        let service = InsightLifecycleService(historicalService: mockHistorical, functions: nil)
 
-        // Provide at least 2 snapshots (minimum required by generateBriefing)
         let snapshots = [
             Self.makeSnapshot(daysAgo: 1, score: 0.7),
             Self.makeSnapshot(daysAgo: 2, score: 0.6)
@@ -23,69 +18,31 @@ final class InsightServiceTests: XCTestCase {
             mockHistorical.historicalData.addOrUpdate(snapshot: snap)
         }
 
-        let briefing = await briefingService.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let insight = await service.generateBriefing(for: Date(), healthKitSleepData: [:])
 
-        XCTAssertNotNil(briefing, "BriefingService must generate a local briefing when Firebase is unavailable")
+        XCTAssertNotNil(insight, "InsightLifecycleService must generate a local briefing when Firebase unavailable")
     }
 
-    func test_briefingService_returnsNil_whenInsufficientData() async {
+    func test_insightLifecycleService_returnsNil_whenInsufficientData() async {
         let mockHistorical = MockHistoricalDataService()
-        let briefingService = BriefingService(historicalService: mockHistorical)
-        // No snapshots added — below the 2-snapshot minimum
+        let service = InsightLifecycleService(historicalService: mockHistorical, functions: nil)
 
-        let briefing = await briefingService.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let insight = await service.generateBriefing(for: Date(), healthKitSleepData: [:])
 
-        XCTAssertNil(briefing, "BriefingService must return nil when fewer than 2 snapshots are available")
+        XCTAssertNil(insight, "InsightLifecycleService must return nil when fewer than 2 snapshots available")
     }
 
     // MARK: - PatternAnalysisEngine parity
 
-    func test_patternAnalysisEngine_producesSameOutputAsPatternAnalyzer() {
+    func test_patternAnalysisEngine_generateCorrelationCards_producesValidOutput() {
         let snapshots = Self.makeSnapshotsForPatternAnalysis()
-
-        let analyzer = PatternAnalyzer()
         let engine = PatternAnalysisEngine()
-
-        let analyzerOutput = analyzer.generateCorrelationCards(from: snapshots)
-        let engineOutput = engine.generateCorrelationCards(from: snapshots)
-
-        XCTAssertEqual(
-            analyzerOutput.count,
-            engineOutput.count,
-            "PatternAnalysisEngine must produce the same number of correlation cards as the original PatternAnalyzer"
-        )
-
-        let analyzerCategories = analyzerOutput.map(\.category).sorted { $0.rawValue < $1.rawValue }
-        let engineCategories = engineOutput.map(\.category).sorted { $0.rawValue < $1.rawValue }
-        XCTAssertEqual(
-            analyzerCategories,
-            engineCategories,
-            "PatternAnalysisEngine must produce identical card categories as the original PatternAnalyzer"
-        )
-    }
-
-    func test_patternAnalysisEngine_matchesPatternAnalyzerPatterns() {
-        let snapshots = Self.makeSnapshotsForPatternAnalysis()
-
-        let analyzer = PatternAnalyzer()
-        let engine = PatternAnalysisEngine()
-
-        let analyzerPatterns = analyzer.analyzePatterns(from: snapshots)
-        let enginePatterns = engine.analyzePatterns(from: snapshots)
-
-        XCTAssertEqual(
-            analyzerPatterns.count,
-            enginePatterns.count,
-            "PatternAnalysisEngine.analyzePatterns must match the original PatternAnalyzer output count"
-        )
-
-        let analyzerTypes = analyzerPatterns.map(\.type).sorted { $0.rawValue < $1.rawValue }
-        let engineTypes = enginePatterns.map(\.type).sorted { $0.rawValue < $1.rawValue }
-        XCTAssertEqual(
-            analyzerTypes,
-            engineTypes,
-            "PatternAnalysisEngine.analyzePatterns must produce identical pattern types as the original PatternAnalyzer"
-        )
+        let cards = engine.generateCorrelationCards(from: snapshots)
+        for card in cards {
+            XCTAssertGreaterThanOrEqual(card.confidence, 0.0)
+            XCTAssertLessThanOrEqual(card.confidence, 1.0)
+            XCTAssertFalse(card.observation.isEmpty)
+        }
     }
 
     // MARK: - Helpers

@@ -100,7 +100,12 @@ final class BuilderTests: XCTestCase {
     }
 
     func test_snapshotBuilder_withInsight_setsInsight() {
-        let insight = DailyInsightBuilder().build()
+        let insight = DailyInsight(
+            date: Date(), headline: "Test", dimensions: .neutral,
+            dominantInsight: "Test.", correlationCards: [],
+            nudge: ActionableNudge(suggestion: "A", reasoning: "B"),
+            causalExplanation: "", textSignals: [], confidence: 0.7
+        )
         let snapshot = DailySmileySnapshotBuilder().withInsight(insight).build()
         XCTAssertNotNil(snapshot.insight)
     }
@@ -149,36 +154,35 @@ final class BuilderTests: XCTestCase {
         XCTAssertNotEqual(id1, id2)
     }
 
-    // MARK: - DailyInsightBuilder defaults
+    // MARK: - DailyInsight defaults (unified type)
 
-    func test_dailyInsightBuilder_build_hasExpectedDefaults() {
-        let insight = DailyInsightBuilder().build()
-        XCTAssertFalse(insight.insightText.isEmpty)
-        XCTAssertEqual(insight.insightType, .encouragement)
+    func test_dailyInsight_hasExpectedDefaults() {
+        let insight = self.makeDailyInsight()
+        XCTAssertFalse(insight.dominantInsight.isEmpty)
         XCTAssertGreaterThan(insight.confidence, 0.0)
         XCTAssertFalse(insight.isViewed)
-        XCTAssertTrue(insight.references.isEmpty)
     }
 
-    func test_dailyInsightBuilder_withText_setsInsightText() {
-        let insight = DailyInsightBuilder().withText("You slept better after lighter dinners.").build()
-        XCTAssertEqual(insight.insightText, "You slept better after lighter dinners.")
-    }
-
-    func test_dailyInsightBuilder_withType_setsInsightType() {
-        let insight = DailyInsightBuilder().withType(.foodSleep).build()
-        XCTAssertEqual(insight.insightType, .foodSleep)
-    }
-
-    func test_dailyInsightBuilder_viewed_setsIsViewed() {
-        let insight = DailyInsightBuilder().viewed().build()
+    func test_dailyInsight_markAsViewed_setsFlag() {
+        var insight = self.makeDailyInsight()
+        insight.markAsViewed()
         XCTAssertTrue(insight.isViewed)
     }
 
-    func test_dailyInsightBuilder_build_producesUniqueIDs() {
-        let id1 = DailyInsightBuilder().build().id
-        let id2 = DailyInsightBuilder().build().id
+    func test_dailyInsight_producesUniqueIDs() {
+        let id1 = self.makeDailyInsight().id
+        let id2 = self.makeDailyInsight().id
         XCTAssertNotEqual(id1, id2)
+    }
+
+    private func makeDailyInsight() -> DailyInsight {
+        DailyInsight(
+            date: Date(), headline: "Test", dimensions: .neutral,
+            dominantInsight: "You slept better after lighter dinners.",
+            correlationCards: [],
+            nudge: ActionableNudge(suggestion: "Test suggestion", reasoning: "Test reason"),
+            causalExplanation: "", textSignals: [], confidence: 0.8
+        )
     }
 
     // MARK: - HealthProfileBuilder defaults

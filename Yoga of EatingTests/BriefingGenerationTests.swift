@@ -3,21 +3,16 @@
     import XCTest
     @testable import Yoga_of_Eating
 
-    /// Tests for InsightGenerationService.generateBriefing(for:) method.
-    /// TDD Phase: RED — verifies server-first + local fallback pipeline.
+    /// Tests for InsightLifecycleService.generateBriefing — replaces InsightGenerationService tests.
     @MainActor
     final class BriefingGenerationTests: XCTestCase {
-        // MARK: - Properties
-
         private var historicalService: MockHistoricalDataService!
-        private var sut: InsightGenerationService!
-
-        // MARK: - Setup & Teardown
+        private var sut: InsightLifecycleService!
 
         override func setUp() {
             super.setUp()
             self.historicalService = MockHistoricalDataService()
-            self.sut = InsightGenerationService(
+            self.sut = InsightLifecycleService(
                 historicalService: self.historicalService,
                 functions: nil
             )
@@ -32,13 +27,13 @@
         // MARK: - Guard Tests
 
         func test_generateBriefing_returnsNil_whenNoData() async {
-            let result = await self.sut.generateBriefing(for: Date())
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
             XCTAssertNil(result, "Should return nil when no historical data exists")
         }
 
         func test_generateBriefing_returnsNil_withInsufficientData() async {
             self.seedSnapshots(count: 1)
-            let result = await self.sut.generateBriefing(for: Date())
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
             XCTAssertNil(result, "Should return nil with fewer than 2 data points")
         }
 
@@ -46,19 +41,19 @@
 
         func test_generateBriefing_fallsBackToLocal_whenNoFirebase() async {
             self.seedSnapshots(count: 5)
-            let result = await self.sut.generateBriefing(for: Date())
-            XCTAssertNotNil(result, "Should produce briefing via local fallback")
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+            XCTAssertNotNil(result, "Should produce unified insight via local fallback")
         }
 
         func test_generateBriefing_localFallback_hasHeadline() async {
             self.seedSnapshots(count: 5)
-            let result = await self.sut.generateBriefing(for: Date())
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
             XCTAssertFalse(result?.headline.isEmpty ?? true, "Headline must not be empty")
         }
 
         func test_generateBriefing_localFallback_hasNudge() async {
             self.seedSnapshots(count: 5)
-            let result = await self.sut.generateBriefing(for: Date())
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
             XCTAssertNotNil(result?.nudge)
             XCTAssertFalse(result!.nudge.suggestion.isEmpty)
         }
@@ -66,36 +61,31 @@
         func test_generateBriefing_localFallback_setsDate() async {
             let today = Date()
             self.seedSnapshots(count: 5)
-            let result = await self.sut.generateBriefing(for: today)
-
-            let calendar = Calendar.current
+            let result = await self.sut.generateBriefing(for: today, healthKitSleepData: [:])
             XCTAssertTrue(
-                calendar.isDate(result!.date, inSameDayAs: today),
-                "Briefing date should match the requested date"
+                Calendar.current.isDate(result!.date, inSameDayAs: today),
+                "Insight date should match the requested date"
             )
         }
 
         func test_generateBriefing_localFallback_isNotViewed() async {
             self.seedSnapshots(count: 5)
-            let result = await self.sut.generateBriefing(for: Date())
-            XCTAssertFalse(result?.isViewed ?? true, "New briefing must not be marked as viewed")
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+            XCTAssertFalse(result?.isViewed ?? true, "New insight must not be marked as viewed")
         }
 
-        // MARK: - Correlation Card Integration
-
-        func test_generateBriefing_includesCorrelationCards_whenPatternsExist() async {
-            self.seedCorrelatedData()
-            let result = await self.sut.generateBriefing(for: Date())
-
-            XCTAssertNotNil(result)
-            // Local PatternAnalyzer should find at least one correlation
-            // (specific count depends on data — don't over-assert)
+        func test_generateBriefing_confidenceIsValid() async {
+            self.seedSnapshots(count: 5)
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+            XCTAssertGreaterThanOrEqual(result?.confidence ?? -1, 0.0)
+            XCTAssertLessThanOrEqual(result?.confidence ?? 2, 1.0)
         }
+
+        // MARK: - Correlation Cards
 
         func test_generateBriefing_cardsClamped_0to1() async {
             self.seedCorrelatedData()
-            let result = await self.sut.generateBriefing(for: Date())
-
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
             for card in result?.correlationCards ?? [] {
                 XCTAssertGreaterThanOrEqual(card.confidence, 0.0)
                 XCTAssertLessThanOrEqual(card.confidence, 1.0)
@@ -106,14 +96,22 @@
 
         func test_generateBriefing_includesWeeklyTrend_withEnoughData() async {
             self.seedSnapshots(count: 5)
-            let result = await self.sut.generateBriefing(for: Date())
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
             XCTAssertNotNil(result?.weeklyTrend, "Should compute a weekly trend from 5+ days")
         }
 
         func test_generateBriefing_weeklyTrend_daysLogged_matchesData() async {
             self.seedSnapshots(count: 5)
-            let result = await self.sut.generateBriefing(for: Date())
+            let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
             XCTAssertEqual(result?.weeklyTrend?.daysLogged, 5)
+        }
+
+        // MARK: - Persistence
+
+        func test_generateBriefing_persistsViaUpdateInsight() async {
+            self.seedSnapshots(count: 3)
+            _ = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+            XCTAssertTrue(self.historicalService.updateInsightCalled)
         }
 
         // MARK: - Helpers
@@ -139,7 +137,6 @@
             let badFeelings: [ReflectionFeeling] = [.tired, .heavy]
             let goodScores: [Double] = [0.85, 0.90, 0.88, 0.82, 0.86]
             let badScores: [Double] = [0.25, 0.30]
-
             for i in 0..<7 {
                 let isGood = i < 5
                 let score = isGood ? goodScores[i] : badScores[i - 5]

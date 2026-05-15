@@ -59,34 +59,12 @@ extension HistoricalDataService {
         self.saveHistoricalData()
     }
 
-    func updateBriefing(for date: Date, briefing: DailyBriefing) {
-        let normalizedDate = Calendar.current.startOfDay(for: date)
-        if let existing = self.historicalData.snapshot(for: normalizedDate) {
-            self.historicalData.addOrUpdate(snapshot: existing.withBriefing(briefing))
-        } else {
-            self.historicalData.addOrUpdate(snapshot: Self.emptySnapshot(for: normalizedDate, briefing: briefing))
-        }
-        self.saveHistoricalData()
-    }
-
     func updateInsight(for date: Date, insight: DailyInsight) {
         let normalizedDate = Calendar.current.startOfDay(for: date)
         if let existing = self.historicalData.snapshot(for: normalizedDate) {
             self.historicalData.addOrUpdate(snapshot: existing.withInsight(insight))
         } else {
             self.historicalData.addOrUpdate(snapshot: Self.emptySnapshot(for: normalizedDate, insight: insight))
-        }
-        self.saveHistoricalData()
-    }
-
-    func updateEnrichedInsight(for date: Date, insight: EnrichedDailyInsight) {
-        let normalizedDate = Calendar.current.startOfDay(for: date)
-        if let existing = self.historicalData.snapshot(for: normalizedDate) {
-            self.historicalData.addOrUpdate(snapshot: existing.withEnrichedInsight(insight))
-        } else {
-            self.historicalData.addOrUpdate(
-                snapshot: Self.emptySnapshot(for: normalizedDate, enrichedInsight: insight)
-            )
         }
         self.saveHistoricalData()
     }
@@ -111,19 +89,16 @@ extension HistoricalDataService {
 
     // MARK: - Private factory helper
 
-    /// Returns a minimal placeholder snapshot for dates that have no meal data yet.
-    private static func emptySnapshot(
+    static func emptySnapshot(
         for date: Date,
         reflection: DailyReflection? = nil,
         morningMindCheck: [MindCheckEntry]? = nil,
         eveningMindCheck: [MindCheckEntry]? = nil,
         highlightData: HighlightData? = nil,
         reflectData: ReflectData? = nil,
-        briefing: DailyBriefing? = nil,
         insight: DailyInsight? = nil,
         wellbeingDimensions: WellbeingDimensions? = nil,
-        textSignals: [TextSignal]? = nil,
-        enrichedInsight: EnrichedDailyInsight? = nil
+        textSignals: [TextSignal]? = nil
     ) -> DailySmileySnapshot {
         DailySmileySnapshot(
             id: UUID(),
@@ -137,11 +112,9 @@ extension HistoricalDataService {
             eveningMindCheck: eveningMindCheck,
             highlightData: highlightData,
             reflectData: reflectData,
-            briefing: briefing,
-            insight: insight,
             wellbeingDimensions: wellbeingDimensions,
             textSignals: textSignals,
-            enrichedInsight: enrichedInsight
+            insight: insight
         )
     }
 }

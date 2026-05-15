@@ -35,22 +35,25 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// Updates or adds reflect data for a specific date.
     func updateReflectData(for date: Date, data: ReflectData)
 
-    /// Updates or adds a morning briefing for a specific date.
-    func updateBriefing(for date: Date, briefing: DailyBriefing)
-
-    /// Updates or adds a daily insight for a specific date.
+    /// Updates or stores the unified daily insight for a specific date.
     func updateInsight(for date: Date, insight: DailyInsight)
 
     /// Updates or adds wellbeing dimensions and text signals for a specific date.
     func updateWellbeingDimensions(for date: Date, dimensions: WellbeingDimensions, textSignals: [TextSignal])
 
-    /// Updates or adds the enriched insight for a specific date.
-    func updateEnrichedInsight(for date: Date, insight: EnrichedDailyInsight)
-
     /// Downloads all snapshots from Firebase and merges them into local storage.
     /// Throws `AppError.syncAuthRequired` when not authenticated.
     /// No-op when the cloud returns no data; saves to disk after a successful restore.
+    /// No-op (silent early return) when a restore is already in progress.
     func restoreFromFirebase() async throws
+
+    /// Whether a cloud restore operation is currently in progress.
+    /// Guard: a second concurrent restore call returns immediately without re-fetching.
+    var isRestoreInProgress: Bool { get }
+
+    /// Whether a cloud sync (upload) operation is currently in progress.
+    /// Exposed on the protocol for settings-UI binding and concurrency guards.
+    var isSyncInProgress: Bool { get }
 
     /// Returns incomplete .todo entries from the given date's snapshot, each with
     /// carriedOverCount incremented by 1. Used by resetDay() to seed the next day's todos.
@@ -74,6 +77,12 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
     // MARK: - Properties
 
     @Published var historicalData: HistoricalData
+    /// Set to `true` while a restore is in progress; cleared via `defer` on exit.
+    /// Written only by `restoreFromFirebase()` — do not mutate from outside the service.
+    @Published var isRestoreInProgress = false
+    /// Set to `true` while a sync upload is in progress; cleared via `defer` on exit.
+    /// Written only by `syncToFirebase()` — do not mutate from outside the service.
+    @Published var isSyncInProgress = false
     let persistenceService: PersistenceServiceProtocol
     let syncHandler: HistoricalSyncService
 
@@ -170,11 +179,10 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
             eveningMindCheck: existing?.eveningMindCheck,
             highlightData: existing?.highlightData,
             reflectData: existing?.reflectData,
-            briefing: existing?.briefing,
-            insight: existing?.insight,
             totalCalories: hasAnyCalorieData ? totalCalories : existing?.totalCalories,
             hasCompleteCalorieData: hasAnyCalorieData ? hasCompleteCalorieData : existing?
-                .hasCompleteCalorieData ?? false
+                .hasCompleteCalorieData ?? false,
+            insight: existing?.insight
         )
 
         // Add or update in historical data
@@ -232,11 +240,14 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
 
     // MARK: - Private Helpers
 
+    /// Allocated once — ISO8601DateFormatter initialisation is expensive.
+    private static let iso8601Formatter = ISO8601DateFormatter()
+
     /// Produces a deterministic UUID-shaped string from an ISO date string so that
     /// the same calendar day always maps to the same snapshot UUID, enabling
     /// idempotent cloud uploads and deduplication.
     private static func stableUUIDString(for date: Date) -> String {
-        let iso = ISO8601DateFormatter().string(from: date)
+        let iso = Self.iso8601Formatter.string(from: date)
         // Simple 32-char hex derived from string hash to form a valid UUID
         let hash = iso.utf8.reduce(UInt64(14_695_981_039_346_656_037)) { acc, byte in
             (acc ^ UInt64(byte)) &* 1_099_511_628_211

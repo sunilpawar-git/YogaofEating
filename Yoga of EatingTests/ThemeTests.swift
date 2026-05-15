@@ -21,17 +21,7 @@ final class ThemeTests: XCTestCase {
 
     // MARK: - Accent Color Tests
 
-    func test_theme_accentColors_exist() {
-        // Given
-        let warmAccent = AppTheme.warmAccent
-        let successAccent = AppTheme.successAccent
-        let warningAccent = AppTheme.warningAccent
-
-        // Then
-        XCTAssertNotNil(warmAccent)
-        XCTAssertNotNil(successAccent)
-        XCTAssertNotNil(warningAccent)
-    }
+    // warmAccent, successAccent, warningAccent, primaryAccent removed — no production callers.
 
     // MARK: - Spacing Tests
 
@@ -61,19 +51,9 @@ final class ThemeTests: XCTestCase {
         XCTAssertGreaterThan(large, medium)
     }
 
-    // MARK: - Typography Tests
+    // MARK: - Typography
 
-    func test_theme_typography_exists() {
-        // Given
-        let headline = AppTheme.Typography.headline
-        let body = AppTheme.Typography.body
-        let caption = AppTheme.Typography.caption
-
-        // Then
-        XCTAssertNotNil(headline)
-        XCTAssertNotNil(body)
-        XCTAssertNotNil(caption)
-    }
+    // AppTheme.Typography removed — SSOT is FontTheme (see Logic/FontTheme.swift).
 
     // MARK: - Meal Card Theme Tests (Phase 4: Score Badge UI)
 
@@ -177,45 +157,17 @@ final class ThemeTests: XCTestCase {
         XCTAssertGreaterThan(AppTheme.Background.glowSize, 0)
     }
 
-    // MARK: - Layout Constants Tests (Phase 2)
+    // MARK: - Layout Constants Tests
 
-    func test_layout_headerTopPadding_isPositive() {
-        XCTAssertGreaterThan(AppTheme.Layout.headerTopPadding, 0)
+    func test_layout_bottomScrollBuffer_isPinned() {
+        // Pinned value — changing this shifts the visible bottom of the timeline scroll area.
+        // Review MainScreenView scroll proxy before changing.
+        XCTAssertEqual(AppTheme.Layout.bottomScrollBuffer, 100, accuracy: 0.01)
     }
 
-    func test_layout_headerBottomPadding_isPositive() {
-        XCTAssertGreaterThan(AppTheme.Layout.headerBottomPadding, 0)
-    }
+    // MARK: - Fasting Domain Constants (coverage moved to FastingConstantsTests.swift)
 
-    func test_layout_bottomScrollBuffer_isPositive() {
-        XCTAssertGreaterThan(AppTheme.Layout.bottomScrollBuffer, 0)
-    }
-
-    func test_layout_dragThreshold_isPositive() {
-        XCTAssertGreaterThan(AppTheme.Layout.dragThreshold, 0)
-    }
-
-    func test_layout_inputSheetHeight_isPositive() {
-        XCTAssertGreaterThan(AppTheme.Layout.inputSheetHeight, 0)
-    }
-
-    func test_layout_feelingSheetHeight_isPositive() {
-        XCTAssertGreaterThan(AppTheme.Layout.feelingSheetHeight, 0)
-    }
-
-    // MARK: - Fasting Domain Constants Tests (Phase 2)
-
-    func test_fasting_significanceHoursThreshold_isTwelve() {
-        XCTAssertEqual(AppTheme.Fasting.significanceHoursThreshold, 12.0, accuracy: 0.001)
-    }
-
-    func test_fasting_secondsPerHour_isCorrect() {
-        XCTAssertEqual(AppTheme.Fasting.secondsPerHour, 3600, accuracy: 0.001)
-    }
-
-    func test_fasting_secondsPerMinute_isCorrect() {
-        XCTAssertEqual(AppTheme.Fasting.secondsPerMinute, 60, accuracy: 0.001)
-    }
+    // AppTheme.Fasting was removed in Phase 1 refactor — see Logic/FastingConstants.swift
 
     // MARK: - DateContext Constants Tests (Phase 2)
 
@@ -234,4 +186,36 @@ final class ThemeTests: XCTestCase {
         XCTAssertGreaterThan(AppTheme.Animation.standardDuration, 0.1)
         XCTAssertLessThan(AppTheme.Animation.standardDuration, 1.0)
     }
+
+    // MARK: - CaloriePill Token Tests (Phase 2 consolidation safety net)
+
+    func test_caloriePill_fillColors_areDefined() {
+        XCTAssertNotNil(AppTheme.CaloriePill.fillOnTrack)
+        XCTAssertNotNil(AppTheme.CaloriePill.fillApproaching)
+        XCTAssertNotNil(AppTheme.CaloriePill.fillOver)
+    }
+
+    func test_caloriePill_pillBackground_isDefined() {
+        XCTAssertNotNil(AppTheme.CaloriePill.pillBackground)
+    }
+
+    func test_caloriePill_textPrimary_isDefined() {
+        XCTAssertNotNil(AppTheme.CaloriePill.textPrimary)
+    }
+
+    func test_caloriePill_geometry_arePositive() {
+        XCTAssertGreaterThan(AppTheme.CaloriePill.pillMaxWidth, 0)
+        XCTAssertGreaterThan(AppTheme.CaloriePill.pillVerticalPadding, 0)
+        XCTAssertGreaterThan(AppTheme.CaloriePill.pillHorizontalPadding, 0)
+    }
+
+    func test_caloriePill_thresholds_areInValidRange() {
+        // Thresholds are business logic living in ScoringThresholds — not in AppTheme.
+        // This test verifies the *colours* still exist in AppTheme for the three bands.
+        XCTAssertNotNil(AppTheme.CaloriePill.fillOnTrack)
+        XCTAssertNotNil(AppTheme.CaloriePill.fillApproaching)
+        XCTAssertNotNil(AppTheme.CaloriePill.fillOver)
+    }
+
+    // Note: approachingThreshold / overThreshold SSOT guard tests moved to ScoringThresholdsTests.swift
 }

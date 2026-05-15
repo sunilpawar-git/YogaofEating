@@ -11,6 +11,9 @@ extension AppTheme {
         static let background = Color(.secondarySystemBackground)
         static let accentBarWidth: CGFloat = 3.0
         static let accentBarCornerRadius: CGFloat = 2.0
+        static let pillShadowColor = Color.black.opacity(0.15)
+        static let pillShadowRadius: CGFloat = 2
+        static let pillShadowY: CGFloat = 1
     }
 
     // MARK: - Score Badge
@@ -19,18 +22,6 @@ extension AppTheme {
         static let background = Color(.secondarySystemBackground)
         static let textColor = Color.secondary
         static let borderWidth: CGFloat = 1.2
-
-        static func colorForScore(_ score: Double) -> Color {
-            if score > 0.75 {
-                Color(red: 0.5, green: 0.65, blue: 0.55)
-            } else if score >= 0.55 {
-                Color(red: 0.5, green: 0.6, blue: 0.7)
-            } else if score >= ScoringThresholds.unhealthy {
-                Color(red: 0.65, green: 0.6, blue: 0.55)
-            } else {
-                Color(red: 0.55, green: 0.55, blue: 0.55)
-            }
-        }
     }
 
     // MARK: - Score Category Colors
@@ -97,9 +88,83 @@ extension AppTheme {
 
     enum TextEntry {
         static let maxCharacters: Int = ValidationLimits.universal
-        /// Settle delay (500 ms) used in Highlight/Reflect text-entry async Tasks.
-        /// Intentionally separate from any meal-entry pipeline constant.
-        static let debounceNanoseconds: UInt64 = 500_000_000
+        // Note: text-entry settle delay lives in TimingConstants.textEntryDebounceNanoseconds
+    }
+
+    // MARK: - Calorie Pill
+
+    /// Visual constants for the CaloriePillView.
+    /// Single source of truth — no hardcoded colors in views or models.
+    enum CaloriePill {
+        // MARK: Fill Colors (liquid fill behind pill text)
+
+        /// < 70% consumed — on track (muted sage green, matching app's minimalist palette)
+        static let fillOnTrack = Color(red: 0.35, green: 0.62, blue: 0.47).opacity(0.55)
+
+        /// 70–95% consumed — approaching goal (warm amber)
+        static let fillApproaching = Color(red: 0.85, green: 0.60, blue: 0.20).opacity(0.55)
+
+        /// > 95% consumed — at or over goal (muted coral)
+        static let fillOver = Color(red: 0.80, green: 0.36, blue: 0.36).opacity(0.55)
+
+        // MARK: Pill Track (unfilled portion background)
+
+        /// Adaptive background for the unfilled portion of the pill capsule.
+        /// `Color.primary` resolves to near-white in dark mode and near-black in light mode,
+        /// so the pill outline is always visible regardless of the app's color scheme.
+        static let pillBackground = Color.primary.opacity(0.10)
+
+        // MARK: Text Colors
+
+        /// Primary text color on pill — adapts to light/dark mode.
+        /// White in dark mode (readable over dark bg + colored fill);
+        /// near-black in light mode (readable over white bg + light colored fill).
+        static let textPrimary = Color.primary
+
+        /// Flame icon tint color
+        static let flameIcon = Color(red: 0.90, green: 0.55, blue: 0.15)
+
+        /// Remaining-calories positive color (muted sage green — matches fillOnTrack family)
+        static let colorRemaining = Color(red: 0.20, green: 0.62, blue: 0.35)
+
+        /// Dimmed color for the decorative ‹ › chevrons flanking the pill text
+        static let textChevron = Color.primary.opacity(0.45)
+
+        // MARK: Pill Geometry
+
+        /// Maximum width for the calorie pill (design spec: ~220pt)
+        static let pillMaxWidth: CGFloat = 220
+
+        /// Vertical padding inside the pill (above/below the label text)
+        static let pillVerticalPadding: CGFloat = 3
+
+        /// Horizontal padding inside the pill — minimal so it hugs the text
+        static let pillHorizontalPadding: CGFloat = 7
+
+        // Note: colour-band thresholds (approachingFraction, overFraction) are business logic.
+        // SSOT: ScoringThresholds.caloriePillApproachingFraction / caloriePillOverFraction.
+    }
+
+    // MARK: - Date Context
+
+    /// Constants used by `DateContextProvider` to determine contextual date subtext.
+    enum DateContext {
+        /// Hour of day (24 h) before which "Good morning" is shown when no sleep is logged.
+        static let morningHourThreshold: Int = 10
+    }
+
+    // MARK: - Cloud Sync / Restore Status Backgrounds
+
+    /// Background tint colours for the sync and restore status pills in `SettingsCloudSection`.
+    enum CloudSync {
+        /// Idle / not-started state.
+        static let idleBackground = Color.blue.opacity(0.1)
+        /// Active (syncing / restoring) state.
+        static let activeBackground = Color.blue.opacity(0.2)
+        /// Success state.
+        static let successBackground = Color.green.opacity(0.15)
+        /// Error state.
+        static let errorBackground = Color.red.opacity(0.1)
     }
 }
 
@@ -130,5 +195,19 @@ extension View {
                 Capsule()
                     .fill(AppTheme.cardBackground)
             )
+    }
+
+    func mealPillShadow() -> some View {
+        self.shadow(
+            color: AppTheme.MealCard.pillShadowColor,
+            radius: AppTheme.MealCard.pillShadowRadius,
+            y: AppTheme.MealCard.pillShadowY
+        )
+    }
+
+    func coloredCapsulePill(color: Color) -> some View {
+        self
+            .background(Capsule().fill(color.opacity(0.15)))
+            .overlay(Capsule().strokeBorder(color.opacity(0.3), lineWidth: 0.5))
     }
 }

@@ -34,4 +34,21 @@ final class TimingConstantsTests: XCTestCase {
     func test_syncMaxRetryAttempts_isAtLeastOne() {
         XCTAssertGreaterThanOrEqual(TimingConstants.syncMaxRetryAttempts, 1)
     }
+
+    // MARK: - Text Entry Debounce (relocated from AppTheme.TextEntry)
+
+    func test_textEntryDebounce_is500ms() {
+        XCTAssertEqual(
+            TimingConstants.textEntryDebounceNanoseconds,
+            500_000_000,
+            "Highlight/Reflect text-entry settle delay must be exactly 500 ms"
+        )
+    }
+
+    func test_textEntryDebounce_isReasonableForUX() {
+        let minNs: UInt64 = 300_000_000 // 300 ms — below this feels laggy to analyse
+        let maxNs: UInt64 = 1_000_000_000 // 1 s — above this feels broken
+        XCTAssertGreaterThanOrEqual(TimingConstants.textEntryDebounceNanoseconds, minNs)
+        XCTAssertLessThanOrEqual(TimingConstants.textEntryDebounceNanoseconds, maxNs)
+    }
 }

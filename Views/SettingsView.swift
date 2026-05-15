@@ -68,7 +68,7 @@ struct SettingsView: View {
         Section("User Data") {
             if let user = self.viewModel.currentUser {
                 self.signedInUserView(user: user)
-                self.syncButton
+                SettingsCloudSection(viewModel: self.viewModel)
             } else {
                 self.signInButton
             }
@@ -90,57 +90,6 @@ struct SettingsView: View {
                 self.viewModel.signOut()
             }
             .foregroundColor(.red)
-        }
-    }
-
-    private var syncButton: some View {
-        VStack(spacing: 0) {
-            Button(action: { self.viewModel.performCloudSync() }) {
-                HStack {
-                    switch self.viewModel.syncStatus {
-                    case .idle:
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .foregroundColor(.blue)
-                    case .syncing:
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .scaleEffect(0.8)
-                    case .success:
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                    case .error:
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.red)
-                    }
-
-                    Text(self.viewModel.syncStatusText)
-                        .foregroundColor(.primary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(self.syncBackgroundColor)
-                .cornerRadius(8)
-                .animation(.easeInOut(duration: 0.3), value: self.viewModel.syncStatus)
-            }
-            .buttonStyle(.borderless)
-            .disabled(self.viewModel.syncStatus == .syncing)
-            .accessibilityLabel(self.viewModel.syncAccessibilityLabel)
-            .accessibilityHint(self.viewModel.syncAccessibilityHint)
-            .padding(.horizontal, 16)
-
-            Divider()
-                .background(Color.secondary.opacity(0.3))
-                .padding(.top, 8)
-        }
-        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 0))
-    }
-
-    private var syncBackgroundColor: Color {
-        switch self.viewModel.syncStatus {
-        case .idle: Color.blue.opacity(0.1)
-        case .syncing: Color.blue.opacity(0.2)
-        case .success: Color.green.opacity(0.15)
-        case .error: Color.red.opacity(0.1)
         }
     }
 

@@ -27,6 +27,10 @@ enum AppError: LocalizedError {
     /// Sync was attempted without an authenticated user.
     case syncAuthRequired
 
+    /// Cloud restore returned fewer snapshots than were stored — some documents were corrupted
+    /// and silently skipped. The skipped count is included for diagnostic logging.
+    case restorePartialData(skippedCount: Int)
+
     // MARK: - Analysis domain
 
     /// The AI analysis service is not available (e.g. not an AIAnalysisProvider).
@@ -54,6 +58,8 @@ enum AppError: LocalizedError {
             "We couldn't sync your data. Please try again later."
         case .syncUploadFailed:
             "Sync failed. Please check your connection and try again."
+        case .restorePartialData:
+            "Some historical data could not be restored. Your recent entries are intact."
         case .analysisUnavailable:
             "Meal analysis is temporarily unavailable."
         case .analysisTimeout:
@@ -77,6 +83,8 @@ enum AppError: LocalizedError {
             "syncUploadFailed: \(underlying)"
         case .syncAuthRequired:
             "syncAuthRequired: userId was nil at sync time"
+        case let .restorePartialData(skippedCount):
+            "restorePartialData: \(skippedCount) document(s) were corrupted or unreadable and were skipped"
         case .analysisUnavailable:
             "analysisUnavailable: logicService does not conform to AIAnalysisProvider"
         case .analysisTimeout:

@@ -545,18 +545,20 @@
             XCTAssertFalse(self.sut.hasEveningMindCheck)
         }
 
-        // MARK: - Tests: Briefing Extension
+        // MARK: - Tests: Unified Insight Extension
 
-        func test_snapshot_withBriefing_encodesAndDecodes() throws {
+        func test_snapshot_withInsight_encodesAndDecodes() throws {
             // Arrange
-            let briefing = DailyBriefing(
+            let insight = DailyInsight(
                 date: self.testDate,
-                generatedAt: self.testDate,
                 headline: "Protein lunch powered your afternoon",
+                dimensions: .neutral,
+                dominantInsight: "Food quality improved your mood.",
                 correlationCards: [
                     CorrelationCard(category: .foodToMood, observation: "Test", confidence: 0.8, dataPoints: [])
                 ],
-                nudge: ActionableNudge(suggestion: "Try it again", reasoning: "It worked well")
+                nudge: ActionableNudge(suggestion: "Try it again", reasoning: "It worked well"),
+                causalExplanation: "Food is the driver.", textSignals: [], confidence: 0.8
             )
 
             self.sut = DailySmileySnapshot(
@@ -566,7 +568,7 @@
                 meals: self.testMeals,
                 mealCount: 2,
                 averageHealthScore: 0.75,
-                briefing: briefing
+                insight: insight
             )
 
             // Act
@@ -574,13 +576,13 @@
             let decoded = try JSONDecoder().decode(DailySmileySnapshot.self, from: data)
 
             // Assert
-            XCTAssertNotNil(decoded.briefing)
-            XCTAssertEqual(decoded.briefing?.headline, "Protein lunch powered your afternoon")
-            XCTAssertEqual(decoded.briefing?.correlationCards.count, 1)
+            XCTAssertNotNil(decoded.insight)
+            XCTAssertEqual(decoded.insight?.headline, "Protein lunch powered your afternoon")
+            XCTAssertEqual(decoded.insight?.correlationCards.count, 1)
         }
 
-        func test_snapshot_legacyData_decodesWithNilBriefing() throws {
-            // Arrange - Legacy JSON without briefing field
+        func test_snapshot_legacyData_decodesWithNilInsight() throws {
+            // Arrange - Legacy JSON without insight field
             let snapshotId = UUID()
             let legacyJSON = """
             {
@@ -597,73 +599,45 @@
             let decoded = try JSONDecoder().decode(DailySmileySnapshot.self, from: legacyJSON)
 
             // Assert
-            XCTAssertNil(decoded.briefing, "Legacy data should decode with nil briefing")
+            XCTAssertNil(decoded.insight, "Legacy data should decode with nil insight")
         }
 
-        func test_snapshot_hasBriefing_returnsTrueWhenPresent() {
-            // Arrange
-            let briefing = DailyBriefing(
-                date: self.testDate,
-                generatedAt: self.testDate,
-                headline: "Test",
-                correlationCards: [],
-                nudge: ActionableNudge(suggestion: "S", reasoning: "R")
+        func test_snapshot_hasInsight_returnsTrueWhenPresent() {
+            let insight = DailyInsight(
+                date: self.testDate, headline: "Test", dimensions: .neutral,
+                dominantInsight: "Test.", correlationCards: [],
+                nudge: ActionableNudge(suggestion: "S", reasoning: "R"),
+                causalExplanation: "", textSignals: [], confidence: 0.7
             )
-
             self.sut = DailySmileySnapshot(
-                id: UUID(),
-                date: self.testDate,
-                smileyState: self.testSmileyState,
-                meals: self.testMeals,
-                mealCount: 2,
-                averageHealthScore: 0.75,
-                briefing: briefing
+                id: UUID(), date: self.testDate, smileyState: self.testSmileyState,
+                meals: self.testMeals, mealCount: 2, averageHealthScore: 0.75, insight: insight
             )
-
-            // Assert
-            XCTAssertTrue(self.sut.hasBriefing)
+            XCTAssertTrue(self.sut.hasInsight)
         }
 
-        func test_snapshot_hasBriefing_returnsFalseWhenNil() {
-            // Arrange
+        func test_snapshot_hasInsight_returnsFalseWhenNil() {
             self.sut = DailySmileySnapshot(
-                id: UUID(),
-                date: self.testDate,
-                smileyState: self.testSmileyState,
-                meals: self.testMeals,
-                mealCount: 2,
-                averageHealthScore: 0.75
+                id: UUID(), date: self.testDate, smileyState: self.testSmileyState,
+                meals: self.testMeals, mealCount: 2, averageHealthScore: 0.75
             )
-
-            // Assert
-            XCTAssertFalse(self.sut.hasBriefing)
+            XCTAssertFalse(self.sut.hasInsight)
         }
 
-        func test_snapshot_withBriefing_createsUpdatedCopy() {
-            // Arrange
+        func test_snapshot_withInsight_createsUpdatedCopy() {
             self.sut = DailySmileySnapshot(
-                id: UUID(),
-                date: self.testDate,
-                smileyState: self.testSmileyState,
-                meals: self.testMeals,
-                mealCount: 2,
-                averageHealthScore: 0.75
+                id: UUID(), date: self.testDate, smileyState: self.testSmileyState,
+                meals: self.testMeals, mealCount: 2, averageHealthScore: 0.75
             )
-
-            let briefing = DailyBriefing(
-                date: self.testDate,
-                generatedAt: self.testDate,
-                headline: "New briefing",
-                correlationCards: [],
-                nudge: ActionableNudge(suggestion: "S", reasoning: "R")
+            let insight = DailyInsight(
+                date: self.testDate, headline: "New insight", dimensions: .neutral,
+                dominantInsight: "New.", correlationCards: [],
+                nudge: ActionableNudge(suggestion: "S", reasoning: "R"),
+                causalExplanation: "", textSignals: [], confidence: 0.8
             )
-
-            // Act
-            let updated = self.sut.withBriefing(briefing)
-
-            // Assert
-            XCTAssertNotNil(updated.briefing)
-            XCTAssertEqual(updated.briefing?.headline, "New briefing")
+            let updated = self.sut.withInsight(insight)
+            XCTAssertNotNil(updated.insight)
+            XCTAssertEqual(updated.insight?.headline, "New insight")
             XCTAssertEqual(updated.id, self.sut.id, "ID should be preserved")
             XCTAssertEqual(updated.meals.count, self.sut.meals.count, "Meals should be preserved")
         }

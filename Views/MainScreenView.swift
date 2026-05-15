@@ -162,7 +162,7 @@ struct MainScreenView: View {
             self.showingSettings = true
         } label: {
             Image(systemName: "gearshape.fill")
-                .font(AppTheme.Typography.headline)
+                .font(FontTheme.sectionHeader)
                 .foregroundColor(.secondary.opacity(0.6))
         }
         .accessibilityIdentifier("settings-button")

@@ -104,11 +104,11 @@ final class SetMainViewModelTrackingService: ObservableObject, HistoricalDataSer
     func updateEveningMindCheck(for _: Date, entries _: [MindCheckEntry]) {}
     func updateHighlightData(for _: Date, data _: HighlightData) {}
     func updateReflectData(for _: Date, data _: ReflectData) {}
-    func updateBriefing(for _: Date, briefing _: DailyBriefing) {}
     func updateInsight(for _: Date, insight _: DailyInsight) {}
     func updateWellbeingDimensions(for _: Date, dimensions _: WellbeingDimensions, textSignals _: [TextSignal]) {}
-    func updateEnrichedInsight(for _: Date, insight _: EnrichedDailyInsight) {}
     func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] { [] }
     func foodDebtStartingState(relativeTo _: Date) -> SmileyState { .neutral }
     func restoreFromFirebase() async throws {}
+    var isRestoreInProgress: Bool { false }
+    var isSyncInProgress: Bool { false }
 }

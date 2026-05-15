@@ -112,19 +112,29 @@ extension JournalBlockView {
         }
         self.rawText = mergedItems.joined(separator: "\n")
         self.showRecentMealsSheet = false
+        self.handleSubmit()
         SensoryService.shared.playNudge(style: .medium)
     }
 
     // MARK: - Timestamp Button
 
     var timestampButton: some View {
-        Button {
+        let pillColor = self.selectedMealType.displayColor
+        return Button {
             self.editedTimestamp = self.meal.timestamp
             self.showTimePicker = true
         } label: {
-            Text(Self.timeFormatter.string(from: self.meal.timestamp))
-                .font(FontTheme.iconSmall)
-                .foregroundColor(.secondary.opacity(0.6))
+            HStack(spacing: 3) {
+                Text(Self.timeFormatter.string(from: self.meal.timestamp))
+                    .font(FontTheme.textEntry(size: 12, weight: .semibold))
+                Image(systemName: "chevron.right")
+                    .font(FontTheme.textEntry(size: 9, weight: .semibold))
+            }
+            .foregroundStyle(pillColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .coloredCapsulePill(color: pillColor)
+            .mealPillShadow()
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("meal-time-button-\(self.meal.id)")

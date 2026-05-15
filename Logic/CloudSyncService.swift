@@ -5,12 +5,21 @@ import OSLog
 
 private let syncLogger = Logger(subsystem: "com.yogaofeating", category: "CloudSync")
 
+/// The result of a cloud snapshot fetch: the valid snapshots and how many corrupted
+/// documents (if any) were skipped during decoding.
+struct SnapshotFetchResult {
+    let snapshots: [DailySmileySnapshot]
+    let skippedCount: Int
+}
+
 /// Protocol for cloud synchronization service
 protocol CloudSyncServiceProtocol {
     func upload(snapshot: DailySmileySnapshot, userId: String) async throws
     func uploadBatch(snapshots: [DailySmileySnapshot], userId: String) async throws
     /// Downloads all snapshots stored in the cloud for the given user.
-    func fetchAllSnapshots(userId: String) async throws -> [DailySmileySnapshot]
+    /// Returns a `SnapshotFetchResult` that carries both the successfully decoded snapshots
+    /// and how many documents (if any) could not be decoded.
+    func fetchAllSnapshots(userId: String) async throws -> SnapshotFetchResult
 }
 
 /// Service for interacting with Firebase Firestore to sync heatmap data.
@@ -23,6 +32,14 @@ class CloudSyncService: CloudSyncServiceProtocol {
     }()
 
     private let collectionName = "heatmap_snapshots"
+
+    /// Allocated once — DateFormatter initialisation is expensive and the format never changes.
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
 
     /// Uploads a single snapshot to Firestore.
     /// Uses the normalized date string as the document ID to prevent duplicates.
@@ -80,26 +97,27 @@ class CloudSyncService: CloudSyncServiceProtocol {
     }
 
     /// Downloads all snapshots for the given user from Firestore.
-    func fetchAllSnapshots(userId: String) async throws -> [DailySmileySnapshot] {
-        guard let db = self.db else { return [] }
+    func fetchAllSnapshots(userId: String) async throws -> SnapshotFetchResult {
+        guard let db = self.db else { return SnapshotFetchResult(snapshots: [], skippedCount: 0) }
 
         let querySnapshot = try await db.collection("users").document(userId)
             .collection(self.collectionName).getDocuments()
 
+        let totalCount = querySnapshot.documents.count
         let snapshots = querySnapshot.documents.compactMap { doc -> DailySmileySnapshot? in
             try? self.decode(doc.data())
         }
+        let skippedCount = totalCount - snapshots.count
+        if skippedCount > 0 {
+            syncLogger.warning(
+                "fetchAllSnapshots: skipped \(skippedCount) corrupted or unreadable document(s) (\(totalCount) total)"
+            )
+        }
         syncLogger.info("Fetched \(snapshots.count) snapshots from cloud for restore")
-        return snapshots
+        return SnapshotFetchResult(snapshots: snapshots, skippedCount: skippedCount)
     }
 
     // MARK: - Helpers
-
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }
 
     private func encode(_ snapshot: DailySmileySnapshot) throws -> [String: Any] {
         let data = try JSONEncoder().encode(snapshot)

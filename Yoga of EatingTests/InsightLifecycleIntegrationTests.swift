@@ -28,11 +28,11 @@
             let snap = DailySmileySnapshotBuilder().build()
             let data = try JSONEncoder().encode(snap)
             let decoded = try JSONDecoder().decode(DailySmileySnapshot.self, from: data)
-            XCTAssertNil(decoded.enrichedInsight)
+            XCTAssertNil(decoded.insight)
         }
 
         func test_enrichedInsight_codableRoundTrip() throws {
-            let enriched = EnrichedDailyInsight(
+            let enriched = DailyInsight(
                 date: Date(),
                 headline: "Great day ahead",
                 dimensions: .neutral,
@@ -45,13 +45,13 @@
                 confidence: 0.82
             )
             let snap = DailySmileySnapshotBuilder()
-                .withEnrichedInsight(enriched)
+                .withInsight(enriched)
                 .build()
 
             let data = try JSONEncoder().encode(snap)
             let decoded = try JSONDecoder().decode(DailySmileySnapshot.self, from: data)
 
-            let decodedInsight = try XCTUnwrap(decoded.enrichedInsight)
+            let decodedInsight = try XCTUnwrap(decoded.insight)
             XCTAssertEqual(decodedInsight.headline, "Great day ahead")
             XCTAssertEqual(decodedInsight.textSignals, [.grateful, .clear])
             XCTAssertEqual(decodedInsight.confidence, 0.82, accuracy: 0.001)
@@ -70,42 +70,36 @@
             """.data(using: .utf8)!
 
             let decoded = try JSONDecoder().decode(DailySmileySnapshot.self, from: json)
-            XCTAssertNil(decoded.enrichedInsight)
+            XCTAssertNil(decoded.insight)
         }
 
         // MARK: - Legacy fields coexist with enriched insight
 
-        func test_snapshot_canHoldBothLegacyAndEnrichedInsight() throws {
-            let legacyInsight = DailyInsightBuilder().build()
-            let enriched = EnrichedDailyInsight(
-                date: Date(),
-                headline: "Enriched headline",
-                dimensions: .neutral,
-                dominantInsight: "Physical.",
-                correlationCards: [],
-                nudge: ActionableNudge(suggestion: "Test", reasoning: "Test"),
-                weeklyTrend: nil,
-                causalExplanation: "Test explanation",
-                textSignals: [.neutral],
-                confidence: 0.7
+        func test_snapshot_lastWithInsightWins() throws {
+            let first = DailyInsight(
+                date: Date(), headline: "First", dimensions: .neutral,
+                dominantInsight: "First.", correlationCards: [],
+                nudge: ActionableNudge(suggestion: "A", reasoning: "B"),
+                causalExplanation: "", textSignals: [], confidence: 0.6
             )
-
+            let second = DailyInsight(
+                date: Date(), headline: "Second", dimensions: .neutral,
+                dominantInsight: "Second.", correlationCards: [],
+                nudge: ActionableNudge(suggestion: "C", reasoning: "D"),
+                causalExplanation: "", textSignals: [.neutral], confidence: 0.7
+            )
             let snap = DailySmileySnapshotBuilder()
-                .withInsight(legacyInsight)
-                .withEnrichedInsight(enriched)
+                .withInsight(first)
+                .withInsight(second)
                 .build()
-
-            XCTAssertNotNil(snap.insight)
-            XCTAssertNotNil(snap.enrichedInsight)
-            XCTAssertEqual(snap.insight?.insightText, legacyInsight.insightText)
-            XCTAssertEqual(snap.enrichedInsight?.headline, "Enriched headline")
+            XCTAssertEqual(snap.insight?.headline, "Second")
         }
 
         // MARK: - Historical service update
 
         func test_updateEnrichedInsight_storesInSnapshot() {
             let today = Date()
-            let enriched = EnrichedDailyInsight(
+            let enriched = DailyInsight(
                 date: today,
                 headline: "Test headline",
                 dimensions: .neutral,
@@ -118,19 +112,24 @@
                 confidence: 0.75
             )
 
-            self.mockHistorical.updateEnrichedInsight(for: today, insight: enriched)
+            self.mockHistorical.updateInsight(for: today, insight: enriched)
 
             let snap = self.mockHistorical.historicalData.snapshot(for: today)
-            XCTAssertNotNil(snap?.enrichedInsight)
-            XCTAssertEqual(snap?.enrichedInsight?.headline, "Test headline")
+            XCTAssertNotNil(snap?.insight)
+            XCTAssertEqual(snap?.insight?.headline, "Test headline")
         }
 
-        func test_updateEnrichedInsight_preservesExistingFields() {
+        func test_updateInsight_overwritesPreviousInsight() {
             let today = Date()
-            let legacyInsight = DailyInsightBuilder().build()
-            self.mockHistorical.updateInsight(for: today, insight: legacyInsight)
+            let first = DailyInsight(
+                date: today, headline: "First", dimensions: .neutral,
+                dominantInsight: "First.", correlationCards: [],
+                nudge: ActionableNudge(suggestion: "A", reasoning: "B"),
+                causalExplanation: "", textSignals: [], confidence: 0.6
+            )
+            self.mockHistorical.updateInsight(for: today, insight: first)
 
-            let enriched = EnrichedDailyInsight(
+            let enriched = DailyInsight(
                 date: today,
                 headline: "Enriched",
                 dimensions: .neutral,
@@ -142,11 +141,11 @@
                 textSignals: [.neutral],
                 confidence: 0.7
             )
-            self.mockHistorical.updateEnrichedInsight(for: today, insight: enriched)
+            self.mockHistorical.updateInsight(for: today, insight: enriched)
 
             let snap = self.mockHistorical.historicalData.snapshot(for: today)
-            XCTAssertNotNil(snap?.insight, "Legacy insight should be preserved")
-            XCTAssertNotNil(snap?.enrichedInsight, "Enriched insight should be set")
+            XCTAssertEqual(snap?.insight?.headline, "Enriched")
+            XCTAssertNotNil(snap?.insight)
         }
     }
 

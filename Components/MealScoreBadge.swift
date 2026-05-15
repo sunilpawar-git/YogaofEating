@@ -2,8 +2,8 @@ import SwiftUI
 
 /// A tappable badge displaying a meal's health score as a percentage.
 /// Features:
-/// - Score-based coloring for visual feedback (excellent/good/moderate/low)
-/// - Visible border for clarity and tappability affordance
+/// - Meal-type color for visual cohesion with the type tag and timestamp pill
+/// - Subtle shadow for tappability affordance
 /// - Subtle press animation to indicate interactivity
 /// - Icon hint (→) to signal tappable action
 struct MealScoreBadge: View {
@@ -11,6 +11,9 @@ struct MealScoreBadge: View {
 
     /// The health score (0.0 to 1.0), nil if not yet analyzed
     let score: Double?
+
+    /// Drives color — keeps color derivation internal rather than requiring callers to pass a raw Color
+    let mealType: MealType
 
     /// Callback when badge is tapped (shows score breakdown sheet)
     let onTap: () -> Void
@@ -21,34 +24,14 @@ struct MealScoreBadge: View {
 
     // MARK: - Computed Properties
 
-    /// Whether the badge should be displayed
     var shouldDisplay: Bool {
         guard let score else { return false }
         return score > 0
     }
 
-    /// Formatted score as percentage string (e.g., "80%")
     var formattedScore: String {
         guard let score, score > 0 else { return "" }
         return "\(Int(score * 100))%"
-    }
-
-    /// Badge color based on score value — uses muted, minimalist palette
-    /// - Excellent (>0.75): Muted sage green
-    /// - Good (0.55-0.75): Muted slate blue
-    /// - Moderate (0.35-0.55): Muted warm grey
-    /// - Low (<0.35): Muted stone grey
-    var badgeColor: Color {
-        guard let score else { return .secondary }
-        if score > 0.75 {
-            return Color(red: 0.5, green: 0.65, blue: 0.55) // Sage green
-        } else if score >= 0.55 {
-            return Color(red: 0.5, green: 0.6, blue: 0.7) // Slate blue
-        } else if score >= 0.35 {
-            return Color(red: 0.65, green: 0.6, blue: 0.55) // Warm grey
-        } else {
-            return Color(red: 0.55, green: 0.55, blue: 0.55) // Stone grey
-        }
     }
 
     // MARK: - Body
@@ -64,17 +47,11 @@ struct MealScoreBadge: View {
                     Image(systemName: "chevron.right")
                         .font(FontTheme.textEntry(size: 9, weight: .semibold))
                 }
-                .foregroundStyle(Color(.systemBackground))
+                .foregroundStyle(self.mealType.displayColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(self.badgeColor)
-                )
-                .overlay(
-                    Capsule()
-                        .strokeBorder(self.badgeColor.opacity(0.7), lineWidth: 1.2)
-                )
+                .coloredCapsulePill(color: self.mealType.displayColor)
+                .mealPillShadow()
             }
             .buttonStyle(.plain)
             .scaleEffect(self.isPressed ? 0.92 : 1.0)
@@ -93,17 +70,17 @@ struct MealScoreBadge: View {
 // MARK: - Preview
 
 #Preview("Score Badge - High Score") {
-    MealScoreBadge(score: 0.85, onTap: {})
+    MealScoreBadge(score: 0.85, mealType: .lunch, onTap: {})
 }
 
 #Preview("Score Badge - Medium Score") {
-    MealScoreBadge(score: 0.55, onTap: {})
+    MealScoreBadge(score: 0.55, mealType: .snacks, onTap: {})
 }
 
 #Preview("Score Badge - Low Score") {
-    MealScoreBadge(score: 0.25, onTap: {})
+    MealScoreBadge(score: 0.25, mealType: .dinner, onTap: {})
 }
 
 #Preview("Score Badge - No Score") {
-    MealScoreBadge(score: nil, onTap: {})
+    MealScoreBadge(score: nil, mealType: .breakfast, onTap: {})
 }

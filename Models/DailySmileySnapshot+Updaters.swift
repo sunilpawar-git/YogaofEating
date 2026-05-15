@@ -11,8 +11,7 @@ extension DailySmileySnapshot {
         morningMindCheck: [MindCheckEntry]? = nil,
         eveningMindCheck: [MindCheckEntry]? = nil,
         highlightData: HighlightData? = nil,
-        reflectData: ReflectData? = nil,
-        briefing: DailyBriefing? = nil
+        reflectData: ReflectData? = nil
     ) -> DailySmileySnapshot {
         let count = meals.count
         let avg = meals.isEmpty ? 0.5 : meals.map(\.healthScore).reduce(0.0, +) / Double(count)
@@ -21,7 +20,7 @@ extension DailySmileySnapshot {
             meals: meals, mealCount: count, averageHealthScore: avg,
             reflection: reflection, morningMindCheck: morningMindCheck,
             eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing
+            reflectData: reflectData
         )
     }
 
@@ -38,10 +37,9 @@ extension DailySmileySnapshot {
             morningMindCheck: morningMindCheck ?? self.morningMindCheck,
             eveningMindCheck: eveningMindCheck ?? self.eveningMindCheck,
             highlightData: highlightData, reflectData: reflectData,
-            briefing: briefing, insight: insight,
             totalCalories: totalCalories, hasCompleteCalorieData: hasCompleteCalorieData,
             wellbeingDimensions: wellbeingDimensions, textSignals: textSignals,
-            enrichedInsight: enrichedInsight
+            insight: insight
         )
     }
 
@@ -51,10 +49,10 @@ extension DailySmileySnapshot {
             mealCount: mealCount, averageHealthScore: averageHealthScore,
             reflection: reflection, morningMindCheck: morningMindCheck,
             eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing, insight: insight,
+            reflectData: reflectData,
             totalCalories: totalCalories, hasCompleteCalorieData: hasCompleteCalorieData,
             wellbeingDimensions: wellbeingDimensions, textSignals: textSignals,
-            enrichedInsight: enrichedInsight
+            insight: insight
         )
     }
 
@@ -64,10 +62,10 @@ extension DailySmileySnapshot {
             mealCount: mealCount, averageHealthScore: averageHealthScore,
             reflection: reflection, morningMindCheck: morningMindCheck,
             eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing, insight: insight,
+            reflectData: reflectData,
             totalCalories: totalCalories, hasCompleteCalorieData: hasCompleteCalorieData,
             wellbeingDimensions: wellbeingDimensions, textSignals: textSignals,
-            enrichedInsight: enrichedInsight
+            insight: insight
         )
     }
 
@@ -77,23 +75,10 @@ extension DailySmileySnapshot {
             mealCount: mealCount, averageHealthScore: averageHealthScore,
             reflection: reflection, morningMindCheck: morningMindCheck,
             eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing, insight: insight,
+            reflectData: reflectData,
             totalCalories: totalCalories, hasCompleteCalorieData: hasCompleteCalorieData,
             wellbeingDimensions: wellbeingDimensions, textSignals: textSignals,
-            enrichedInsight: enrichedInsight
-        )
-    }
-
-    func withBriefing(_ briefing: DailyBriefing) -> DailySmileySnapshot {
-        DailySmileySnapshot(
-            id: id, date: date, smileyState: smileyState, meals: meals,
-            mealCount: mealCount, averageHealthScore: averageHealthScore,
-            reflection: reflection, morningMindCheck: morningMindCheck,
-            eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing, insight: insight,
-            totalCalories: totalCalories, hasCompleteCalorieData: hasCompleteCalorieData,
-            wellbeingDimensions: wellbeingDimensions, textSignals: textSignals,
-            enrichedInsight: enrichedInsight
+            insight: insight
         )
     }
 
@@ -103,10 +88,10 @@ extension DailySmileySnapshot {
             mealCount: mealCount, averageHealthScore: averageHealthScore,
             reflection: reflection, morningMindCheck: morningMindCheck,
             eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing, insight: insight,
+            reflectData: reflectData,
             totalCalories: totalCalories, hasCompleteCalorieData: hasCompleteCalorieData,
             wellbeingDimensions: wellbeingDimensions, textSignals: textSignals,
-            enrichedInsight: enrichedInsight
+            insight: insight
         )
     }
 
@@ -116,10 +101,10 @@ extension DailySmileySnapshot {
             mealCount: mealCount, averageHealthScore: averageHealthScore,
             reflection: reflection, morningMindCheck: morningMindCheck,
             eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing, insight: insight,
+            reflectData: reflectData,
             totalCalories: calories, hasCompleteCalorieData: hasCompleteCalorieData,
             wellbeingDimensions: wellbeingDimensions, textSignals: textSignals,
-            enrichedInsight: enrichedInsight
+            insight: insight
         )
     }
 
@@ -129,10 +114,10 @@ extension DailySmileySnapshot {
             mealCount: mealCount, averageHealthScore: averageHealthScore,
             reflection: reflection, morningMindCheck: morningMindCheck,
             eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing, insight: insight,
+            reflectData: reflectData,
             totalCalories: totalCalories, hasCompleteCalorieData: hasCompleteCalorieData,
             wellbeingDimensions: dimensions, textSignals: textSignals,
-            enrichedInsight: enrichedInsight
+            insight: insight
         )
     }
 
@@ -142,23 +127,10 @@ extension DailySmileySnapshot {
             mealCount: mealCount, averageHealthScore: averageHealthScore,
             reflection: reflection, morningMindCheck: morningMindCheck,
             eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing, insight: insight,
+            reflectData: reflectData,
             totalCalories: totalCalories, hasCompleteCalorieData: hasCompleteCalorieData,
             wellbeingDimensions: wellbeingDimensions, textSignals: signals,
-            enrichedInsight: enrichedInsight
-        )
-    }
-
-    func withEnrichedInsight(_ enrichedInsight: EnrichedDailyInsight) -> DailySmileySnapshot {
-        DailySmileySnapshot(
-            id: id, date: date, smileyState: smileyState, meals: meals,
-            mealCount: mealCount, averageHealthScore: averageHealthScore,
-            reflection: reflection, morningMindCheck: morningMindCheck,
-            eveningMindCheck: eveningMindCheck, highlightData: highlightData,
-            reflectData: reflectData, briefing: briefing, insight: insight,
-            totalCalories: totalCalories, hasCompleteCalorieData: hasCompleteCalorieData,
-            wellbeingDimensions: wellbeingDimensions, textSignals: textSignals,
-            enrichedInsight: enrichedInsight
+            insight: insight
         )
     }
 }
