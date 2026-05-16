@@ -26,6 +26,28 @@ enum ValidationLimits {
     /// Used by: HighlightSections, InputValidator, MainViewModel
     static let todoItem = 150
 
+    // MARK: - Macro Caps (per meal, physiological maximums)
+
+    /// Maximum grams of protein per meal before the AI value is considered hallucinated.
+    static let maxProteinPerMeal = 150
+
+    /// Maximum grams of carbohydrates per meal before clamping.
+    static let maxCarbsPerMeal = 400
+
+    /// Maximum grams of fat per meal before clamping.
+    static let maxFatPerMeal = 200
+
+    // MARK: - Calorie-per-gram multipliers (Atwater factors)
+
+    /// Kilocalories per gram of protein (Atwater factor).
+    static let caloriesPerGramProtein = 4
+
+    /// Kilocalories per gram of carbohydrates (Atwater factor).
+    static let caloriesPerGramCarbs = 4
+
+    /// Kilocalories per gram of fat (Atwater factor).
+    static let caloriesPerGramFat = 9
+
     // MARK: - Universal Limit (Fallback)
 
     /// Universal character limit used as the app-wide UI truncation ceiling.

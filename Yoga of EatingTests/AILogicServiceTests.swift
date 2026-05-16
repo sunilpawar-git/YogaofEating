@@ -163,5 +163,78 @@
             let asAny: AnyObject = self.sut
             XCTAssertTrue(asAny is any MealInsightProvider)
         }
+
+        // MARK: - parseAnalysisResponse: macro parsing & calorie derivation
+
+        func test_parseAnalysisResponse_derivesCaloriesFromMacros() {
+            let data: [String: Any] = ["healthScore": 0.8, "protein": 42, "carbs": 130, "fat": 28]
+            let result = AILogicService.parseAnalysisResponse(data)
+            // 42*4 + 130*4 + 28*9 = 168 + 520 + 252 = 940
+            XCTAssertEqual(result.estimatedCalories, 940)
+        }
+
+        func test_parseAnalysisResponse_fallsBackToDirectCaloriesWhenMacrosAbsent() {
+            let data: [String: Any] = ["healthScore": 0.7, "estimatedCalories": 600]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertEqual(result.estimatedCalories, 600)
+        }
+
+        func test_parseAnalysisResponse_macroCaloriesOverrideDirectCalories() {
+            // When macros are present, derived calories take precedence over Firebase's estimatedCalories
+            let data: [String: Any] = [
+                "healthScore": 0.7,
+                "protein": 10,
+                "carbs": 20,
+                "fat": 5,
+                "estimatedCalories": 999
+            ]
+            let result = AILogicService.parseAnalysisResponse(data)
+            // 10*4 + 20*4 + 5*9 = 40 + 80 + 45 = 165
+            XCTAssertEqual(result.estimatedCalories, 165)
+        }
+
+        func test_parseAnalysisResponse_clampsProteinAboveMaximum() {
+            let data: [String: Any] = ["healthScore": 0.5, "protein": 9999, "carbs": 10, "fat": 5]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertEqual(result.protein, ValidationLimits.maxProteinPerMeal)
+        }
+
+        func test_parseAnalysisResponse_clampsCarbohydratesAboveMaximum() {
+            let data: [String: Any] = ["healthScore": 0.5, "protein": 10, "carbs": 9999, "fat": 5]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertEqual(result.carbs, ValidationLimits.maxCarbsPerMeal)
+        }
+
+        func test_parseAnalysisResponse_clampsFatAboveMaximum() {
+            let data: [String: Any] = ["healthScore": 0.5, "protein": 10, "carbs": 50, "fat": 9999]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertEqual(result.fat, ValidationLimits.maxFatPerMeal)
+        }
+
+        func test_parseAnalysisResponse_macrosNilWhenAbsent() {
+            let data: [String: Any] = ["healthScore": 0.6]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertNil(result.protein)
+            XCTAssertNil(result.carbs)
+            XCTAssertNil(result.fat)
+        }
+
+        func test_parseAnalysisResponse_preservesZeroMacros() {
+            // Black coffee: all zeros are valid macro values (not absent)
+            let data: [String: Any] = ["healthScore": 0.9, "protein": 0, "carbs": 0, "fat": 0]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertEqual(result.protein, 0)
+            XCTAssertEqual(result.carbs, 0)
+            XCTAssertEqual(result.fat, 0)
+        }
+
+        func test_parseAnalysisResponse_partialMacroTriple_fallsBackToDirectCalories() {
+            // Firebase returns only 2 of 3 macros (incomplete triple) — must use direct estimatedCalories
+            let data: [String: Any] = ["healthScore": 0.7, "protein": 30, "carbs": 50, "estimatedCalories": 400]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertEqual(result.estimatedCalories, 400, "Incomplete macro triple must not derive calories")
+            XCTAssertNil(result.fat, "Missing fat must remain nil")
+            XCTAssertEqual(result.protein, 30, "Present macros must still be stored")
+        }
     }
 #endif

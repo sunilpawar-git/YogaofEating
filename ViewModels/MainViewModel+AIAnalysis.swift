@@ -38,8 +38,8 @@ extension MainViewModel {
             return AIAnalysisContext(
                 logicService: FallbackAnalysisProvider(),
                 currentMealsSnapshot: self.meals,
-                onMealScoreUpdated: { [weak self] _, score, _, _ in
-                    self?.updateSmileyState(with: score)
+                onMealScoreUpdated: { [weak self] _, result in
+                    self?.updateSmileyState(with: result.score)
                 },
                 onSmileyStateChanged: { [weak self] state in
                     self?.smileyState = state
@@ -51,16 +51,19 @@ extension MainViewModel {
         return AIAnalysisContext(
             logicService: aiService,
             currentMealsSnapshot: self.meals,
-            onMealScoreUpdated: { [weak self] id, score, insight, estimatedCalories in
+            onMealScoreUpdated: { [weak self] id, result in
                 guard let self else { return }
                 if let idx = self.meals.firstIndex(where: { $0.id == id }) {
                     var updated = self.meals
-                    updated[idx].healthScore = score
+                    updated[idx].healthScore = result.score
                     updated[idx].isAIAnalyzed = true
-                    updated[idx].aiInsight = insight
-                    if let cal = estimatedCalories {
+                    updated[idx].aiInsight = result.insight
+                    if let cal = result.estimatedCalories {
                         updated[idx].estimatedCalories = cal
                     }
+                    updated[idx].protein = result.protein
+                    updated[idx].carbs = result.carbs
+                    updated[idx].fat = result.fat
                     withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
                         self.meals = updated
                     }
@@ -70,7 +73,7 @@ extension MainViewModel {
                 let freshCtx = AIAnalysisContext(
                     logicService: aiService,
                     currentMealsSnapshot: self.meals,
-                    onMealScoreUpdated: { _, _, _, _ in },
+                    onMealScoreUpdated: { _, _ in },
                     onSmileyStateChanged: { [weak self] state in
                         self?.smileyState = state
                         self?.saveData()
@@ -144,6 +147,9 @@ extension MainViewModel {
                 if let cal = result.estimatedCalories {
                     updatedMeals[verifyIndex].estimatedCalories = cal
                 }
+                updatedMeals[verifyIndex].protein = result.protein
+                updatedMeals[verifyIndex].carbs = result.carbs
+                updatedMeals[verifyIndex].fat = result.fat
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
                     meals = updatedMeals
                 }
@@ -202,12 +208,6 @@ private struct FallbackAnalysisProvider: AIAnalysisProvider {
     func calculateHealthScore(for _: [String]) -> Double { ScoringThresholds.neutral }
     func calculateNextState(from state: SmileyState, healthScore _: Double) -> SmileyState { state }
     func analyzeMealQuality(description _: String) async throws -> MealAnalysisResult {
-        MealAnalysisResult(
-            score: ScoringThresholds.neutral,
-            mood: .neutral,
-            sound: "",
-            insight: nil,
-            estimatedCalories: nil
-        )
+        .fallback(score: ScoringThresholds.neutral)
     }
 }

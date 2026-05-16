@@ -8,6 +8,7 @@ import SwiftUI
 ///   1. Progress — Consumed + Remaining above bar, bar, Total Goal below
 ///   2. Goal breakdown — Base Goal + Exercise = Total Goal (only when applicable)
 ///   3. By meal — per-meal calorie breakdown
+///   4. Macros — Protein / Carbs / Fat totals (only when any meal has complete macro data)
 ///
 /// Accepts only `CalorieDetailData` — never references `MainViewModel` directly.
 /// Follows the Principle of Least Privilege: receives only what it needs.
@@ -25,6 +26,9 @@ struct CalorieDetailSheet: View {
                 self.goalSection
                 if !self.data.mealBreakdown.isEmpty {
                     self.mealBreakdownSection
+                }
+                if let macros = self.data.macroTotals {
+                    self.macroSection(macros)
                 }
             }
             .listStyle(.insetGrouped)
@@ -180,6 +184,28 @@ struct CalorieDetailSheet: View {
                 }
             }
         }
+    }
+
+    // MARK: - Macros Section
+
+    private func macroSection(_ macros: MacroTotals) -> some View {
+        Section(Strings.Macros.sectionHeader) {
+            self.macroRow(label: Strings.Macros.protein, grams: macros.protein, partial: macros.isPartial)
+            self.macroRow(label: Strings.Macros.carbs, grams: macros.carbs, partial: macros.isPartial)
+            self.macroRow(label: Strings.Macros.fat, grams: macros.fat, partial: macros.isPartial)
+        }
+    }
+
+    private func macroRow(label: String, grams: Int, partial: Bool) -> some View {
+        HStack {
+            Text(label).font(FontTheme.body)
+            Spacer()
+            Text(Strings.Macros.gramsLabel(grams, partial: partial))
+                .font(FontTheme.caption)
+                .foregroundColor(.secondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Strings.Macros.accessibilityLabel(macro: label, grams: grams, partial: partial))
     }
 
     // MARK: - Helpers

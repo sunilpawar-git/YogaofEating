@@ -81,6 +81,15 @@ struct Meal: Identifiable, Codable, Equatable {
     var aiInsight: String? // AI-generated insight/reasoning for the health score
     /// AI-estimated calorie count for this meal. nil until AI analysis completes.
     var estimatedCalories: Int?
+    /// Macro breakdown from AI analysis. nil for legacy meals analyzed before the macro feature.
+    var protein: Int?
+    var carbs: Int?
+    var fat: Int?
+
+    /// True only when all three macro fields carry a value (even zero — e.g. black coffee).
+    /// A meal may be `isAIAnalyzed` yet still return `false` here — macros are only present
+    /// for meals analyzed after the macro feature was deployed.
+    var hasCompleteMacros: Bool { self.protein != nil && self.carbs != nil && self.fat != nil }
 
     /// Backward compatibility: computed property that joins items
     var description: String {
@@ -107,7 +116,10 @@ struct Meal: Identifiable, Codable, Equatable {
         healthScore: Double = 0.0,
         isAIAnalyzed: Bool = false,
         aiInsight: String? = nil,
-        estimatedCalories: Int? = nil
+        estimatedCalories: Int? = nil,
+        protein: Int? = nil,
+        carbs: Int? = nil,
+        fat: Int? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -117,6 +129,9 @@ struct Meal: Identifiable, Codable, Equatable {
         self.isAIAnalyzed = isAIAnalyzed
         self.aiInsight = aiInsight
         self.estimatedCalories = estimatedCalories
+        self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
     }
 
     /// Legacy initializer for backward compatibility

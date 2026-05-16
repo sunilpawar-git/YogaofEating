@@ -1,5 +1,18 @@
 import SwiftUI
 
+// MARK: - MacroTotals
+
+/// Aggregated daily macros for display in `CalorieDetailSheet`.
+/// `isPartial` is true only when meals that have not yet been AI-analyzed exist today —
+/// legacy meals (analyzed before the macro feature) are excluded silently without setting this flag.
+struct MacroTotals: Equatable {
+    let protein: Int
+    let carbs: Int
+    let fat: Int
+    /// True only when un-analyzed meals exist and the total may change after they are analyzed.
+    let isPartial: Bool
+}
+
 // MARK: - MealCalorieEntry
 
 /// A single meal's calorie entry for display in the detail sheet.
@@ -28,6 +41,9 @@ struct CalorieDetailData: Equatable {
 
     /// Per-meal breakdown (only meals that have been AI-analyzed).
     let mealBreakdown: [MealCalorieEntry]
+
+    /// Aggregated macros for the day. `nil` when no meal has macro data yet.
+    let macroTotals: MacroTotals?
 
     /// Basal (resting) calories burned today from HealthKit. `nil` when unavailable.
     let basalCalories: Double?
@@ -91,5 +107,20 @@ struct CalorieDetailData: Equatable {
                 guard let cal = meal.estimatedCalories else { return nil }
                 return MealCalorieEntry(label: meal.mealType.displayName, calories: cal)
             }
+
+        // Build macro totals from meals that carry all three macro fields.
+        // Legacy meals (isAIAnalyzed but no macros) are silently excluded — they don't set isPartial.
+        let mealsWithMacros = meals.filter(\.hasCompleteMacros)
+        if mealsWithMacros.isEmpty {
+            self.macroTotals = nil
+        } else {
+            let hasUnanalyzedMeals = meals.contains { !$0.isAIAnalyzed }
+            self.macroTotals = MacroTotals(
+                protein: mealsWithMacros.compactMap(\.protein).reduce(0, +),
+                carbs: mealsWithMacros.compactMap(\.carbs).reduce(0, +),
+                fat: mealsWithMacros.compactMap(\.fat).reduce(0, +),
+                isPartial: hasUnanalyzedMeals
+            )
+        }
     }
 }
