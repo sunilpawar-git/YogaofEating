@@ -114,5 +114,43 @@
             XCTAssertLessThan(abs(decodedData.meals[1].timestamp.timeIntervalSince(date2)), 1.0)
             XCTAssertLessThan(abs(decodedData.meals[2].timestamp.timeIntervalSince(date3)), 1.0)
         }
+
+        // MARK: - Meal macro Codable round-trip
+
+        func test_meal_codable_roundTrip_preservesMacros() throws {
+            var meal = Meal(mealType: .lunch, items: ["Chicken", "Rice"])
+            meal.protein = 42
+            meal.carbs = 130
+            meal.fat = 28
+            meal.isAIAnalyzed = true
+
+            let encoded = try JSONEncoder().encode(meal)
+            let decoded = try JSONDecoder().decode(Meal.self, from: encoded)
+
+            XCTAssertEqual(decoded.protein, 42)
+            XCTAssertEqual(decoded.carbs, 130)
+            XCTAssertEqual(decoded.fat, 28)
+        }
+
+        func test_meal_codable_decodesMacrosAsNilWhenAbsent() throws {
+            // Simulate a JSON payload from before the macro feature
+            let legacyJSON = """
+            {
+                "id": "00000000-0000-0000-0000-000000000001",
+                "timestamp": 0,
+                "mealType": "lunch",
+                "items": ["Pasta"],
+                "healthScore": 0.6,
+                "isAIAnalyzed": true
+            }
+            """.data(using: .utf8)!
+
+            let meal = try JSONDecoder().decode(Meal.self, from: legacyJSON)
+
+            XCTAssertNil(meal.protein, "Legacy JSON without macros must decode protein as nil")
+            XCTAssertNil(meal.carbs, "Legacy JSON without macros must decode carbs as nil")
+            XCTAssertNil(meal.fat, "Legacy JSON without macros must decode fat as nil")
+            XCTAssertFalse(meal.hasCompleteMacros, "Legacy meal must report hasCompleteMacros == false")
+        }
     }
 #endif

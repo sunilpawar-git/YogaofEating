@@ -11,13 +11,45 @@ protocol MealLogicProvider {
 /// Strongly-typed result returned by `AIAnalysisProvider.analyzeMealQuality`.
 /// Replaces the previous 4-tuple to allow forward-compatible fields (e.g. estimatedCalories)
 /// without touching call sites.
-struct MealAnalysisResult {
+struct MealAnalysisResult: Sendable {
     let score: Double
     let mood: SmileyMood
     let sound: String
     let insight: String?
     /// AI-estimated calories for this meal. `nil` if the backend did not return a value.
     let estimatedCalories: Int?
+    /// Macro breakdown (grams). nil when the backend did not return macro data.
+    let protein: Int?
+    let carbs: Int?
+    let fat: Int?
+
+    init(
+        score: Double,
+        mood: SmileyMood,
+        sound: String,
+        insight: String?,
+        estimatedCalories: Int?,
+        protein: Int? = nil,
+        carbs: Int? = nil,
+        fat: Int? = nil
+    ) {
+        self.score = score
+        self.mood = mood
+        self.sound = sound
+        self.insight = insight
+        self.estimatedCalories = estimatedCalories
+        self.protein = protein
+        self.carbs = carbs
+        self.fat = fat
+    }
+}
+
+extension MealAnalysisResult {
+    /// Returns a safe nil-macro fallback result — used when Firebase is unavailable
+    /// or when a non-AI analysis path needs to produce a neutral default.
+    static func fallback(score: Double = 0.5, mood: SmileyMood = .neutral) -> MealAnalysisResult {
+        MealAnalysisResult(score: score, mood: mood, sound: "tink", insight: nil, estimatedCalories: nil)
+    }
 }
 
 /// Protocol for services that provide AI-powered meal analysis

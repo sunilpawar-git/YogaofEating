@@ -134,6 +134,33 @@
         func test_strings_rowGoalTotal_isDefined() {
             XCTAssertFalse(Strings.CaloriePill.rowGoalTotal.isEmpty)
         }
+
+        // MARK: - Strings.Macros
+
+        func test_strings_macros_gramsLabel_noPrefix_whenNotPartial() {
+            XCTAssertEqual(Strings.Macros.gramsLabel(42, partial: false), "42g")
+        }
+
+        func test_strings_macros_gramsLabel_tildePrefix_whenPartial() {
+            XCTAssertEqual(Strings.Macros.gramsLabel(42, partial: true), "~42g")
+        }
+
+        func test_strings_macros_gramsLabel_zeroGrams() {
+            XCTAssertEqual(Strings.Macros.gramsLabel(0, partial: false), "0g")
+        }
+
+        func test_strings_macros_accessibilityLabel_approximate_whenPartial() {
+            let label = Strings.Macros.accessibilityLabel(macro: "Protein", grams: 42, partial: true)
+            XCTAssertTrue(label.contains("approximately"), "Partial label must include 'approximately'")
+            XCTAssertTrue(label.contains("42"))
+            XCTAssertTrue(label.contains("Protein"))
+        }
+
+        func test_strings_macros_accessibilityLabel_noApproximate_whenNotPartial() {
+            let label = Strings.Macros.accessibilityLabel(macro: "Protein", grams: 42, partial: false)
+            XCTAssertFalse(label.contains("approximately"), "Non-partial label must not include 'approximately'")
+            XCTAssertTrue(label.contains("42"))
+        }
     }
 
 #endif

@@ -16,13 +16,11 @@ struct AIAnalysisContext {
     /// Read-only inside the coordinator — mutations go through the write-back closures.
     let currentMealsSnapshot: [Meal]
 
-    /// Called on `@MainActor` after the AI service returns a score.
+    /// Called on `@MainActor` after the AI service returns a result.
     /// - Parameters:
     ///   - mealId: The meal that was analysed.
-    ///   - score: The health score returned by the AI service.
-    ///   - insight: Optional text insight returned by the AI service.
-    ///   - estimatedCalories: Optional calorie estimate returned by the AI service.
-    let onMealScoreUpdated: @MainActor (UUID, Double, String?, Int?) -> Void
+    ///   - result: The full `MealAnalysisResult` returned by the AI service.
+    let onMealScoreUpdated: @MainActor (UUID, MealAnalysisResult) -> Void
 
     /// Called on `@MainActor` after `reanalyzeAll` resolves the new smiley state.
     let onSmileyStateChanged: @MainActor (SmileyState) -> Void
@@ -35,7 +33,7 @@ struct AIAnalysisContext {
     init(
         logicService: any AIAnalysisProvider,
         currentMealsSnapshot: [Meal],
-        onMealScoreUpdated: @escaping @MainActor (UUID, Double, String?, Int?) -> Void,
+        onMealScoreUpdated: @escaping @MainActor (UUID, MealAnalysisResult) -> Void,
         onSmileyStateChanged: @escaping @MainActor (SmileyState) -> Void,
         shouldProceed: (@MainActor (UUID) -> Bool)? = nil
     ) {
