@@ -38,14 +38,18 @@ extension JournalBlockView {
                         .font(FontTheme.mealEntry)
                         .foregroundColor(self.bulletColor(for: i))
 
-                    TextField(i == 0 ? Strings.Journal.placeholder : "", text: self.itemBinding(for: i))
-                        .font(FontTheme.mealEntry)
-                        .foregroundColor(.primary)
-                        .tint(.blue)
-                        .textFieldStyle(.plain)
-                        .focused(self.$focusedItemIndex, equals: i)
-                        .onSubmit { self.handleRowSubmit(at: i) }
-                        .accessibilityIdentifier("meal-item-field-\(self.meal.id)-\(i)")
+                    TextField(
+                        i == 0 ? Strings.Journal.placeholder : "",
+                        text: self.itemBinding(for: i),
+                        axis: .vertical
+                    )
+                    .font(FontTheme.mealEntry)
+                    .foregroundColor(.primary)
+                    .tint(.blue)
+                    .textFieldStyle(.plain)
+                    .lineLimit(1)
+                    .focused(self.$focusedItemIndex, equals: i)
+                    .accessibilityIdentifier("meal-item-field-\(self.meal.id)-\(i)")
                 }
             }
         }
@@ -83,7 +87,9 @@ extension JournalBlockView {
         }
     }
 
-    /// Per-item binding that enforces the character limit.
+    /// Per-item binding that enforces the character limit and intercepts Return.
+    /// axis: .vertical TextFields insert \n on Return (keyboard stays up).
+    /// We catch the \n here so onSubmit — which always dismisses the keyboard — is never needed.
     func itemBinding(for index: Int) -> Binding<String> {
         Binding(
             get: {
@@ -92,7 +98,12 @@ extension JournalBlockView {
             },
             set: { newValue in
                 guard index < self.draftItems.count else { return }
-                self.draftItems[index] = String(newValue.prefix(Self.maxCharacterLimit))
+                if newValue.hasSuffix("\n") {
+                    self.draftItems[index] = String(newValue.dropLast())
+                    self.handleRowSubmit(at: index)
+                } else {
+                    self.draftItems[index] = String(newValue.prefix(Self.maxCharacterLimit))
+                }
             }
         )
     }
