@@ -44,7 +44,7 @@ extension JournalBlockView {
                         .tint(.blue)
                         .textFieldStyle(.plain)
                         .focused(self.$focusedItemIndex, equals: i)
-                        .onSubmit { self.appendItem(after: i) }
+                        .onSubmit { self.handleRowSubmit(at: i) }
                         .accessibilityIdentifier("meal-item-field-\(self.meal.id)-\(i)")
                 }
             }
@@ -58,11 +58,28 @@ extension JournalBlockView {
 
     // MARK: - Item Management
 
+    /// Enter on a filled row → new bullet below. Enter on an empty row → remove it (Apple Notes behavior).
+    func handleRowSubmit(at index: Int) {
+        if self.draftItems[index].isEmpty, self.draftItems.count > 1 {
+            self.removeItem(at: index)
+        } else {
+            self.appendItem(after: index)
+        }
+    }
+
     func appendItem(after index: Int) {
         let insertAt = min(index + 1, self.draftItems.count)
         self.draftItems.insert("", at: insertAt)
         Task { @MainActor in
             self.focusedItemIndex = insertAt
+        }
+    }
+
+    func removeItem(at index: Int) {
+        guard self.draftItems.count > 1 else { return }
+        self.draftItems.remove(at: index)
+        Task { @MainActor in
+            self.focusedItemIndex = max(0, index - 1)
         }
     }
 
