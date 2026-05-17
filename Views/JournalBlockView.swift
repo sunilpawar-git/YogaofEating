@@ -36,7 +36,7 @@ struct JournalBlockView: View {
     @State var showTimePicker: Bool = false
     @State var showRecentMealsSheet: Bool = false
     @State var editedTimestamp: Date = .init()
-    @FocusState var focusedItemIndex: Int?
+    @State var focusedItemIndex: Int?
     @State private var hasInitialized: Bool = false
     @State private var showScoreBreakdown: Bool = false
 

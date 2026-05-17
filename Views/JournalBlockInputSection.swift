@@ -38,17 +38,21 @@ extension JournalBlockView {
                         .font(FontTheme.mealEntry)
                         .foregroundColor(self.bulletColor(for: i))
 
-                    TextField(
-                        i == 0 ? Strings.Journal.placeholder : "",
+                    BulletTextField(
                         text: self.itemBinding(for: i),
-                        axis: .vertical
+                        placeholder: i == 0 ? Strings.Journal.placeholder : "",
+                        isFocused: self.focusedItemIndex == i,
+                        onFocusChange: { focused in
+                            if focused {
+                                self.focusedItemIndex = i
+                            } else if self.focusedItemIndex == i {
+                                self.focusedItemIndex = nil
+                            }
+                        },
+                        onReturn: { self.handleRowSubmit(at: i) },
+                        onDeleteEmpty: { self.removeItem(at: i) }
                     )
-                    .font(FontTheme.mealEntry)
-                    .foregroundColor(.primary)
-                    .tint(.blue)
-                    .textFieldStyle(.plain)
-                    .lineLimit(1)
-                    .focused(self.$focusedItemIndex, equals: i)
+                    .frame(maxWidth: .infinity)
                     .accessibilityIdentifier("meal-item-field-\(self.meal.id)-\(i)")
                 }
             }
@@ -81,15 +85,13 @@ extension JournalBlockView {
 
     func removeItem(at index: Int) {
         guard self.draftItems.count > 1 else { return }
-        self.draftItems.remove(at: index)
         Task { @MainActor in
+            guard index < self.draftItems.count else { return }
+            self.draftItems.remove(at: index)
             self.focusedItemIndex = max(0, index - 1)
         }
     }
 
-    /// Per-item binding that enforces the character limit and intercepts Return.
-    /// axis: .vertical TextFields insert \n on Return (keyboard stays up).
-    /// We catch the \n here so onSubmit — which always dismisses the keyboard — is never needed.
     func itemBinding(for index: Int) -> Binding<String> {
         Binding(
             get: {
@@ -98,12 +100,7 @@ extension JournalBlockView {
             },
             set: { newValue in
                 guard index < self.draftItems.count else { return }
-                if newValue.hasSuffix("\n") {
-                    self.draftItems[index] = String(newValue.dropLast())
-                    self.handleRowSubmit(at: index)
-                } else {
-                    self.draftItems[index] = String(newValue.prefix(Self.maxCharacterLimit))
-                }
+                self.draftItems[index] = newValue
             }
         )
     }
