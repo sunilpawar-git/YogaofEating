@@ -15,6 +15,8 @@ const geminiApiKey = defineSecret('GEMINI_API_KEY');
 const MAX_INPUT_LENGTH = 500;
 const BRIEFING_LOOKBACK_DAYS = 7;
 
+const MACRO_CAPS = { protein: 150, carbs: 400, fat: 200 };
+
 function sanitizeInput(input, maxLength = MAX_INPUT_LENGTH) {
     if (typeof input !== 'string') return '';
     return input
@@ -24,18 +26,12 @@ function sanitizeInput(input, maxLength = MAX_INPUT_LENGTH) {
         .trim();
 }
 
-/**
- * Clamps a macro value to a physiological maximum.
- * Returns null when the raw value is absent; logs a warning when clamped.
- */
+// Returns null when the raw value is absent; logs a warning when clamped.
 function clampMacro(raw, max, name) {
     if (raw == null || typeof raw !== 'number') return null;
-    const value = Math.round(raw);
-    if (value > max) {
-        console.warn(`Macro clamped: ${name} ${value}g → ${max}g`);
-        return max;
-    }
-    return value;
+    const clamped = raw > max ? max : raw;
+    if (raw > max) console.warn(`Macro clamped: ${name} ${raw}g → ${max}g`);
+    return Math.round(clamped);
 }
 
 /**
@@ -120,14 +116,12 @@ Example Response:
         const jsonString = text.replace(/```json/g, "").replace(/```/g, "").trim();
         const data = JSON.parse(jsonString);
 
-        // Clamp macros to physiological maximums
-        const protein = clampMacro(data.protein, 150, "protein");
-        const carbs   = clampMacro(data.carbs,   400, "carbs");
-        const fat     = clampMacro(data.fat,      200, "fat");
+        const protein = clampMacro(data.protein, MACRO_CAPS.protein, "protein");
+        const carbs   = clampMacro(data.carbs,   MACRO_CAPS.carbs,   "carbs");
+        const fat     = clampMacro(data.fat,      MACRO_CAPS.fat,     "fat");
 
-        // Derive calories from macros when all three are present; fall back to direct estimate
         const macroCalories = (protein != null && carbs != null && fat != null)
-            ? Math.round(protein * 4 + carbs * 4 + fat * 9)
+            ? protein * 4 + carbs * 4 + fat * 9
             : null;
         const estimatedCalories = macroCalories
             ?? (typeof data.estimatedCalories === 'number' ? Math.round(data.estimatedCalories) : null);
