@@ -29,16 +29,18 @@ struct JournalBlockView: View {
         return formatter
     }()
 
-    @State var rawText: String = ""
+    @State var draftItems: [String] = [""]
     @State var selectedMealType: MealType = .lunch
     @State private var isPressed: Bool = false
     @State private var showDeleteAlert: Bool = false
     @State var showTimePicker: Bool = false
     @State var showRecentMealsSheet: Bool = false
     @State var editedTimestamp: Date = .init()
-    @FocusState var isFocused: Bool
+    @FocusState var focusedItemIndex: Int?
     @State private var hasInitialized: Bool = false
     @State private var showScoreBreakdown: Bool = false
+
+    var isFocused: Bool { self.focusedItemIndex != nil }
 
     init(
         meal: Meal,
@@ -141,25 +143,26 @@ struct JournalBlockView: View {
 
     private func initializeState() {
         guard !self.hasInitialized else { return }
-        self.rawText = self.meal.items.joined(separator: "\n")
+        self.draftItems = self.meal.items.isEmpty ? [""] : self.meal.items
         self.selectedMealType = self.meal.mealType
         self.hasInitialized = true
     }
 
     func handleCheckmarkTap() {
-        self.isFocused = false
+        self.focusedItemIndex = nil
         self.handleSubmit()
         SensoryService.shared.playNudge(style: .light)
     }
 
     func handleSubmit() {
-        let items = self.parseItems(from: self.rawText)
+        let items = self.parsedItems
         guard !items.isEmpty else { return }
         self.onUpdate(self.selectedMealType, items)
     }
 
     // MARK: - Helpers
 
+    /// Kept for backward compatibility with existing tests that call parseItems(from:) directly.
     func parseItems(from text: String) -> [String] {
         text.split(separator: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
@@ -167,7 +170,9 @@ struct JournalBlockView: View {
     }
 
     var parsedItems: [String] {
-        self.parseItems(from: self.rawText)
+        self.draftItems
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
     }
 
     private var feedback: MealCardFeedback {
