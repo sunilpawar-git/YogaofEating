@@ -29,7 +29,9 @@ extension JournalBlockView {
 
     // MARK: - Bullet Items List
 
-    /// Per-item TextFields with bullet chrome. Bullets are UI-only — stored items are clean text.
+    /// Per-item rows with bullet chrome.
+    /// Editing: BulletTextField (UITextField). Display: Text (wraps naturally).
+    /// UITextField is single-line and truncates — Text is used when not focused.
     var bulletItemsList: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(self.draftItems.indices, id: \.self) { i in
@@ -38,22 +40,33 @@ extension JournalBlockView {
                         .font(FontTheme.mealEntry)
                         .foregroundColor(self.bulletColor(for: i))
 
-                    BulletTextField(
-                        text: self.itemBinding(for: i),
-                        placeholder: i == 0 ? Strings.Journal.placeholder : "",
-                        isFocused: self.focusedItemIndex == i,
-                        onFocusChange: { focused in
-                            if focused {
-                                self.focusedItemIndex = i
-                            } else if self.focusedItemIndex == i {
-                                self.focusedItemIndex = nil
-                            }
-                        },
-                        onReturn: { self.handleRowSubmit(at: i) },
-                        onDeleteEmpty: { self.removeItem(at: i) }
-                    )
-                    .frame(maxWidth: .infinity)
-                    .accessibilityIdentifier("meal-item-field-\(self.meal.id)-\(i)")
+                    if self.isFocused {
+                        BulletTextField(
+                            text: self.itemBinding(for: i),
+                            placeholder: i == 0 ? Strings.Journal.placeholder : "",
+                            isFocused: self.focusedItemIndex == i,
+                            onFocusChange: { focused in
+                                if focused {
+                                    self.focusedItemIndex = i
+                                } else if self.focusedItemIndex == i {
+                                    self.focusedItemIndex = nil
+                                }
+                            },
+                            onReturn: { self.handleRowSubmit(at: i) },
+                            onDeleteEmpty: { self.removeItem(at: i) }
+                        )
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("meal-item-field-\(self.meal.id)-\(i)")
+                    } else {
+                        Text(self.draftItems[i].isEmpty ? Strings.Journal.placeholder : self.draftItems[i])
+                            .font(FontTheme.mealEntry)
+                            .foregroundColor(self.draftItems[i].isEmpty ? .secondary.opacity(0.4) : .primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .onTapGesture { self.focusedItemIndex = i }
+                            .accessibilityIdentifier("meal-item-label-\(self.meal.id)-\(i)")
+                    }
                 }
             }
         }
