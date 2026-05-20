@@ -135,6 +135,7 @@ final class MockInsightLifecycleService: InsightLifecycling {
 final class MockDailySynthesisEngine: DailySynthesizing {
     var stubbedSynthesis: DailySynthesis = .init(
         dimensions: .neutral,
+        dataCompleteness: [],
         textSignals: [.neutral],
         smileySuggestion: .neutral,
         dominantDimension: .physicalLoad,

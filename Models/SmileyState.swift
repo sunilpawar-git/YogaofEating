@@ -1,7 +1,7 @@
 import Foundation
 
 /// Represents the visual and physiological state of the Smiley friend.
-struct SmileyState: Codable {
+struct SmileyState: Codable, Equatable {
     /// The scale factor of the smiley (bloat/shrink). 1.0 is neutral.
     /// Always guaranteed to be a valid, positive, finite value between 0.1 and 10.0
     var scale: Double {
@@ -37,7 +37,7 @@ struct SmileyState: Codable {
 
 // Case names ARE the rawValues used in Codable and in the custom init?(rawValue:) below.
 // If you add a case here, add it to the extension below too.
-enum SmileyMood: String, Codable {
+enum SmileyMood: String, Codable, Equatable {
     case serene // 🙂  — overall > 0.65
     case neutral // 😐  — overall 0.45–0.65
     case thoughtful // 🤔  — overall 0.35–0.45 (synthesis-driven; mild carry-over signal)

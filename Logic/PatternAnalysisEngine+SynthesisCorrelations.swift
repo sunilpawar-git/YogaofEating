@@ -35,7 +35,9 @@ extension PatternAnalysisEngine {
         let confidence = min(1.0, Double(consecutivePairs.count) / 3.0 + 0.6)
         return [CorrelationCard(
             category: .sleepRecoveryCarryover,
-            observation: "Two consecutive poor-sleep nights — cognitive clarity may be reduced today",
+            observation: BriefingCardFormatter.sleepRecoveryCarryover(
+                consecutivePairCount: consecutivePairs.count
+            ),
             confidence: confidence,
             dataPoints: Array(refs)
         )]
@@ -66,9 +68,12 @@ extension PatternAnalysisEngine {
             InsightReference(date: $0.date, description: "Low todo completion", category: .todo)
         }
 
+        let observation = BriefingCardFormatter.intentionFollowthrough(
+            rate: avgRate, gapDayCount: gapDays.count
+        )
         return [CorrelationCard(
             category: .intentionFollowthrough,
-            observation: "Morning intentions are often unmet — consider setting fewer, more focused goals",
+            observation: observation,
             confidence: max(0, min(1, confidence)),
             dataPoints: Array(refs)
         )]
@@ -116,7 +121,7 @@ extension PatternAnalysisEngine {
 
         return [CorrelationCard(
             category: .journalTonePrediction,
-            observation: "Evenings with overwhelming feelings tend to lower next-day wellbeing",
+            observation: Strings.Insight.Cards.journalTonePrediction,
             confidence: confidence,
             dataPoints: refs
         )]
@@ -141,7 +146,7 @@ extension PatternAnalysisEngine {
 
         return [CorrelationCard(
             category: .sleepMismatch,
-            observation: "You rated sleep as great, but your clarity pattern suggests otherwise — check your sleep environment",
+            observation: Strings.Insight.Cards.sleepMismatch,
             confidence: confidence,
             dataPoints: Array(refs)
         )]
@@ -167,7 +172,7 @@ extension PatternAnalysisEngine {
 
         return [CorrelationCard(
             category: .carryOverLoad,
-            observation: "You have had \(lowDays.count) low-wellbeing days recently — this is a pattern worth addressing",
+            observation: BriefingCardFormatter.carryOverLoad(lowDayCount: lowDays.count),
             confidence: confidence,
             dataPoints: Array(refs)
         )]

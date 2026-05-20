@@ -92,6 +92,7 @@ final class InsightConsolidationRegressionTests: XCTestCase {
         }
         let synthesis = DailySynthesis(
             dimensions: .neutral,
+            dataCompleteness: [],
             textSignals: [.neutral],
             smileySuggestion: .neutral,
             dominantDimension: .physicalLoad,
