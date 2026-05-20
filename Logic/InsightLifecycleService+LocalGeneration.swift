@@ -39,7 +39,10 @@ extension InsightLifecycleService {
     func localNudge(from cards: [CorrelationCard]) -> ActionableNudge {
         if let top = cards.first {
             return ActionableNudge(
-                suggestion: "Focus on \(top.category.displayName.lowercased()) today",
+                suggestion: String(
+                    format: Strings.Insight.NudgeSuggestion.focusOnFmt,
+                    top.category.displayName.lowercased()
+                ),
                 reasoning: top.observation
             )
         }
@@ -65,7 +68,7 @@ extension InsightLifecycleService {
     ) -> DailyInsight {
         let cards = self.patternAnalyzer.generateCorrelationCards(from: recentSnapshots)
         let topCards = Array(cards.prefix(3))
-        let headline = self.synthesisHeadline(for: synthesis.dimensions.overall)
+        let headline = self.synthesisHeadline(for: synthesis.overall)
         let nudge = self.computeNudge(from: topCards, synthesis: synthesis)
         let trend = self.computeWeeklyTrend(from: recentSnapshots)
         let confidence = self.computeConfidence(synthesis: synthesis, snapshots: recentSnapshots)
@@ -94,7 +97,10 @@ extension InsightLifecycleService {
     func computeNudge(from cards: [CorrelationCard], synthesis: DailySynthesis) -> ActionableNudge {
         if let top = cards.first {
             return ActionableNudge(
-                suggestion: "Focus on \(top.category.displayName.lowercased()) today",
+                suggestion: String(
+                    format: Strings.Insight.NudgeSuggestion.focusOnFmt,
+                    top.category.displayName.lowercased()
+                ),
                 reasoning: top.observation
             )
         }
@@ -105,22 +111,22 @@ extension InsightLifecycleService {
         switch dimension {
         case .physicalLoad:
             ActionableNudge(
-                suggestion: "Log your meals mindfully today",
+                suggestion: Strings.Insight.NudgeSuggestion.physical,
                 reasoning: Strings.Synthesis.CausalNarrative.physical
             )
         case .cognitiveClarity:
             ActionableNudge(
-                suggestion: "Prioritise restful sleep tonight",
+                suggestion: Strings.Insight.NudgeSuggestion.cognitive,
                 reasoning: Strings.Synthesis.CausalNarrative.cognitive
             )
         case .emotionalTone:
             ActionableNudge(
-                suggestion: "Take a moment to check in with how you feel",
+                suggestion: Strings.Insight.NudgeSuggestion.emotional,
                 reasoning: Strings.Synthesis.CausalNarrative.emotional
             )
         case .behavioralMomentum:
             ActionableNudge(
-                suggestion: "Pick one intention and follow through on it today",
+                suggestion: Strings.Insight.NudgeSuggestion.behavioral,
                 reasoning: Strings.Synthesis.CausalNarrative.behavioral
             )
         }
@@ -160,8 +166,8 @@ extension InsightLifecycleService {
         var score = 0.4
         if snapshots.count >= 5 { score += 0.2 }
         if synthesis.textSignals != [.neutral] { score += 0.2 }
-        if synthesis.dimensions.physicalLoad != 0.5 { score += 0.1 }
-        if synthesis.dimensions.cognitiveClarity != 0.5 { score += 0.1 }
+        if synthesis.dataCompleteness.contains(.physicalLoad) { score += 0.1 }
+        if synthesis.dataCompleteness.contains(.cognitiveClarity) { score += 0.1 }
         return min(1.0, score)
     }
 }

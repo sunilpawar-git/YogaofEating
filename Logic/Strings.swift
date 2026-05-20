@@ -95,6 +95,39 @@ enum Strings {
             static let defaultSuggestion = "Log your meals today to unlock deeper patterns"
             static let defaultReasoning = "More data means richer insights tomorrow"
         }
+
+        // Correlation card format strings — %d/%@ placeholders injected by BriefingCardFormatter
+        enum Cards {
+            static let intentionFollowthroughFmt =
+                "%d%% goal completion across %d days — focus on fewer, more targeted intentions"
+            static let sleepRecoveryCarryoverFmt =
+                "%d consecutive poor-sleep nights — cognitive clarity may be reduced today"
+            static let carryOverLoadFmt =
+                "You have had %d low-wellbeing days recently — this is a pattern worth addressing"
+
+            // Static observations (no data injection) — kept in Strings.swift for localization readiness
+            static let foodDebt =
+                "2 days of low-quality eating — inflammation and cravings may be elevated today"
+            static let foodToMood =
+                "Days with healthier meals tend to end with a better mood"
+            static let timingPattern =
+                "Regular meal timing is linked to better sleep quality"
+            static let todoProductivity =
+                "Higher task completion days correlate with healthier food choices"
+            static let journalTonePrediction =
+                "Evenings with overwhelming feelings tend to lower next-day wellbeing"
+            static let sleepMismatch =
+                "You rated sleep as great, but your clarity pattern suggests otherwise — check your sleep environment"
+        }
+
+        // Default nudge suggestions shown when no correlation cards are available
+        enum NudgeSuggestion {
+            static let physical = "Log your meals mindfully today"
+            static let cognitive = "Prioritize restful sleep tonight"
+            static let emotional = "Take a moment to check in with how you feel"
+            static let behavioral = "Pick one intention and follow through on it today"
+            static let focusOnFmt = "Focus on %@ today"
+        }
     }
 
     // MARK: - Briefing Detail View
@@ -386,11 +419,35 @@ enum Strings {
         }
 
         enum CausalNarrative {
+            // Intentional nudge-fallback strings used only by defaultNudge(for:) in
+            // InsightLifecycleService+LocalGeneration when no correlation cards are present.
+            // Deliberately generic — the nudge path has no NarrativeContext for the resolver.
+            // NOT dead code — do not delete.
             static let physical = "Your food choices are driving today's state."
             static let emotional = "Your mood and feelings are shaping today."
             static let cognitive = "Sleep quality is influencing your clarity."
             static let behavioral = "Your follow-through on intentions is leading today."
             static let balanced = "All dimensions are contributing equally today."
+
+            // Shown when the engine has no data at all (no meals, sleep, feeling, or todos).
+            static let noData = "Start logging today to begin building your personal patterns."
+
+            // Physical variants now include meal count (%d) and avg score (%d%)
+            static let physical_high_fmt = "%d meals at %d%% average — food quality is working in your favour."
+            static let physical_low_fmt = "%d meals at %d%% average — food quality is weighing on how you feel."
+            static let physical_neutral_fmt = "%d meals at %d%% average — food quality is holding steady."
+
+            static let emotional_high = "A positive mood is carrying your day forward."
+            static let emotional_low = "Your emotional state is pulling on your energy today."
+            static let emotional_neutral = "Your emotional state is balanced today."
+
+            static let cognitive_high = "Good sleep is sharpening your clarity today."
+            static let cognitive_low = "Poor sleep is clouding your focus today."
+            static let cognitive_neutral = "Your sleep is having a balanced effect today."
+
+            static let behavioral_high = "Following through on your intentions is building momentum."
+            static let behavioral_low = "Unmet intentions are creating drag on your day."
+            static let behavioral_neutral = "Your follow-through is on track today."
         }
     }
 }

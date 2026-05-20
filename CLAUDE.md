@@ -678,6 +678,25 @@ Data change → SynthesisScheduler.schedule(_:)
 
 `SynthesisTrigger` cases: `.mealChanged`, `.sleepLogged`, `.journalUpdated`, `.todoChanged`, `.feelingChanged`, `.morningThoughtsUpdated`. Sleep bypasses the debounce window and fires immediately; all other triggers are collapsed via `TimingConstants.synthesisDebounceNanoseconds`.
 
+### DailySynthesis shape (post Phases 1–6)
+
+- `causalNarrative` — direction-aware string from `CausalNarrativeResolver`. Physical variant includes meal count and avg score (format strings in `Strings.Synthesis.CausalNarrative.*_fmt`). Non-physical variants use plain directional strings.
+- `dataCompleteness: Set<WellbeingDimension>` — which dimensions have real data. Use `synthesis.overall` (not `synthesis.dimensions.overall`) for a composite that excludes 0.5 stubs.
+- `synthesis.score(for:) -> Double?` — real score or nil for unknown dimensions.
+- `synthesis.displayScore(for:) -> Double` — real score or 0.5 fallback for legacy callers.
+
+### SnapshotPayloadBuilder (post Phase 4)
+
+The server payload now includes raw text fields for Gemini grounding:
+- `morningThoughts` — raw text from `highlightData.morningThoughts` (omitted if nil/empty)
+- `journalEntry` — raw text from `reflectData.journalText` (omitted if nil/empty)
+
+`TextSignalExtractor` keyword signals are used **only** by the local synthesis path (`DailySynthesisEngine.collectSignals`). They are NOT in the server payload — Gemini uses the raw text directly.
+
+### CorrelationCard.dataReferences (post Phase 6)
+
+`CorrelationCard` now carries `dataReferences: [String]?` — optional short strings from the server grounding the observation in user data. The iOS side degrades gracefully when absent (nil). Cloud Function prompt update is tracked separately.
+
 ## Scoring thresholds (`ScoringThresholds` — single source of truth)
 
 ```swift

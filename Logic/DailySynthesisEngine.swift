@@ -29,7 +29,7 @@ final class DailySynthesisEngine: DailySynthesizing {
 
         let hasSleepData = highlightData?.sleepQuality != nil || appleSleepData != nil
         let hasFeelingData = reflectData?.feeling != nil
-            || (reflectData?.textSignals != nil && reflectData?.textSignals != [.neutral])
+            || (reflectData?.textSignals?.isEmpty == false && reflectData?.textSignals != [.neutral])
         let hasTodoData = !(highlightData?.todos.isEmpty ?? true)
         let hasMealData = !meals.isEmpty
 
@@ -54,12 +54,23 @@ final class DailySynthesisEngine: DailySynthesizing {
             hasFeelingData: hasFeelingData, hasTodoData: hasTodoData
         )
 
+        var completeness = Set<WellbeingDimension>()
+        if hasMealData { completeness.insert(.physicalLoad) }
+        if hasSleepData { completeness.insert(.cognitiveClarity) }
+        if hasFeelingData { completeness.insert(.emotionalTone) }
+        if hasTodoData { completeness.insert(.behavioralMomentum) }
+
         let signals = self.collectSignals(from: highlightData, reflectData: reflectData)
         let smiley = self.smileySuggestion(overall: overall)
-        let narrative = self.causalNarrative(for: dominant, overall: overall)
+        let dominantScore = dominant.value(in: dimensions)
+        let context = NarrativeContext(mealCount: meals.count, avgMealScore: physical)
+        let narrative = completeness.isEmpty
+            ? Strings.Synthesis.CausalNarrative.noData
+            : self.causalNarrative(for: dominant, score: dominantScore, context: context)
 
         return DailySynthesis(
             dimensions: dimensions,
+            dataCompleteness: completeness,
             textSignals: signals,
             smileySuggestion: smiley,
             dominantDimension: dominant,
@@ -172,13 +183,8 @@ final class DailySynthesisEngine: DailySynthesizing {
 
     // MARK: - Causal Narrative
 
-    private func causalNarrative(for dominant: WellbeingDimension, overall _: Double) -> String {
-        switch dominant {
-        case .physicalLoad: Strings.Synthesis.CausalNarrative.physical
-        case .emotionalTone: Strings.Synthesis.CausalNarrative.emotional
-        case .cognitiveClarity: Strings.Synthesis.CausalNarrative.cognitive
-        case .behavioralMomentum: Strings.Synthesis.CausalNarrative.behavioral
-        }
+    private func causalNarrative(for dominant: WellbeingDimension, score: Double, context: NarrativeContext) -> String {
+        CausalNarrativeResolver.resolve(dimension: dominant, score: score, context: context)
     }
 
     // MARK: - Private Helpers
