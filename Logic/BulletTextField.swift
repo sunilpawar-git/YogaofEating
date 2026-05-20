@@ -28,6 +28,7 @@ struct BulletTextField: UIViewRepresentable {
 
     func makeUIView(context: Context) -> DeleteDetectingTextField {
         let tf = DeleteDetectingTextField()
+        tf.text = self.text // pre-populate so view never flashes empty on first render
         tf.delegate = context.coordinator
         tf.font = .roundedSystem(size: 17, weight: .regular)
         tf.textColor = .label
