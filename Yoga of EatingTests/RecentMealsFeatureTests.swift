@@ -142,19 +142,22 @@
             XCTAssertTrue(visible, "Button must be visible when not focused and data exists")
         }
 
-        func test_recentMealsButtonVisibility_falseWhenFocused() {
+        func test_recentMealsButtonVisibility_trueWhenFocused() {
             let visible = recentMealsButtonShouldShow(isFocused: true)
-            XCTAssertFalse(visible, "Button must be hidden when focused (checkmark is showing)")
+            XCTAssertTrue(
+                visible,
+                "Button must always be visible — even when focused — so user can add a recent meal mid-typing"
+            )
         }
     }
 
     // MARK: - Production visibility rule (extracted from JournalBlockInputSection)
 
-    /// Mirrors the production condition: `if !self.isFocused { recentMealsButton }`.
-    /// Keeping this function next to the tests makes the spec explicit and easy to update
-    /// if the production condition ever changes.
-    private func recentMealsButtonShouldShow(isFocused: Bool) -> Bool {
-        !isFocused
+    /// Mirrors the production condition for the recent meals "+" button.
+    /// The button is always visible (no focus guard) so users can add a recent meal
+    /// at any point, including while actively typing.
+    private func recentMealsButtonShouldShow(isFocused _: Bool) -> Bool {
+        true
     }
 
 #endif

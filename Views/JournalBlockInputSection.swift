@@ -40,7 +40,7 @@ extension JournalBlockView {
                         .font(FontTheme.mealEntry)
                         .foregroundColor(self.bulletColor(for: i))
 
-                    if self.isFocused {
+                    if self.focusedItemIndex == i {
                         BulletTextField(
                             text: self.itemBinding(for: i),
                             placeholder: i == 0 ? Strings.Journal.placeholder : "",
@@ -139,9 +139,7 @@ extension JournalBlockView {
     @ViewBuilder
     var itemCountFooter: some View {
         HStack {
-            if !self.isFocused {
-                self.recentMealsButton
-            }
+            self.recentMealsButton
 
             if !self.isFocused, !self.parsedItems.isEmpty {
                 Text(Strings.Journal.itemCount(self.parsedItems.count))
@@ -175,6 +173,7 @@ extension JournalBlockView {
         }
         self.draftItems = mergedItems.isEmpty ? [""] : mergedItems
         self.showRecentMealsSheet = false
+        self.focusedItemIndex = 0
         SensoryService.shared.playNudge(style: .medium)
     }
 
