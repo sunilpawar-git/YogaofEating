@@ -101,7 +101,8 @@ extension MainViewModel {
             dimensions: synthesis.dimensions,
             dominantDimension: synthesis.dominantDimension,
             causalNarrative: synthesis.causalNarrative,
-            weakDimensions: weakDims
+            weakDimensions: weakDims,
+            mealCount: self.meals.count
         )
     }
 

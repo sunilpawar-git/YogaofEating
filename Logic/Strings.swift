@@ -396,6 +396,15 @@ enum Strings {
         static let overallLabel = "Overall"
         static let weakDimensionPrefix = "Needs attention:"
         static let detectedSignalsLabel = "Detected tone:"
+
+        enum DimensionSubtitle {
+            static let physicalLoad_fmt = "Meal Quality of %d %@"
+            static let physicalLoad_meal = "Meal"
+            static let physicalLoad_meals = "Meals"
+            static let emotionalTone = "Feelings from your Journal"
+            static let cognitiveClarity = "Sleep Hygiene"
+            static let behavioralMomentum = "To-Do Completions"
+        }
     }
 
     // MARK: - Synthesis (WellbeingDimensions + TextSignal)

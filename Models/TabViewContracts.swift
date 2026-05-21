@@ -35,6 +35,8 @@ struct WellbeingBreakdownSheetContract: Equatable {
     let causalNarrative: String
     /// Up to 2 weakest dimensions (score < SynthesisThresholds.overallNeutral), sorted ascending.
     let weakDimensions: [WellbeingDimension]
+    /// Number of meals logged today — used for the Physical dimension subtitle.
+    let mealCount: Int
 }
 
 /// Minimal data contract for ReflectView.

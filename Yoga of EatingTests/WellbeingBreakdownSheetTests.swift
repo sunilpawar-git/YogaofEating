@@ -97,7 +97,8 @@ final class WellbeingBreakdownSheetTests: XCTestCase {
                 dimensions: .neutral,
                 dominantDimension: .physicalLoad,
                 causalNarrative: "test",
-                weakDimensions: []
+                weakDimensions: [],
+                mealCount: 0
             )).displayStyle == .struct
         )
     }
@@ -107,13 +108,15 @@ final class WellbeingBreakdownSheetTests: XCTestCase {
             dimensions: .neutral,
             dominantDimension: .physicalLoad,
             causalNarrative: "test",
-            weakDimensions: [.emotionalTone]
+            weakDimensions: [.emotionalTone],
+            mealCount: 2
         )
         let b = WellbeingBreakdownSheetContract(
             dimensions: .neutral,
             dominantDimension: .physicalLoad,
             causalNarrative: "test",
-            weakDimensions: [.emotionalTone]
+            weakDimensions: [.emotionalTone],
+            mealCount: 2
         )
         XCTAssertEqual(a, b)
     }
