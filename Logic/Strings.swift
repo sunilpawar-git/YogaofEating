@@ -394,7 +394,6 @@ enum Strings {
         static let whyHeading = "Why did my smiley change?"
         static let done = "Done"
         static let overallLabel = "Overall"
-        static let weakDimensionPrefix = "Needs attention:"
         static let detectedSignalsLabel = "Detected tone:"
 
         enum DimensionSubtitle {
@@ -442,20 +441,20 @@ enum Strings {
             static let noData = "Start logging today to begin building your personal patterns."
 
             // Physical variants now include meal count (%d) and avg score (%d%)
-            static let physical_high_fmt = "%d meals at %d%% average — food quality is working in your favour."
-            static let physical_low_fmt = "%d meals at %d%% average — food quality is weighing on how you feel."
+            static let physical_high_fmt = "%d meals at %d%% average — what you're eating is lifting you up today."
+            static let physical_low_fmt = "%d meals at %d%% average — your body is letting you know it wants something different."
             static let physical_neutral_fmt = "%d meals at %d%% average — food quality is holding steady."
 
-            static let emotional_high = "A positive mood is carrying your day forward."
-            static let emotional_low = "Your emotional state is pulling on your energy today."
+            static let emotional_high = "The way you're feeling is brightening everything today."
+            static let emotional_low = "Your feelings are at the heart of today — give yourself some grace."
             static let emotional_neutral = "Your emotional state is balanced today."
 
             static let cognitive_high = "Good sleep is sharpening your clarity today."
-            static let cognitive_low = "Poor sleep is clouding your focus today."
+            static let cognitive_low = "Last night's rest is making today feel heavier — be gentle with yourself."
             static let cognitive_neutral = "Your sleep is having a balanced effect today."
 
             static let behavioral_high = "Following through on your intentions is building momentum."
-            static let behavioral_low = "Unmet intentions are creating drag on your day."
+            static let behavioral_low = "A few intentions slipped today — that's okay, tomorrow is a new page."
             static let behavioral_neutral = "Your follow-through is on track today."
         }
     }

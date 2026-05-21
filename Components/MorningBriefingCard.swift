@@ -42,7 +42,7 @@ struct MorningBriefingCard: View {
 
                 if !self.weakDimensions.isEmpty {
                     Text(
-                        Strings.WellbeingBreakdown.weakDimensionPrefix + " "
+                        Strings.WellbeingBreakdown.worthNurturing + " "
                             + self.weakDimensions.map(\.displayName).joined(separator: ", ")
                     )
                     .font(.caption2)

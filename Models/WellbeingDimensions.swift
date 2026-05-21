@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - WellbeingDimensions
 
-struct WellbeingDimensions: Codable, Equatable {
+struct WellbeingDimensions: Codable, Equatable, Hashable {
     let physicalLoad: Double
     let emotionalTone: Double
     let cognitiveClarity: Double
