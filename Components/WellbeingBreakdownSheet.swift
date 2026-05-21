@@ -49,7 +49,8 @@ struct WellbeingBreakdownSheet: View {
                 WellbeingDimensionBar(
                     dimension: dimension,
                     value: dimension.value(in: self.contract.dimensions),
-                    isDominant: dimension == self.contract.dominantDimension
+                    isDominant: dimension == self.contract.dominantDimension,
+                    mealCount: self.contract.mealCount
                 )
             }
         }
@@ -62,17 +63,25 @@ private struct WellbeingDimensionBar: View {
     let dimension: WellbeingDimension
     let value: Double
     let isDominant: Bool
+    let mealCount: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(self.dimension.displayName)
-                    .font(FontTheme.caption)
-                    .fontWeight(self.isDominant ? .semibold : .regular)
-                if self.isDominant {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(AppTheme.Dimension.color(for: self.dimension))
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text(self.dimension.displayName)
+                            .font(FontTheme.caption)
+                            .fontWeight(self.isDominant ? .semibold : .regular)
+                        if self.isDominant {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(AppTheme.Dimension.color(for: self.dimension))
+                        }
+                    }
+                    Text(self.dimension.subtitle(mealCount: self.mealCount))
+                        .font(FontTheme.caption)
+                        .foregroundStyle(AppTheme.textMuted)
                 }
                 Spacer()
                 Text("\(Int(self.value * 100))%")
@@ -104,7 +113,8 @@ private struct WellbeingDimensionBar: View {
             ),
             dominantDimension: .physicalLoad,
             causalNarrative: "Your food choices are driving today's state.",
-            weakDimensions: []
+            weakDimensions: [],
+            mealCount: 3
         )
     )
 }
@@ -117,7 +127,8 @@ private struct WellbeingDimensionBar: View {
             ),
             dominantDimension: .emotionalTone,
             causalNarrative: "Your mood and feelings are shaping today.",
-            weakDimensions: [.emotionalTone, .cognitiveClarity]
+            weakDimensions: [.emotionalTone, .cognitiveClarity],
+            mealCount: 1
         )
     )
 }

@@ -44,6 +44,22 @@ enum WellbeingDimension: String, Codable, CaseIterable, Equatable {
         }
     }
 
+    func subtitle(mealCount: Int) -> String {
+        switch self {
+        case .physicalLoad:
+            let noun = mealCount == 1
+                ? Strings.WellbeingBreakdown.DimensionSubtitle.physicalLoad_meal
+                : Strings.WellbeingBreakdown.DimensionSubtitle.physicalLoad_meals
+            return String(
+                format: Strings.WellbeingBreakdown.DimensionSubtitle.physicalLoad_fmt,
+                mealCount, noun
+            )
+        case .emotionalTone: return Strings.WellbeingBreakdown.DimensionSubtitle.emotionalTone
+        case .cognitiveClarity: return Strings.WellbeingBreakdown.DimensionSubtitle.cognitiveClarity
+        case .behavioralMomentum: return Strings.WellbeingBreakdown.DimensionSubtitle.behavioralMomentum
+        }
+    }
+
     func value(in dimensions: WellbeingDimensions) -> Double {
         switch self {
         case .physicalLoad: dimensions.physicalLoad
