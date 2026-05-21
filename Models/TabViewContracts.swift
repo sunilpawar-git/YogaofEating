@@ -29,14 +29,18 @@ struct HighlightViewContract: Equatable {
 
 /// Minimal data contract for the WellbeingBreakdownSheet.
 /// Contains only the synthesis output — no meals, no raw journal text.
-struct WellbeingBreakdownSheetContract: Equatable {
+struct WellbeingBreakdownSheetContract: Equatable, Hashable {
     let dimensions: WellbeingDimensions
     let dominantDimension: WellbeingDimension
     let causalNarrative: String
-    /// Up to 2 weakest dimensions (score < SynthesisThresholds.overallNeutral), sorted ascending.
+    /// Up to 2 weakest dimensions (score < SynthesisThresholds.weakDimension), sorted ascending.
     let weakDimensions: [WellbeingDimension]
     /// Number of meals logged today — used for the Physical dimension subtitle.
     let mealCount: Int
+    /// The current smiley mood — drives the coach header in WellbeingBreakdownSheet.
+    let currentMood: SmileyMood
+    /// Weighted composite score from synthesis, range [0, 1] — drives the progress pill.
+    let overallScore: Double
 }
 
 /// Minimal data contract for ReflectView.

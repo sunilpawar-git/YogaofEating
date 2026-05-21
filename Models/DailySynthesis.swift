@@ -11,12 +11,27 @@ struct DailySynthesis: Equatable {
     let dominantDimension: WellbeingDimension
     let causalNarrative: String
 
-    /// Composite score that only averages dimensions with real data.
+    /// Weighted composite score — applies `SynthesisWeights` to only the dimensions with
+    /// real data. Matches the calculation used by `DailySynthesisEngine` to determine
+    /// `smileySuggestion.mood`, so mood and score are always semantically consistent.
     /// Returns 0.5 when no data is available for any dimension.
     var overall: Double {
-        let scores = self.dataCompleteness.map { $0.value(in: self.dimensions) }
-        guard !scores.isEmpty else { return 0.5 }
-        return scores.reduce(0, +) / Double(scores.count)
+        var total = 0.0
+        var weight = 0.0
+        for dimension in self.dataCompleteness {
+            let score = dimension.value(in: self.dimensions)
+            switch dimension {
+            case .physicalLoad: total += score * SynthesisWeights.physicalLoad
+                weight += SynthesisWeights.physicalLoad
+            case .emotionalTone: total += score * SynthesisWeights.emotionalTone
+                weight += SynthesisWeights.emotionalTone
+            case .cognitiveClarity: total += score * SynthesisWeights.cognitiveClarity
+                weight += SynthesisWeights.cognitiveClarity
+            case .behavioralMomentum: total += score * SynthesisWeights.behavioralMomentum
+                weight += SynthesisWeights.behavioralMomentum
+            }
+        }
+        return weight > 0 ? total / weight : 0.5
     }
 
     /// Returns the raw score for a dimension, or nil if that dimension has no real data.

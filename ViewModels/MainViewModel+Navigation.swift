@@ -92,8 +92,8 @@ extension MainViewModel {
             yesterday: nil
         )
         let weakDims: [WellbeingDimension] = WellbeingDimension.allCases
-            .map { ($0, $0.value(in: synthesis.dimensions)) }
-            .filter { $0.1 < SynthesisThresholds.overallNeutral }
+            .map { dim in (dim, dim.value(in: synthesis.dimensions)) }
+            .filter { _, score in score < SynthesisThresholds.weakDimension }
             .sorted { $0.1 < $1.1 }
             .prefix(2)
             .map(\.0)
@@ -102,7 +102,9 @@ extension MainViewModel {
             dominantDimension: synthesis.dominantDimension,
             causalNarrative: synthesis.causalNarrative,
             weakDimensions: weakDims,
-            mealCount: self.meals.count
+            mealCount: self.meals.count,
+            currentMood: synthesis.smileySuggestion.mood,
+            overallScore: synthesis.overall
         )
     }
 

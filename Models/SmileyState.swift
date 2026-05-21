@@ -36,8 +36,8 @@ struct SmileyState: Codable, Equatable {
 }
 
 // Case names ARE the rawValues used in Codable and in the custom init?(rawValue:) below.
-// If you add a case here, add it to the extension below too.
-enum SmileyMood: String, Codable, Equatable {
+// If you add a case here, add it to the extensions below too.
+enum SmileyMood: String, Codable, Equatable, CaseIterable {
     case serene // 🙂  — overall > 0.65
     case neutral // 😐  — overall 0.45–0.65
     case thoughtful // 🤔  — overall 0.35–0.45 (synthesis-driven; mild carry-over signal)
@@ -57,6 +57,40 @@ extension SmileyMood {
         case "concerned": self = .concerned
         case "overwhelmed": self = .overwhelmed
         default: return nil
+        }
+    }
+}
+
+// MARK: - Display
+
+extension SmileyMood {
+    var emoji: String {
+        switch self {
+        case .serene: "🙂"
+        case .neutral: "😐"
+        case .thoughtful: "🤔"
+        case .concerned: "😟"
+        case .overwhelmed: "😮"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .serene: Strings.SmileyMood.serene
+        case .neutral: Strings.SmileyMood.neutral
+        case .thoughtful: Strings.SmileyMood.thoughtful
+        case .concerned: Strings.SmileyMood.concerned
+        case .overwhelmed: Strings.SmileyMood.overwhelmed
+        }
+    }
+
+    var tagline: String {
+        switch self {
+        case .serene: Strings.SmileyMood.sereneTagline
+        case .neutral: Strings.SmileyMood.neutralTagline
+        case .thoughtful: Strings.SmileyMood.thoughtfulTagline
+        case .concerned: Strings.SmileyMood.concernedTagline
+        case .overwhelmed: Strings.SmileyMood.overwhelmedTagline
         }
     }
 }
