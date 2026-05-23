@@ -32,8 +32,9 @@ final class WellbeingBreakdownSheetTests: XCTestCase {
 
     // MARK: - Contract Availability
 
-    func test_wellbeingBreakdownContract_isNilWhenNoMeals() {
-        XCTAssertNil(self.sut.wellbeingBreakdownContract)
+    func test_wellbeingBreakdownContract_isNotNilWhenNoMeals_viewingToday() {
+        // No meals but viewing today — contract is available (synthesis returns stubs)
+        XCTAssertNotNil(self.sut.wellbeingBreakdownContract)
     }
 
     func test_wellbeingBreakdownContract_isNotNilWithMealsToday() {
@@ -195,10 +196,10 @@ final class WellbeingBreakdownSheetTests: XCTestCase {
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 
-    func test_handleSmileyLongPress_noDataNoSheets() {
-        // No meals → no breakdown contract; no insight → no insight sheet
+    func test_handleSmileyLongPress_noMealsViewingToday_opensBreakdownSheet() {
+        // No meals but viewing today — breakdown sheet always opens
         self.sut.handleSmileyLongPress()
-        XCTAssertFalse(self.sut.showBreakdownSheet)
+        XCTAssertTrue(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 
