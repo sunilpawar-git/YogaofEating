@@ -38,14 +38,14 @@ final class HistoricalSyncService {
         snapshotsProvider: @escaping @MainActor () -> [DailySmileySnapshot],
         lastSyncDateProvider: @escaping @MainActor () -> Date?,
         onSyncCompleted: @escaping @MainActor (Date) -> Void,
-        retryDelayNanoseconds: UInt64 = TimingConstants.syncRetryDelayNanoseconds
+        retryDelayNanoseconds: UInt64? = nil
     ) {
         self.authService = authService
         self.syncService = syncService
         self.snapshotsProvider = snapshotsProvider
         self.lastSyncDateProvider = lastSyncDateProvider
         self.onSyncCompleted = onSyncCompleted
-        self.retryDelayNanoseconds = retryDelayNanoseconds
+        self.retryDelayNanoseconds = retryDelayNanoseconds ?? TimingConstants.syncRetryDelayNanoseconds
     }
 
     // MARK: - Restore
