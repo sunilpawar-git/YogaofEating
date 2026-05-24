@@ -27,12 +27,9 @@ class HealthKitService {
     /// Enable debug logging for sleep data processing
     var enableSleepLogging = true
 
-    /// Cache for sleep data queries to prevent redundant HealthKit lookups.
-    /// Key: normalized date (start of day), Value: (cached SleepData, timestamp)
-    private var sleepDataCache: [Date: (data: SleepData?, timestamp: Date)] = [:]
-
-    /// Cache expiration interval. Sleep data from the same date won't be re-queried within this window.
-    private let sleepCacheExpiration: TimeInterval = TimingConstants.sleepCacheDuration
+    /// Handles caching and in-flight query coalescing so concurrent callers never fire
+    /// more than one HealthKit round-trip for the same date.
+    let sleepCoalescer = HealthKitSleepCoalescer()
 
     private init() {
         if HKHealthStore.isHealthDataAvailable() {
@@ -150,7 +147,8 @@ class HealthKitService {
     // MARK: - Sleep Data
 
     /// Fetches sleep analysis data for a specific date (last night's sleep).
-    /// Results are cached for 5 minutes to avoid redundant HealthKit queries.
+    /// Results are cached for 5 minutes. Concurrent callers for the same date
+    /// share a single in-flight HealthKit query via `sleepCoalescer`.
     /// - Parameter date: The date to fetch sleep data for (defaults to today)
     /// - Returns: Sleep data including duration, time in bed, and quality score
     func fetchSleepData(for date: Date = Date()) async throws -> SleepData? {
@@ -159,34 +157,33 @@ class HealthKitService {
             return nil
         }
 
-        let calendar = Calendar.current
-        let normalizedDate = calendar.startOfDay(for: date)
-
-        // Check cache first
-        if let cached = self.sleepDataCache[normalizedDate] {
-            let timeSinceCached = Date().timeIntervalSince(cached.timestamp)
-            if timeSinceCached < self.sleepCacheExpiration {
-                if self.enableSleepLogging {
-                    healthKitLogger.debug(
-                        "Sleep data served from cache (age: \(Int(timeSinceCached), privacy: .public)s)"
-                    )
-                }
-                return cached.data
-            } else {
-                // Cache expired, remove it
-                self.sleepDataCache.removeValue(forKey: normalizedDate)
-            }
+        if self.enableSleepLogging, let age = self.sleepCoalescer.cacheAge(for: date) {
+            healthKitLogger.debug("Sleep data served from cache (age: \(Int(age), privacy: .public)s)")
         }
 
+        return try await self.sleepCoalescer.fetch(for: date) { [weak self] in
+            guard let self else { return nil }
+            return try await self.executeRawSleepQuery(
+                healthStore: healthStore,
+                sleepType: sleepType,
+                for: date
+            )
+        }
+    }
+
+    private func executeRawSleepQuery(
+        healthStore: HKHealthStore,
+        sleepType: HKCategoryType,
+        for date: Date
+    ) async throws -> SleepData? {
         let (windowStart, windowEnd) = Self.sleepQueryWindow(for: date)
 
         if self.enableSleepLogging {
             let formatter = DateFormatter()
             formatter.dateFormat = "MMM d, HH:mm"
-            healthKitLogger
-                .debug(
-                    "Sleep query window: \(formatter.string(from: windowStart), privacy: .public) to \(formatter.string(from: windowEnd), privacy: .public)"
-                )
+            healthKitLogger.debug(
+                "Sleep query window: \(formatter.string(from: windowStart), privacy: .public) to \(formatter.string(from: windowEnd), privacy: .public)"
+            )
         }
 
         let predicate = HKQuery.predicateForSamples(
@@ -217,13 +214,10 @@ class HealthKitService {
             if self.enableSleepLogging {
                 healthKitLogger.debug("No sleep samples found in window")
             }
-            self.sleepDataCache[normalizedDate] = (nil, Date())
             return nil
         }
 
-        let sleepData = self.processSamples(samples)
-        self.sleepDataCache[normalizedDate] = (sleepData, Date())
-        return sleepData
+        return self.processSamples(samples)
     }
 
     // MARK: - Private Helpers
@@ -323,7 +317,7 @@ class HealthKitService {
 
     /// Clears the sleep data cache. Useful for forcing a fresh query or app cleanup.
     func clearSleepCache() {
-        self.sleepDataCache.removeAll()
+        self.sleepCoalescer.clearCache()
         if self.enableSleepLogging {
             healthKitLogger.debug("Sleep data cache cleared")
         }
