@@ -251,6 +251,70 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertEqual(Calendar.current.component(.minute, from: vm2.morningBriefingTime), 55)
     }
 
+    // MARK: - Activity Level Persistence Tests (RED — activityLevel not yet on SettingsViewModel)
+
+    func test_activityLevel_defaultIsSedentary_onFreshInstall() {
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+
+        XCTAssertEqual(vm.activityLevel, .sedentary, "Fresh install must default to .sedentary")
+    }
+
+    func test_activityLevel_change_persistsToUserDefaults() {
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+
+        vm.activityLevel = .moderatelyActive
+
+        let stored = ud.integer(forKey: StorageKeys.userActivityLevel)
+        XCTAssertEqual(
+            stored,
+            ActivityLevel.moderatelyActive.rawValue,
+            "activityLevel change must persist rawValue to UserDefaults immediately"
+        )
+    }
+
+    func test_activityLevel_loadsFromUserDefaults_onInit() {
+        let ud = self.freshUserDefaults()
+        ud.set(ActivityLevel.veryActive.rawValue, forKey: StorageKeys.userActivityLevel)
+
+        let vm = self.makeVM(userDefaults: ud)
+
+        XCTAssertEqual(vm.activityLevel, .veryActive, "activityLevel must be restored from UserDefaults on init")
+    }
+
+    func test_activityLevel_invalidRawValue_inUserDefaults_defaultsSedentary() {
+        // Security: corrupt or tampered UserDefaults must not crash; fall back to safe default
+        let ud = self.freshUserDefaults()
+        ud.set(999, forKey: StorageKeys.userActivityLevel)
+
+        let vm = self.makeVM(userDefaults: ud)
+
+        XCTAssertEqual(vm.activityLevel, .sedentary, "Invalid stored rawValue must default to .sedentary")
+    }
+
+    func test_activityLevel_roundTrip_preservesAllCases() {
+        for level in ActivityLevel.allCases {
+            let ud = self.freshUserDefaults()
+            let vm1 = self.makeVM(userDefaults: ud)
+            vm1.activityLevel = level
+
+            let vm2 = self.makeVM(userDefaults: ud)
+            XCTAssertEqual(vm2.activityLevel, level, "Round-trip must preserve .\(level) through UserDefaults")
+        }
+    }
+
+    func test_activityLevel_settingSedentaryAfterHigher_persistsSedentary() {
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+        vm.activityLevel = .veryActive
+
+        vm.activityLevel = .sedentary
+
+        XCTAssertEqual(vm.activityLevel, .sedentary)
+        XCTAssertEqual(ud.integer(forKey: StorageKeys.userActivityLevel), ActivityLevel.sedentary.rawValue)
+    }
+
     // MARK: - Helpers
 
     private static func makeTime(hour: Int, minute: Int) -> Date {

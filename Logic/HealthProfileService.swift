@@ -82,11 +82,6 @@ class HealthProfileService: HealthProfileServiceProtocol {
         static let sixtyfive = 65
     }
 
-    // Activity levels
-    private enum ActivityLevel {
-        static let sedentary: Double = 1.2
-    }
-
     // Unit conversion
     private enum UnitConversion {
         static let lbsToKg: Double = 0.453592
@@ -157,9 +152,7 @@ class HealthProfileService: HealthProfileServiceProtocol {
 
     // MARK: - TDEE Calculation
 
-    func calculateTDEE(bmr: Double, activityLevel: Double = ActivityLevel.sedentary) -> Double {
-        // Default to sedentary (1.2) activity multiplier
-        // Future enhancement: Make this user-configurable
+    func calculateTDEE(bmr: Double, activityLevel: Double = ActivityLevel.sedentary.multiplier) -> Double {
         bmr * activityLevel
     }
 
@@ -228,11 +221,14 @@ class HealthProfileService: HealthProfileServiceProtocol {
         let gender = Gender(rawValue: genderRaw) ?? .unspecified
         let unitSystem = UnitSystem(rawValue: unitSystemRaw) ?? .metric
 
+        let activityLevelRaw = self.userDefaults.integer(forKey: StorageKeys.userActivityLevel)
+        let activityLevel = ActivityLevel(rawValue: activityLevelRaw) ?? .sedentary
+
         // Calculate all metrics
         let bmi = self.calculateBMI(height: height, weight: weight, unitSystem: unitSystem)
         let bmiCategory = self.getBMICategory(bmi: bmi)
         let bmr = self.calculateBMR(weight: weight, height: height, age: age, gender: gender, unitSystem: unitSystem)
-        let tdee = self.calculateTDEE(bmr: bmr)
+        let tdee = self.calculateTDEE(bmr: bmr, activityLevel: activityLevel.multiplier)
         let riskLevel = self.getHealthRiskLevel(bmi: bmi, age: age)
         let sensitivity = self.getSensitivityMultiplier(bmi: bmi, age: age)
 
@@ -243,7 +239,8 @@ class HealthProfileService: HealthProfileServiceProtocol {
             bmr: bmr,
             tdee: tdee,
             riskLevel: riskLevel,
-            sensitivityMultiplier: sensitivity
+            sensitivityMultiplier: sensitivity,
+            activityLevel: activityLevel
         )
     }
 }

@@ -33,7 +33,8 @@
       "Bash(sed -i '' 's/updateEnrichedInsight\\(/updateInsight\\(/g' 'Yoga of EatingTests/InsightLifecycleIntegrationTests.swift' 'Yoga of EatingTests/InsightLifecycleTests.swift')",
       "Bash(sed -n '15,30p' \"Yoga of EatingTests/ConcurrentAnalysisTests.swift\")",
       "Bash(sed -n '160,170p' \"Yoga of EatingTests/WeeklyInsightTests.swift\")",
-      "Bash(swiftformat \"Yoga of Eating\" --config .swiftformat)"
+      "Bash(swiftformat \"Yoga of Eating\" --config .swiftformat)",
+      "WebSearch"
     ]
   }
 }

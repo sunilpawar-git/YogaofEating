@@ -127,4 +127,43 @@ final class SettingsUserProfileStringsTests: XCTestCase {
             "All health calculations are done on your device. Data never leaves your phone except for encrypted cloud sync."
         )
     }
+
+    // MARK: - Activity Level section (RED — strings added in Phase 1, SSOT coverage added here)
+
+    func test_activityLevelPickerLabel_exists() {
+        XCTAssertFalse(Strings.Settings.activityLevelPickerLabel.isEmpty)
+    }
+
+    func test_activityLevelSedentary_exists() {
+        XCTAssertFalse(Strings.Settings.activityLevelSedentary.isEmpty)
+    }
+
+    func test_activityLevelLightlyActive_exists() {
+        XCTAssertFalse(Strings.Settings.activityLevelLightlyActive.isEmpty)
+    }
+
+    func test_activityLevelModeratelyActive_exists() {
+        XCTAssertFalse(Strings.Settings.activityLevelModeratelyActive.isEmpty)
+    }
+
+    func test_activityLevelVeryActive_exists() {
+        XCTAssertFalse(Strings.Settings.activityLevelVeryActive.isEmpty)
+    }
+
+    func test_activityLevelFooter_exists() {
+        XCTAssertFalse(Strings.Settings.activityLevelFooter.isEmpty)
+    }
+
+    func test_activityLevel_displayNames_matchStringsSettings() {
+        // Verify ActivityLevel.displayName delegates to Strings.Settings (SSOT contract)
+        XCTAssertEqual(ActivityLevel.sedentary.displayName, Strings.Settings.activityLevelSedentary)
+        XCTAssertEqual(ActivityLevel.lightlyActive.displayName, Strings.Settings.activityLevelLightlyActive)
+        XCTAssertEqual(ActivityLevel.moderatelyActive.displayName, Strings.Settings.activityLevelModeratelyActive)
+        XCTAssertEqual(ActivityLevel.veryActive.displayName, Strings.Settings.activityLevelVeryActive)
+    }
+
+    func test_activityLevel_displayNames_areDistinct() {
+        let names = ActivityLevel.allCases.map(\.displayName)
+        XCTAssertEqual(Set(names).count, names.count, "Every ActivityLevel must have a unique display name")
+    }
 }

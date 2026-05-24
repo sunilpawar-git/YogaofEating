@@ -46,6 +46,13 @@ class SettingsViewModel: ObservableObject {
         didSet { self.userDefaults.set(self.unitSystem, forKey: StorageKeys.unitSystem) }
     }
 
+    @Published var activityLevel: ActivityLevel {
+        didSet {
+            self.userDefaults.set(self.activityLevel.rawValue, forKey: StorageKeys.userActivityLevel)
+            NotificationCenter.default.post(name: AppNotification.healthProfileDidChange, object: nil)
+        }
+    }
+
     // MARK: - Notifications Published Properties
 
     @Published var isMorningNudgeEnabled: Bool {
@@ -187,6 +194,8 @@ class SettingsViewModel: ObservableObject {
         self.age = userDefaults.string(forKey: StorageKeys.userAge) ?? "30"
         self.theme = userDefaults.integer(forKey: StorageKeys.appTheme)
         self.unitSystem = userDefaults.integer(forKey: StorageKeys.unitSystem)
+        let storedActivityRaw = userDefaults.integer(forKey: StorageKeys.userActivityLevel)
+        self.activityLevel = ActivityLevel(rawValue: storedActivityRaw) ?? .sedentary
         // morningBriefingTime must be set BEFORE isMorningNudgeEnabled so that
         // handleMorningNudgeChange (triggered by isMorningNudgeEnabled.didSet) can
         // safely reference self.morningBriefingTime.

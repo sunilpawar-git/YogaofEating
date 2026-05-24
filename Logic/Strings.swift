@@ -420,6 +420,16 @@ enum Strings {
         static let privacySectionHeader = "Privacy"
         static let privacyFooter = "All health calculations are done on your device. Data never leaves your phone except for encrypted cloud sync."
 
+        // MARK: - Activity Level picker
+
+        static let activityLevelPickerLabel = "Activity Level"
+        static let activityLevelSedentary = "Sedentary"
+        static let activityLevelLightlyActive = "Lightly Active"
+        static let activityLevelModeratelyActive = "Moderately Active"
+        static let activityLevelVeryActive = "Very Active"
+        /// Footer explaining why activity level matters for the calorie goal.
+        static let activityLevelFooter = "Higher activity means a higher daily calorie goal. Exercise calories are added on top."
+
         // MARK: - Sign Out
 
         static let signOutTitle = "Sign Out"

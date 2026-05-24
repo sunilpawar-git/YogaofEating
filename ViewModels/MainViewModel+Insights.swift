@@ -59,9 +59,9 @@ extension MainViewModel {
     }
 
     func handleSmileyLongPress() {
-        guard self.wellbeingBreakdownContract != nil || self.hasInsightAvailable else { return }
+        guard self.isViewingToday || self.wellbeingBreakdownContract != nil || self.hasInsightAvailable else { return }
         SensoryService.shared.playNudge(style: .heavy)
-        if self.wellbeingBreakdownContract != nil {
+        if self.isViewingToday || self.wellbeingBreakdownContract != nil {
             self.showBreakdownSheet = true
         } else {
             self.showInsightSheet = true

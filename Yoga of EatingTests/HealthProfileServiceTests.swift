@@ -480,5 +480,126 @@
                 XCTAssertEqual(profile.bmi, 23.1, accuracy: 0.1)
             }
         }
+
+        // MARK: - ActivityLevel Multiplier Tests (RED — ActivityLevel not yet defined)
+
+        func test_activityLevel_sedentary_hasCorrectMultiplier() {
+            XCTAssertEqual(ActivityLevel.sedentary.multiplier, 1.2, accuracy: 0.001)
+        }
+
+        func test_activityLevel_lightlyActive_hasCorrectMultiplier() {
+            XCTAssertEqual(ActivityLevel.lightlyActive.multiplier, 1.375, accuracy: 0.001)
+        }
+
+        func test_activityLevel_moderatelyActive_hasCorrectMultiplier() {
+            XCTAssertEqual(ActivityLevel.moderatelyActive.multiplier, 1.55, accuracy: 0.001)
+        }
+
+        func test_activityLevel_veryActive_hasCorrectMultiplier() {
+            XCTAssertEqual(ActivityLevel.veryActive.multiplier, 1.725, accuracy: 0.001)
+        }
+
+        func test_activityLevel_multipliers_areStrictlyIncreasing() {
+            // Higher activity level = higher calorie need
+            let ordered = ActivityLevel.allCases.sorted { $0.rawValue < $1.rawValue }
+            for index in 1..<ordered.count {
+                XCTAssertGreaterThan(
+                    ordered[index].multiplier,
+                    ordered[index - 1].multiplier,
+                    "\(ordered[index]) multiplier must exceed \(ordered[index - 1]) multiplier"
+                )
+            }
+        }
+
+        func test_activityLevel_allCases_multipliersInScientificRange() {
+            for level in ActivityLevel.allCases {
+                XCTAssertGreaterThanOrEqual(level.multiplier, 1.0, "\(level) multiplier below minimum")
+                XCTAssertLessThanOrEqual(level.multiplier, 2.0, "\(level) multiplier above maximum")
+            }
+        }
+
+        // MARK: - getUserHealthProfile with Activity Level Tests (RED)
+
+        func test_getUserHealthProfile_noActivityLevelStored_defaultsSedentary() {
+            // Given: Fresh install — no activity level in UserDefaults
+            self.mockUserDefaults.set("173", forKey: StorageKeys.userHeight)
+            self.mockUserDefaults.set("71", forKey: StorageKeys.userWeight)
+            self.mockUserDefaults.set("41", forKey: StorageKeys.userAge)
+            self.mockUserDefaults.set(1, forKey: StorageKeys.userGender)
+            self.mockUserDefaults.set(0, forKey: StorageKeys.unitSystem)
+            // intentionally NOT setting StorageKeys.userActivityLevel
+
+            let profile = self.sut.getUserHealthProfile()
+
+            XCTAssertNotNil(profile)
+            XCTAssertEqual(profile?.activityLevel, .sedentary)
+        }
+
+        func test_getUserHealthProfile_lightlyActive_tdeeUsesMul1375() {
+            self.seedProfileDefaults(activityLevelRaw: ActivityLevel.lightlyActive.rawValue)
+
+            guard let profile = self.sut.getUserHealthProfile() else {
+                return XCTFail("Expected non-nil profile")
+            }
+
+            XCTAssertEqual(profile.activityLevel, .lightlyActive)
+            XCTAssertEqual(profile.tdee, profile.bmr * 1.375, accuracy: 0.01)
+        }
+
+        func test_getUserHealthProfile_moderatelyActive_tdeeUsesMul155() {
+            self.seedProfileDefaults(activityLevelRaw: ActivityLevel.moderatelyActive.rawValue)
+
+            guard let profile = self.sut.getUserHealthProfile() else {
+                return XCTFail("Expected non-nil profile")
+            }
+
+            XCTAssertEqual(profile.activityLevel, .moderatelyActive)
+            XCTAssertEqual(profile.tdee, profile.bmr * 1.55, accuracy: 0.01)
+        }
+
+        func test_getUserHealthProfile_veryActive_tdeeUsesMul1725() {
+            self.seedProfileDefaults(activityLevelRaw: ActivityLevel.veryActive.rawValue)
+
+            guard let profile = self.sut.getUserHealthProfile() else {
+                return XCTFail("Expected non-nil profile")
+            }
+
+            XCTAssertEqual(profile.activityLevel, .veryActive)
+            XCTAssertEqual(profile.tdee, profile.bmr * 1.725, accuracy: 0.01)
+        }
+
+        func test_getUserHealthProfile_invalidActivityLevelRaw_defaultsSedentary() {
+            // Given: Corrupt UserDefaults value (data migration / attack scenario)
+            self.seedProfileDefaults(activityLevelRaw: 999)
+
+            guard let profile = self.sut.getUserHealthProfile() else {
+                return XCTFail("Expected non-nil profile")
+            }
+
+            XCTAssertEqual(profile.activityLevel, .sedentary)
+            XCTAssertEqual(profile.tdee, profile.bmr * 1.2, accuracy: 0.01)
+        }
+
+        func test_getUserHealthProfile_activityLevelPreservesExistingTDEETest() {
+            // Regression: sedentary TDEE must still equal BMR × 1.2 (existing contract)
+            self.seedProfileDefaults(activityLevelRaw: ActivityLevel.sedentary.rawValue)
+
+            guard let profile = self.sut.getUserHealthProfile() else {
+                return XCTFail("Expected non-nil profile")
+            }
+
+            XCTAssertEqual(profile.tdee, profile.bmr * 1.2, accuracy: 0.01)
+        }
+
+        // MARK: - Private Helpers
+
+        private func seedProfileDefaults(activityLevelRaw: Int) {
+            self.mockUserDefaults.set("173", forKey: StorageKeys.userHeight)
+            self.mockUserDefaults.set("71", forKey: StorageKeys.userWeight)
+            self.mockUserDefaults.set("41", forKey: StorageKeys.userAge)
+            self.mockUserDefaults.set(1, forKey: StorageKeys.userGender)
+            self.mockUserDefaults.set(0, forKey: StorageKeys.unitSystem)
+            self.mockUserDefaults.set(activityLevelRaw, forKey: StorageKeys.userActivityLevel)
+        }
     }
 #endif
