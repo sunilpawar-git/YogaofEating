@@ -24,8 +24,8 @@ struct HeatmapLayoutConfiguration {
     /// Maximum cell size — reduced for breathing room; iPhones are formula-limited (~32–36pt)
     let maximumCellSize: CGFloat = 34
 
-    /// Spacing between circles (3pt provides visual breathing room)
-    let spacing: CGFloat = 3
+    /// Spacing between circles (4pt provides visual breathing room)
+    let spacing: CGFloat = 4
 
     /// Number of days in a week (columns in portrait, rows in landscape)
     private let daysPerWeek: Int = 7

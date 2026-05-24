@@ -83,6 +83,7 @@ extension MainViewModel {
     /// Returns nil when viewing a past day.
     var wellbeingBreakdownContract: WellbeingBreakdownSheetContract? {
         guard self.isViewingToday else { return nil }
+        guard !self.meals.isEmpty else { return nil }
         let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
         let synthesis = self.synthesisEngine.synthesize(
             meals: self.meals,
