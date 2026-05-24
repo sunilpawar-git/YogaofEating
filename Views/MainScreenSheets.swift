@@ -12,6 +12,7 @@ private struct MainScreenSheetsModifier: ViewModifier {
         content
             .sheet(isPresented: self.$showingSettings) {
                 SettingsView(mainViewModel: self.viewModel)
+                    .environmentObject(self.viewModel)
                     .environmentObject(AuthService.shared)
             }
             .sheet(isPresented: self.$viewModel.showInsightSheet) {

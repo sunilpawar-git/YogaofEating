@@ -4,6 +4,17 @@ import OSLog
 
 private let healthKitLogger = Logger(subsystem: "com.yogaofeating", category: "HealthKit")
 
+/// Protocol for reading body metrics from HealthKit.
+/// Enables injection of a test double in place of `HealthKitService.shared`.
+@MainActor
+protocol HealthKitBodyMetricsProviding {
+    func requestAuthorization() async throws -> Bool
+    func fetchLatestWeight(unit: HKUnit) async throws -> Double?
+    func fetchLatestHeight(unit: HKUnit) async throws -> Double?
+    func fetchAge() throws -> Int?
+    func fetchGender() throws -> Int?
+}
+
 /// Service to handle HealthKit interactions for reading body metrics.
 /// `@MainActor` ensures all mutable state (sleepDataCache, enableSleepLogging) is accessed
 /// from a single actor, preventing data races from concurrent HealthKit callbacks.
@@ -331,3 +342,5 @@ enum HealthKitError: LocalizedError {
         }
     }
 }
+
+extension HealthKitService: HealthKitBodyMetricsProviding {}
