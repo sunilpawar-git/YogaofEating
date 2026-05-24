@@ -63,7 +63,7 @@ class AILogicService: AIAnalysisProvider {
     func analyzeMealQuality(description: String) async throws -> MealAnalysisResult {
         guard let functions = self.functions else {
             aiServiceLogger.warning("Firebase Functions not available — returning defaults")
-            return MealAnalysisResult(score: 0.5, mood: .neutral, sound: "tink", insight: nil, estimatedCalories: nil)
+            return .fallback()
         }
 
         aiServiceLogger.debug("Calling Firebase Cloud Function 'analyzeMeal'")
@@ -94,18 +94,54 @@ class AILogicService: AIAnalysisProvider {
         let moodString = data["mood"] as? String ?? "neutral"
         let sound = data["sound"] as? String ?? "tink"
         let insight = data["insight"] as? String
-        // Use NSNumber bridge: handles both Int- and Double-backed NSNumber
-        // (Math.round in JS always returns an integer, but JSONSerialization may decode
-        // it as a Double-backed NSNumber on some Firebase SDK versions).
-        let estimatedCalories = (data["estimatedCalories"] as? NSNumber)?.intValue
         let mood = SmileyMood(rawValue: moodString) ?? .neutral
+
+        // Parse macros; clamp to physiological maximums and log when clamped.
+        let protein = (data["protein"] as? NSNumber).map { Self.clampMacro(
+            $0.intValue,
+            max: ValidationLimits.maxProteinPerMeal,
+            name: "protein"
+        ) }
+        let carbs = (data["carbs"] as? NSNumber).map { Self.clampMacro(
+            $0.intValue,
+            max: ValidationLimits.maxCarbsPerMeal,
+            name: "carbs"
+        ) }
+        let fat = (data["fat"] as? NSNumber).map { Self.clampMacro(
+            $0.intValue,
+            max: ValidationLimits.maxFatPerMeal,
+            name: "fat"
+        ) }
+
+        // Derive calories from macros when all three are present; fall back to Firebase direct value.
+        let macroCalories: Int? = if let p = protein, let c = carbs, let f = fat {
+            p * ValidationLimits.caloriesPerGramProtein
+                + c * ValidationLimits.caloriesPerGramCarbs
+                + f * ValidationLimits.caloriesPerGramFat
+        } else {
+            nil
+        }
+        let estimatedCalories = macroCalories ?? (data["estimatedCalories"] as? NSNumber)?.intValue
+
         return MealAnalysisResult(
             score: score,
             mood: mood,
             sound: sound,
             insight: insight,
-            estimatedCalories: estimatedCalories
+            estimatedCalories: estimatedCalories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat
         )
+    }
+
+    private static func clampMacro(_ value: Int, max maxValue: Int, name: String) -> Int {
+        guard value > maxValue else { return value }
+        aiServiceLogger
+            .warning(
+                "Macro '\(name, privacy: .public)' value \(value, privacy: .public) exceeds cap \(maxValue, privacy: .public) — clamping"
+            )
+        return maxValue
     }
 }
 

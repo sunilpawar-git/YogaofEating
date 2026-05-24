@@ -137,7 +137,8 @@ final class InsightLifecycleService: InsightLifecycling {
                       let obs = raw["observation"] as? String,
                       let conf = raw["confidence"] as? Double,
                       let cat = CorrelationCategory(rawValue: catStr) else { return nil }
-                return CorrelationCard(category: cat, observation: obs, confidence: conf)
+                let refs = raw["dataReferences"] as? [String]
+                return CorrelationCard(category: cat, observation: obs, confidence: conf, dataReferences: refs)
             }
 
             let nudge = ActionableNudge(

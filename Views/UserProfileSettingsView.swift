@@ -14,7 +14,7 @@ struct UserProfileSettingsView: View {
             }
             self.privacySection
         }
-        .navigationTitle("Profile & Health")
+        .navigationTitle(Strings.Settings.profileAndHealthTitle)
         #if canImport(UIKit)
             .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -30,91 +30,107 @@ struct UserProfileSettingsView: View {
             self.unitPicker
             self.heightRow
             self.weightRow
+            self.activityLevelPicker
         } header: {
-            Text("Personal Details")
+            Text(Strings.Settings.personalDetailsSectionHeader)
         } footer: {
-            Text("This information is used to calculate your health insights and personalize feedback.")
-                .font(.caption)
+            Text(Strings.Settings.personalDetailsFooter)
+                .font(FontTheme.caption)
         }
     }
 
     private var nameRow: some View {
         HStack {
-            Text("Name")
+            Text(Strings.Settings.nameLabel)
             Spacer()
-            TextField("Name", text: self.$viewModel.name)
+            TextField(Strings.Settings.nameLabel, text: self.$viewModel.name)
                 .multilineTextAlignment(.trailing)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.textSecondary)
         }
     }
 
     private var genderPicker: some View {
-        Picker("Gender", selection: self.$viewModel.gender) {
-            Text("Unspecified").tag(0)
-            Text("Male").tag(1)
-            Text("Female").tag(2)
-            Text("Other").tag(3)
+        Picker(Strings.Settings.genderPickerLabel, selection: self.$viewModel.gender) {
+            Text(Strings.Settings.genderUnspecified).tag(0)
+            Text(Strings.Settings.genderMale).tag(1)
+            Text(Strings.Settings.genderFemale).tag(2)
+            Text(Strings.Settings.genderOther).tag(3)
         }
     }
 
     private var ageRow: some View {
         HStack {
-            Text("Age")
+            Text(Strings.Settings.ageLabel)
             Spacer()
-            TextField("Age", text: self.$viewModel.age)
+            TextField(Strings.Settings.ageLabel, text: self.$viewModel.age)
             #if canImport(UIKit)
                 .keyboardType(.numberPad)
             #endif
                 .multilineTextAlignment(.trailing)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.textSecondary)
         }
     }
 
     private var unitPicker: some View {
-        Picker("Unit System", selection: self.$viewModel.unitSystem) {
-            Text("Metric").tag(0)
-            Text("Imperial").tag(1)
+        Picker(Strings.Settings.unitSystemPickerLabel, selection: self.$viewModel.unitSystem) {
+            Text(Strings.Settings.unitMetric).tag(0)
+            Text(Strings.Settings.unitImperial).tag(1)
         }
     }
 
     private var heightRow: some View {
-        HStack {
-            Text(self.viewModel.unitSystem == 0 ? "Height (cm)" : "Height (ft/in)")
+        let label = self.viewModel.unitSystem == 0
+            ? Strings.Settings.heightLabelMetric
+            : Strings.Settings.heightLabelImperial
+        return HStack {
+            Text(label)
             Spacer()
-            TextField("Height", text: self.$viewModel.height)
+            TextField(Strings.Settings.heightPlaceholder, text: self.$viewModel.height)
             #if canImport(UIKit)
                 .keyboardType(.numbersAndPunctuation)
             #endif
                 .multilineTextAlignment(.trailing)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.textSecondary)
         }
     }
 
     private var weightRow: some View {
-        HStack {
-            Text(self.viewModel.unitSystem == 0 ? "Weight (kg)" : "Weight (lbs)")
+        let label = self.viewModel.unitSystem == 0
+            ? Strings.Settings.weightLabelMetric
+            : Strings.Settings.weightLabelImperial
+        return HStack {
+            Text(label)
             Spacer()
-            TextField("Weight", text: self.$viewModel.weight)
+            TextField(Strings.Settings.weightPlaceholder, text: self.$viewModel.weight)
             #if canImport(UIKit)
                 .keyboardType(.decimalPad)
             #endif
                 .multilineTextAlignment(.trailing)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppTheme.textSecondary)
+        }
+    }
+
+    private var activityLevelPicker: some View {
+        Picker(Strings.Settings.activityLevelPickerLabel, selection: self.$viewModel.activityLevel) {
+            ForEach(ActivityLevel.allCases, id: \.self) { level in
+                Text(level.displayName).tag(level)
+            }
         }
     }
 
     // MARK: - Health Insights Section
 
     private var healthInsightsSection: some View {
-        Section("Health Insights") {
+        Section(Strings.Settings.healthInsightsSectionHeader) {
             if let profile = self.mainViewModel.healthProfileService.getUserHealthProfile() {
-                LabeledContent("BMI", value: String(format: "%.1f", profile.bmi))
-                LabeledContent("Category", value: profile.bmiCategory.rawValue)
-                LabeledContent("Daily Energy", value: "\(Int(profile.tdee)) cal")
-                LabeledContent("Risk Level", value: profile.riskLevel.rawValue)
+                LabeledContent(Strings.Settings.bmiLabel, value: String(format: "%.1f", profile.bmi))
+                LabeledContent(Strings.Settings.bmiCategoryLabel, value: profile.bmiCategory.rawValue)
+                LabeledContent(Strings.Settings.dailyEnergyLabel, value: "\(Int(profile.tdee)) cal")
+                LabeledContent(Strings.Settings.activityLevelPickerLabel, value: profile.activityLevel.displayName)
+                LabeledContent(Strings.Settings.riskLevelLabel, value: profile.riskLevel.rawValue)
             } else {
-                Text("Complete your personal details above to see health insights")
-                    .font(.caption)
+                Text(Strings.Settings.healthInsightsEmptyState)
+                    .font(FontTheme.caption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -124,16 +140,14 @@ struct UserProfileSettingsView: View {
 
     private var privacySection: some View {
         Section {
-            Toggle("Show Health Insights", isOn: self.$viewModel.showHealthInsights)
+            Toggle(Strings.Settings.showHealthInsightsToggle, isOn: self.$viewModel.showHealthInsights)
                 .tint(.green)
                 .accessibilityIdentifier("show-health-insights-toggle")
         } header: {
-            Text("Privacy")
+            Text(Strings.Settings.privacySectionHeader)
         } footer: {
-            Text(
-                "All health calculations are done on your device. Data never leaves your phone except for encrypted cloud sync."
-            )
-            .font(.caption)
+            Text(Strings.Settings.privacyFooter)
+                .font(FontTheme.caption)
         }
     }
 }

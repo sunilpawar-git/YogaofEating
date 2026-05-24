@@ -100,12 +100,93 @@
                 "Meal reminder should NOT be scheduled when explicitly disabled"
             )
         }
+
+        // MARK: - TDD: scheduleMorningNudge(at:)
+
+        func test_scheduleMorningNudge_withCustomTime_usesCorrectHour() {
+            // Given
+            let time = Self.makeTime(hour: 9, minute: 15)
+
+            // When
+            self.sut.scheduleMorningNudge(at: time)
+
+            // Then
+            let trigger = self.mockCenter.requests.first?.trigger as? UNCalendarNotificationTrigger
+            XCTAssertEqual(trigger?.dateComponents.hour, 9)
+        }
+
+        func test_scheduleMorningNudge_withCustomTime_usesCorrectMinute() {
+            // Given
+            let time = Self.makeTime(hour: 9, minute: 15)
+
+            // When
+            self.sut.scheduleMorningNudge(at: time)
+
+            // Then
+            let trigger = self.mockCenter.requests.first?.trigger as? UNCalendarNotificationTrigger
+            XCTAssertEqual(trigger?.dateComponents.minute, 15)
+        }
+
+        func test_scheduleMorningNudge_withCustomTime_setsRepeating() {
+            // When
+            self.sut.scheduleMorningNudge(at: Self.makeTime(hour: 7, minute: 30))
+
+            // Then
+            let trigger = self.mockCenter.requests.first?.trigger as? UNCalendarNotificationTrigger
+            XCTAssertEqual(trigger?.repeats, true)
+        }
+
+        func test_scheduleMorningNudge_withCustomTime_usesMorningNudgeIdentifier() {
+            // When
+            self.sut.scheduleMorningNudge(at: Self.makeTime(hour: 7, minute: 30))
+
+            // Then
+            XCTAssertEqual(self.mockCenter.requests.first?.identifier, "morning_nudge")
+        }
+
+        // MARK: - TDD: cancelMorningNudge uses injected center
+
+        func test_cancelMorningNudge_callsRemoveOnInjectedCenter() {
+            // When
+            self.sut.cancelMorningNudge()
+
+            // Then: must go through self.center, not UNUserNotificationCenter.current()
+            XCTAssertTrue(
+                self.mockCenter.removedIdentifiers.contains("morning_nudge"),
+                "cancelMorningNudge must route through the injected center"
+            )
+        }
+
+        func test_cancelMealReminders_callsRemoveOnInjectedCenter() {
+            // When
+            self.sut.cancelMealReminders()
+
+            // Then
+            XCTAssertTrue(
+                self.mockCenter.removedIdentifiers.contains("meal_reminder_Breakfast"),
+                "cancelMealReminders must route through the injected center"
+            )
+            XCTAssertTrue(self.mockCenter.removedIdentifiers.contains("meal_reminder_Lunch"))
+            XCTAssertTrue(self.mockCenter.removedIdentifiers.contains("meal_reminder_Dinner"))
+        }
+
+        // MARK: - Helpers
+
+        private static func makeTime(hour: Int, minute: Int) -> Date {
+            var components = DateComponents()
+            components.hour = hour
+            components.minute = minute
+            return Calendar.current.date(from: components) ?? Date()
+        }
     }
 
     // Mock for UNUserNotificationCenter
     @MainActor
     final class MockNotificationCenter: NotificationCenterProtocol {
         var requests: [UNNotificationRequest] = []
+        /// Identifiers passed to removePendingNotificationRequests(withIdentifiers:).
+        /// Used to verify cancellation routes through the injected center.
+        var removedIdentifiers: [String] = []
 
         func add(_ request: UNNotificationRequest, withCompletionHandler completionHandler: ((Error?) -> Void)?) {
             self.requests.append(request)
@@ -121,6 +202,11 @@
 
         func removeAllPendingNotificationRequests() {
             self.requests.removeAll()
+        }
+
+        func removePendingNotificationRequests(withIdentifiers identifiers: [String]) {
+            self.removedIdentifiers.append(contentsOf: identifiers)
+            self.requests.removeAll { identifiers.contains($0.identifier) }
         }
     }
 

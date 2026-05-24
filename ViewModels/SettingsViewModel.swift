@@ -46,6 +46,13 @@ class SettingsViewModel: ObservableObject {
         didSet { self.userDefaults.set(self.unitSystem, forKey: StorageKeys.unitSystem) }
     }
 
+    @Published var activityLevel: ActivityLevel {
+        didSet {
+            self.userDefaults.set(self.activityLevel.rawValue, forKey: StorageKeys.userActivityLevel)
+            NotificationCenter.default.post(name: AppNotification.healthProfileDidChange, object: nil)
+        }
+    }
+
     // MARK: - Notifications Published Properties
 
     @Published var isMorningNudgeEnabled: Bool {
@@ -55,13 +62,29 @@ class SettingsViewModel: ObservableObject {
         }
     }
 
+    /// User-configured time for the morning briefing notification.
+    /// Stored as a `TimeInterval` in UserDefaults. Hour and minute components are used;
+    /// the date portion is ignored when scheduling.
+    @Published var morningBriefingTime: Date {
+        didSet {
+            self.userDefaults.set(
+                self.morningBriefingTime.timeIntervalSinceReferenceDate,
+                forKey: StorageKeys.morningBriefingTime
+            )
+            // Guard: do not schedule during init (isFullyInitialized = false).
+            // Post-init: reschedule only if the nudge is enabled.
+            guard self.isFullyInitialized, self.isMorningNudgeEnabled else { return }
+            self.notificationScheduler.scheduleMorningNudge(at: self.morningBriefingTime)
+        }
+    }
+
     @Published var areMealRemindersEnabled: Bool {
         didSet {
             self.userDefaults.set(self.areMealRemindersEnabled, forKey: StorageKeys.mealRemindersEnabled)
             if self.areMealRemindersEnabled {
-                NotificationManager.shared.scheduleDefaultMealReminders()
+                self.notificationScheduler.scheduleDefaultMealReminders()
             } else {
-                NotificationManager.shared.cancelMealReminders()
+                self.notificationScheduler.cancelMealReminders()
             }
         }
     }
@@ -112,6 +135,8 @@ class SettingsViewModel: ObservableObject {
     let userDefaults: UserDefaults
     let historicalService: any HistoricalDataServiceProtocol
     let authService: any AuthServiceProtocol
+    let notificationScheduler: any NotificationScheduling
+    let healthKitProvider: any HealthKitBodyMetricsProviding
     var syncTask: Task<Void, Never>?
     var restoreTask: Task<Void, Never>?
     let networkMonitor: NWPathMonitor?
@@ -123,6 +148,10 @@ class SettingsViewModel: ObservableObject {
 
     let syncSuccessDisplayDuration = TimingConstants.syncSuccessDisplayNanoseconds
     let syncErrorDisplayDuration = TimingConstants.syncErrorDisplayNanoseconds
+
+    /// Prevents property observers from triggering notification-scheduling side effects
+    /// during two-phase initialization. Set to `true` at the end of `init`.
+    private var isFullyInitialized = false
 
     // MARK: - Sync Status Enum
 
@@ -147,11 +176,15 @@ class SettingsViewModel: ObservableObject {
     init(
         historicalService: any HistoricalDataServiceProtocol,
         authService: (any AuthServiceProtocol)? = nil,
-        userDefaults: UserDefaults = .standard
+        userDefaults: UserDefaults = .standard,
+        notificationScheduler: (any NotificationScheduling)? = nil,
+        healthKitProvider: (any HealthKitBodyMetricsProviding)? = nil
     ) {
         self.userDefaults = userDefaults
         self.historicalService = historicalService
         self.authService = authService ?? AuthService.shared
+        self.notificationScheduler = notificationScheduler ?? NotificationManager.shared
+        self.healthKitProvider = healthKitProvider ?? HealthKitService.shared
 
         // Load initial values from UserDefaults
         self.name = userDefaults.string(forKey: StorageKeys.userName) ?? "User"
@@ -161,6 +194,20 @@ class SettingsViewModel: ObservableObject {
         self.age = userDefaults.string(forKey: StorageKeys.userAge) ?? "30"
         self.theme = userDefaults.integer(forKey: StorageKeys.appTheme)
         self.unitSystem = userDefaults.integer(forKey: StorageKeys.unitSystem)
+        let storedActivityRaw = userDefaults.integer(forKey: StorageKeys.userActivityLevel)
+        self.activityLevel = ActivityLevel(rawValue: storedActivityRaw) ?? .sedentary
+        // morningBriefingTime must be set BEFORE isMorningNudgeEnabled so that
+        // handleMorningNudgeChange (triggered by isMorningNudgeEnabled.didSet) can
+        // safely reference self.morningBriefingTime.
+        let storedInterval = userDefaults.object(forKey: StorageKeys.morningBriefingTime) as? Double
+        if let interval = storedInterval {
+            self.morningBriefingTime = Date(timeIntervalSinceReferenceDate: interval)
+        } else {
+            var defaultComponents = DateComponents()
+            defaultComponents.hour = 8
+            defaultComponents.minute = 0
+            self.morningBriefingTime = Calendar.current.date(from: defaultComponents) ?? Date()
+        }
         self.isMorningNudgeEnabled = userDefaults.object(forKey: StorageKeys.morningNudgeEnabled) as? Bool ?? true
         self.areMealRemindersEnabled = userDefaults.object(forKey: StorageKeys.mealRemindersEnabled) as? Bool ?? true
         self.areHapticsEnabled = userDefaults.object(forKey: StorageKeys.hapticsEnabled) as? Bool ?? true
@@ -183,6 +230,7 @@ class SettingsViewModel: ObservableObject {
         #else
             self.networkMonitor = nil
         #endif
+        self.isFullyInitialized = true
     }
 
     deinit {
@@ -193,9 +241,9 @@ class SettingsViewModel: ObservableObject {
 
     func handleMorningNudgeChange(_ enabled: Bool) {
         if enabled {
-            NotificationManager.shared.scheduleMorningNudge()
+            self.notificationScheduler.scheduleMorningNudge(at: self.morningBriefingTime)
         } else {
-            NotificationManager.shared.cancelMorningNudge()
+            self.notificationScheduler.cancelMorningNudge()
         }
     }
 }

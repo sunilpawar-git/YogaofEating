@@ -1,6 +1,35 @@
 import Foundation
 import SwiftUI
 
+/// Physical activity level for TDEE calculation (Mifflin-St Jeor activity multipliers).
+/// Values are ordered from least to most active; rawValue enables UserDefaults persistence.
+enum ActivityLevel: Int, Codable, CaseIterable {
+    case sedentary = 0
+    case lightlyActive = 1
+    case moderatelyActive = 2
+    case veryActive = 3
+
+    /// Harris-Benedict / Mifflin-St Jeor activity multiplier for this level.
+    var multiplier: Double {
+        switch self {
+        case .sedentary: 1.2
+        case .lightlyActive: 1.375
+        case .moderatelyActive: 1.55
+        case .veryActive: 1.725
+        }
+    }
+
+    /// Localized display name sourced from `Strings.Settings` (SSOT — never hardcode in views).
+    var displayName: String {
+        switch self {
+        case .sedentary: Strings.Settings.activityLevelSedentary
+        case .lightlyActive: Strings.Settings.activityLevelLightlyActive
+        case .moderatelyActive: Strings.Settings.activityLevelModeratelyActive
+        case .veryActive: Strings.Settings.activityLevelVeryActive
+        }
+    }
+}
+
 /// BMI (Body Mass Index) categories based on WHO standards
 enum BMICategory: String, Codable, CaseIterable {
     case underweight = "Underweight"
@@ -47,7 +76,7 @@ enum UnitSystem: Int, Codable, CaseIterable {
 }
 
 /// Complete user health profile with calculated metrics
-struct UserHealthProfile: Codable, Equatable {
+struct UserHealthProfile: Equatable {
     /// User's age in years
     let age: Int
 
@@ -69,6 +98,30 @@ struct UserHealthProfile: Codable, Equatable {
     /// Sensitivity multiplier for personalized scoring (0.5 - 1.5)
     /// Higher values mean stricter scoring for unhealthy foods
     let sensitivityMultiplier: Double
+
+    /// User's self-reported physical activity level; drives the TDEE multiplier
+    let activityLevel: ActivityLevel
+}
+
+// MARK: - Codable (manual implementation for backward-compatible decoding)
+
+extension UserHealthProfile: Codable {
+    enum CodingKeys: String, CodingKey {
+        case age, bmi, bmiCategory, bmr, tdee, riskLevel, sensitivityMultiplier, activityLevel
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.age = try c.decode(Int.self, forKey: .age)
+        self.bmi = try c.decode(Double.self, forKey: .bmi)
+        self.bmiCategory = try c.decode(BMICategory.self, forKey: .bmiCategory)
+        self.bmr = try c.decode(Double.self, forKey: .bmr)
+        self.tdee = try c.decode(Double.self, forKey: .tdee)
+        self.riskLevel = try c.decode(HealthRiskLevel.self, forKey: .riskLevel)
+        self.sensitivityMultiplier = try c.decode(Double.self, forKey: .sensitivityMultiplier)
+        // Existing persisted profiles pre-date this field — default to .sedentary
+        self.activityLevel = try c.decodeIfPresent(ActivityLevel.self, forKey: .activityLevel) ?? .sedentary
+    }
 }
 
 // MARK: - Meal Feedback Color Extensions

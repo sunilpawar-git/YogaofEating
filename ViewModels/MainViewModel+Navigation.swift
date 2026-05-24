@@ -80,9 +80,10 @@ extension MainViewModel {
     // MARK: - Wellbeing Breakdown Contract
 
     /// Minimal data contract for `WellbeingBreakdownSheet`.
-    /// Returns nil when no meals are logged today or when viewing a past day.
+    /// Returns nil when viewing a past day.
     var wellbeingBreakdownContract: WellbeingBreakdownSheetContract? {
-        guard self.isViewingToday, !self.meals.isEmpty else { return nil }
+        guard self.isViewingToday else { return nil }
+        guard !self.meals.isEmpty else { return nil }
         let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
         let synthesis = self.synthesisEngine.synthesize(
             meals: self.meals,
@@ -92,8 +93,8 @@ extension MainViewModel {
             yesterday: nil
         )
         let weakDims: [WellbeingDimension] = WellbeingDimension.allCases
-            .map { ($0, $0.value(in: synthesis.dimensions)) }
-            .filter { $0.1 < SynthesisThresholds.overallNeutral }
+            .map { dim in (dim, dim.value(in: synthesis.dimensions)) }
+            .filter { _, score in score < SynthesisThresholds.weakDimension }
             .sorted { $0.1 < $1.1 }
             .prefix(2)
             .map(\.0)
@@ -101,7 +102,10 @@ extension MainViewModel {
             dimensions: synthesis.dimensions,
             dominantDimension: synthesis.dominantDimension,
             causalNarrative: synthesis.causalNarrative,
-            weakDimensions: weakDims
+            weakDimensions: weakDims,
+            mealCount: self.meals.count,
+            currentMood: synthesis.smileySuggestion.mood,
+            overallScore: synthesis.overall
         )
     }
 

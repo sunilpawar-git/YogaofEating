@@ -10,6 +10,7 @@ enum StorageKeys {
     static let userWeight = "user_weight"
     static let userGender = "user_gender"
     static let userAge = "user_age"
+    static let userActivityLevel = "user_activity_level"
 
     // MARK: - Appearance
 
@@ -20,6 +21,8 @@ enum StorageKeys {
 
     static let morningNudgeEnabled = "morning_nudge_enabled"
     static let mealRemindersEnabled = "meal_reminders_enabled"
+    /// Stores the user-configured morning briefing time as a TimeInterval since reference date.
+    static let morningBriefingTime = "morning_briefing_time"
 
     // MARK: - Sensory
 
@@ -61,10 +64,12 @@ enum StorageKeys {
         userWeight,
         userGender,
         userAge,
+        userActivityLevel,
         appTheme,
         unitSystem,
         morningNudgeEnabled,
         mealRemindersEnabled,
+        morningBriefingTime,
         hapticsEnabled,
         soundEnabled,
         healthSyncEnabled,

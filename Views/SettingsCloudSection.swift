@@ -5,59 +5,53 @@ import SwiftUI
 /// Extracted from `SettingsView` to:
 /// - Keep `SettingsView.swift` under the 300-line limit
 /// - Collocate sync and restore UI in one coherent component
+///
+/// Uses standard Form/List row buttons (no custom background or corner radius).
+/// The row itself is the interactive element — the List handles background,
+/// separators, and tap highlights natively.
 struct SettingsCloudSection: View {
     @ObservedObject var viewModel: SettingsViewModel
 
     var body: some View {
-        VStack(spacing: 0) {
+        Group {
             self.syncButton
             self.restoreButton
         }
-        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 0))
     }
 
     // MARK: - Sync Button
 
     private var syncButton: some View {
         Button(action: { self.viewModel.performCloudSync() }) {
-            HStack {
-                switch self.viewModel.syncStatus {
-                case .idle:
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .foregroundColor(.blue)
-                case .syncing:
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                        .scaleEffect(0.8)
-                case .success:
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                case .error:
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                }
+            Label {
                 Text(self.viewModel.syncStatusText)
-                    .foregroundColor(.primary)
+            } icon: {
+                self.syncStatusIcon
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(self.syncBackgroundColor)
-            .cornerRadius(8)
-            .animation(.easeInOut(duration: 0.3), value: self.viewModel.syncStatus)
         }
-        .buttonStyle(.borderless)
         .disabled(self.viewModel.syncStatus == .syncing)
-        .padding(.horizontal, 16)
+        .animation(.easeInOut(duration: 0.3), value: self.viewModel.syncStatus)
         .accessibilityLabel(self.viewModel.syncAccessibilityLabel)
         .accessibilityHint(self.viewModel.syncAccessibilityHint)
     }
 
-    private var syncBackgroundColor: Color {
+    @ViewBuilder
+    private var syncStatusIcon: some View {
         switch self.viewModel.syncStatus {
-        case .idle: AppTheme.CloudSync.idleBackground
-        case .syncing: AppTheme.CloudSync.activeBackground
-        case .success: AppTheme.CloudSync.successBackground
-        case .error: AppTheme.CloudSync.errorBackground
+        case .idle:
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .foregroundStyle(AppTheme.CloudSync.syncButtonColor)
+        case .syncing:
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
+                .scaleEffect(AppTheme.CloudSync.progressViewScale)
+                .tint(AppTheme.CloudSync.syncButtonColor)
+        case .success:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(AppTheme.CloudSync.successColor)
+        case .error:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(AppTheme.CloudSync.errorColor)
         }
     }
 
@@ -65,45 +59,35 @@ struct SettingsCloudSection: View {
 
     private var restoreButton: some View {
         Button(action: { self.viewModel.performCloudRestore() }) {
-            HStack {
-                switch self.viewModel.restoreStatus {
-                case .idle:
-                    Image(systemName: "icloud.and.arrow.down")
-                        .foregroundColor(.blue)
-                case .restoring:
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                        .scaleEffect(0.8)
-                case .success:
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                case .error:
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.red)
-                }
+            Label {
                 Text(self.viewModel.restoreStatusText)
-                    .foregroundColor(.primary)
+            } icon: {
+                self.restoreStatusIcon
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(self.restoreBackgroundColor)
-            .cornerRadius(8)
-            .animation(.easeInOut(duration: 0.3), value: self.viewModel.restoreStatus)
         }
-        .buttonStyle(.borderless)
         .disabled(self.viewModel.restoreStatus == .restoring)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
+        .animation(.easeInOut(duration: 0.3), value: self.viewModel.restoreStatus)
         .accessibilityLabel(self.viewModel.restoreAccessibilityLabel)
         .accessibilityHint(self.viewModel.restoreAccessibilityHint)
     }
 
-    private var restoreBackgroundColor: Color {
+    @ViewBuilder
+    private var restoreStatusIcon: some View {
         switch self.viewModel.restoreStatus {
-        case .idle: AppTheme.CloudSync.idleBackground
-        case .restoring: AppTheme.CloudSync.activeBackground
-        case .success: AppTheme.CloudSync.successBackground
-        case .error: AppTheme.CloudSync.errorBackground
+        case .idle:
+            Image(systemName: "icloud.and.arrow.down")
+                .foregroundStyle(AppTheme.CloudSync.syncButtonColor)
+        case .restoring:
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle())
+                .scaleEffect(AppTheme.CloudSync.progressViewScale)
+                .tint(AppTheme.CloudSync.syncButtonColor)
+        case .success:
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(AppTheme.CloudSync.successColor)
+        case .error:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(AppTheme.CloudSync.errorColor)
         }
     }
 }

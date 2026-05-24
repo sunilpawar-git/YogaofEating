@@ -206,6 +206,57 @@
             )
             XCTAssertLessThan(synthesis.dimensions.behavioralMomentum, 0.5)
         }
+
+        // MARK: - DailySynthesis.overall weighted calculation
+
+        func test_overall_withPhysicalAndCognitive_usesWeights() {
+            // physical=0.80 (weight 0.50), cognitive=0.30 (weight 0.25)
+            // Weighted: (0.80×0.50 + 0.30×0.25) / (0.50+0.25) = 0.475 / 0.75 = 0.6333…
+            // Unweighted (current bug): (0.80+0.30)/2 = 0.55  ← must differ from expected
+            let synthesis = DailySynthesis(
+                dimensions: WellbeingDimensions(
+                    physicalLoad: 0.80,
+                    emotionalTone: 0.5,
+                    cognitiveClarity: 0.30,
+                    behavioralMomentum: 0.5
+                ),
+                dataCompleteness: [.physicalLoad, .cognitiveClarity],
+                textSignals: [],
+                smileySuggestion: .neutral,
+                dominantDimension: .physicalLoad,
+                causalNarrative: ""
+            )
+            XCTAssertEqual(synthesis.overall, 0.6333, accuracy: 0.001)
+        }
+
+        func test_overall_singleDimension_equalsScore() {
+            let synthesis = DailySynthesis(
+                dimensions: WellbeingDimensions(
+                    physicalLoad: 0.80,
+                    emotionalTone: 0.5,
+                    cognitiveClarity: 0.5,
+                    behavioralMomentum: 0.5
+                ),
+                dataCompleteness: [.physicalLoad],
+                textSignals: [],
+                smileySuggestion: .neutral,
+                dominantDimension: .physicalLoad,
+                causalNarrative: ""
+            )
+            XCTAssertEqual(synthesis.overall, 0.80, accuracy: 0.001)
+        }
+
+        func test_overall_noData_returnsFallback() {
+            let synthesis = DailySynthesis(
+                dimensions: .neutral,
+                dataCompleteness: [],
+                textSignals: [],
+                smileySuggestion: .neutral,
+                dominantDimension: .physicalLoad,
+                causalNarrative: ""
+            )
+            XCTAssertEqual(synthesis.overall, 0.5, accuracy: 0.001)
+        }
     }
 
 #endif

@@ -12,9 +12,19 @@ protocol NotificationCenterProtocol: Sendable {
     )
     func add(_ request: UNNotificationRequest, withCompletionHandler completionHandler: (@Sendable (Error?) -> Void)?)
     func removeAllPendingNotificationRequests()
+    func removePendingNotificationRequests(withIdentifiers identifiers: [String])
 }
 
 extension UNUserNotificationCenter: NotificationCenterProtocol {}
+
+/// Protocol for scheduling and cancelling app notifications.
+/// Enables injection of a test double in place of `NotificationManager.shared`.
+protocol NotificationScheduling {
+    func scheduleMorningNudge(at time: Date)
+    func cancelMorningNudge()
+    func scheduleDefaultMealReminders()
+    func cancelMealReminders()
+}
 
 /// Manages mindful nudges and meal planning reminders.
 class NotificationManager {
@@ -36,6 +46,7 @@ class NotificationManager {
     }
 
     /// The "Morning Nudge" to plan the day's meals.
+    /// Reads the nudge-enabled flag from UserDefaults; used on app launch.
     func scheduleMorningNudge() {
         guard UserDefaults.standard.object(forKey: StorageKeys.morningNudgeEnabled) as? Bool ?? true else {
             return
@@ -43,7 +54,7 @@ class NotificationManager {
 
         let content = UNMutableNotificationContent()
         content.title = "Good Morning!"
-        content.body = "Time to plan your mindful meals for today. The Smiley is waiting for you 🙂"
+        content.body = "Time to plan your mindful meals for today. The Smiley is waiting for you \u{1F642}"
         content.sound = .default
 
         var dateComponents = DateComponents()
@@ -52,6 +63,27 @@ class NotificationManager {
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(identifier: "morning_nudge", content: content, trigger: trigger)
 
+        self.center.add(request, withCompletionHandler: nil)
+    }
+
+    /// Schedules the morning nudge at a user-configured time.
+    /// The caller is responsible for checking whether the nudge is enabled before calling.
+    /// Cancels any existing morning nudge before scheduling the new one.
+    func scheduleMorningNudge(at time: Date) {
+        let content = UNMutableNotificationContent()
+        content.title = "Good Morning!"
+        content.body = "Time to plan your mindful meals for today. The Smiley is waiting for you \u{1F642}"
+        content.sound = .default
+
+        let calendar = Calendar.current
+        var dateComponents = DateComponents()
+        dateComponents.hour = calendar.component(.hour, from: time)
+        dateComponents.minute = calendar.component(.minute, from: time)
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: "morning_nudge", content: content, trigger: trigger)
+
+        self.center.removePendingNotificationRequests(withIdentifiers: ["morning_nudge"])
         self.center.add(request, withCompletionHandler: nil)
     }
 
@@ -86,13 +118,13 @@ class NotificationManager {
 
     /// Cancels only the morning nudge notification, leaving other notifications intact.
     func cancelMorningNudge() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["morning_nudge"])
+        self.center.removePendingNotificationRequests(withIdentifiers: ["morning_nudge"])
     }
 
     /// Cancels all meal reminder notifications (Breakfast, Lunch, Dinner).
     func cancelMealReminders() {
         let ids = ["meal_reminder_Breakfast", "meal_reminder_Lunch", "meal_reminder_Dinner"]
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        self.center.removePendingNotificationRequests(withIdentifiers: ids)
     }
 
     /// Schedules a local notification for the daily briefing using A/B test variant.
@@ -125,7 +157,7 @@ class NotificationManager {
 
     /// Cancels any pending briefing notification.
     func cancelBriefingNotification() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(
+        self.center.removePendingNotificationRequests(
             withIdentifiers: [NotificationTimingABTest.briefingNotificationIdentifier]
         )
     }
@@ -135,3 +167,5 @@ class NotificationManager {
         self.center.removeAllPendingNotificationRequests()
     }
 }
+
+extension NotificationManager: NotificationScheduling {}

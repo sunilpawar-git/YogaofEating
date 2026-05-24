@@ -177,4 +177,150 @@ final class SettingsViewModelTests: XCTestCase {
         _ = vm.signInWithGoogle
         XCTAssertTrue(true, "SettingsViewModel must expose signInWithGoogle() for MVVM compliance")
     }
+
+    // MARK: - morningBriefingTime — TDD Phase 3
+
+    func test_morningBriefingTime_defaultIsEightAM() {
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+
+        let hour = Calendar.current.component(.hour, from: vm.morningBriefingTime)
+        let minute = Calendar.current.component(.minute, from: vm.morningBriefingTime)
+
+        XCTAssertEqual(hour, 8, "Default morning briefing time must be 8:00 AM (hour)")
+        XCTAssertEqual(minute, 0, "Default morning briefing time must be 8:00 AM (minute)")
+    }
+
+    func test_morningBriefingTime_persistsToUserDefaults() {
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+
+        vm.morningBriefingTime = Self.makeTime(hour: 9, minute: 30)
+
+        XCTAssertNotNil(
+            ud.object(forKey: StorageKeys.morningBriefingTime),
+            "morningBriefingTime must be persisted to UserDefaults on change"
+        )
+    }
+
+    func test_morningBriefingTime_loadsFromUserDefaults_onInit() {
+        let ud = self.freshUserDefaults()
+
+        // Persist a custom time via a first VM instance
+        let vm1 = self.makeVM(userDefaults: ud)
+        vm1.morningBriefingTime = Self.makeTime(hour: 6, minute: 45)
+
+        // A fresh VM with the same UserDefaults must restore the custom time
+        let vm2 = self.makeVM(userDefaults: ud)
+        let hour = Calendar.current.component(.hour, from: vm2.morningBriefingTime)
+        let minute = Calendar.current.component(.minute, from: vm2.morningBriefingTime)
+
+        XCTAssertEqual(hour, 6, "morningBriefingTime must be restored from UserDefaults (hour)")
+        XCTAssertEqual(minute, 45, "morningBriefingTime must be restored from UserDefaults (minute)")
+    }
+
+    func test_morningBriefingTime_storedAsTimeInterval_inUserDefaults() {
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+
+        vm.morningBriefingTime = Self.makeTime(hour: 7, minute: 15)
+
+        let stored = ud.object(forKey: StorageKeys.morningBriefingTime)
+        XCTAssertTrue(stored is Double, "morningBriefingTime must be stored as TimeInterval (Double)")
+    }
+
+    func test_morningBriefingTime_changingTime_doesNotAlterNudgeEnabledState() {
+        // Verifies the nudge toggle is not accidentally mutated when time changes
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+        vm.isMorningNudgeEnabled = false
+
+        vm.morningBriefingTime = Self.makeTime(hour: 10, minute: 0)
+
+        XCTAssertFalse(vm.isMorningNudgeEnabled, "Changing briefing time must not alter nudge-enabled state")
+    }
+
+    func test_morningBriefingTime_roundTrip_preservesHourAndMinute() {
+        // Verifies the TimeInterval encode/decode does not lose hour/minute precision
+        let ud = self.freshUserDefaults()
+        let vm1 = self.makeVM(userDefaults: ud)
+        vm1.morningBriefingTime = Self.makeTime(hour: 5, minute: 55)
+
+        let vm2 = self.makeVM(userDefaults: ud)
+        XCTAssertEqual(Calendar.current.component(.hour, from: vm2.morningBriefingTime), 5)
+        XCTAssertEqual(Calendar.current.component(.minute, from: vm2.morningBriefingTime), 55)
+    }
+
+    // MARK: - Activity Level Persistence Tests (RED — activityLevel not yet on SettingsViewModel)
+
+    func test_activityLevel_defaultIsSedentary_onFreshInstall() {
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+
+        XCTAssertEqual(vm.activityLevel, .sedentary, "Fresh install must default to .sedentary")
+    }
+
+    func test_activityLevel_change_persistsToUserDefaults() {
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+
+        vm.activityLevel = .moderatelyActive
+
+        let stored = ud.integer(forKey: StorageKeys.userActivityLevel)
+        XCTAssertEqual(
+            stored,
+            ActivityLevel.moderatelyActive.rawValue,
+            "activityLevel change must persist rawValue to UserDefaults immediately"
+        )
+    }
+
+    func test_activityLevel_loadsFromUserDefaults_onInit() {
+        let ud = self.freshUserDefaults()
+        ud.set(ActivityLevel.veryActive.rawValue, forKey: StorageKeys.userActivityLevel)
+
+        let vm = self.makeVM(userDefaults: ud)
+
+        XCTAssertEqual(vm.activityLevel, .veryActive, "activityLevel must be restored from UserDefaults on init")
+    }
+
+    func test_activityLevel_invalidRawValue_inUserDefaults_defaultsSedentary() {
+        // Security: corrupt or tampered UserDefaults must not crash; fall back to safe default
+        let ud = self.freshUserDefaults()
+        ud.set(999, forKey: StorageKeys.userActivityLevel)
+
+        let vm = self.makeVM(userDefaults: ud)
+
+        XCTAssertEqual(vm.activityLevel, .sedentary, "Invalid stored rawValue must default to .sedentary")
+    }
+
+    func test_activityLevel_roundTrip_preservesAllCases() {
+        for level in ActivityLevel.allCases {
+            let ud = self.freshUserDefaults()
+            let vm1 = self.makeVM(userDefaults: ud)
+            vm1.activityLevel = level
+
+            let vm2 = self.makeVM(userDefaults: ud)
+            XCTAssertEqual(vm2.activityLevel, level, "Round-trip must preserve .\(level) through UserDefaults")
+        }
+    }
+
+    func test_activityLevel_settingSedentaryAfterHigher_persistsSedentary() {
+        let ud = self.freshUserDefaults()
+        let vm = self.makeVM(userDefaults: ud)
+        vm.activityLevel = .veryActive
+
+        vm.activityLevel = .sedentary
+
+        XCTAssertEqual(vm.activityLevel, .sedentary)
+        XCTAssertEqual(ud.integer(forKey: StorageKeys.userActivityLevel), ActivityLevel.sedentary.rawValue)
+    }
+
+    // MARK: - Helpers
+
+    private static func makeTime(hour: Int, minute: Int) -> Date {
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+        return Calendar.current.date(from: components) ?? Date()
+    }
 }

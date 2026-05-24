@@ -69,4 +69,9 @@ enum SynthesisThresholds {
     /// Synthesis overall score below this → .overwhelmed smiley.
     /// Values between overallNeutral and this → .thoughtful (Phase 3).
     static let overallThoughtful: Double = 0.35
+
+    /// Individual dimension score below which a dimension is flagged as "weak" in
+    /// `WellbeingBreakdownSheet`. Semantically distinct from `overallNeutral` (which
+    /// classifies whole-day mood) — a single dimension can be weak on an otherwise neutral day.
+    static let weakDimension: Double = 0.45
 }

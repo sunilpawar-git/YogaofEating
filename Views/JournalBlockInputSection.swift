@@ -8,15 +8,14 @@ extension JournalBlockView {
     // MARK: - Text Input Section
 
     var textInputSection: some View {
-        let hasContent = !self.rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasContent = self.draftItems.contains { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         let showCheckmark = self.isFocused && hasContent
 
         return VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
-                self.mealTextField
+                self.bulletItemsList
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Always in layout (opacity-only toggle) so TextField width never changes.
                 self.checkmarkButton
                     .opacity(showCheckmark ? 1 : 0)
                     .allowsHitTesting(showCheckmark)
@@ -28,7 +27,83 @@ extension JournalBlockView {
         .animation(.easeInOut(duration: 0.2), value: self.isFocused)
     }
 
-    /// Green checkmark — the sole submission affordance.
+    // MARK: - Bullet Items List
+
+    /// Per-item rows with bullet chrome.
+    /// Editing: BulletTextField (UITextField). Display: Text (wraps naturally).
+    /// UITextField is single-line and truncates — Text is used when not focused.
+    var bulletItemsList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(self.draftItems.indices, id: \.self) { i in
+                HStack(alignment: .top, spacing: 6) {
+                    Text("•")
+                        .font(FontTheme.mealEntry)
+                        .foregroundColor(self.bulletColor(for: i))
+
+                    BulletTextField(
+                        text: self.itemBinding(for: i),
+                        placeholder: i == 0 ? Strings.Journal.placeholder : "",
+                        isFocused: self.focusedItemIndex == i,
+                        onFocusChange: { focused in
+                            if focused {
+                                self.focusedItemIndex = i
+                            } else if self.focusedItemIndex == i {
+                                self.focusedItemIndex = nil
+                            }
+                        },
+                        onReturn: { self.handleRowSubmit(at: i) },
+                        onDeleteEmpty: { self.removeItem(at: i) }
+                    )
+                    .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("meal-item-field-\(self.meal.id)-\(i)")
+                }
+            }
+        }
+    }
+
+    private func bulletColor(for index: Int) -> Color {
+        let isEmpty = index < self.draftItems.count && self.draftItems[index].isEmpty
+        return isEmpty && index == 0 ? .secondary.opacity(0.35) : .primary
+    }
+
+    // MARK: - Item Management
+
+    /// Enter on a filled row → new bullet below. Enter on an empty row → remove it (Apple Notes behavior).
+    func handleRowSubmit(at index: Int) {
+        if self.draftItems[index].isEmpty, self.draftItems.count > 1 {
+            self.removeItem(at: index)
+        } else {
+            self.appendItem(after: index)
+        }
+    }
+
+    func appendItem(after index: Int) {
+        let insertAt = min(index + 1, self.draftItems.count)
+        self.draftItems.insert("", at: insertAt)
+        self.focusedItemIndex = insertAt
+    }
+
+    func removeItem(at index: Int) {
+        guard self.draftItems.count > 1, index < self.draftItems.count else { return }
+        self.draftItems.remove(at: index)
+        self.focusedItemIndex = max(0, index - 1)
+    }
+
+    func itemBinding(for index: Int) -> Binding<String> {
+        Binding(
+            get: {
+                guard index < self.draftItems.count else { return "" }
+                return self.draftItems[index]
+            },
+            set: { newValue in
+                guard index < self.draftItems.count else { return }
+                self.draftItems[index] = newValue
+            }
+        )
+    }
+
+    // MARK: - Checkmark Button
+
     var checkmarkButton: some View {
         Button {
             self.handleCheckmarkTap()
@@ -43,42 +118,12 @@ extension JournalBlockView {
         .accessibilityHint(Strings.Accessibility.submitMealHint)
     }
 
-    // MARK: - Text Field
-
-    var mealTextField: some View {
-        TextField(Strings.Journal.placeholder, text: self.limitedTextBinding, axis: .vertical)
-            .font(FontTheme.mealEntry)
-            .foregroundColor(.primary)
-            .tint(.blue)
-            .textFieldStyle(.plain)
-            .lineLimit(nil)
-            .fixedSize(horizontal: false, vertical: true)
-            .focused(self.$isFocused)
-            .accessibilityIdentifier("meal-text-field-\(self.meal.id)")
-    }
-
-    /// Enforces the character limit silently (security boundary).
-    var limitedTextBinding: Binding<String> {
-        Binding(
-            get: { self.rawText },
-            set: { newValue in
-                if newValue.count > Self.maxCharacterLimit {
-                    self.rawText = String(newValue.prefix(Self.maxCharacterLimit))
-                } else {
-                    self.rawText = newValue
-                }
-            }
-        )
-    }
-
     // MARK: - Footer
 
     @ViewBuilder
     var itemCountFooter: some View {
         HStack {
-            if !self.isFocused {
-                self.recentMealsButton
-            }
+            self.recentMealsButton
 
             if !self.isFocused, !self.parsedItems.isEmpty {
                 Text(Strings.Journal.itemCount(self.parsedItems.count))
@@ -110,9 +155,9 @@ extension JournalBlockView {
         if existingItems.isEmpty {
             self.selectedMealType = meal.mealType
         }
-        self.rawText = mergedItems.joined(separator: "\n")
+        self.draftItems = mergedItems.isEmpty ? [""] : mergedItems
         self.showRecentMealsSheet = false
-        self.handleSubmit()
+        self.focusedItemIndex = 0
         SensoryService.shared.playNudge(style: .medium)
     }
 

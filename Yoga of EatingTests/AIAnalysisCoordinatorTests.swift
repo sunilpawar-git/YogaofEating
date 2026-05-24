@@ -24,7 +24,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { _, _, _, _ in },
+            onMealScoreUpdated: { (_: UUID, _: MealAnalysisResult) in },
             onSmileyStateChanged: { _ in }
         )
 
@@ -51,7 +51,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { _, _, _, _ in },
+            onMealScoreUpdated: { (_: UUID, _: MealAnalysisResult) in },
             onSmileyStateChanged: { _ in }
         )
 
@@ -68,7 +68,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { _, _, _, _ in },
+            onMealScoreUpdated: { (_: UUID, _: MealAnalysisResult) in },
             onSmileyStateChanged: { _ in }
         )
 
@@ -94,9 +94,9 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { id, score, _, _ in
+            onMealScoreUpdated: { id, result in
                 capturedId = id
-                capturedScore = score
+                capturedScore = result.score
             },
             onSmileyStateChanged: { _ in }
         )
@@ -122,7 +122,7 @@ final class AIAnalysisCoordinatorTests: XCTestCase {
         let ctx = AIAnalysisContext(
             logicService: mock,
             currentMealsSnapshot: [meal],
-            onMealScoreUpdated: { _, _, _, _ in
+            onMealScoreUpdated: { _, _ in
                 // Thread.isMainThread is stable across Swift concurrency versions;
                 // avoids the DEBUG-trap risk of MainActor.assumeIsolated.
                 calledOnMain = Thread.isMainThread

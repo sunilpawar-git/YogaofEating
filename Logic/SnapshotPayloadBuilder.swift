@@ -21,6 +21,7 @@ enum SnapshotPayloadBuilder {
             var data = self.baseFields(for: snapshot, relativeTo: normalizedRef, calendar: calendar)
             self.appendMeals(to: &data, snapshot: snapshot)
             self.appendReflection(to: &data, snapshot: snapshot)
+            self.appendRawText(to: &data, snapshot: snapshot)
             self.appendSleepData(
                 to: &data,
                 snapshot: snapshot,
@@ -46,15 +47,25 @@ enum SnapshotPayloadBuilder {
 
     // MARK: - Private helpers
 
+    private static let dayOfWeekFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE"
+        return f
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        return f
+    }()
+
     private static func baseFields(
         for snapshot: DailySmileySnapshot,
         relativeTo normalizedRef: Date,
         calendar: Calendar
     ) -> [String: Any] {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        return [
-            "date": formatter.string(from: snapshot.date),
+        [
+            "date": self.dayOfWeekFormatter.string(from: snapshot.date),
             "averageHealthScore": snapshot.averageHealthScore,
             "isToday": calendar.isDate(snapshot.date, inSameDayAs: normalizedRef)
         ]
@@ -62,14 +73,12 @@ enum SnapshotPayloadBuilder {
 
     private static func appendMeals(to data: inout [String: Any], snapshot: DailySmileySnapshot) {
         guard !snapshot.meals.isEmpty else { return }
-        let timeFormatter = DateFormatter()
-        timeFormatter.timeStyle = .short
         data["meals"] = snapshot.meals.map { meal -> [String: Any] in
             [
                 "items": meal.items,
                 "healthScore": meal.healthScore,
                 "mealType": meal.mealType.rawValue,
-                "time": timeFormatter.string(from: meal.timestamp)
+                "time": self.timeFormatter.string(from: meal.timestamp)
             ]
         }
     }
@@ -98,6 +107,17 @@ enum SnapshotPayloadBuilder {
         ]
         if let score = sleepData.sleepScore { apple["score"] = score }
         data["appleSleepData"] = apple
+    }
+
+    // Raw text sent over the existing authenticated HTTPS channel for Gemini grounding.
+    // Values are never logged — only serialised into the encrypted-in-transit payload.
+    private static func appendRawText(to data: inout [String: Any], snapshot: DailySmileySnapshot) {
+        if let thoughts = snapshot.highlightData?.morningThoughts, !thoughts.isEmpty {
+            data["morningThoughts"] = thoughts
+        }
+        if let journal = snapshot.reflectData?.journalText, !journal.isEmpty {
+            data["journalEntry"] = journal
+        }
     }
 
     private static func appendMindCheck(to data: inout [String: Any], snapshot: DailySmileySnapshot) {

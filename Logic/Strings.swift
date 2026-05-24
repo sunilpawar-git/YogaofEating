@@ -95,6 +95,39 @@ enum Strings {
             static let defaultSuggestion = "Log your meals today to unlock deeper patterns"
             static let defaultReasoning = "More data means richer insights tomorrow"
         }
+
+        // Correlation card format strings — %d/%@ placeholders injected by BriefingCardFormatter
+        enum Cards {
+            static let intentionFollowthroughFmt =
+                "%d%% goal completion across %d days — focus on fewer, more targeted intentions"
+            static let sleepRecoveryCarryoverFmt =
+                "%d consecutive poor-sleep nights — cognitive clarity may be reduced today"
+            static let carryOverLoadFmt =
+                "You have had %d low-wellbeing days recently — this is a pattern worth addressing"
+
+            // Static observations (no data injection) — kept in Strings.swift for localization readiness
+            static let foodDebt =
+                "2 days of low-quality eating — inflammation and cravings may be elevated today"
+            static let foodToMood =
+                "Days with healthier meals tend to end with a better mood"
+            static let timingPattern =
+                "Regular meal timing is linked to better sleep quality"
+            static let todoProductivity =
+                "Higher task completion days correlate with healthier food choices"
+            static let journalTonePrediction =
+                "Evenings with overwhelming feelings tend to lower next-day wellbeing"
+            static let sleepMismatch =
+                "You rated sleep as great, but your clarity pattern suggests otherwise — check your sleep environment"
+        }
+
+        // Default nudge suggestions shown when no correlation cards are available
+        enum NudgeSuggestion {
+            static let physical = "Log your meals mindfully today"
+            static let cognitive = "Prioritize restful sleep tonight"
+            static let emotional = "Take a moment to check in with how you feel"
+            static let behavioral = "Pick one intention and follow through on it today"
+            static let focusOnFmt = "Focus on %@ today"
+        }
     }
 
     // MARK: - Briefing Detail View
@@ -280,9 +313,157 @@ enum Strings {
     // MARK: - Accessibility
 
     enum Settings {
+        // MARK: - Navigation title
+
+        static let navigationTitle = "Settings"
+
+        // MARK: - Toolbar
+
+        static let doneButton = "Done"
+
+        // MARK: - Account section
+
+        static let accountHeader = "Account"
+        static let loginWithGoogleTitle = "Login with Google"
+
+        // MARK: - Navigation section rows
+
+        static let profileHealthTitle = "Profile & Health"
+        static let preferencesTitle = "Preferences"
+        static let manageHealthAccessTitle = "Manage Health Access"
+
+        // MARK: - Cloud Backup sub-page
+
+        static let cloudBackupTitle = "Cloud Backup"
+        static let cloudBackupDescription = "Your meals and insights are securely backed up to your account."
+
+        // MARK: - History section
+
+        static let historyHeader = "History"
+        static let yearlyHeatmapTitle = "Yearly Heatmap"
+
+        // MARK: - Support & Legal section
+
+        static let supportHeader = "Support & Legal"
+        static let faqTitle = "FAQ & Help"
+        static let privacyPolicyTitle = "Privacy Policy"
+        static let termsTitle = "Terms of Service"
+        static let rateTitle = "Rate Yoga of Eating"
+
+        // MARK: - Version footer
+
+        /// Format: "Yoga of Eating v1.0 (42)"
+        static func versionFooter(version: String, build: String) -> String {
+            "Yoga of Eating v\(version) (\(build))"
+        }
+
+        /// Format: "© 2026 Sunil"
+        static func copyrightFooter(year: Int) -> String {
+            "© \(year) Sunil"
+        }
+
+        // MARK: - Notifications preferences
+
+        static let morningBriefingTimeLabel = "Briefing Time"
+
+        /// Footer shown under Notifications section in Preferences.
+        /// `formattedTime` is a pre-formatted time string (e.g. "8:00 AM").
+        static func notificationsFooter(briefingTime: String) -> String {
+            "Morning briefing at \(briefingTime). Meal reminders at 8 AM, 1 PM, and 8 PM."
+        }
+
+        // MARK: - Preferences sub-view sections and controls
+
+        static let appearanceSectionHeader = "Appearance"
+        static let themeSystem = "System"
+        static let themeLight = "Light"
+        static let themeDark = "Dark"
+        static let themeAccessibilityLabel = "Theme"
+        static let morningNudgeToggle = "Morning Nudge"
+        static let mealRemindersToggle = "Meal Reminders"
+        static let notificationsSectionHeader = "Notifications"
+        static let sensoryFeedbackSectionHeader = "Sensory Feedback"
+        static let hapticNudgesToggle = "Haptic Nudges"
+        static let soundEffectsToggle = "Sound Effects"
+        static let integrationsSectionHeader = "Integrations"
+        static let appleHealthToggle = "Sync Body Metrics (Apple Health)"
+        static let appleHealthFooter = "When enabled, your height, weight, age, and gender will be synced from Apple Health."
+
+        // MARK: - User Profile sub-view sections and controls
+
+        static let profileAndHealthTitle = "Profile & Health"
+        static let personalDetailsSectionHeader = "Personal Details"
+        static let personalDetailsFooter = "This information is used to calculate your health insights and personalize feedback."
+        static let nameLabel = "Name"
+        static let genderPickerLabel = "Gender"
+        static let genderUnspecified = "Unspecified"
+        static let genderMale = "Male"
+        static let genderFemale = "Female"
+        static let genderOther = "Other"
+        static let ageLabel = "Age"
+        static let unitSystemPickerLabel = "Unit System"
+        static let unitMetric = "Metric"
+        static let unitImperial = "Imperial"
+        static let heightLabelMetric = "Height (cm)"
+        static let heightLabelImperial = "Height (ft/in)"
+        static let heightPlaceholder = "Height"
+        static let weightLabelMetric = "Weight (kg)"
+        static let weightLabelImperial = "Weight (lbs)"
+        static let weightPlaceholder = "Weight"
+        static let healthInsightsSectionHeader = "Health Insights"
+        static let bmiLabel = "BMI"
+        static let bmiCategoryLabel = "Category"
+        static let dailyEnergyLabel = "Daily Energy"
+        static let riskLevelLabel = "Risk Level"
+        static let healthInsightsEmptyState = "Complete your personal details above to see health insights"
+        static let showHealthInsightsToggle = "Show Health Insights"
+        static let privacySectionHeader = "Privacy"
+        static let privacyFooter = "All health calculations are done on your device. Data never leaves your phone except for encrypted cloud sync."
+
+        // MARK: - Activity Level picker
+
+        static let activityLevelPickerLabel = "Activity Level"
+        static let activityLevelSedentary = "Sedentary"
+        static let activityLevelLightlyActive = "Lightly Active"
+        static let activityLevelModeratelyActive = "Moderately Active"
+        static let activityLevelVeryActive = "Very Active"
+        /// Footer explaining why activity level matters for the calorie goal.
+        static let activityLevelFooter = "Higher activity means a higher daily calorie goal. Exercise calories are added on top."
+
+        // MARK: - Sign Out
+
+        static let signOutTitle = "Sign Out"
+        static let signOutAlertTitle = "Sign Out?"
+        static let signOutConfirmationMessage = "You'll need to sign in again to sync your data."
+
+        // MARK: - Danger Zone section
+
+        static let dangerZoneHeader = "Danger Zone"
+        static let clearAllDataTitle = "Clear All Data"
+        static let clearAllDataAlertTitle = "Clear All Data?"
+        static let clearAllDataAlertMessage =
+            "This will permanently delete all logged meals, history, and user settings. This action cannot be undone."
+        static let clearAllDataDestructiveButton = "Clear"
+
+        // MARK: - Cloud sync / restore
+
         /// Generic sync failure message shown to users when the underlying error is not user-actionable.
         /// Never expose provider-specific error strings (Firebase, NSError domains) to users.
         static let syncFailedGeneric = "Sync failed. Please check your connection and try again."
+
+        // MARK: - Sync button labels
+
+        /// Idle state — sync button ready to tap.
+        static let syncButtonIdle = "Sync with Cloud"
+
+        /// Active state — sync in progress.
+        static let syncButtonSyncing = "Syncing..."
+
+        /// Completion state — sync finished successfully.
+        static let syncButtonSuccess = "Synced!"
+
+        /// Error state — sync failed.
+        static let syncButtonError = "Sync Failed"
 
         // MARK: - Restore button labels
 
@@ -300,6 +481,85 @@ enum Strings {
 
         /// Generic restore failure shown when the underlying error is not user-actionable.
         static let restoreFailedGeneric = "Restore failed. Please check your connection and try again."
+
+        // MARK: - Sync accessibility labels
+
+        static let syncAccessibilityLabelIdle = "Sync with Cloud button"
+        static let syncAccessibilityLabelSyncing = "Syncing data to cloud"
+        static let syncAccessibilityLabelSuccess = "Sync completed successfully"
+        static let syncAccessibilityLabelErrorPrefix = "Sync failed: "
+
+        // MARK: - Sync accessibility hints
+
+        static let syncAccessibilityHintIdle = "Double tap to sync your data with cloud storage"
+        static let syncAccessibilityHintSyncing = "Sync in progress, please wait"
+        static let syncAccessibilityHintSuccess = "Sync completed"
+        static let syncAccessibilityHintError = "Double tap to retry sync"
+
+        // MARK: - Restore accessibility labels
+
+        static let restoreAccessibilityLabelIdle = "Restore from Cloud button"
+        static let restoreAccessibilityLabelRestoring = "Restoring data from cloud"
+        static let restoreAccessibilityLabelSuccess = "Restore completed successfully"
+        static let restoreAccessibilityLabelErrorPrefix = "Restore failed: "
+
+        // MARK: - Restore accessibility hints
+
+        static let restoreAccessibilityHintIdle = "Double tap to restore your meal history from cloud storage"
+        static let restoreAccessibilityHintRestoring = "Restore in progress, please wait"
+        static let restoreAccessibilityHintSuccess = "Restore completed"
+        static let restoreAccessibilityHintError = "Double tap to retry restore"
+
+        // MARK: - Legal documents (SSOT — never hardcode in Views)
+
+        static let privacyPolicyText = """
+        Privacy Policy
+
+        Last Updated: January 2026
+
+        1. Overview
+        Yoga of Eating respects your privacy. We prioritize local data storage and transparency.
+
+        2. Data Collection
+        - Personal Data: We collect your name and email only if you choose to sign in.
+        - Health Data: We sync with HealthKit only with your explicit permission.
+        - Usage Data: Basic app usage metrics may be collected anonymously.
+
+        3. AI & Analysis
+        - Your meal entries are processed effectively by Google Gemini AI to provide nutritional insights.
+        - We do not use your personal data to train public AI models.
+
+        4. Cloud Sync
+        - If you enable Cloud Sync, your data is encrypted and stored on Google Firebase.
+        - You can delete your account and data at any time.
+
+        5. Contact
+        For any questions, please check the FAQ or contact support.
+        """
+
+        static let termsOfServiceText = """
+        Terms of Service
+
+        Last Updated: January 2026
+
+        1. Acceptance
+        By using Yoga of Eating, you agree to these terms.
+
+        2. Usage
+        - You agree to use the app for personal, non-commercial purposes.
+        - You will not use the app for any illegal activities.
+
+        3. Medical Disclaimer
+        - This app is NOT a medical device.
+        - The AI insights are for informational purposes only.
+        - Consult a healthcare professional for medical advice.
+
+        4. Termination
+        We reserve the right to terminate accounts that violate these terms.
+
+        5. Changes
+        We may update these terms from time to time. Continued use implies acceptance.
+        """
     }
 
     enum Accessibility {
@@ -361,8 +621,16 @@ enum Strings {
         static let whyHeading = "Why did my smiley change?"
         static let done = "Done"
         static let overallLabel = "Overall"
-        static let weakDimensionPrefix = "Needs attention:"
         static let detectedSignalsLabel = "Detected tone:"
+
+        enum DimensionSubtitle {
+            static let physicalLoad_fmt = "Meal Quality of %d %@"
+            static let physicalLoad_meal = "Meal"
+            static let physicalLoad_meals = "Meals"
+            static let emotionalTone = "Feelings from your Journal"
+            static let cognitiveClarity = "Sleep Hygiene"
+            static let behavioralMomentum = "To-Do Completions"
+        }
     }
 
     // MARK: - Synthesis (WellbeingDimensions + TextSignal)
@@ -386,11 +654,35 @@ enum Strings {
         }
 
         enum CausalNarrative {
+            // Intentional nudge-fallback strings used only by defaultNudge(for:) in
+            // InsightLifecycleService+LocalGeneration when no correlation cards are present.
+            // Deliberately generic — the nudge path has no NarrativeContext for the resolver.
+            // NOT dead code — do not delete.
             static let physical = "Your food choices are driving today's state."
             static let emotional = "Your mood and feelings are shaping today."
             static let cognitive = "Sleep quality is influencing your clarity."
             static let behavioral = "Your follow-through on intentions is leading today."
             static let balanced = "All dimensions are contributing equally today."
+
+            // Shown when the engine has no data at all (no meals, sleep, feeling, or todos).
+            static let noData = "Start logging today to begin building your personal patterns."
+
+            // Physical variants now include meal count (%d) and avg score (%d%)
+            static let physical_high_fmt = "%d meals at %d%% average — what you're eating is lifting you up today."
+            static let physical_low_fmt = "%d meals at %d%% average — your body is letting you know it wants something different."
+            static let physical_neutral_fmt = "%d meals at %d%% average — food quality is holding steady."
+
+            static let emotional_high = "The way you're feeling is brightening everything today."
+            static let emotional_low = "Your feelings are at the heart of today — give yourself some grace."
+            static let emotional_neutral = "Your emotional state is balanced today."
+
+            static let cognitive_high = "Good sleep is sharpening your clarity today."
+            static let cognitive_low = "Last night's rest is making today feel heavier — be gentle with yourself."
+            static let cognitive_neutral = "Your sleep is having a balanced effect today."
+
+            static let behavioral_high = "Following through on your intentions is building momentum."
+            static let behavioral_low = "A few intentions slipped today — that's okay, tomorrow is a new page."
+            static let behavioral_neutral = "Your follow-through is on track today."
         }
     }
 }

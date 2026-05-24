@@ -154,7 +154,7 @@ final class AIAnalysisCoordinator: AIAnalysisCoordinating {
 
                 // Deliver result on MainActor via write-back closure
                 await MainActor.run {
-                    context.onMealScoreUpdated(mealId, result.score, result.insight, result.estimatedCalories)
+                    context.onMealScoreUpdated(mealId, result)
                 }
 
                 // After the score is updated, reanalyze all meals for the smiley state.

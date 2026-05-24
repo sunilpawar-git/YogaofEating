@@ -70,19 +70,24 @@ struct CorrelationCard: Codable, Identifiable, Equatable {
     let observation: String
     let confidence: Double
     let dataPoints: [InsightReference]
+    /// Short strings from the server grounding the observation in specific user data.
+    /// Nil when absent (local cards, or server cards before the prompt update).
+    let dataReferences: [String]?
 
     init(
         id: UUID = UUID(),
         category: CorrelationCategory,
         observation: String,
         confidence: Double,
-        dataPoints: [InsightReference] = []
+        dataPoints: [InsightReference] = [],
+        dataReferences: [String]? = nil
     ) {
         self.id = id
         self.category = category
         self.observation = observation
         self.confidence = max(0, min(1, confidence))
         self.dataPoints = dataPoints
+        self.dataReferences = dataReferences
     }
 
     var isHighConfidence: Bool {

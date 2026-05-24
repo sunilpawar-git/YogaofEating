@@ -12,7 +12,7 @@ struct PreferencesSettingsView: View {
             self.sensorySection
             self.integrationsSection
         }
-        .navigationTitle("Preferences")
+        .navigationTitle(Strings.Settings.preferencesTitle)
         #if canImport(UIKit)
             .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -21,14 +21,14 @@ struct PreferencesSettingsView: View {
     // MARK: - Appearance Section
 
     private var appearanceSection: some View {
-        Section("Appearance") {
-            Picker("Theme", selection: self.$viewModel.theme) {
-                Text("System").tag(0)
-                Text("Light").tag(1)
-                Text("Dark").tag(2)
+        Section(Strings.Settings.appearanceSectionHeader) {
+            Picker(Strings.Settings.themeAccessibilityLabel, selection: self.$viewModel.theme) {
+                Text(Strings.Settings.themeSystem).tag(0)
+                Text(Strings.Settings.themeLight).tag(1)
+                Text(Strings.Settings.themeDark).tag(2)
             }
             .accessibilityIdentifier("theme-picker")
-            .accessibilityLabel("Theme")
+            .accessibilityLabel(Strings.Settings.themeAccessibilityLabel)
         }
     }
 
@@ -36,25 +36,41 @@ struct PreferencesSettingsView: View {
 
     private var notificationsSection: some View {
         Section {
-            Toggle("Morning Nudge", isOn: self.$viewModel.isMorningNudgeEnabled)
+            Toggle(Strings.Settings.morningNudgeToggle, isOn: self.$viewModel.isMorningNudgeEnabled)
                 .accessibilityIdentifier("morning-nudge-toggle")
-            Toggle("Meal Reminders", isOn: self.$viewModel.areMealRemindersEnabled)
+            if self.viewModel.isMorningNudgeEnabled {
+                DatePicker(
+                    Strings.Settings.morningBriefingTimeLabel,
+                    selection: self.$viewModel.morningBriefingTime,
+                    displayedComponents: .hourAndMinute
+                )
+                .datePickerStyle(.compact)
+                .accessibilityIdentifier("morning-briefing-time-picker")
+            }
+            Toggle(Strings.Settings.mealRemindersToggle, isOn: self.$viewModel.areMealRemindersEnabled)
                 .accessibilityIdentifier("meal-reminders-toggle")
         } header: {
-            Text("Notifications")
+            Text(Strings.Settings.notificationsSectionHeader)
         } footer: {
-            Text("Morning nudge at 8am, meal reminders at 8am, 1pm, and 8pm.")
-                .font(.caption)
+            Text(Strings.Settings.notificationsFooter(briefingTime: self.formattedBriefingTime))
+                .font(FontTheme.caption)
         }
+    }
+
+    private var formattedBriefingTime: String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        return formatter.string(from: self.viewModel.morningBriefingTime)
     }
 
     // MARK: - Sensory Feedback Section
 
     private var sensorySection: some View {
-        Section("Sensory Feedback") {
-            Toggle("Haptic Nudges", isOn: self.$viewModel.areHapticsEnabled)
+        Section(Strings.Settings.sensoryFeedbackSectionHeader) {
+            Toggle(Strings.Settings.hapticNudgesToggle, isOn: self.$viewModel.areHapticsEnabled)
                 .accessibilityIdentifier("haptics-toggle")
-            Toggle("Sound Effects", isOn: self.$viewModel.isSoundEnabled)
+            Toggle(Strings.Settings.soundEffectsToggle, isOn: self.$viewModel.isSoundEnabled)
                 .accessibilityIdentifier("sounds-toggle")
         }
     }
@@ -63,13 +79,13 @@ struct PreferencesSettingsView: View {
 
     private var integrationsSection: some View {
         Section {
-            Toggle("Sync Body Metrics (Apple Health)", isOn: self.$viewModel.isHealthSyncEnabled)
+            Toggle(Strings.Settings.appleHealthToggle, isOn: self.$viewModel.isHealthSyncEnabled)
                 .accessibilityIdentifier("health-sync-toggle")
         } header: {
-            Text("Integrations")
+            Text(Strings.Settings.integrationsSectionHeader)
         } footer: {
-            Text("When enabled, your height, weight, age, and gender will be synced from Apple Health.")
-                .font(.caption)
+            Text(Strings.Settings.appleHealthFooter)
+                .font(FontTheme.caption)
         }
     }
 }

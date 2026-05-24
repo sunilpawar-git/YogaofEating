@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - WellbeingDimensions
 
-struct WellbeingDimensions: Codable, Equatable {
+struct WellbeingDimensions: Codable, Equatable, Hashable {
     let physicalLoad: Double
     let emotionalTone: Double
     let cognitiveClarity: Double
@@ -41,6 +41,22 @@ enum WellbeingDimension: String, Codable, CaseIterable, Equatable {
         case .emotionalTone: Strings.Synthesis.Dimension.emotionalTone
         case .cognitiveClarity: Strings.Synthesis.Dimension.cognitiveClarity
         case .behavioralMomentum: Strings.Synthesis.Dimension.behavioralMomentum
+        }
+    }
+
+    func subtitle(mealCount: Int) -> String {
+        switch self {
+        case .physicalLoad:
+            let noun = mealCount == 1
+                ? Strings.WellbeingBreakdown.DimensionSubtitle.physicalLoad_meal
+                : Strings.WellbeingBreakdown.DimensionSubtitle.physicalLoad_meals
+            return String(
+                format: Strings.WellbeingBreakdown.DimensionSubtitle.physicalLoad_fmt,
+                mealCount, noun
+            )
+        case .emotionalTone: return Strings.WellbeingBreakdown.DimensionSubtitle.emotionalTone
+        case .cognitiveClarity: return Strings.WellbeingBreakdown.DimensionSubtitle.cognitiveClarity
+        case .behavioralMomentum: return Strings.WellbeingBreakdown.DimensionSubtitle.behavioralMomentum
         }
     }
 

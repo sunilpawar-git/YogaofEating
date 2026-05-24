@@ -87,19 +87,19 @@ extension SettingsViewModel {
 
     var restoreAccessibilityLabel: String {
         switch self.restoreStatus {
-        case .idle: "Restore from Cloud button"
-        case .restoring: "Restoring data from cloud"
-        case .success: "Restore completed successfully"
-        case let .error(message): "Restore failed: \(message)"
+        case .idle: Strings.Settings.restoreAccessibilityLabelIdle
+        case .restoring: Strings.Settings.restoreAccessibilityLabelRestoring
+        case .success: Strings.Settings.restoreAccessibilityLabelSuccess
+        case let .error(message): Strings.Settings.restoreAccessibilityLabelErrorPrefix + message
         }
     }
 
     var restoreAccessibilityHint: String {
         switch self.restoreStatus {
-        case .idle: "Double tap to restore your meal history from cloud storage"
-        case .restoring: "Restore in progress, please wait"
-        case .success: "Restore completed"
-        case .error: "Double tap to retry restore"
+        case .idle: Strings.Settings.restoreAccessibilityHintIdle
+        case .restoring: Strings.Settings.restoreAccessibilityHintRestoring
+        case .success: Strings.Settings.restoreAccessibilityHintSuccess
+        case .error: Strings.Settings.restoreAccessibilityHintError
         }
     }
 }

@@ -140,16 +140,21 @@ final class InsightTriggerTests: XCTestCase {
 
     // MARK: - Smiley long-press
 
-    func test_handleSmileyLongPress_whenInsightAvailable_showsInsightSheet() {
+    func test_handleSmileyLongPress_whenInsightAvailable_alwaysShowsBreakdownSheet() {
+        // Viewing today always opens the breakdown sheet, not the insight sheet
         self.sut.currentInsight = self.makeInsight()
-        XCTAssertFalse(self.sut.showInsightSheet)
         self.sut.handleSmileyLongPress()
-        XCTAssertTrue(self.sut.showInsightSheet)
+        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertFalse(self.sut.showInsightSheet)
     }
 
-    func test_handleSmileyLongPress_whenNoInsight_doesNotShowSheet() {
+    func test_handleSmileyLongPress_pastDay_noInsight_doesNotShowSheet() {
+        // Past day with no insight — nothing opens
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        self.sut.selectedDate = yesterday
         self.sut.currentInsight = nil
         self.sut.handleSmileyLongPress()
+        XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 

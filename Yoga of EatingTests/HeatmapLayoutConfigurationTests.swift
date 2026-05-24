@@ -6,23 +6,16 @@
         // MARK: - Cell Size Calculation Tests
 
         func test_cellSize_inPortrait_calculatesFittingSevenColumns() {
-            // Given: iPhone SE width (375pt) in portrait, with some horizontal padding
-            let screenWidth: CGFloat = 375
-            let horizontalPadding: CGFloat = 32 // 16 on each side
-            let availableWidth = screenWidth - horizontalPadding
-
-            // When
+            // Given: iPhone SE width (375pt) in portrait — formula gives ~47pt, clamped to maximumCellSize
             let config = HeatmapLayoutConfiguration(
-                screenWidth: screenWidth,
+                screenWidth: 375,
                 screenHeight: 667,
                 isPortrait: true,
-                horizontalPadding: horizontalPadding
+                horizontalPadding: 32
             )
 
-            // Then: Cell size should fit 7 columns with spacing
-            // Available width = 343, need to fit 7 cells + 6 spacing gaps
-            let expectedMaxCellSize = (availableWidth - (config.spacing * 6)) / 7
-            XCTAssertEqual(config.cellSize, expectedMaxCellSize, accuracy: 0.1)
+            // Then: On standard iPhone widths the formula exceeds maximumCellSize, so it clamps
+            XCTAssertEqual(config.cellSize, config.maximumCellSize, accuracy: 0.1)
             XCTAssertGreaterThanOrEqual(config.cellSize, config.minimumCellSize)
         }
 
@@ -39,14 +32,14 @@
                 horizontalPadding: 32
             )
 
-            // Then: In landscape, 7 rows with weeks as columns
-            // Cell size should be clamped to minimum if calculated value is too small
+            // Then: In landscape, 7 rows — formula gives ~30pt, within [min, max] bounds
             let availableHeight = screenHeight - 150 // Account for header, legend, etc.
             let calculatedSize = (availableHeight - (config.spacing * 6)) / 7
             let expectedSize = max(config.minimumCellSize, min(calculatedSize, config.maximumCellSize))
             XCTAssertEqual(config.cellSize, expectedSize, accuracy: 0.1)
-            // Should be at minimum since calculated is below minimum
-            XCTAssertEqual(config.cellSize, config.minimumCellSize)
+            // Calculated (~30pt) is within bounds — no clamping occurs
+            XCTAssertGreaterThanOrEqual(config.cellSize, config.minimumCellSize)
+            XCTAssertLessThanOrEqual(config.cellSize, config.maximumCellSize)
         }
 
         func test_cellSize_neverGoesBelowMinimum() {
@@ -65,7 +58,7 @@
             XCTAssertGreaterThanOrEqual(config.cellSize, config.minimumCellSize)
         }
 
-        func test_minimumCellSize_is32Points() {
+        func test_minimumCellSize_is14Points() {
             // Given/When
             let config = HeatmapLayoutConfiguration(
                 screenWidth: 375,
@@ -73,8 +66,8 @@
                 isPortrait: true
             )
 
-            // Then: Minimum cell size should be 32pt for thumb-friendly tapping
-            XCTAssertEqual(config.minimumCellSize, 32)
+            // Then: Minimum cell size is 14pt (compact circle floor)
+            XCTAssertEqual(config.minimumCellSize, 14)
         }
 
         // MARK: - Grid Direction Tests
@@ -119,7 +112,7 @@
                 isPortrait: true
             )
 
-            // Then: Spacing should be consistent
+            // Then: Spacing should be consistent (4pt for breathing room)
             XCTAssertEqual(config1.spacing, 4)
             XCTAssertEqual(config2.spacing, 4)
         }
@@ -134,9 +127,9 @@
                 isPortrait: true
             )
 
-            // Then: Should calculate appropriate size for smallest iPhone
-            XCTAssertGreaterThanOrEqual(config.cellSize, 32)
-            XCTAssertLessThanOrEqual(config.cellSize, 50)
+            // Then: Should produce compact circle within defined bounds
+            XCTAssertGreaterThanOrEqual(config.cellSize, config.minimumCellSize)
+            XCTAssertLessThanOrEqual(config.cellSize, config.maximumCellSize)
         }
 
         func test_cellSize_foriPhone15ProMax() {
@@ -147,9 +140,9 @@
                 isPortrait: true
             )
 
-            // Then: Should calculate appropriate size for largest iPhone
-            XCTAssertGreaterThanOrEqual(config.cellSize, 32)
-            XCTAssertLessThanOrEqual(config.cellSize, 60)
+            // Then: Should produce compact circle within defined bounds
+            XCTAssertGreaterThanOrEqual(config.cellSize, config.minimumCellSize)
+            XCTAssertLessThanOrEqual(config.cellSize, config.maximumCellSize)
         }
 
         func test_cellSize_foriPad() {
@@ -160,14 +153,14 @@
                 isPortrait: true
             )
 
-            // Then: iPad can have larger cells, capped at max
-            XCTAssertGreaterThanOrEqual(config.cellSize, 32)
+            // Then: iPad cells are capped at maximumCellSize (compact circles)
+            XCTAssertGreaterThanOrEqual(config.cellSize, config.minimumCellSize)
             XCTAssertLessThanOrEqual(config.cellSize, config.maximumCellSize)
         }
 
         // MARK: - Corner Radius Tests
 
-        func test_cornerRadius_isProportionalToCellSize() {
+        func test_cornerRadius_isHalfOfCellSize() {
             // Given
             let config = HeatmapLayoutConfiguration(
                 screenWidth: 375,
@@ -175,9 +168,8 @@
                 isPortrait: true
             )
 
-            // Then: Corner radius should be about 10% of cell size, with min of 3
-            let expectedRadius = max(3, config.cellSize * 0.1)
-            XCTAssertEqual(config.cornerRadius, expectedRadius, accuracy: 0.1)
+            // Then: Corner radius is half of cell size, producing perfect circles
+            XCTAssertEqual(config.cornerRadius, config.cellSize / 2, accuracy: 0.1)
         }
 
         // MARK: - Total Grid Size Tests

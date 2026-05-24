@@ -38,7 +38,8 @@
         // MARK: - Footer Layout Improvements
 
         func test_footerButtonCount_maxTwo() {
-            // When focused: checkmark + timestamp (no recent meals)
+            // Footer contains: recentMeals + timestamp (checkmark lives in textInputSection, not footer)
+            // Both focused and unfocused footer always show exactly 2 items: "+" and timestamp.
             let focusedFooter = FooterButtonVisibility(
                 isFocused: true,
                 hasContent: true,
@@ -46,14 +47,12 @@
             )
 
             let focusedCount = [
-                focusedFooter.showCheckmark,
                 focusedFooter.showRecentMeals,
                 focusedFooter.showTimestamp
             ].count(where: { $0 })
 
             XCTAssertLessThanOrEqual(focusedCount, 2, "Footer should never show more than 2 buttons")
 
-            // When unfocused: recent meals + timestamp (no checkmark)
             let unfocusedFooter = FooterButtonVisibility(
                 isFocused: false,
                 hasContent: true,
@@ -61,7 +60,6 @@
             )
 
             let unfocusedCount = [
-                unfocusedFooter.showCheckmark,
                 unfocusedFooter.showRecentMeals,
                 unfocusedFooter.showTimestamp
             ].count(where: { $0 })
@@ -94,7 +92,7 @@
             XCTAssertTrue(visibility.shouldShowTimestamp)
         }
 
-        func test_focusedEmptyField_onlyTimestampShown() {
+        func test_focusedEmptyField_recentMealsStillVisible() {
             let visibility = SimplifiedMealEntryVisibility(
                 isFocused: true,
                 hasContent: false,
@@ -102,7 +100,10 @@
             )
 
             XCTAssertFalse(visibility.shouldShowCheckmark, "Don't show checkmark for empty field")
-            XCTAssertFalse(visibility.shouldShowRecentMeals, "Recent meals hidden when focused")
+            XCTAssertTrue(
+                visibility.shouldShowRecentMeals,
+                "Recent meals '+' always visible so user can add items while focused"
+            )
             XCTAssertTrue(visibility.shouldShowTimestamp)
         }
     }
@@ -123,7 +124,7 @@
         }
 
         var shouldShowRecentMeals: Bool {
-            !self.isFocused && self.hasRecentMeals
+            self.hasRecentMeals
         }
 
         var shouldShowTimestamp: Bool {
@@ -141,7 +142,7 @@
         }
 
         var showRecentMeals: Bool {
-            !self.isFocused && self.hasRecentMeals
+            self.hasRecentMeals
         }
 
         var showTimestamp: Bool {

@@ -35,7 +35,7 @@ extension PatternAnalysisEngine {
         }
         return [CorrelationCard(
             category: .foodDebt,
-            observation: "2 days of low-quality eating — inflammation and cravings may be elevated today",
+            observation: Strings.Insight.Cards.foodDebt,
             confidence: confidence,
             dataPoints: Array(refs)
         )]
@@ -70,7 +70,7 @@ extension PatternAnalysisEngine {
 
         return [CorrelationCard(
             category: .foodToMood,
-            observation: "Days with healthier meals tend to end with a better mood",
+            observation: Strings.Insight.Cards.foodToMood,
             confidence: confidence,
             dataPoints: Array(references)
         )]
@@ -111,7 +111,7 @@ extension PatternAnalysisEngine {
 
         return [CorrelationCard(
             category: .timingPattern,
-            observation: "Regular meal timing is linked to better sleep quality",
+            observation: Strings.Insight.Cards.timingPattern,
             confidence: ratio,
             dataPoints: Array(refs)
         )]
@@ -153,7 +153,7 @@ extension PatternAnalysisEngine {
 
         return [CorrelationCard(
             category: .focusToFeeling,
-            observation: "Higher task completion days correlate with healthier food choices",
+            observation: Strings.Insight.Cards.todoProductivity,
             confidence: confidence,
             dataPoints: Array(refs)
         )]

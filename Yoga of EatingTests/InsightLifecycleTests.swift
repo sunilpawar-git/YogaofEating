@@ -27,6 +27,7 @@
                     physicalLoad: 0.8, emotionalTone: 0.7,
                     cognitiveClarity: 0.75, behavioralMomentum: 0.65
                 ),
+                dataCompleteness: [.physicalLoad, .emotionalTone, .cognitiveClarity, .behavioralMomentum],
                 textSignals: [.clear, .grateful],
                 smileySuggestion: SmileyState(scale: 0.85, mood: .serene),
                 dominantDimension: .physicalLoad,

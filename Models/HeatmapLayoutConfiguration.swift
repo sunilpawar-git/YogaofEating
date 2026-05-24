@@ -18,13 +18,13 @@ enum HeatmapGridDirection: Equatable {
 struct HeatmapLayoutConfiguration {
     // MARK: - Constants
 
-    /// Minimum cell size for comfortable tapping (Apple HIG recommends 44pt, we use 32pt as compromise)
-    let minimumCellSize: CGFloat = 32
+    /// Minimum cell size — floor for very small screens
+    let minimumCellSize: CGFloat = 14
 
-    /// Maximum cell size to prevent cells from becoming too large on iPads
-    let maximumCellSize: CGFloat = 50
+    /// Maximum cell size — reduced for breathing room; iPhones are formula-limited (~32–36pt)
+    let maximumCellSize: CGFloat = 34
 
-    /// Standard spacing between cells
+    /// Spacing between circles (4pt provides visual breathing room)
     let spacing: CGFloat = 4
 
     /// Number of days in a week (columns in portrait, rows in landscape)
@@ -78,9 +78,9 @@ struct HeatmapLayoutConfiguration {
         self.isPortrait ? .vertical : .horizontal
     }
 
-    /// Corner radius proportional to cell size (10% with minimum of 3pt).
+    /// Perfect circle corner radius (half of cell size).
     var cornerRadius: CGFloat {
-        max(3, self.cellSize * 0.1)
+        self.cellSize / 2
     }
 
     /// Total width of the grid including all cells and spacing.
