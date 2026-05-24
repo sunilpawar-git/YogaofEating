@@ -18,9 +18,11 @@ struct MainScreenView: View {
                 // Note: Peekaboo star removed - insights now accessed via smiley long-press
             }
             .toolbar { self.toolbarContent }
-            .mainScreenSheets(viewModel: self.viewModel, showingSettings: self.$showingSettings)
             // Note: Auto-prompt removed - now using user-initiated reflections via smiley tap
         }
+        // Sheets are attached outside the NavigationStack to avoid an iOS 16+ SwiftUI bug
+        // where .sheet() inside NavigationStack inside TabView fails to present.
+        .mainScreenSheets(viewModel: self.viewModel, showingSettings: self.$showingSettings)
     }
 
     // MARK: - Main Content

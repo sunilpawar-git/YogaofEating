@@ -165,6 +165,14 @@ extension AppTheme {
         static let successBackground = Color.green.opacity(0.15)
         /// Error state.
         static let errorBackground = Color.red.opacity(0.1)
+        /// Foreground color for icons in idle/action state.
+        static let syncButtonColor: Color = .blue
+        /// Foreground color for success icons.
+        static let successColor: Color = .green
+        /// Foreground color for error icons.
+        static let errorColor: Color = .red
+        /// Scale factor applied to ProgressView spinners inside cloud buttons.
+        static let progressViewScale: CGFloat = 0.8
     }
 }
 

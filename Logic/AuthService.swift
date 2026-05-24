@@ -166,7 +166,11 @@ class AuthService: ObservableObject, AuthServiceProtocol {
         self.provider = FirebaseAuthCoreProvider()
         self.currentUser = self.provider.currentUser
         self.setupAuthStateListener()
-        self.restorePreviousSession()
+        // Skip session restore during UI tests: the --uitesting handler signs out explicitly,
+        // and restoring here would race with that sign-out and re-authenticate the user.
+        if !CommandLine.arguments.contains("--uitesting") {
+            self.restorePreviousSession()
+        }
     }
 
     /// Initializer for dependency injection (tests)

@@ -9,6 +9,7 @@ struct SettingsView: View {
     @EnvironmentObject var mainViewModel: MainViewModel
     @StateObject private var viewModel: SettingsViewModel
     @State private var showingClearConfirmation = false
+    @State private var showingSignOutConfirmation = false
 
     init(mainViewModel: MainViewModel) {
         self._mainViewModel = EnvironmentObject()
@@ -20,59 +21,57 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                self.userDataSection
-                self.navigationSection
-                self.dataManagementSection
+                self.accountSection
+                self.navigationLinksSection
+                self.historySection
                 self.supportSection
+                self.dangerZoneSection
             }
-            .navigationTitle("Settings")
+            .navigationTitle(Strings.Settings.navigationTitle)
             #if canImport(UIKit)
                 .navigationBarTitleDisplayMode(.inline)
             #endif
                 .toolbar { self.toolbarContent }
-                .alert("Clear All Data?", isPresented: self.$showingClearConfirmation) {
-                    Button("Cancel", role: .cancel) {}
-                    Button("Clear", role: .destructive) { self.mainViewModel.deleteAllData() }
+                .alert(
+                    Strings.Settings.clearAllDataAlertTitle,
+                    isPresented: self.$showingClearConfirmation
+                ) {
+                    Button(Strings.Common.cancel, role: .cancel) {}
+                    Button(Strings.Settings.clearAllDataDestructiveButton, role: .destructive) {
+                        self.mainViewModel.deleteAllData()
+                    }
                 } message: {
-                    Text(
-                        "This will permanently delete all logged meals, history, and user settings. This action cannot be undone."
-                    )
+                    Text(Strings.Settings.clearAllDataAlertMessage)
+                }
+                .alert(
+                    Strings.Settings.signOutAlertTitle,
+                    isPresented: self.$showingSignOutConfirmation
+                ) {
+                    Button(Strings.Common.cancel, role: .cancel) {}
+                    Button(Strings.Settings.signOutTitle, role: .destructive) {
+                        self.viewModel.signOut()
+                    }
+                } message: {
+                    Text(Strings.Settings.signOutConfirmationMessage)
                 }
         }
     }
 
-    // MARK: - Navigation Section
+    // MARK: - Account Section
 
-    private var navigationSection: some View {
-        Section {
-            NavigationLink {
-                UserProfileSettingsView(viewModel: self.viewModel)
-                    .environmentObject(self.mainViewModel)
-            } label: {
-                Label("Profile & Health", systemImage: "person.crop.circle")
-            }
-            .accessibilityIdentifier("profile-settings-link")
-
-            NavigationLink {
-                PreferencesSettingsView(viewModel: self.viewModel)
-            } label: {
-                Label("Preferences", systemImage: "gearshape")
-            }
-            .accessibilityIdentifier("preferences-settings-link")
-        }
-    }
-
-    // MARK: - Sections
-
-    private var userDataSection: some View {
-        Section("User Data") {
+    private var accountSection: some View {
+        Section(Strings.Settings.accountHeader) {
             if let user = self.viewModel.currentUser {
                 self.signedInUserView(user: user)
-                SettingsCloudSection(viewModel: self.viewModel)
+                NavigationLink {
+                    SettingsCloudBackupView(viewModel: self.viewModel)
+                } label: {
+                    Label(Strings.Settings.cloudBackupTitle, systemImage: "icloud")
+                }
+                .accessibilityIdentifier("cloud-backup-link")
             } else {
                 self.signInButton
             }
-            self.heatmapLink
         }
     }
 
@@ -80,16 +79,12 @@ struct SettingsView: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(user.displayName ?? "User")
-                    .font(.headline)
+                    .font(FontTheme.displayName)
                 Text(user.email ?? "")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .font(FontTheme.displaySubtitle)
+                    .foregroundColor(AppTheme.textSecondary)
             }
             Spacer()
-            Button("Sign Out") {
-                self.viewModel.signOut()
-            }
-            .foregroundColor(.red)
         }
     }
 
@@ -99,53 +94,108 @@ struct SettingsView: View {
         }) {
             HStack {
                 Image(systemName: "person.crop.circle.badge.plus")
-                Text("Login with Google")
+                Text(Strings.Settings.loginWithGoogleTitle)
             }
         }
     }
 
-    private var heatmapLink: some View {
-        NavigationLink {
-            YearlyCalendarView(
-                viewModel: YearlyCalendarViewModel(historicalService: self.mainViewModel.historicalService)
-            )
-        } label: {
-            Label("Yearly Heatmap", systemImage: "calendar.badge.clock")
+    // MARK: - Navigation Links Section
+
+    private var navigationLinksSection: some View {
+        Section {
+            NavigationLink {
+                UserProfileSettingsView(viewModel: self.viewModel)
+                    .environmentObject(self.mainViewModel)
+            } label: {
+                Label(Strings.Settings.profileHealthTitle, systemImage: "person.crop.circle")
+            }
+            .accessibilityIdentifier("profile-settings-link")
+
+            NavigationLink {
+                PreferencesSettingsView(viewModel: self.viewModel)
+            } label: {
+                Label(Strings.Settings.preferencesTitle, systemImage: "gearshape")
+            }
+            .accessibilityIdentifier("preferences-settings-link")
+
+            Button {
+                #if canImport(UIKit)
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                #endif
+            } label: {
+                Label(Strings.Settings.manageHealthAccessTitle, systemImage: "heart.text.square")
+            }
+            .accessibilityIdentifier("manage-health-access-link")
         }
-        .accessibilityIdentifier("yearly-heatmap-link")
     }
 
-    // MARK: - Sections moved to sub-views
+    // MARK: - History Section
 
-    // personalDetailsSection, healthInsightsSection, privacySection -> UserProfileSettingsView
-    // appearanceSection, notificationsSection, sensorySection, integrationsSection -> PreferencesSettingsView
+    private var historySection: some View {
+        Section(Strings.Settings.historyHeader) {
+            NavigationLink {
+                YearlyCalendarView(
+                    viewModel: YearlyCalendarViewModel(
+                        historicalService: self.mainViewModel.historicalService
+                    )
+                )
+            } label: {
+                Label(Strings.Settings.yearlyHeatmapTitle, systemImage: "calendar.badge.clock")
+            }
+            .accessibilityIdentifier("yearly-heatmap-link")
+        }
+    }
 
-    private var dataManagementSection: some View {
-        Section("Data Management") {
+    // MARK: - Danger Zone Section
+
+    private var dangerZoneSection: some View {
+        Section(Strings.Settings.dangerZoneHeader) {
+            if self.viewModel.currentUser != nil {
+                Button(role: .destructive) {
+                    self.showingSignOutConfirmation = true
+                } label: {
+                    Label(
+                        Strings.Settings.signOutTitle,
+                        systemImage: "rectangle.portrait.and.arrow.right"
+                    )
+                }
+                .accessibilityIdentifier("sign-out-button")
+            }
             Button(role: .destructive) {
                 self.showingClearConfirmation = true
             } label: {
-                Label("Clear All Data", systemImage: "trash")
+                Label(Strings.Settings.clearAllDataTitle, systemImage: "trash")
             }
+            .accessibilityIdentifier("clear-all-data-button")
         }
     }
+
+    // MARK: - Support & Legal Section
 
     private var supportSection: some View {
         Section {
             NavigationLink {
                 FAQView()
             } label: {
-                Label("FAQ & Help", systemImage: "questionmark.circle")
+                Label(Strings.Settings.faqTitle, systemImage: "questionmark.circle")
             }
             NavigationLink {
-                LegalDocumentView(title: "Privacy Policy", textContent: self.privacyPolicyText)
+                LegalDocumentView(
+                    title: Strings.Settings.privacyPolicyTitle,
+                    textContent: Strings.Settings.privacyPolicyText
+                )
             } label: {
-                Label("Privacy Policy", systemImage: "lock.shield")
+                Label(Strings.Settings.privacyPolicyTitle, systemImage: "lock.shield")
             }
             NavigationLink {
-                LegalDocumentView(title: "Terms of Service", textContent: self.termsOfServiceText)
+                LegalDocumentView(
+                    title: Strings.Settings.termsTitle,
+                    textContent: Strings.Settings.termsOfServiceText
+                )
             } label: {
-                Label("Terms of Service", systemImage: "doc.text")
+                Label(Strings.Settings.termsTitle, systemImage: "doc.text")
             }
             Button {
                 #if canImport(UIKit)
@@ -156,14 +206,16 @@ struct SettingsView: View {
                     }
                 #endif
             } label: {
-                Label("Rate Yoga of Eating", systemImage: "star")
+                Label(Strings.Settings.rateTitle, systemImage: "star")
             }
         } header: {
-            Text("Support & Legal")
+            Text(Strings.Settings.supportHeader)
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Yoga of Eating v\(self.appVersion) (\(self.appBuild))")
-                Text("© \(Calendar.current.component(.year, from: Date())) Sunil")
+                Text(Strings.Settings.versionFooter(version: self.appVersion, build: self.appBuild))
+                Text(Strings.Settings.copyrightFooter(
+                    year: Calendar.current.component(.year, from: Date())
+                ))
             }
             .padding(.top, 8)
         }
@@ -175,11 +227,11 @@ struct SettingsView: View {
     private var toolbarContent: some ToolbarContent {
         #if canImport(UIKit)
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") { self.dismiss() }
+                Button(Strings.Settings.doneButton) { self.dismiss() }
             }
         #elseif canImport(AppKit)
             ToolbarItem(placement: .automatic) {
-                Button("Done") { self.dismiss() }
+                Button(Strings.Settings.doneButton) { self.dismiss() }
             }
         #endif
     }
@@ -192,58 +244,5 @@ struct SettingsView: View {
 
     private var appBuild: String {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-    }
-
-    private var privacyPolicyText: String {
-        """
-        Privacy Policy
-
-        Last Updated: January 2026
-
-        1. Overview
-        Yoga of Eating respects your privacy. We prioritize local data storage and transparency.
-
-        2. Data Collection
-        - Personal Data: We collect your name and email only if you choose to sign in.
-        - Health Data: We sync with HealthKit only with your explicit permission.
-        - Usage Data: Basic app usage metrics may be collected anonymously.
-
-        3. AI & Analysis
-        - Your meal entries are processed effectively by Google Gemini AI to provide nutritional insights.
-        - We do not use your personal data to train public AI models.
-
-        4. Cloud Sync
-        - If you enable Cloud Sync, your data is encrypted and stored on Google Firebase.
-        - You can delete your account and data at any time.
-
-        5. Contact
-        For any questions, please check the FAQ or contact support.
-        """
-    }
-
-    private var termsOfServiceText: String {
-        """
-        Terms of Service
-
-        Last Updated: January 2026
-
-        1. Acceptance
-        By using Yoga of Eating, you agree to these terms.
-
-        2. Usage
-        - You agree to use the app for personal, non-commercial purposes.
-        - You will not use the app for any illegal activities.
-
-        3. Medical Disclaimer
-        - This app is NOT a medical device.
-        - The AI insights are for informational purposes only.
-        - Consult a healthcare professional for medical advice.
-
-        4. Termination
-        We reserve the right to terminate accounts that violate these terms.
-
-        5. Changes
-        We may update these terms from time to time. Continued use implies acceptance.
-        """
     }
 }

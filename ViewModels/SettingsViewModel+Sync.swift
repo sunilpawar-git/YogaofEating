@@ -16,24 +16,24 @@ extension SettingsViewModel {
         // Untracked fire-and-forget: triggered by toggle, single run, no cancellation needed.
         Task {
             do {
-                _ = try await HealthKitService.shared.requestAuthorization()
+                _ = try await self.healthKitProvider.requestAuthorization()
 
                 let weightUnit: HKUnit = self.unitSystem == 0 ? .gramUnit(with: .kilo) : .pound()
                 let heightUnit: HKUnit = self.unitSystem == 0 ? .meterUnit(with: .centi) : .inch()
 
-                if let hkWeight = try await HealthKitService.shared.fetchLatestWeight(unit: weightUnit) {
+                if let hkWeight = try await self.healthKitProvider.fetchLatestWeight(unit: weightUnit) {
                     self.weight = String(format: "%.1f", hkWeight)
                 }
 
-                if let hkHeight = try await HealthKitService.shared.fetchLatestHeight(unit: heightUnit) {
+                if let hkHeight = try await self.healthKitProvider.fetchLatestHeight(unit: heightUnit) {
                     self.height = String(format: "%.1f", hkHeight)
                 }
 
-                if let hkAge = try HealthKitService.shared.fetchAge() {
+                if let hkAge = try self.healthKitProvider.fetchAge() {
                     self.age = String(hkAge)
                 }
 
-                if let hkGender = try HealthKitService.shared.fetchGender() {
+                if let hkGender = try self.healthKitProvider.fetchGender() {
                     self.applyHealthKitGender(hkGender)
                 }
 
@@ -168,28 +168,28 @@ extension SettingsViewModel {
 
     var syncStatusText: String {
         switch self.syncStatus {
-        case .idle: "Sync with Cloud"
-        case .syncing: "Syncing..."
-        case .success: "Synced!"
-        case .error: "Sync Failed"
+        case .idle: Strings.Settings.syncButtonIdle
+        case .syncing: Strings.Settings.syncButtonSyncing
+        case .success: Strings.Settings.syncButtonSuccess
+        case .error: Strings.Settings.syncButtonError
         }
     }
 
     var syncAccessibilityLabel: String {
         switch self.syncStatus {
-        case .idle: "Sync with Cloud button"
-        case .syncing: "Syncing data to cloud"
-        case .success: "Sync completed successfully"
-        case let .error(message): "Sync failed: \(message)"
+        case .idle: Strings.Settings.syncAccessibilityLabelIdle
+        case .syncing: Strings.Settings.syncAccessibilityLabelSyncing
+        case .success: Strings.Settings.syncAccessibilityLabelSuccess
+        case let .error(message): Strings.Settings.syncAccessibilityLabelErrorPrefix + message
         }
     }
 
     var syncAccessibilityHint: String {
         switch self.syncStatus {
-        case .idle: "Double tap to sync your data with cloud storage"
-        case .syncing: "Sync in progress, please wait"
-        case .success: "Sync completed"
-        case .error: "Double tap to retry sync"
+        case .idle: Strings.Settings.syncAccessibilityHintIdle
+        case .syncing: Strings.Settings.syncAccessibilityHintSyncing
+        case .success: Strings.Settings.syncAccessibilityHintSuccess
+        case .error: Strings.Settings.syncAccessibilityHintError
         }
     }
 }

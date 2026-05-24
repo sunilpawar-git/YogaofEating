@@ -33,6 +33,14 @@ enum FontTheme {
     /// Size: 12pt, Regular weight
     static let caption = Font.system(size: 12, weight: .regular, design: .rounded)
 
+    /// For user display name in Settings account row
+    /// Size: 17pt, Semibold weight
+    static let displayName = Font.system(size: 17, weight: .semibold, design: .rounded)
+
+    /// For secondary user info (email, subtitle) in Settings account row
+    /// Size: 15pt, Regular weight
+    static let displaySubtitle = Font.system(size: 15, weight: .regular, design: .rounded)
+
     /// For small inline icons (e.g. flame icon in CaloriePillView)
     /// Size: 11pt, Semibold weight
     static let iconSmall = Font.system(size: 11, weight: .semibold, design: .rounded)

@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import HealthKit
 @testable import Yoga_of_Eating
 
 // MARK: - MockSynthesisScheduler
@@ -207,5 +208,79 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
                 wellbeingDimensions: dimensions, textSignals: textSignals
             ))
         }
+    }
+}
+
+// MARK: - MockNotificationScheduler
+
+/// Test double for `NotificationScheduling`. Records call counts for assertion in unit tests.
+final class MockNotificationScheduler: NotificationScheduling {
+    var scheduleMorningNudgeCallCount = 0
+    var cancelMorningNudgeCallCount = 0
+    var scheduleDefaultMealRemindersCallCount = 0
+    var cancelMealRemindersCallCount = 0
+
+    func scheduleMorningNudge(at _: Date) { self.scheduleMorningNudgeCallCount += 1 }
+    func cancelMorningNudge() { self.cancelMorningNudgeCallCount += 1 }
+    func scheduleDefaultMealReminders() { self.scheduleDefaultMealRemindersCallCount += 1 }
+    func cancelMealReminders() { self.cancelMealRemindersCallCount += 1 }
+
+    func resetCounts() {
+        self.scheduleMorningNudgeCallCount = 0
+        self.cancelMorningNudgeCallCount = 0
+        self.scheduleDefaultMealRemindersCallCount = 0
+        self.cancelMealRemindersCallCount = 0
+    }
+}
+
+// MARK: - MockHealthKitBodyMetricsProvider
+
+/// Test double for `HealthKitBodyMetricsProviding`. Records call counts and returns stubs.
+@MainActor
+final class MockHealthKitBodyMetricsProvider: HealthKitBodyMetricsProviding {
+    var requestAuthorizationCallCount = 0
+    var fetchLatestWeightCallCount = 0
+    var fetchLatestHeightCallCount = 0
+    var fetchAgeCallCount = 0
+    var fetchGenderCallCount = 0
+
+    var shouldThrow = false
+    var stubbedWeight: Double?
+    var stubbedHeight: Double?
+    var stubbedAge: Int?
+    var stubbedGender: Int?
+
+    func requestAuthorization() async throws -> Bool {
+        self.requestAuthorizationCallCount += 1
+        if self.shouldThrow { throw NSError(domain: "MockHealthKit", code: 1) }
+        return true
+    }
+
+    func fetchLatestWeight(unit _: HKUnit) async throws -> Double? {
+        self.fetchLatestWeightCallCount += 1
+        return self.stubbedWeight
+    }
+
+    func fetchLatestHeight(unit _: HKUnit) async throws -> Double? {
+        self.fetchLatestHeightCallCount += 1
+        return self.stubbedHeight
+    }
+
+    func fetchAge() throws -> Int? {
+        self.fetchAgeCallCount += 1
+        return self.stubbedAge
+    }
+
+    func fetchGender() throws -> Int? {
+        self.fetchGenderCallCount += 1
+        return self.stubbedGender
+    }
+
+    func resetCounts() {
+        self.requestAuthorizationCallCount = 0
+        self.fetchLatestWeightCallCount = 0
+        self.fetchLatestHeightCallCount = 0
+        self.fetchAgeCallCount = 0
+        self.fetchGenderCallCount = 0
     }
 }

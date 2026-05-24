@@ -60,6 +60,10 @@ struct YogaOfEatingApp: App {
                 UserDefaults.standard.synchronize()
             }
 
+            // Sign out from Firebase so Settings shows the signed-out state,
+            // preventing the tall SettingsCloudSection from pushing navigation rows off-screen.
+            AuthService.shared.signOut()
+
             // Clear persisted JSON data file
             if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                 let dataFileURL = documentsURL.appendingPathComponent("yoga_of_eating_data.json")
@@ -74,11 +78,18 @@ struct YogaOfEatingApp: App {
         }
 
         // Request permissions and schedule daily nudges on startup.
-        // Skipped in CI environments to prevent permission popups causing test flakiness.
+        // Skipped in CI and UI-test environments to prevent permission popups intercepting taps.
         let isCIEnvironment = ProcessInfo.processInfo.environment["CI"] == "true"
-        if !isCIEnvironment {
+        let isUITestingMode = CommandLine.arguments.contains("--uitesting")
+        if !isCIEnvironment, !isUITestingMode {
             NotificationManager.shared.requestPermissions()
-            NotificationManager.shared.scheduleMorningNudge()
+            // Use the user's stored briefing time preference; default to 8:00 AM on first launch.
+            let storedInterval = UserDefaults.standard.object(forKey: StorageKeys.morningBriefingTime) as? Double
+            if let interval = storedInterval {
+                NotificationManager.shared.scheduleMorningNudge(at: Date(timeIntervalSinceReferenceDate: interval))
+            } else {
+                NotificationManager.shared.scheduleMorningNudge()
+            }
             NotificationManager.shared.scheduleDefaultMealReminders()
             appLogger.info("Notifications configured")
         }
@@ -99,7 +110,7 @@ struct YogaOfEatingApp: App {
             }
         }
         .onChange(of: self.scenePhase) { _, newPhase in
-            if newPhase == .active {
+            if newPhase == .active, !CommandLine.arguments.contains("--uitesting") {
                 self.viewModel.refreshActivityDataIfNeeded()
             }
         }

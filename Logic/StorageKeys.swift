@@ -20,6 +20,8 @@ enum StorageKeys {
 
     static let morningNudgeEnabled = "morning_nudge_enabled"
     static let mealRemindersEnabled = "meal_reminders_enabled"
+    /// Stores the user-configured morning briefing time as a TimeInterval since reference date.
+    static let morningBriefingTime = "morning_briefing_time"
 
     // MARK: - Sensory
 
@@ -65,6 +67,7 @@ enum StorageKeys {
         unitSystem,
         morningNudgeEnabled,
         mealRemindersEnabled,
+        morningBriefingTime,
         hapticsEnabled,
         soundEnabled,
         healthSyncEnabled,

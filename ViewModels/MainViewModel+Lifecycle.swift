@@ -136,6 +136,8 @@ extension MainViewModel {
     /// - Auth uses `HealthKitService.shared` directly (not injectable) and may show a dialog
     /// - Data fetch uses the injected `activityProvider` (mockable in tests), so tests are deterministic
     func refreshActivityDataIfNeeded() {
+        // HealthKit auth shows a system sheet that intercepts taps in UI tests — skip entirely.
+        guard !CommandLine.arguments.contains("--uitesting") else { return }
         let elapsed = Date().timeIntervalSince(self.lastActivityDataFetchDate ?? .distantPast)
         guard elapsed >= TimingConstants.activityFetchCooldown else { return }
         self.lastActivityDataFetchDate = Date()

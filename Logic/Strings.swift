@@ -313,9 +313,147 @@ enum Strings {
     // MARK: - Accessibility
 
     enum Settings {
+        // MARK: - Navigation title
+
+        static let navigationTitle = "Settings"
+
+        // MARK: - Toolbar
+
+        static let doneButton = "Done"
+
+        // MARK: - Account section
+
+        static let accountHeader = "Account"
+        static let loginWithGoogleTitle = "Login with Google"
+
+        // MARK: - Navigation section rows
+
+        static let profileHealthTitle = "Profile & Health"
+        static let preferencesTitle = "Preferences"
+        static let manageHealthAccessTitle = "Manage Health Access"
+
+        // MARK: - Cloud Backup sub-page
+
+        static let cloudBackupTitle = "Cloud Backup"
+        static let cloudBackupDescription = "Your meals and insights are securely backed up to your account."
+
+        // MARK: - History section
+
+        static let historyHeader = "History"
+        static let yearlyHeatmapTitle = "Yearly Heatmap"
+
+        // MARK: - Support & Legal section
+
+        static let supportHeader = "Support & Legal"
+        static let faqTitle = "FAQ & Help"
+        static let privacyPolicyTitle = "Privacy Policy"
+        static let termsTitle = "Terms of Service"
+        static let rateTitle = "Rate Yoga of Eating"
+
+        // MARK: - Version footer
+
+        /// Format: "Yoga of Eating v1.0 (42)"
+        static func versionFooter(version: String, build: String) -> String {
+            "Yoga of Eating v\(version) (\(build))"
+        }
+
+        /// Format: "© 2026 Sunil"
+        static func copyrightFooter(year: Int) -> String {
+            "© \(year) Sunil"
+        }
+
+        // MARK: - Notifications preferences
+
+        static let morningBriefingTimeLabel = "Briefing Time"
+
+        /// Footer shown under Notifications section in Preferences.
+        /// `formattedTime` is a pre-formatted time string (e.g. "8:00 AM").
+        static func notificationsFooter(briefingTime: String) -> String {
+            "Morning briefing at \(briefingTime). Meal reminders at 8 AM, 1 PM, and 8 PM."
+        }
+
+        // MARK: - Preferences sub-view sections and controls
+
+        static let appearanceSectionHeader = "Appearance"
+        static let themeSystem = "System"
+        static let themeLight = "Light"
+        static let themeDark = "Dark"
+        static let themeAccessibilityLabel = "Theme"
+        static let morningNudgeToggle = "Morning Nudge"
+        static let mealRemindersToggle = "Meal Reminders"
+        static let notificationsSectionHeader = "Notifications"
+        static let sensoryFeedbackSectionHeader = "Sensory Feedback"
+        static let hapticNudgesToggle = "Haptic Nudges"
+        static let soundEffectsToggle = "Sound Effects"
+        static let integrationsSectionHeader = "Integrations"
+        static let appleHealthToggle = "Sync Body Metrics (Apple Health)"
+        static let appleHealthFooter = "When enabled, your height, weight, age, and gender will be synced from Apple Health."
+
+        // MARK: - User Profile sub-view sections and controls
+
+        static let profileAndHealthTitle = "Profile & Health"
+        static let personalDetailsSectionHeader = "Personal Details"
+        static let personalDetailsFooter = "This information is used to calculate your health insights and personalize feedback."
+        static let nameLabel = "Name"
+        static let genderPickerLabel = "Gender"
+        static let genderUnspecified = "Unspecified"
+        static let genderMale = "Male"
+        static let genderFemale = "Female"
+        static let genderOther = "Other"
+        static let ageLabel = "Age"
+        static let unitSystemPickerLabel = "Unit System"
+        static let unitMetric = "Metric"
+        static let unitImperial = "Imperial"
+        static let heightLabelMetric = "Height (cm)"
+        static let heightLabelImperial = "Height (ft/in)"
+        static let heightPlaceholder = "Height"
+        static let weightLabelMetric = "Weight (kg)"
+        static let weightLabelImperial = "Weight (lbs)"
+        static let weightPlaceholder = "Weight"
+        static let healthInsightsSectionHeader = "Health Insights"
+        static let bmiLabel = "BMI"
+        static let bmiCategoryLabel = "Category"
+        static let dailyEnergyLabel = "Daily Energy"
+        static let riskLevelLabel = "Risk Level"
+        static let healthInsightsEmptyState = "Complete your personal details above to see health insights"
+        static let showHealthInsightsToggle = "Show Health Insights"
+        static let privacySectionHeader = "Privacy"
+        static let privacyFooter = "All health calculations are done on your device. Data never leaves your phone except for encrypted cloud sync."
+
+        // MARK: - Sign Out
+
+        static let signOutTitle = "Sign Out"
+        static let signOutAlertTitle = "Sign Out?"
+        static let signOutConfirmationMessage = "You'll need to sign in again to sync your data."
+
+        // MARK: - Danger Zone section
+
+        static let dangerZoneHeader = "Danger Zone"
+        static let clearAllDataTitle = "Clear All Data"
+        static let clearAllDataAlertTitle = "Clear All Data?"
+        static let clearAllDataAlertMessage =
+            "This will permanently delete all logged meals, history, and user settings. This action cannot be undone."
+        static let clearAllDataDestructiveButton = "Clear"
+
+        // MARK: - Cloud sync / restore
+
         /// Generic sync failure message shown to users when the underlying error is not user-actionable.
         /// Never expose provider-specific error strings (Firebase, NSError domains) to users.
         static let syncFailedGeneric = "Sync failed. Please check your connection and try again."
+
+        // MARK: - Sync button labels
+
+        /// Idle state — sync button ready to tap.
+        static let syncButtonIdle = "Sync with Cloud"
+
+        /// Active state — sync in progress.
+        static let syncButtonSyncing = "Syncing..."
+
+        /// Completion state — sync finished successfully.
+        static let syncButtonSuccess = "Synced!"
+
+        /// Error state — sync failed.
+        static let syncButtonError = "Sync Failed"
 
         // MARK: - Restore button labels
 
@@ -333,6 +471,85 @@ enum Strings {
 
         /// Generic restore failure shown when the underlying error is not user-actionable.
         static let restoreFailedGeneric = "Restore failed. Please check your connection and try again."
+
+        // MARK: - Sync accessibility labels
+
+        static let syncAccessibilityLabelIdle = "Sync with Cloud button"
+        static let syncAccessibilityLabelSyncing = "Syncing data to cloud"
+        static let syncAccessibilityLabelSuccess = "Sync completed successfully"
+        static let syncAccessibilityLabelErrorPrefix = "Sync failed: "
+
+        // MARK: - Sync accessibility hints
+
+        static let syncAccessibilityHintIdle = "Double tap to sync your data with cloud storage"
+        static let syncAccessibilityHintSyncing = "Sync in progress, please wait"
+        static let syncAccessibilityHintSuccess = "Sync completed"
+        static let syncAccessibilityHintError = "Double tap to retry sync"
+
+        // MARK: - Restore accessibility labels
+
+        static let restoreAccessibilityLabelIdle = "Restore from Cloud button"
+        static let restoreAccessibilityLabelRestoring = "Restoring data from cloud"
+        static let restoreAccessibilityLabelSuccess = "Restore completed successfully"
+        static let restoreAccessibilityLabelErrorPrefix = "Restore failed: "
+
+        // MARK: - Restore accessibility hints
+
+        static let restoreAccessibilityHintIdle = "Double tap to restore your meal history from cloud storage"
+        static let restoreAccessibilityHintRestoring = "Restore in progress, please wait"
+        static let restoreAccessibilityHintSuccess = "Restore completed"
+        static let restoreAccessibilityHintError = "Double tap to retry restore"
+
+        // MARK: - Legal documents (SSOT — never hardcode in Views)
+
+        static let privacyPolicyText = """
+        Privacy Policy
+
+        Last Updated: January 2026
+
+        1. Overview
+        Yoga of Eating respects your privacy. We prioritize local data storage and transparency.
+
+        2. Data Collection
+        - Personal Data: We collect your name and email only if you choose to sign in.
+        - Health Data: We sync with HealthKit only with your explicit permission.
+        - Usage Data: Basic app usage metrics may be collected anonymously.
+
+        3. AI & Analysis
+        - Your meal entries are processed effectively by Google Gemini AI to provide nutritional insights.
+        - We do not use your personal data to train public AI models.
+
+        4. Cloud Sync
+        - If you enable Cloud Sync, your data is encrypted and stored on Google Firebase.
+        - You can delete your account and data at any time.
+
+        5. Contact
+        For any questions, please check the FAQ or contact support.
+        """
+
+        static let termsOfServiceText = """
+        Terms of Service
+
+        Last Updated: January 2026
+
+        1. Acceptance
+        By using Yoga of Eating, you agree to these terms.
+
+        2. Usage
+        - You agree to use the app for personal, non-commercial purposes.
+        - You will not use the app for any illegal activities.
+
+        3. Medical Disclaimer
+        - This app is NOT a medical device.
+        - The AI insights are for informational purposes only.
+        - Consult a healthcare professional for medical advice.
+
+        4. Termination
+        We reserve the right to terminate accounts that violate these terms.
+
+        5. Changes
+        We may update these terms from time to time. Continued use implies acceptance.
+        """
     }
 
     enum Accessibility {
