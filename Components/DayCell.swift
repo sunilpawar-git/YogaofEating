@@ -6,11 +6,11 @@ struct DayCell: View {
     let date: Date
     let snapshot: DailySmileySnapshot?
 
-    /// The size of the cell. Defaults to 32pt for thumb-friendly tapping.
-    var cellSize: CGFloat = 32
+    /// The size of the cell. Defaults to 20pt for compact circle display.
+    var cellSize: CGFloat = 20
 
-    /// The corner radius of the cell. Defaults to 4pt.
-    var cornerRadius: CGFloat = 4
+    /// The corner radius of the cell. Defaults to half cell size for perfect circles.
+    var cornerRadius: CGFloat = 10
 
     var body: some View {
         RoundedRectangle(cornerRadius: self.cornerRadius)
