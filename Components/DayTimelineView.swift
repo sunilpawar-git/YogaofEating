@@ -146,24 +146,6 @@ struct DayTimelineView: View {
         let showBadge = FastingLogicService.shouldShowBadge(for: period)
 
         return ZStack {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: period.isSignificant
-                            ? [.green.opacity(0.2), .green.opacity(0.1)]
-                            : [.primary.opacity(0.08), .primary.opacity(0.04)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: period.isSignificant ? 3 : 2, height: spacing)
-                .shadow(
-                    color: period.isSignificant ? .green.opacity(0.3 * period.glowIntensity) : .clear,
-                    radius: 4,
-                    x: 0,
-                    y: 0
-                )
-
             if showBadge {
                 FastingBadgeView(fastingPeriod: period)
             }

@@ -1,67 +1,19 @@
 import SwiftUI
 
-/// Minimalist badge displaying fasting duration, centered on timeline connector.
-/// Significant fasting periods (12h+) display with green text and a subtle green
-/// capsule wash to express their metabolic significance. Default periods stay grey.
+/// Plain duration label centered on the timeline connector between meals.
+/// Shows elapsed time (e.g. "4h 55m") without decorative capsule or glow —
+/// the spine carries the visual; this label just adds the temporal context.
 struct FastingBadgeView: View {
     let fastingPeriod: FastingPeriod
 
+    /// Text shown in the connector. Exposed for testing.
+    var displayText: String { self.fastingPeriod.formattedDuration }
+
     var body: some View {
-        Text("[\(self.fastingPeriod.formattedDuration)]")
-            .font(.system(size: 11, weight: .medium, design: .rounded))
-            .foregroundColor(self.textColor)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background {
-                Capsule()
-                    .fill(self.capsuleFill)
-            }
-            .overlay {
-                Capsule()
-                    .stroke(self.borderColor, lineWidth: 0.5)
-            }
-            .shadow(
-                color: self.glowColor.opacity(self.fastingPeriod.glowIntensity * 0.4),
-                radius: self.glowRadius,
-                x: 0,
-                y: 0
-            )
-            .accessibilityLabel("Fasting period: \(self.fastingPeriod.formattedDuration)")
-    }
-
-    /// Text color: green for significant periods, default secondary for others.
-    private var textColor: Color {
-        self.fastingPeriod.isSignificant
-            ? AppTheme.Timeline.fastingSignificantColor
-            : AppTheme.Timeline.fastingDefaultColor
-    }
-
-    /// Capsule fill: subtle green wash for significant periods, material for others.
-    private var capsuleFill: AnyShapeStyle {
-        if self.fastingPeriod.isSignificant {
-            return AnyShapeStyle(
-                AppTheme.Timeline.fastingSignificantColor
-                    .opacity(AppTheme.Timeline.fastingSignificantFillOpacity)
-            )
-        }
-        return AnyShapeStyle(.ultraThinMaterial)
-    }
-
-    /// Border color based on fasting significance.
-    private var borderColor: Color {
-        self.fastingPeriod.isSignificant
-            ? AppTheme.Timeline.fastingSignificantColor.opacity(0.4)
-            : Color.primary.opacity(0.1)
-    }
-
-    /// Glow color for significant fasting periods.
-    private var glowColor: Color {
-        .green
-    }
-
-    /// Glow radius scales with intensity.
-    private var glowRadius: CGFloat {
-        self.fastingPeriod.isSignificant ? 8 : 0
+        Text(self.displayText)
+            .font(FontTheme.caption)
+            .foregroundColor(.secondary.opacity(0.7))
+            .accessibilityLabel("Fasting period: \(self.displayText)")
     }
 }
 

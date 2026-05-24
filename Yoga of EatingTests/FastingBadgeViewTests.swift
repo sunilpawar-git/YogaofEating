@@ -173,6 +173,39 @@ final class FastingBadgeViewTests: XCTestCase {
         XCTAssertEqual(view.fastingPeriod.glowIntensity, 0.0)
     }
 
+    // MARK: - displayText (minimalist connector label)
+
+    func test_fastingBadgeView_displayText_matchesFormattedDuration() {
+        // Given: 4h 55m fasting gap
+        let period = self.makePeriod(hours: 4 + 55.0 / 60.0)
+        let view = FastingBadgeView(fastingPeriod: period)
+
+        // Then: displayText equals the model's formattedDuration — no extra decoration
+        XCTAssertEqual(view.displayText, period.formattedDuration)
+    }
+
+    func test_fastingBadgeView_displayText_hasNoBrackets() {
+        // Given: any fasting period
+        let period = self.makePeriod(hours: 6)
+        let view = FastingBadgeView(fastingPeriod: period)
+
+        // Then: no square brackets (old "[6h]" style is gone)
+        XCTAssertFalse(view.displayText.contains("["), "displayText must not wrap duration in brackets")
+        XCTAssertFalse(view.displayText.contains("]"), "displayText must not wrap duration in brackets")
+    }
+
+    func test_fastingBadgeView_displayText_significantAndShort_haveSameFormat() {
+        // Given: one short, one significant fasting period
+        let short = self.makePeriod(hours: 5)
+        let significant = self.makePeriod(hours: 16)
+        let shortView = FastingBadgeView(fastingPeriod: short)
+        let significantView = FastingBadgeView(fastingPeriod: significant)
+
+        // Then: both display using plain formattedDuration — no format difference by significance
+        XCTAssertEqual(shortView.displayText, short.formattedDuration)
+        XCTAssertEqual(significantView.displayText, significant.formattedDuration)
+    }
+
     // MARK: - Invalid Range Guard (Phase 3)
 
     func test_fastingPeriod_endBeforeStart_durationIsZero() {

@@ -43,24 +43,24 @@
             XCTAssertEqual(badge.formattedScore, "")
         }
 
-        func test_formattedScore_75Percent() {
+        func test_formattedScore_75() {
             let badge = MealScoreBadge(score: 0.75, mealType: .lunch, onTap: {})
-            XCTAssertEqual(badge.formattedScore, "75%")
+            XCTAssertEqual(badge.formattedScore, "75")
         }
 
         func test_formattedScore_roundsDown() {
             let badge = MealScoreBadge(score: 0.756, mealType: .lunch, onTap: {})
-            XCTAssertEqual(badge.formattedScore, "75%", "Should round down (truncate) to integer")
+            XCTAssertEqual(badge.formattedScore, "75", "Should truncate to integer, no percent")
         }
 
         func test_formattedScore_singleDigit() {
             let badge = MealScoreBadge(score: 0.05, mealType: .lunch, onTap: {})
-            XCTAssertEqual(badge.formattedScore, "5%")
+            XCTAssertEqual(badge.formattedScore, "5")
         }
 
-        func test_formattedScore_100Percent() {
+        func test_formattedScore_100() {
             let badge = MealScoreBadge(score: 1.0, mealType: .lunch, onTap: {})
-            XCTAssertEqual(badge.formattedScore, "100%")
+            XCTAssertEqual(badge.formattedScore, "100")
         }
 
         // MARK: - Regression: Stub Score (50%) Shown Before AI Analysis
@@ -83,7 +83,25 @@
                 badge.shouldDisplay,
                 "0.5 stub score satisfies shouldDisplay — caller must gate on isAIAnalyzed"
             )
-            XCTAssertEqual(badge.formattedScore, "50%", "Passing 0.5 directly produces the '50%' bug")
+            XCTAssertEqual(badge.formattedScore, "50", "Passing 0.5 directly produces the '50' stub-score bug")
+        }
+
+        // MARK: - Integer Display (no percent sign)
+
+        func test_formattedScore_isIntegerWithoutPercent() {
+            let badge = MealScoreBadge(score: 0.75, mealType: .lunch, onTap: {})
+            XCTAssertFalse(badge.formattedScore.contains("%"), "Score must display as plain integer, no percent sign")
+            XCTAssertEqual(badge.formattedScore, "75")
+        }
+
+        func test_formattedScore_highScore_isIntegerWithoutPercent() {
+            let badge = MealScoreBadge(score: 0.84, mealType: .breakfast, onTap: {})
+            XCTAssertEqual(badge.formattedScore, "84")
+        }
+
+        func test_formattedScore_lowScore_isIntegerWithoutPercent() {
+            let badge = MealScoreBadge(score: 0.35, mealType: .dinner, onTap: {})
+            XCTAssertEqual(badge.formattedScore, "35")
         }
 
         // MARK: - Edge Cases
@@ -91,13 +109,13 @@
         func test_badgeVisible_scoreBoundaryAt0_55() {
             let badge = MealScoreBadge(score: 0.55, mealType: .lunch, onTap: {})
             XCTAssertTrue(badge.shouldDisplay)
-            XCTAssertEqual(badge.formattedScore, "55%")
+            XCTAssertEqual(badge.formattedScore, "55")
         }
 
         func test_badgeVisible_scoreBoundaryAt0_35() {
             let badge = MealScoreBadge(score: 0.35, mealType: .lunch, onTap: {})
             XCTAssertTrue(badge.shouldDisplay)
-            XCTAssertEqual(badge.formattedScore, "35%")
+            XCTAssertEqual(badge.formattedScore, "35")
         }
     }
 #endif

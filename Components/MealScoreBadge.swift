@@ -31,7 +31,7 @@ struct MealScoreBadge: View {
 
     var formattedScore: String {
         guard let score, score > 0 else { return "" }
-        return "\(Int(score * 100))%"
+        return "\(Int(score * 100))"
     }
 
     // MARK: - Body
@@ -59,7 +59,7 @@ struct MealScoreBadge: View {
             .onLongPressGesture(minimumDuration: 0.01, perform: {}, onPressingChanged: { pressing in
                 self.isPressed = pressing
             })
-            .accessibilityLabel("Health score: \(self.formattedScore)")
+            .accessibilityLabel("Health score: \(self.formattedScore) out of 100")
             .accessibilityHint("Tap to see detailed score breakdown and nutrition analysis")
             .transition(.opacity)
             .animation(.spring(response: 0.5, dampingFraction: 0.8), value: self.shouldDisplay)
