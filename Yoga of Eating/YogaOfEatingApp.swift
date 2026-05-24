@@ -52,29 +52,7 @@ struct YogaOfEatingApp: App {
 
         // Check if running UI tests and reset data if needed
         if CommandLine.arguments.contains("--uitesting") {
-            appLogger.debug("UI Testing mode — clearing all data")
-
-            // Clear UserDefaults
-            if let bundleID = Bundle.main.bundleIdentifier {
-                UserDefaults.standard.removePersistentDomain(forName: bundleID)
-                UserDefaults.standard.synchronize()
-            }
-
-            // Sign out from Firebase so Settings shows the signed-out state,
-            // preventing the tall SettingsCloudSection from pushing navigation rows off-screen.
-            AuthService.shared.signOut()
-
-            // Clear persisted JSON data file
-            if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                let dataFileURL = documentsURL.appendingPathComponent("yoga_of_eating_data.json")
-                do {
-                    try FileManager.default.removeItem(at: dataFileURL)
-                    appLogger.debug("Removed persisted data file for UI test run")
-                } catch {
-                    appLogger
-                        .error("Failed to remove persisted data file: \(error.localizedDescription, privacy: .public)")
-                }
-            }
+            self.resetDataForUITesting()
         }
 
         // Request permissions and schedule daily nudges on startup.
@@ -112,6 +90,27 @@ struct YogaOfEatingApp: App {
         .onChange(of: self.scenePhase) { _, newPhase in
             if newPhase == .active, !CommandLine.arguments.contains("--uitesting") {
                 self.viewModel.refreshActivityDataIfNeeded()
+            }
+        }
+    }
+
+    private func resetDataForUITesting() {
+        appLogger.debug("UI Testing mode — clearing all data")
+        if let bundleID = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: bundleID)
+            UserDefaults.standard.synchronize()
+        }
+        // Sign out from Firebase so Settings shows the signed-out state,
+        // preventing the tall SettingsCloudSection from pushing navigation rows off-screen.
+        AuthService.shared.signOut()
+        // Clear persisted JSON data file
+        if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let dataFileURL = documentsURL.appendingPathComponent("yoga_of_eating_data.json")
+            do {
+                try FileManager.default.removeItem(at: dataFileURL)
+                appLogger.debug("Removed persisted data file for UI test run")
+            } catch {
+                appLogger.error("Failed to remove persisted data file: \(error.localizedDescription, privacy: .public)")
             }
         }
     }

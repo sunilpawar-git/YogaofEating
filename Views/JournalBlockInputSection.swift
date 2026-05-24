@@ -40,33 +40,22 @@ extension JournalBlockView {
                         .font(FontTheme.mealEntry)
                         .foregroundColor(self.bulletColor(for: i))
 
-                    if self.focusedItemIndex == i {
-                        BulletTextField(
-                            text: self.itemBinding(for: i),
-                            placeholder: i == 0 ? Strings.Journal.placeholder : "",
-                            isFocused: self.focusedItemIndex == i,
-                            onFocusChange: { focused in
-                                if focused {
-                                    self.focusedItemIndex = i
-                                } else if self.focusedItemIndex == i {
-                                    self.focusedItemIndex = nil
-                                }
-                            },
-                            onReturn: { self.handleRowSubmit(at: i) },
-                            onDeleteEmpty: { self.removeItem(at: i) }
-                        )
-                        .frame(maxWidth: .infinity)
-                        .accessibilityIdentifier("meal-item-field-\(self.meal.id)-\(i)")
-                    } else {
-                        Text(self.draftItems[i].isEmpty ? Strings.Journal.placeholder : self.draftItems[i])
-                            .font(FontTheme.mealEntry)
-                            .foregroundColor(self.draftItems[i].isEmpty ? .secondary.opacity(0.4) : .primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .onTapGesture { self.focusedItemIndex = i }
-                            .accessibilityIdentifier("meal-item-label-\(self.meal.id)-\(i)")
-                    }
+                    BulletTextField(
+                        text: self.itemBinding(for: i),
+                        placeholder: i == 0 ? Strings.Journal.placeholder : "",
+                        isFocused: self.focusedItemIndex == i,
+                        onFocusChange: { focused in
+                            if focused {
+                                self.focusedItemIndex = i
+                            } else if self.focusedItemIndex == i {
+                                self.focusedItemIndex = nil
+                            }
+                        },
+                        onReturn: { self.handleRowSubmit(at: i) },
+                        onDeleteEmpty: { self.removeItem(at: i) }
+                    )
+                    .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("meal-item-field-\(self.meal.id)-\(i)")
                 }
             }
         }
@@ -91,18 +80,13 @@ extension JournalBlockView {
     func appendItem(after index: Int) {
         let insertAt = min(index + 1, self.draftItems.count)
         self.draftItems.insert("", at: insertAt)
-        Task { @MainActor in
-            self.focusedItemIndex = insertAt
-        }
+        self.focusedItemIndex = insertAt
     }
 
     func removeItem(at index: Int) {
-        guard self.draftItems.count > 1 else { return }
-        Task { @MainActor in
-            guard index < self.draftItems.count else { return }
-            self.draftItems.remove(at: index)
-            self.focusedItemIndex = max(0, index - 1)
-        }
+        guard self.draftItems.count > 1, index < self.draftItems.count else { return }
+        self.draftItems.remove(at: index)
+        self.focusedItemIndex = max(0, index - 1)
     }
 
     func itemBinding(for index: Int) -> Binding<String> {
