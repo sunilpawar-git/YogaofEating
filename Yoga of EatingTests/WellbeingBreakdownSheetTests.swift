@@ -32,9 +32,9 @@ final class WellbeingBreakdownSheetTests: XCTestCase {
 
     // MARK: - Contract Availability
 
-    func test_wellbeingBreakdownContract_isNotNilWhenNoMeals_viewingToday() {
-        // No meals but viewing today — contract is available (synthesis returns stubs)
-        XCTAssertNotNil(self.sut.wellbeingBreakdownContract)
+    func test_wellbeingBreakdownContract_isNilWhenNoMeals_viewingToday() {
+        // No meals + viewing today — contract is nil (requires at least one meal)
+        XCTAssertNil(self.sut.wellbeingBreakdownContract)
     }
 
     func test_wellbeingBreakdownContract_isNotNilWithMealsToday() {
