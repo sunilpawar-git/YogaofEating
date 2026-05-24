@@ -113,7 +113,7 @@ struct DayMealPopupView: View {
                     .font(FontTheme.caption)
                     .foregroundColor(.secondary)
                     .italic()
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(.horizontal, 20)
