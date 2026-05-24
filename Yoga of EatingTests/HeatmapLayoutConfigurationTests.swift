@@ -112,9 +112,9 @@
                 isPortrait: true
             )
 
-            // Then: Spacing should be consistent (3pt for breathing room)
-            XCTAssertEqual(config1.spacing, 3)
-            XCTAssertEqual(config2.spacing, 3)
+            // Then: Spacing should be consistent (4pt for breathing room)
+            XCTAssertEqual(config1.spacing, 4)
+            XCTAssertEqual(config2.spacing, 4)
         }
 
         // MARK: - Device Size Tests

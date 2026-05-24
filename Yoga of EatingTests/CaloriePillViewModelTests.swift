@@ -16,7 +16,8 @@
                 bmr: tdee / 1.55,
                 tdee: tdee,
                 riskLevel: .low,
-                sensitivityMultiplier: 1.0
+                sensitivityMultiplier: 1.0,
+                activityLevel: .sedentary
             )
         }
 

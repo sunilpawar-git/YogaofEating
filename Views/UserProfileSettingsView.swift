@@ -30,6 +30,7 @@ struct UserProfileSettingsView: View {
             self.unitPicker
             self.heightRow
             self.weightRow
+            self.activityLevelPicker
         } header: {
             Text(Strings.Settings.personalDetailsSectionHeader)
         } footer: {
@@ -109,6 +110,14 @@ struct UserProfileSettingsView: View {
         }
     }
 
+    private var activityLevelPicker: some View {
+        Picker(Strings.Settings.activityLevelPickerLabel, selection: self.$viewModel.activityLevel) {
+            ForEach(ActivityLevel.allCases, id: \.self) { level in
+                Text(level.displayName).tag(level)
+            }
+        }
+    }
+
     // MARK: - Health Insights Section
 
     private var healthInsightsSection: some View {
@@ -117,6 +126,7 @@ struct UserProfileSettingsView: View {
                 LabeledContent(Strings.Settings.bmiLabel, value: String(format: "%.1f", profile.bmi))
                 LabeledContent(Strings.Settings.bmiCategoryLabel, value: profile.bmiCategory.rawValue)
                 LabeledContent(Strings.Settings.dailyEnergyLabel, value: "\(Int(profile.tdee)) cal")
+                LabeledContent(Strings.Settings.activityLevelPickerLabel, value: profile.activityLevel.displayName)
                 LabeledContent(Strings.Settings.riskLevelLabel, value: profile.riskLevel.rawValue)
             } else {
                 Text(Strings.Settings.healthInsightsEmptyState)

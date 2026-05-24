@@ -64,7 +64,8 @@
                 bmr: 1650.0,
                 tdee: 1980.0,
                 riskLevel: .high,
-                sensitivityMultiplier: 1.45
+                sensitivityMultiplier: 1.45,
+                activityLevel: .sedentary
             )
             let description = "Pizza and coke"
 
@@ -85,7 +86,8 @@
                 bmr: 1650.0,
                 tdee: 1980.0,
                 riskLevel: .high,
-                sensitivityMultiplier: 1.45
+                sensitivityMultiplier: 1.45,
+                activityLevel: .sedentary
             )
             let description = "Green salad with vegetables"
 
@@ -119,7 +121,8 @@
                 bmr: 1500.0,
                 tdee: 1800.0,
                 riskLevel: .low,
-                sensitivityMultiplier: 1.0
+                sensitivityMultiplier: 1.0,
+                activityLevel: .sedentary
             )
             let description = "Burger"
 
@@ -139,7 +142,8 @@
                 bmr: 1700.0,
                 tdee: 2040.0,
                 riskLevel: .high,
-                sensitivityMultiplier: 1.5
+                sensitivityMultiplier: 1.5,
+                activityLevel: .sedentary
             )
             let description = "Fried chicken"
 
@@ -161,7 +165,8 @@
                 bmr: 1650.0,
                 tdee: 1980.0,
                 riskLevel: .high,
-                sensitivityMultiplier: 1.45
+                sensitivityMultiplier: 1.45,
+                activityLevel: .sedentary
             )
             let description = "Deep-fried samosa"
 
@@ -181,7 +186,8 @@
                 bmr: 1400.0,
                 tdee: 1680.0,
                 riskLevel: .low,
-                sensitivityMultiplier: 1.0
+                sensitivityMultiplier: 1.0,
+                activityLevel: .sedentary
             )
             let description = "Deep-fried samosa"
 
@@ -201,7 +207,8 @@
                 bmr: 1650.0,
                 tdee: 1980.0,
                 riskLevel: .high,
-                sensitivityMultiplier: 1.45
+                sensitivityMultiplier: 1.45,
+                activityLevel: .sedentary
             )
             let description = "Green vegetable salad"
 
@@ -223,7 +230,8 @@
                 bmr: 1500.0,
                 tdee: 1800.0,
                 riskLevel: .low,
-                sensitivityMultiplier: 1.0
+                sensitivityMultiplier: 1.0,
+                activityLevel: .sedentary
             )
             let items = ["Salad", "Pizza"]
 
@@ -257,7 +265,8 @@
                 bmr: 1650.0,
                 tdee: 1980.0,
                 riskLevel: .high,
-                sensitivityMultiplier: 1.45
+                sensitivityMultiplier: 1.45,
+                activityLevel: .sedentary
             )
             let currentState = SmileyState(scale: 1.5, mood: .neutral)
             let healthScore = 0.8 // Very healthy meal
@@ -279,7 +288,8 @@
                 bmr: 1650.0,
                 tdee: 1980.0,
                 riskLevel: .high,
-                sensitivityMultiplier: 1.45
+                sensitivityMultiplier: 1.45,
+                activityLevel: .sedentary
             )
             let currentState = SmileyState(scale: 1.0, mood: .neutral)
             let healthScore = 0.2 // Very unhealthy meal
@@ -301,7 +311,8 @@
                 bmr: 1400.0,
                 tdee: 1680.0,
                 riskLevel: .low,
-                sensitivityMultiplier: 1.0
+                sensitivityMultiplier: 1.0,
+                activityLevel: .sedentary
             )
             let currentState = SmileyState(scale: 1.3, mood: .neutral)
             let healthScore = 0.5 // Neutral meal

@@ -10,6 +10,7 @@ enum StorageKeys {
     static let userWeight = "user_weight"
     static let userGender = "user_gender"
     static let userAge = "user_age"
+    static let userActivityLevel = "user_activity_level"
 
     // MARK: - Appearance
 
@@ -63,6 +64,7 @@ enum StorageKeys {
         userWeight,
         userGender,
         userAge,
+        userActivityLevel,
         appTheme,
         unitSystem,
         morningNudgeEnabled,

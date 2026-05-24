@@ -190,6 +190,13 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
             .sink { [weak self] _ in self?.objectWillChange.send() }
             .store(in: &self.cancellables)
 
+        // Re-render calorie pill when health-profile settings change (e.g. activity level).
+        // Decoupled from SettingsViewModel via NotificationCenter (no direct reference).
+        NotificationCenter.default
+            .publisher(for: AppNotification.healthProfileDidChange)
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &self.cancellables)
+
         if !skipDataLoading {
             self.loadData()
             self.setupResetMonitoring()

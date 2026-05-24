@@ -263,6 +263,7 @@ final class HealthProfileBuilder {
     private var tdee = 2100.0
     private var riskLevel: HealthRiskLevel = .low
     private var sensitivityMultiplier = 1.0
+    private var activityLevel: ActivityLevel = .sedentary
 
     @discardableResult
     func withAge(_ age: Int) -> Self {
@@ -300,6 +301,12 @@ final class HealthProfileBuilder {
         return self
     }
 
+    @discardableResult
+    func withActivityLevel(_ level: ActivityLevel) -> Self {
+        self.activityLevel = level
+        return self
+    }
+
     func build() -> UserHealthProfile {
         UserHealthProfile(
             age: self.age,
@@ -308,7 +315,8 @@ final class HealthProfileBuilder {
             bmr: self.bmr,
             tdee: self.tdee,
             riskLevel: self.riskLevel,
-            sensitivityMultiplier: self.sensitivityMultiplier
+            sensitivityMultiplier: self.sensitivityMultiplier,
+            activityLevel: self.activityLevel
         )
     }
 }
