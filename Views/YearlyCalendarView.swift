@@ -64,7 +64,7 @@ struct YearlyCalendarView: View {
                     }
                 }
                 .sheet(item: self.$viewModel.selectedSnapshot) { snapshot in
-                    DayMealPopupView(snapshot: snapshot, selectedDetent: self.$sheetDetent)
+                    DayMealPopupView(snapshot: snapshot)
                         .presentationDetents([.medium, .large], selection: self.$sheetDetent)
                         .onAppear {
                             // Auto-expand for days with 3+ meals
