@@ -32,13 +32,14 @@
                 horizontalPadding: 32
             )
 
-            // Then: In landscape, 7 rows — formula gives ~30pt, clamped to maximumCellSize
+            // Then: In landscape, 7 rows — formula gives ~30pt, within [min, max] bounds
             let availableHeight = screenHeight - 150 // Account for header, legend, etc.
             let calculatedSize = (availableHeight - (config.spacing * 6)) / 7
             let expectedSize = max(config.minimumCellSize, min(calculatedSize, config.maximumCellSize))
             XCTAssertEqual(config.cellSize, expectedSize, accuracy: 0.1)
-            // Calculated (~30pt) exceeds maximumCellSize, so result clamps to maximum
-            XCTAssertEqual(config.cellSize, config.maximumCellSize)
+            // Calculated (~30pt) is within bounds — no clamping occurs
+            XCTAssertGreaterThanOrEqual(config.cellSize, config.minimumCellSize)
+            XCTAssertLessThanOrEqual(config.cellSize, config.maximumCellSize)
         }
 
         func test_cellSize_neverGoesBelowMinimum() {
@@ -111,9 +112,9 @@
                 isPortrait: true
             )
 
-            // Then: Spacing should be consistent (2pt for compact circles)
-            XCTAssertEqual(config1.spacing, 2)
-            XCTAssertEqual(config2.spacing, 2)
+            // Then: Spacing should be consistent (3pt for breathing room)
+            XCTAssertEqual(config1.spacing, 3)
+            XCTAssertEqual(config2.spacing, 3)
         }
 
         // MARK: - Device Size Tests
