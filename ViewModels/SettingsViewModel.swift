@@ -170,14 +170,14 @@ class SettingsViewModel: ObservableObject {
         historicalService: any HistoricalDataServiceProtocol,
         authService: (any AuthServiceProtocol)? = nil,
         userDefaults: UserDefaults = .standard,
-        notificationScheduler: any NotificationScheduling = NotificationManager.shared,
-        healthKitProvider: any HealthKitBodyMetricsProviding = HealthKitService.shared
+        notificationScheduler: (any NotificationScheduling)? = nil,
+        healthKitProvider: (any HealthKitBodyMetricsProviding)? = nil
     ) {
         self.userDefaults = userDefaults
         self.historicalService = historicalService
         self.authService = authService ?? AuthService.shared
-        self.notificationScheduler = notificationScheduler
-        self.healthKitProvider = healthKitProvider
+        self.notificationScheduler = notificationScheduler ?? NotificationManager.shared
+        self.healthKitProvider = healthKitProvider ?? HealthKitService.shared
 
         // Load initial values from UserDefaults
         self.name = userDefaults.string(forKey: StorageKeys.userName) ?? "User"
