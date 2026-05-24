@@ -54,7 +54,9 @@ struct BulletTextField: UIViewRepresentable {
         uiView.onDeleteWhenEmpty = self.onDeleteEmpty
 
         if self.isFocused, !uiView.isFirstResponder {
-            uiView.becomeFirstResponder()
+            DispatchQueue.main.async {
+                uiView.becomeFirstResponder()
+            }
         } else if !self.isFocused, uiView.isFirstResponder {
             DispatchQueue.main.async {
                 if !self.isFocused { uiView.resignFirstResponder() }

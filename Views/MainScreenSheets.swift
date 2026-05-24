@@ -15,7 +15,10 @@ private struct MainScreenSheetsModifier: ViewModifier {
                     .environmentObject(self.viewModel)
                     .environmentObject(AuthService.shared)
             }
-            .sheet(isPresented: self.$viewModel.showInsightSheet) {
+            .sheet(isPresented: Binding(
+                get: { self.viewModel.showInsightSheet && self.viewModel.currentInsight != nil },
+                set: { self.viewModel.showInsightSheet = $0 }
+            )) {
                 if let insight = self.viewModel.currentInsight {
                     InsightBottomSheet(
                         insight: insight,
@@ -23,24 +26,24 @@ private struct MainScreenSheetsModifier: ViewModifier {
                     )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
-                } else {
-                    Color.clear
-                        .onAppear { self.viewModel.showInsightSheet = false }
                 }
             }
-            .sheet(isPresented: self.$viewModel.showBreakdownSheet) {
+            .sheet(isPresented: Binding(
+                get: { self.viewModel.showBreakdownSheet && self.viewModel.wellbeingBreakdownContract != nil },
+                set: { self.viewModel.showBreakdownSheet = $0 }
+            )) {
                 if let contract = self.viewModel.wellbeingBreakdownContract {
                     WellbeingBreakdownSheet(contract: contract, onDismiss: {
                         self.viewModel.showBreakdownSheet = false
                     })
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
-                } else {
-                    Color.clear
-                        .onAppear { self.viewModel.showBreakdownSheet = false }
                 }
             }
-            .sheet(isPresented: self.$viewModel.showBriefingSheet) {
+            .sheet(isPresented: Binding(
+                get: { self.viewModel.showBriefingSheet && self.viewModel.currentInsight != nil },
+                set: { self.viewModel.showBriefingSheet = $0 }
+            )) {
                 if let insight = self.viewModel.currentInsight {
                     BriefingDetailView(
                         insight: insight,
@@ -48,9 +51,6 @@ private struct MainScreenSheetsModifier: ViewModifier {
                     )
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
-                } else {
-                    Color.clear
-                        .onAppear { self.viewModel.showBriefingSheet = false }
                 }
             }
     }
