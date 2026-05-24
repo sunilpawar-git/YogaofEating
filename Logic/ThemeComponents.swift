@@ -3,6 +3,16 @@ import SwiftUI
 // MARK: - Component-specific AppTheme tokens
 
 extension AppTheme {
+    // MARK: - Meal Type Colors
+
+    enum MealTypeColors {
+        static let breakfast = Color(red: 0.78, green: 0.55, blue: 0.35)
+        static let lunch = Color(red: 0.42, green: 0.60, blue: 0.48)
+        static let dinner = Color(red: 0.52, green: 0.46, blue: 0.66)
+        static let snacks = Color(red: 0.72, green: 0.50, blue: 0.54)
+        static let drinks = Color(red: 0.40, green: 0.55, blue: 0.70)
+    }
+
     // MARK: - Meal Card
 
     enum MealCard {
@@ -14,6 +24,9 @@ extension AppTheme {
         static let pillShadowColor = Color.black.opacity(0.15)
         static let pillShadowRadius: CGFloat = 2
         static let pillShadowY: CGFloat = 1
+        static let cardShadowColor = Color.black.opacity(0.02)
+        static let cardShadowRadius: CGFloat = 4
+        static let cardShadowOffsetY: CGFloat = 2
     }
 
     // MARK: - Score Badge
@@ -49,7 +62,7 @@ extension AppTheme {
     // MARK: - Background Glow
 
     enum Background {
-        static let glowOpacity: Double = 0.08
+        static let glowOpacity: Double = 0.0
         static let glowBlurRadius: CGFloat = 60
         static let glowSize: CGFloat = 200
         static let glowOffsetX: CGFloat = -100
@@ -59,8 +72,8 @@ extension AppTheme {
     // MARK: - Timeline
 
     enum Timeline {
-        static let spineOpacity: Double = 0.18
-        static let spineWidth: CGFloat = 1.5
+        static let spineOpacity: Double = 0.06
+        static let spineWidth: CGFloat = 1.0
         static let fastingSignificantFillOpacity: Double = 0.08
         static let fastingSignificantColor: Color = .green
         static let fastingDefaultColor: Color = .secondary.opacity(0.8)

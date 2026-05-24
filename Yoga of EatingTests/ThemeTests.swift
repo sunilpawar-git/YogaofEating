@@ -111,16 +111,16 @@ final class ThemeTests: XCTestCase {
         // Given / When
         let opacity = AppTheme.Timeline.spineOpacity
 
-        // Then: Spine must be visible (0.18) — not the old invisible 0.10
-        XCTAssertEqual(opacity, 0.18, accuracy: 0.001)
+        // Then: Minimalist spine — barely present, guides without announcing itself
+        XCTAssertEqual(opacity, 0.06, accuracy: 0.001)
     }
 
     func test_timeline_spineWidth_isCorrectValue() {
         // Given / When
         let width = AppTheme.Timeline.spineWidth
 
-        // Then: 1.5pt — crisp without being heavy
-        XCTAssertEqual(width, 1.5, accuracy: 0.01)
+        // Then: 1.0pt — thinnest visible line
+        XCTAssertEqual(width, 1.0, accuracy: 0.01)
     }
 
     func test_timeline_spineWidth_isPositive() {
@@ -143,10 +143,10 @@ final class ThemeTests: XCTestCase {
 
     // MARK: - Background Glow Constants Tests (Phase 5)
 
-    func test_background_glowOpacity_isDefined() {
-        let opacity = AppTheme.Background.glowOpacity
-        XCTAssertGreaterThan(opacity, 0.0)
-        XCTAssertLessThan(opacity, 1.0)
+    func test_background_glowOpacity_isOff() {
+        // Glow intentionally removed for minimalist aesthetic.
+        // The view renders an invisible circle; no orange bleed onto the background.
+        XCTAssertEqual(AppTheme.Background.glowOpacity, 0.0, accuracy: 0.001)
     }
 
     func test_background_glowBlurRadius_isDefined() {
@@ -163,6 +163,34 @@ final class ThemeTests: XCTestCase {
         // Pinned value — changing this shifts the visible bottom of the timeline scroll area.
         // Review MainScreenView scroll proxy before changing.
         XCTAssertEqual(AppTheme.Layout.bottomScrollBuffer, 100, accuracy: 0.01)
+    }
+
+    func test_layout_smileyButtonSize_isInMinimalistRange() {
+        // Smiley must be large enough to carry emotional presence but not dominate the screen.
+        // Acceptable range: 80–100pt. Below 80 loses impact; above 100 feels toy-like.
+        let size = AppTheme.Layout.smileyButtonSize
+        XCTAssertGreaterThanOrEqual(size, 80)
+        XCTAssertLessThanOrEqual(size, 100)
+    }
+
+    // MARK: - Meal Type Color Tests
+
+    func test_mealTypeColors_areAllDefined() {
+        XCTAssertNotNil(AppTheme.MealTypeColors.breakfast)
+        XCTAssertNotNil(AppTheme.MealTypeColors.lunch)
+        XCTAssertNotNil(AppTheme.MealTypeColors.dinner)
+        XCTAssertNotNil(AppTheme.MealTypeColors.snacks)
+        XCTAssertNotNil(AppTheme.MealTypeColors.drinks)
+    }
+
+    // MARK: - Meal Card Shadow Tests
+
+    func test_mealCard_cardShadowColor_isSubtle() {
+        // Shadow must stay near-invisible for minimalist aesthetic.
+        // If opacity creeps above 0.05, the card will feel heavy.
+        XCTAssertNotNil(AppTheme.MealCard.cardShadowColor)
+        XCTAssertGreaterThan(AppTheme.MealCard.cardShadowRadius, 0)
+        XCTAssertGreaterThan(AppTheme.MealCard.cardShadowOffsetY, 0)
     }
 
     // MARK: - Fasting Domain Constants (coverage moved to FastingConstantsTests.swift)

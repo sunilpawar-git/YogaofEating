@@ -22,28 +22,28 @@
         func test_mealCardBackground_accentBarUsesDisplayColor_breakfast() {
             // Given: breakfast meal type
             let color = MealType.breakfast.displayColor
-            // Then: orange — passed as mealTypeColor into MealCardBackground
-            XCTAssertTrue(self.colorMatches(color, .orange))
+            // Then: muted terracotta from AppTheme.MealTypeColors (not system orange)
+            XCTAssertTrue(self.colorMatches(color, AppTheme.MealTypeColors.breakfast))
         }
 
         func test_mealCardBackground_accentBarUsesDisplayColor_lunch() {
             let color = MealType.lunch.displayColor
-            XCTAssertTrue(self.colorMatches(color, .green))
+            XCTAssertTrue(self.colorMatches(color, AppTheme.MealTypeColors.lunch))
         }
 
         func test_mealCardBackground_accentBarUsesDisplayColor_dinner() {
             let color = MealType.dinner.displayColor
-            XCTAssertTrue(self.colorMatches(color, .purple))
+            XCTAssertTrue(self.colorMatches(color, AppTheme.MealTypeColors.dinner))
         }
 
         func test_mealCardBackground_accentBarUsesDisplayColor_snacks() {
             let color = MealType.snacks.displayColor
-            XCTAssertTrue(self.colorMatches(color, .pink))
+            XCTAssertTrue(self.colorMatches(color, AppTheme.MealTypeColors.snacks))
         }
 
         func test_mealCardBackground_accentBarUsesDisplayColor_drinks() {
             let color = MealType.drinks.displayColor
-            XCTAssertTrue(self.colorMatches(color, .blue))
+            XCTAssertTrue(self.colorMatches(color, AppTheme.MealTypeColors.drinks))
         }
 
         // MARK: - Tint Opacity Tests (Keep subtle tints for feedback)

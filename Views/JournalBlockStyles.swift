@@ -6,11 +6,11 @@ extension MealType {
     /// Returns the associated color for this meal type
     var displayColor: Color {
         switch self {
-        case .breakfast: .orange
-        case .lunch: .green
-        case .dinner: .purple
-        case .snacks: .pink
-        case .drinks: .blue
+        case .breakfast: AppTheme.MealTypeColors.breakfast
+        case .lunch: AppTheme.MealTypeColors.lunch
+        case .dinner: AppTheme.MealTypeColors.dinner
+        case .snacks: AppTheme.MealTypeColors.snacks
+        case .drinks: AppTheme.MealTypeColors.drinks
         }
     }
 
@@ -55,7 +55,11 @@ struct MealCardBackground: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(self.feedback.tintColor.opacity(self.feedback.tintOpacity))
             }
-            .shadow(color: .black.opacity(0.03), radius: 8, y: 4)
+            .shadow(
+                color: AppTheme.MealCard.cardShadowColor,
+                radius: AppTheme.MealCard.cardShadowRadius,
+                y: AppTheme.MealCard.cardShadowOffsetY
+            )
             .overlay(alignment: .leading) {
                 self.leftAccentBar
             }

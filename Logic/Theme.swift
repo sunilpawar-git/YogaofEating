@@ -84,5 +84,9 @@ enum AppTheme {
     enum Layout {
         /// Height of the invisible spacer anchoring the scroll-to-bottom proxy.
         static let bottomScrollBuffer: CGFloat = 100
+
+        /// Size of the smiley add-button on the today timeline.
+        /// Kept in the 80–100pt range to preserve emotional presence without dominating the screen.
+        static let smileyButtonSize: CGFloat = 92
     }
 }

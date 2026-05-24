@@ -10,7 +10,7 @@ extension DayTimelineView {
     var smileyAddButton: some View {
         VStack(spacing: 16) {
             SmileyView(state: self.smileyState)
-                .frame(width: 120, height: 120)
+                .frame(width: AppTheme.Layout.smileyButtonSize, height: AppTheme.Layout.smileyButtonSize)
                 .scaleEffect(self.isSmileyPulsing ? AppTheme.Animation.breathingScale : 1.0)
                 .animation(
                     self.isSmileyPulsing ? AppTheme.Animation.breathingPulse : .default,
@@ -60,10 +60,8 @@ extension DayTimelineView {
                 }
 
             Text(self.hasInsightAvailable ? Strings.Timeline.tapToLogWithInsight : Strings.Timeline.tapToLog)
-                .font(.system(.caption, design: .monospaced))
-                .fontWeight(.bold)
+                .font(FontTheme.caption)
                 .foregroundColor(.secondary)
-                .kerning(self.hasInsightAvailable ? 1 : 2)
                 .fixedSize()
 
             if let pillData = self.caloriePillData, pillData.isVisible {
