@@ -166,6 +166,35 @@ extension AppTheme {
         static let morningHourThreshold: Int = 10
     }
 
+    // MARK: - Correlation Card Colors
+
+    enum CorrelationCard {
+        static let highConfidenceColor: Color = .green
+        static let lowConfidenceColor: Color = .orange
+
+        static func color(for category: CorrelationCategory) -> Color {
+            switch category {
+            case .foodToSleep: .indigo
+            case .foodToMood: .green
+            case .focusToFeeling: .purple
+            case .timingPattern: .orange
+            case .foodDebt: AppTheme.foodDebtColor
+            case .sleepRecoveryCarryover: .teal
+            case .intentionFollowthrough: .blue
+            case .journalTonePrediction: AppTheme.journalToneColor
+            case .sleepMismatch: .yellow
+            case .carryOverLoad: .red
+            }
+        }
+    }
+
+    // MARK: - Briefing Accent Colors
+
+    enum Briefing {
+        static let sunAccent: Color = .orange
+        static let nudgeAccent: Color = .yellow
+    }
+
     // MARK: - Cloud Sync / Restore Status Backgrounds
 
     /// Background tint colours for the sync and restore status pills in `SettingsCloudSection`.

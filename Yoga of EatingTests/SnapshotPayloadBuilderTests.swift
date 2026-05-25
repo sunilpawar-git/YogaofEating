@@ -108,7 +108,7 @@ final class SnapshotPayloadBuilderTests: XCTestCase {
             isAccomplished: true
         )
         let dict = SnapshotPayloadBuilder.mindCheckEntryPayload(entry)
-        XCTAssertEqual(dict["isAccomplished"] as? Bool, true)
+        XCTAssertEqual(dict["isAccomplished"] as? String, "true")
     }
 
     func test_mindCheckEntryPayload_nonTodo_omitsIsAccomplished() {
@@ -122,6 +122,108 @@ final class SnapshotPayloadBuilderTests: XCTestCase {
         XCTAssertNil(dict["isAccomplished"])
     }
 
+    // MARK: - highlightData todos payload
+
+    func test_build_highlightDataTodos_isIncludedInPayload() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let todo = MindCheckEntry(category: .todo, text: "Buy groceries", timestamp: today, context: .morning)
+        let highlight = HighlightData(todos: [todo])
+        let snap = DailySmileySnapshotBuilder().withDate(today).withHighlightData(highlight).build()
+        let payload = SnapshotPayloadBuilder.build(from: [snap], healthKitSleepData: [:], relativeTo: today)
+        XCTAssertNotNil(payload[0]["todos"])
+    }
+
+    func test_build_morningMindCheck_isAlsoRetainedInPayload() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let mindCheckEntry = MindCheckEntry(category: .todo, text: "Meditate", timestamp: today, context: .morning)
+        let todo = MindCheckEntry(category: .todo, text: "Buy groceries", timestamp: today, context: .morning)
+        let highlight = HighlightData(todos: [todo])
+        let snap = DailySmileySnapshotBuilder()
+            .withDate(today)
+            .withMorningMindCheck([mindCheckEntry])
+            .withHighlightData(highlight)
+            .build()
+        let payload = SnapshotPayloadBuilder.build(from: [snap], healthKitSleepData: [:], relativeTo: today)
+        XCTAssertNotNil(payload[0]["morningMindCheck"])
+        XCTAssertNotNil(payload[0]["todos"])
+    }
+
+    func test_build_accomplishedTodo_serialisesAsString_true() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let todo = MindCheckEntry(
+            category: .todo, text: "Run 5km", timestamp: today, context: .morning, isAccomplished: true
+        )
+        let highlight = HighlightData(todos: [todo])
+        let snap = DailySmileySnapshotBuilder().withDate(today).withHighlightData(highlight).build()
+        let payload = SnapshotPayloadBuilder.build(from: [snap], healthKitSleepData: [:], relativeTo: today)
+        let todos = payload[0]["todos"] as? [[String: Any]]
+        XCTAssertEqual(todos?.first?["isAccomplished"] as? String, "true")
+    }
+
+    func test_build_unaccomplishedTodo_serialisesAsString_false() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let todo = MindCheckEntry(
+            category: .todo, text: "Run 5km", timestamp: today, context: .morning, isAccomplished: false
+        )
+        let highlight = HighlightData(todos: [todo])
+        let snap = DailySmileySnapshotBuilder().withDate(today).withHighlightData(highlight).build()
+        let payload = SnapshotPayloadBuilder.build(from: [snap], healthKitSleepData: [:], relativeTo: today)
+        let todos = payload[0]["todos"] as? [[String: Any]]
+        XCTAssertEqual(todos?.first?["isAccomplished"] as? String, "false")
+    }
+
+    func test_build_unreviewedTodo_serialisesAsString_unreviewed() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let todo = MindCheckEntry(category: .todo, text: "Run 5km", timestamp: today, context: .morning)
+        let highlight = HighlightData(todos: [todo])
+        let snap = DailySmileySnapshotBuilder().withDate(today).withHighlightData(highlight).build()
+        let payload = SnapshotPayloadBuilder.build(from: [snap], healthKitSleepData: [:], relativeTo: today)
+        let todos = payload[0]["todos"] as? [[String: Any]]
+        XCTAssertEqual(todos?.first?["isAccomplished"] as? String, "unreviewed")
+    }
+
+    func test_build_morningMindCheck_unreviewedEntry_serialisesAsString_unreviewed() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let entry = MindCheckEntry(category: .todo, text: "Meditate", timestamp: today, context: .morning)
+        let snap = DailySmileySnapshotBuilder().withDate(today).withMorningMindCheck([entry]).build()
+        let payload = SnapshotPayloadBuilder.build(from: [snap], healthKitSleepData: [:], relativeTo: today)
+        let mindCheck = payload[0]["morningMindCheck"] as? [[String: Any]]
+        XCTAssertEqual(mindCheck?.first?["isAccomplished"] as? String, "unreviewed")
+    }
+
+    // MARK: - userContext personalization payload
+
+    func test_build_withUserContext_payloadContainsUserContextKey() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let snap = DailySmileySnapshotBuilder().withDate(today).build()
+        let context = BriefingUserContext(
+            userName: "Alex",
+            activityLevel: .moderatelyActive,
+            dietaryGoal: .generalWellness
+        )
+        let payload = SnapshotPayloadBuilder.build(
+            from: [snap],
+            userContext: context,
+            healthKitSleepData: [:],
+            relativeTo: today
+        )
+        XCTAssertNotNil(payload["userContext"])
+        XCTAssertNotNil(payload["userData"])
+    }
+
+    func test_build_withNilUserContext_payloadOmitsUserContextKey() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let snap = DailySmileySnapshotBuilder().withDate(today).build()
+        let payload = SnapshotPayloadBuilder.build(
+            from: [snap],
+            userContext: nil,
+            healthKitSleepData: [:],
+            relativeTo: today
+        )
+        XCTAssertNil(payload["userContext"])
+        XCTAssertNotNil(payload["userData"])
+    }
+
     // MARK: - Security: no sensitive content in payload keys
 
     func test_buildPayload_mealItems_areIncluded_forServerAnalysis() {
@@ -133,5 +235,45 @@ final class SnapshotPayloadBuilderTests: XCTestCase {
         XCTAssertNotNil(meals)
         // Items are sent encrypted in transit (HTTPS); never logged
         XCTAssertNotNil(meals?.first?["items"])
+    }
+
+    func test_build_withHistoricalSummary_payloadContainsHistoricalContextKey() {
+        let summary = HistoricalSummary(
+            thirtyDayStats: PeriodStats(averageFoodScore: 0.72, daysLogged: 20),
+            ninetyDayStats: nil,
+            currentStreak: 5,
+            bestDimension: .physicalLoad,
+            worstDimension: .emotionalTone
+        )
+        let payload = SnapshotPayloadBuilder.build(
+            from: [],
+            userContext: nil,
+            nudgeHistory: [],
+            historicalSummary: summary,
+            healthKitSleepData: [:],
+            relativeTo: Date()
+        )
+        XCTAssertNotNil(payload["historicalContext"])
+    }
+
+    func test_build_historicalSummary_containsNoRawMealDescriptions() {
+        let summary = HistoricalSummary(
+            thirtyDayStats: PeriodStats(averageFoodScore: 0.65, daysLogged: 14),
+            ninetyDayStats: nil,
+            currentStreak: 3,
+            bestDimension: nil,
+            worstDimension: nil
+        )
+        let payload = SnapshotPayloadBuilder.build(
+            from: [],
+            userContext: nil,
+            nudgeHistory: [],
+            historicalSummary: summary,
+            healthKitSleepData: [:],
+            relativeTo: Date()
+        )
+        let context = payload["historicalContext"] as? [String: Any]
+        XCTAssertNil(context?["meals"])
+        XCTAssertNil(context?["items"])
     }
 }

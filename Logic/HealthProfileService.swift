@@ -50,6 +50,9 @@ protocol HealthProfileServiceProtocol {
     /// Generate complete health profile from stored user data
     /// - Returns: UserHealthProfile if valid data exists, nil otherwise
     func getUserHealthProfile() -> UserHealthProfile?
+
+    /// The current user health profile (computed on demand from stored data).
+    var currentProfile: UserHealthProfile? { get }
 }
 
 /// Service for calculating health metrics and personalized sensitivity
@@ -201,6 +204,8 @@ class HealthProfileService: HealthProfileServiceProtocol {
     }
 
     // MARK: - User Profile Generation
+
+    var currentProfile: UserHealthProfile? { self.getUserHealthProfile() }
 
     func getUserHealthProfile() -> UserHealthProfile? {
         // Read user data from UserDefaults

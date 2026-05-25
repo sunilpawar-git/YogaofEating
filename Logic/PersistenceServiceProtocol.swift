@@ -4,6 +4,12 @@ import Foundation
 @MainActor
 protocol PersistenceServiceProtocol {
     func load() -> PersistenceService.AppData?
-    func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData)
+    func save(
+        meals: [Meal],
+        smileyState: SmileyState,
+        lastResetDate: Date,
+        historicalData: HistoricalData,
+        nudgeHistory: [NudgeHistoryEntry]
+    )
     func deleteAll()
 }

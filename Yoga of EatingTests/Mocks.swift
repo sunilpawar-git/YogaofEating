@@ -161,9 +161,20 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
 
     var stubbedCarriedTodos: [MindCheckEntry] = []
     var stubbedFoodDebtState: SmileyState = .neutral
+    var stubbedHistoricalSummary: HistoricalSummary?
 
     func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] { self.stubbedCarriedTodos }
     func foodDebtStartingState(relativeTo _: Date) -> SmileyState { self.stubbedFoodDebtState }
+
+    func computeHistoricalSummary(relativeTo _: Date) -> HistoricalSummary {
+        self.stubbedHistoricalSummary ?? HistoricalSummary(
+            thirtyDayStats: PeriodStats(averageFoodScore: 0.5, daysLogged: 0),
+            ninetyDayStats: nil,
+            currentStreak: 0,
+            bestDimension: nil,
+            worstDimension: nil
+        )
+    }
 
     // MARK: - Unified insight spy
 

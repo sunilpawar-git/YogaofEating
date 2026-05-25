@@ -32,7 +32,7 @@ struct DayTimelineView: View {
     var hasInsightAvailable: Bool = false
 
     /// Data-contract tuple for the morning briefing card (nil hides it).
-    var briefingCardData: (headline: String, topCorrelation: String?, nudge: String, isViewed: Bool)?
+    var briefingCardData: (headline: String, topCorrelation: String?, nudge: String, isViewed: Bool, greeting: String)?
 
     /// Weak dimensions to surface in the briefing card subtext (≤2). Defaults to empty.
     var briefingWeakDimensions: [WellbeingDimension] = []
@@ -74,6 +74,7 @@ struct DayTimelineView: View {
                     topCorrelation: data.topCorrelation,
                     nudge: data.nudge,
                     isViewed: data.isViewed,
+                    greeting: data.greeting,
                     weakDimensions: self.briefingWeakDimensions,
                     onTap: self.onBriefingTap
                 )

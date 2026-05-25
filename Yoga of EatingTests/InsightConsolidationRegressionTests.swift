@@ -76,7 +76,12 @@ final class InsightConsolidationRegressionTests: XCTestCase {
         let mock = MockHistoricalDataService()
         let sut = InsightLifecycleService(historicalService: mock, functions: nil)
         // nil functions → local-only; no data → nil result
-        let result = await sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let result = await sut.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
         let _: DailyInsight? = result
         XCTAssertNil(result, "Nil result when no snapshots")
     }

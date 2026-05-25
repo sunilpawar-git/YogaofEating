@@ -56,6 +56,12 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Whether to show validation error alert to user
     @Published var showValidationErrorAlert: Bool = false
 
+    // MARK: - Nudge History
+
+    /// Historical record of nudge suggestions shown to the user.
+    /// Persisted across launches; capped at `ValidationLimits.nudgeHistoryMaxEntries`.
+    @Published var nudgeHistory: [NudgeHistoryEntry] = []
+
     // MARK: - AI Analysis Tracking
 
     /// Coordinator for AI analysis tasks. Owns task lifecycle and write-back closures;

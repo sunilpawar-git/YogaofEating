@@ -29,11 +29,14 @@ final class BriefingRemediationTests: XCTestCase {
     ) -> (MainViewModel, MockHistoricalDataService, MockInsightLifecycleService) {
         let mockHistorical = historicalService ?? MockHistoricalDataService()
         let mockLifecycle = lifecycleService ?? MockInsightLifecycleService()
+        let authService = MockAuthService()
+        authService.currentUser = MockAuthUser(uid: "test_uid")
         let vm = MainViewModel(
             logicService: MockMealLogicService(),
             persistenceService: MockPersistenceService(),
             historicalService: mockHistorical,
             insightLifecycleService: mockLifecycle,
+            authService: authService,
             skipDataLoading: true
         )
         return (vm, mockHistorical, mockLifecycle)

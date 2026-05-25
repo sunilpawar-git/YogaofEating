@@ -75,6 +75,25 @@ enum UnitSystem: Int, Codable, CaseIterable {
     case imperial = 1 // lbs, inches
 }
 
+/// User's dietary goal for personalized coaching.
+enum DietaryGoal: String, Codable, CaseIterable {
+    case weightLoss
+    case maintenance
+    case muscleGain
+    case heartHealth
+    case generalWellness
+
+    var displayName: String {
+        switch self {
+        case .weightLoss: Strings.Settings.DietaryGoal.weightLoss
+        case .maintenance: Strings.Settings.DietaryGoal.maintenance
+        case .muscleGain: Strings.Settings.DietaryGoal.muscleGain
+        case .heartHealth: Strings.Settings.DietaryGoal.heartHealth
+        case .generalWellness: Strings.Settings.DietaryGoal.generalWellness
+        }
+    }
+}
+
 /// Complete user health profile with calculated metrics
 struct UserHealthProfile: Equatable {
     /// User's age in years
@@ -101,13 +120,38 @@ struct UserHealthProfile: Equatable {
 
     /// User's self-reported physical activity level; drives the TDEE multiplier
     let activityLevel: ActivityLevel
+
+    /// User's dietary goal for personalized briefing coaching (nil if not set)
+    let dietaryGoal: DietaryGoal?
+
+    init(
+        age: Int,
+        bmi: Double,
+        bmiCategory: BMICategory,
+        bmr: Double,
+        tdee: Double,
+        riskLevel: HealthRiskLevel,
+        sensitivityMultiplier: Double,
+        activityLevel: ActivityLevel,
+        dietaryGoal: DietaryGoal? = nil
+    ) {
+        self.age = age
+        self.bmi = bmi
+        self.bmiCategory = bmiCategory
+        self.bmr = bmr
+        self.tdee = tdee
+        self.riskLevel = riskLevel
+        self.sensitivityMultiplier = sensitivityMultiplier
+        self.activityLevel = activityLevel
+        self.dietaryGoal = dietaryGoal
+    }
 }
 
 // MARK: - Codable (manual implementation for backward-compatible decoding)
 
 extension UserHealthProfile: Codable {
     enum CodingKeys: String, CodingKey {
-        case age, bmi, bmiCategory, bmr, tdee, riskLevel, sensitivityMultiplier, activityLevel
+        case age, bmi, bmiCategory, bmr, tdee, riskLevel, sensitivityMultiplier, activityLevel, dietaryGoal
     }
 
     init(from decoder: Decoder) throws {
@@ -121,6 +165,8 @@ extension UserHealthProfile: Codable {
         self.sensitivityMultiplier = try c.decode(Double.self, forKey: .sensitivityMultiplier)
         // Existing persisted profiles pre-date this field — default to .sedentary
         self.activityLevel = try c.decodeIfPresent(ActivityLevel.self, forKey: .activityLevel) ?? .sedentary
+        // Existing persisted profiles pre-date this field — default to nil
+        self.dietaryGoal = try c.decodeIfPresent(DietaryGoal.self, forKey: .dietaryGoal)
     }
 }
 

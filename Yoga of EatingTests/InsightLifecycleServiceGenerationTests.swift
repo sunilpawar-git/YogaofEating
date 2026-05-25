@@ -28,19 +28,34 @@ final class InsightLifecycleServiceGenerationTests: XCTestCase {
     // MARK: - generateBriefing exists and returns DailyInsight
 
     func test_generateBriefing_returnsNil_whenFewerThanTwoSnapshots() async {
-        let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let result = await self.sut.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
         XCTAssertNil(result)
     }
 
     func test_generateBriefing_returnsInsight_withTwoOrMoreSnapshots() async {
         self.seedSnapshots(count: 3)
-        let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let result = await self.sut.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
         XCTAssertNotNil(result)
     }
 
     func test_generateBriefing_returnsUnifiedDailyInsight_notLegacyType() async {
         self.seedSnapshots(count: 3)
-        let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let result = await self.sut.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
         // Compile-time: result type is DailyInsight, not LegacyDailyInsight or DailyBriefing
         XCTAssertNotNil(result as DailyInsight?)
     }
@@ -49,26 +64,46 @@ final class InsightLifecycleServiceGenerationTests: XCTestCase {
 
     func test_generateBriefing_localFallback_headlineIsNonEmpty() async {
         self.seedSnapshots(count: 3)
-        let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let result = await self.sut.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
         XCTAssertFalse(result?.headline.isEmpty ?? true)
     }
 
     func test_generateBriefing_localFallback_nudgeSuggestionIsNonEmpty() async {
         self.seedSnapshots(count: 3)
-        let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let result = await self.sut.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
         XCTAssertFalse(result?.nudge.suggestion.isEmpty ?? true)
     }
 
     func test_generateBriefing_localFallback_confidenceIsValid() async {
         self.seedSnapshots(count: 5)
-        let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let result = await self.sut.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
         XCTAssertGreaterThanOrEqual(result?.confidence ?? -1, 0.0)
         XCTAssertLessThanOrEqual(result?.confidence ?? 2, 1.0)
     }
 
     func test_generateBriefing_highScoringSnapshots_headlineReflectsProgress() async {
         self.seedSnapshots(count: 4, averageScore: 0.85)
-        let result = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let result = await self.sut.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
         XCTAssertNotNil(result)
         // Should not be the "challenging" headline for high scorers
         XCTAssertNotEqual(result?.headline, Strings.Insight.Headline.challenging)
@@ -78,14 +113,14 @@ final class InsightLifecycleServiceGenerationTests: XCTestCase {
 
     func test_generateBriefing_persistsViaUpdateInsight() async {
         self.seedSnapshots(count: 3)
-        _ = await self.sut.generateBriefing(for: Date(), healthKitSleepData: [:])
+        _ = await self.sut.generateBriefing(for: Date(), userContext: nil, nudgeHistory: [], healthKitSleepData: [:])
         XCTAssertTrue(self.mockHistorical.updateInsightCalled)
     }
 
     func test_generateBriefing_persistedInsight_retrievableFromSnapshot() async {
         let today = Calendar.current.startOfDay(for: Date())
         self.seedSnapshots(count: 3)
-        _ = await self.sut.generateBriefing(for: today, healthKitSleepData: [:])
+        _ = await self.sut.generateBriefing(for: today, userContext: nil, nudgeHistory: [], healthKitSleepData: [:])
         XCTAssertNotNil(self.mockHistorical.getSnapshot(for: today)?.insight)
     }
 

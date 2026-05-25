@@ -16,13 +16,20 @@ class MockPersistenceService: PersistenceServiceProtocol {
         self.stubbedLoadData
     }
 
-    func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {
+    func save(
+        meals: [Meal],
+        smileyState: SmileyState,
+        lastResetDate: Date,
+        historicalData: HistoricalData,
+        nudgeHistory: [NudgeHistoryEntry]
+    ) {
         self.saveCalled = true
         self.savedData = PersistenceService.AppData(
             meals: meals,
             smileyState: smileyState,
             lastResetDate: lastResetDate,
-            historicalData: historicalData
+            historicalData: historicalData,
+            nudgeHistory: nudgeHistory
         )
     }
 
@@ -83,6 +90,7 @@ class MockHealthProfileService: HealthProfileServiceProtocol {
     }
 
     func getUserHealthProfile() -> UserHealthProfile? { self.mockProfile }
+    var currentProfile: UserHealthProfile? { self.mockProfile }
 }
 
 // MARK: - MockActivityDataProvider
@@ -123,6 +131,8 @@ final class MockInsightLifecycleService: InsightLifecycling {
 
     func generateBriefing(
         for _: Date,
+        userContext _: BriefingUserContext?,
+        nudgeHistory _: [NudgeHistoryEntry],
         healthKitSleepData _: [Date: SleepData]
     ) async -> DailyInsight? {
         self.generateBriefingCalled = true

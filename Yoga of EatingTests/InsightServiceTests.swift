@@ -18,7 +18,12 @@ final class InsightServiceTests: XCTestCase {
             mockHistorical.historicalData.addOrUpdate(snapshot: snap)
         }
 
-        let insight = await service.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let insight = await service.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
 
         XCTAssertNotNil(insight, "InsightLifecycleService must generate a local briefing when Firebase unavailable")
     }
@@ -27,7 +32,12 @@ final class InsightServiceTests: XCTestCase {
         let mockHistorical = MockHistoricalDataService()
         let service = InsightLifecycleService(historicalService: mockHistorical, functions: nil)
 
-        let insight = await service.generateBriefing(for: Date(), healthKitSleepData: [:])
+        let insight = await service.generateBriefing(
+            for: Date(),
+            userContext: nil,
+            nudgeHistory: [],
+            healthKitSleepData: [:]
+        )
 
         XCTAssertNil(insight, "InsightLifecycleService must return nil when fewer than 2 snapshots available")
     }

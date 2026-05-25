@@ -83,11 +83,14 @@ extension MainViewModel {
     /// Triggers enriched insight generation after sleep is logged.
     /// Uses the current synthesis to produce an `EnrichedDailyInsight` via `InsightLifecycleService`.
     func triggerEnrichedInsightGeneration(for date: Date) {
+        guard self.authService?.currentUser?.uid != nil else { return }
         Task {
             let snapshot = self.historicalService.getSnapshot(for: self.selectedDate)
             let healthKitData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
             let recentSnapshots = (0..<7).compactMap { daysAgo -> DailySmileySnapshot? in
-                let target = Calendar.current.date(byAdding: .day, value: -daysAgo, to: date)!
+                guard let target = Calendar.current.date(byAdding: .day, value: -daysAgo, to: date) else {
+                    return nil
+                }
                 return self.historicalService.getSnapshot(for: target)
             }.filter { !$0.isEmpty }
 

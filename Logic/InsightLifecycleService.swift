@@ -21,6 +21,8 @@ protocol InsightLifecycling {
 
     func generateBriefing(
         for date: Date,
+        userContext: BriefingUserContext?,
+        nudgeHistory: [NudgeHistoryEntry],
         healthKitSleepData: [Date: SleepData]
     ) async -> DailyInsight?
 }
@@ -89,6 +91,8 @@ final class InsightLifecycleService: InsightLifecycling {
     /// Replaces `BriefingService`: tries server first, falls back to local pattern analysis.
     func generateBriefing(
         for date: Date,
+        userContext: BriefingUserContext?,
+        nudgeHistory: [NudgeHistoryEntry],
         healthKitSleepData: [Date: SleepData]
     ) async -> DailyInsight? {
         let snapshots = self.gatherRecentSnapshots(relativeTo: date)
@@ -97,6 +101,8 @@ final class InsightLifecycleService: InsightLifecycling {
         if let serverInsight = await self.generateBriefingFromServer(
             snapshots: snapshots,
             date: date,
+            userContext: userContext,
+            nudgeHistory: nudgeHistory,
             healthKitSleepData: healthKitSleepData
         ) {
             self.historicalService.updateInsight(for: date, insight: serverInsight)
@@ -115,18 +121,24 @@ final class InsightLifecycleService: InsightLifecycling {
     private func generateBriefingFromServer(
         snapshots: [DailySmileySnapshot],
         date: Date,
+        userContext: BriefingUserContext?,
+        nudgeHistory: [NudgeHistoryEntry],
         healthKitSleepData: [Date: SleepData]
     ) async -> DailyInsight? {
         guard let functions = self.functions else { return nil }
 
-        let userData = SnapshotPayloadBuilder.build(
+        let historicalSummary = self.historicalService.computeHistoricalSummary(relativeTo: date)
+        let callPayload = SnapshotPayloadBuilder.build(
             from: Array(snapshots.prefix(lookbackDays)),
+            userContext: userContext,
+            nudgeHistory: nudgeHistory,
+            historicalSummary: historicalSummary,
             healthKitSleepData: healthKitSleepData,
             relativeTo: date
         )
 
         do {
-            let result = try await functions.httpsCallable("generateDailyBriefing").call(["userData": userData])
+            let result = try await functions.httpsCallable("generateDailyBriefing").call(callPayload)
             guard let resp = result.data as? [String: Any],
                   let headline = resp["headline"] as? String,
                   let nudgeDict = resp["nudge"] as? [String: Any]

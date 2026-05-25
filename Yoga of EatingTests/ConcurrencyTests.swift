@@ -11,7 +11,9 @@ final class ConcurrencyTests: XCTestCase {
 
     /// VM without data loading (for tests that don't need monitoring started)
     private func makeVM() -> MainViewModel {
-        MainViewModel(skipDataLoading: true)
+        let authService = MockAuthService()
+        authService.currentUser = MockAuthUser(uid: "test_uid")
+        return MainViewModel(authService: authService, skipDataLoading: true)
     }
 
     /// VM with data loading enabled (monitoring loop is started, uses mock persistence)
@@ -76,10 +78,13 @@ final class ConcurrencyTests: XCTestCase {
 
     func test_insightTask_isCancelledBeforeCompletion_withSlowLifecycleService() async throws {
         let slowMock = SlowMockInsightLifecycleService()
+        let authService = MockAuthService()
+        authService.currentUser = MockAuthUser(uid: "test_uid")
         let vm = MainViewModel(
             persistenceService: MockPersistenceService(),
             historicalService: MockHistoricalDataService(),
             insightLifecycleService: slowMock,
+            authService: authService,
             skipDataLoading: true
         )
 
@@ -104,7 +109,12 @@ private final class SlowMockInsightLifecycleService: InsightLifecycling {
         healthKitSleepData _: [Date: SleepData]
     ) async -> DailyInsight? { nil }
 
-    func generateBriefing(for _: Date, healthKitSleepData _: [Date: SleepData]) async -> DailyInsight? {
+    func generateBriefing(
+        for _: Date,
+        userContext _: BriefingUserContext?,
+        nudgeHistory _: [NudgeHistoryEntry],
+        healthKitSleepData _: [Date: SleepData]
+    ) async -> DailyInsight? {
         try? await Task.sleep(nanoseconds: .max)
         return nil
     }

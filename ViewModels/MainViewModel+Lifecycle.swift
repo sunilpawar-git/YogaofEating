@@ -25,6 +25,7 @@ extension MainViewModel {
             self.smileyState = data.smileyState
             self.lastResetDate = data.lastResetDate
             self.historicalService.historicalData = data.historicalData
+            self.nudgeHistory = data.nudgeHistory
 
             // Update stored UID so future launches can detect any subsequent account switch.
             if let currentUID {
@@ -100,7 +101,8 @@ extension MainViewModel {
             meals: self.meals,
             smileyState: self.smileyState,
             lastResetDate: self.lastResetDate,
-            historicalData: self.historicalService.historicalData
+            historicalData: self.historicalService.historicalData,
+            nudgeHistory: self.nudgeHistory
         )
     }
 

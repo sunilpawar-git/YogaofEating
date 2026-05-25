@@ -48,6 +48,12 @@ enum ValidationLimits {
     /// Kilocalories per gram of fat (Atwater factor).
     static let caloriesPerGramFat = 9
 
+    // MARK: - Nudge History
+
+    /// Maximum number of nudge history entries retained across days.
+    /// Oldest entries are dropped first when the cap is reached.
+    static let nudgeHistoryMaxEntries = 14
+
     // MARK: - Universal Limit (Fallback)
 
     /// Universal character limit used as the app-wide UI truncation ceiling.

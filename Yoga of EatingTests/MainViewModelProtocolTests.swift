@@ -108,6 +108,13 @@ final class SetMainViewModelTrackingService: ObservableObject, HistoricalDataSer
     func updateWellbeingDimensions(for _: Date, dimensions _: WellbeingDimensions, textSignals _: [TextSignal]) {}
     func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] { [] }
     func foodDebtStartingState(relativeTo _: Date) -> SmileyState { .neutral }
+    func computeHistoricalSummary(relativeTo _: Date) -> HistoricalSummary {
+        HistoricalSummary(
+            thirtyDayStats: PeriodStats(averageFoodScore: 0.5, daysLogged: 0),
+            ninetyDayStats: nil, currentStreak: 0, bestDimension: nil, worstDimension: nil
+        )
+    }
+
     func restoreFromFirebase() async throws {}
     var isRestoreInProgress: Bool { false }
     var isSyncInProgress: Bool { false }

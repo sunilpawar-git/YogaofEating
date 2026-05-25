@@ -64,6 +64,11 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// Used by resetDay() to set the smiley's starting state.
     func foodDebtStartingState(relativeTo date: Date) -> SmileyState
 
+    /// Computes aggregate wellbeing statistics relative to the given date.
+    /// Returns 30-day stats (always), optional 90-day stats (when data extends beyond 30 days),
+    /// current streak, and best/worst wellbeing dimensions from the last 30 days.
+    func computeHistoricalSummary(relativeTo date: Date) -> HistoricalSummary
+
     /// Type-erased publisher that fires whenever the service's state changes.
     /// Allows MainViewModel to subscribe to historical-service mutations via the
     /// protocol existential, without needing a concrete cast to access `objectWillChange`.
@@ -233,7 +238,8 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
                 meals: existing?.meals ?? [],
                 smileyState: existing?.smileyState ?? .neutral,
                 lastResetDate: existing?.lastResetDate ?? Date(),
-                historicalData: self.historicalData
+                historicalData: self.historicalData,
+                nudgeHistory: existing?.nudgeHistory ?? []
             )
         }
     }

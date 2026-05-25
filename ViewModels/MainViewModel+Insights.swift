@@ -30,27 +30,45 @@ extension MainViewModel {
     }
 
     /// Briefing card data contract — minimal fields for `MorningBriefingCard`.
-    var briefingCardData: (headline: String, topCorrelation: String?, nudge: String, isViewed: Bool)? {
+    var briefingCardData: (
+        headline: String,
+        topCorrelation: String?,
+        nudge: String,
+        isViewed: Bool,
+        greeting: String
+    )? {
         guard let insight = self.currentInsight else { return nil }
         return (
             headline: insight.headline,
             topCorrelation: insight.topCorrelation?.observation,
             nudge: insight.nudge.suggestion,
-            isViewed: insight.isViewed
+            isViewed: insight.isViewed,
+            greeting: self.currentGreeting
         )
     }
-
-    var hasBriefingAvailable: Bool { self.currentInsight != nil }
-    var hasUnreadBriefing: Bool { self.hasUnreadInsight }
 
     // MARK: - Insight Actions
 
     func dismissInsight() {
+        if let insight = self.currentInsight {
+            let entry = NudgeHistoryEntry(date: Date(), suggestion: insight.nudge.suggestion)
+            self.nudgeHistory.append(entry)
+            if self.nudgeHistory.count > ValidationLimits.nudgeHistoryMaxEntries {
+                self.nudgeHistory = Array(self.nudgeHistory.suffix(ValidationLimits.nudgeHistoryMaxEntries))
+            }
+            self.saveData()
+        }
         self.showInsightSheet = false
         if var insight = self.currentInsight {
             insight.markAsViewed()
             self.currentInsight = insight
         }
+    }
+
+    func markNudgeFollowedThrough(id: UUID) {
+        guard let index = self.nudgeHistory.firstIndex(where: { $0.id == id }) else { return }
+        self.nudgeHistory[index].wasFollowedThrough = true
+        self.saveData()
     }
 
     func showInsightDetails() {
@@ -80,6 +98,7 @@ extension MainViewModel {
     /// Triggers morning briefing generation via `InsightLifecycleService`.
     /// Idempotent: skips if an insight already exists for today.
     func triggerInsightGeneration() {
+        guard self.authService?.currentUser?.uid != nil else { return }
         guard !self.isInsightGenerationInProgress else { return }
 
         let date = Date()
@@ -104,8 +123,14 @@ extension MainViewModel {
             defer { self.isInsightGenerationInProgress = false }
 
             let healthKitSleepData = await self.fetchHealthKitSleepDataForInsights(relativeTo: date)
+            let userContext = BriefingUserContext.build(
+                from: self.healthProfileService.currentProfile,
+                authService: self.authService
+            )
             guard let insight = await self.insightLifecycleService.generateBriefing(
                 for: date,
+                userContext: userContext,
+                nudgeHistory: self.nudgeHistory,
                 healthKitSleepData: healthKitSleepData
             ) else { return }
 

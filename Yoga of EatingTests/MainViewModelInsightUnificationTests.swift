@@ -19,6 +19,7 @@ final class MainViewModelInsightUnificationTests: XCTestCase {
         self.mockLifecycle = MockInsightLifecycleService()
         self.mockActivityProvider = MockActivityDataProvider()
         self.mockAuth = MockAuthService()
+        self.mockAuth.currentUser = MockAuthUser(uid: "test_uid")
         self.sut = MainViewModel(
             historicalService: self.mockHistorical,
             activityProvider: self.mockActivityProvider,

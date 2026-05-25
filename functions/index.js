@@ -8,23 +8,26 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { defineSecret } = require('firebase-functions/params');
 const BriefingPerformanceMetrics = require('./briefingPerformanceMonitor');
 const admin = require('firebase-admin');
+const {
+    sanitizeInput,
+    buildSystemPrompt,
+    buildDaySummary,
+    CONFIDENCE_FLOOR,
+    HEADLINE_MAX_WORDS,
+    BRIEFING_LOOKBACK_DAYS,
+} = require('./briefingHelpers');
 
 // Define the API Key as a secret for security
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 const MAX_INPUT_LENGTH = 500;
-const BRIEFING_LOOKBACK_DAYS = 7;
+
+// analyzeMeal, getMealInsight, generateInsight use the lite tier (lower cost, sufficient quality).
+// generateDailyBriefing uses the full tier for richer personalization and narrative quality.
+const INSIGHT_MODEL_ID = "gemini-2.5-flash-lite";
+const BRIEFING_MODEL_ID = "gemini-2.5-flash";
 
 const MACRO_CAPS = { protein: 150, carbs: 400, fat: 200 };
-
-function sanitizeInput(input, maxLength = MAX_INPUT_LENGTH) {
-    if (typeof input !== 'string') return '';
-    return input
-        .replace(/["""\u201C\u201D]/g, "'")
-        .replace(/\n/g, ' ')
-        .slice(0, maxLength)
-        .trim();
-}
 
 // Returns null when the raw value is absent; logs a warning when clamped.
 function clampMacro(raw, max, name) {
@@ -73,7 +76,7 @@ exports.analyzeMeal = onCall({ secrets: [geminiApiKey] }, async (request) => {
 
     // 2. Initialize Model with Key
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: INSIGHT_MODEL_ID });
 
     // 3. Construct Prompt with basic insight
     const prompt = `You are a nutrition analyzer. Follow these rules exactly.
@@ -169,7 +172,7 @@ exports.getMealInsight = onCall({ secrets: [geminiApiKey] }, async (request) => 
 
     // 2. Initialize Model with Key
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: INSIGHT_MODEL_ID });
 
     // 3. Construct comprehensive prompt
     const mealDescription = sanitizedItems.join(", ");
@@ -244,7 +247,7 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
 
     // 2. Initialize Model with Key
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: INSIGHT_MODEL_ID });
 
     // 3. Identify which day is "today" (the insight date)
     const insightDate = request.data.insightDate || null;
@@ -424,11 +427,15 @@ exports.generateDailyBriefing = onCall({ secrets: [geminiApiKey] }, async (reque
     requireAuth(request);
     const userId = request.auth.uid;
     await BriefingPerformanceMetrics.logGenerationStart(userId);
-    
+
     const userData = request.data.userData;
+    const userContext = request.data.userContext || null;
+    const nudgeHistory = Array.isArray(request.data.nudgeHistory) ? request.data.nudgeHistory : [];
+    const historicalContext = request.data.historicalContext || null;
+
     if (!userData || !Array.isArray(userData) || userData.length === 0) {
         await BriefingPerformanceMetrics.logGenerationError(
-            userId, 
+            userId,
             'Invalid or missing userData array',
             false
         );
@@ -439,59 +446,22 @@ exports.generateDailyBriefing = onCall({ secrets: [geminiApiKey] }, async (reque
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: BRIEFING_MODEL_ID });
 
     const days = userData.slice(0, BRIEFING_LOOKBACK_DAYS);
 
-    const dataSummary = days.map(day => {
-        const safeDate = sanitizeInput(String(day.date || "unknown"), 30);
-        let summary = `**${safeDate}**:\n`;
+    const dataSummary = days.map(day => buildDaySummary(day)).join("\n");
 
-        if (day.meals && day.meals.length > 0) {
-            const items = day.meals
-                .flatMap(m => m.items || [])
-                .slice(0, 6)
-                .map(item => sanitizeInput(String(item), 100))
-                .join(", ");
-            const avgScore = day.averageHealthScore
-                ? Math.round(day.averageHealthScore * 100)
-                : 50;
-            summary += `  Meals: ${items || 'None logged'} (Score: ${avgScore}%)\n`;
+    const nudgeHistorySummary = nudgeHistory.length > 0
+        ? `\nPrevious nudges (avoid repeating suggestions where wasFollowedThrough is false):\n${nudgeHistory.map(n => `- ${n.suggestion}${n.wasFollowedThrough === false ? ' (not followed)' : n.wasFollowedThrough === true ? ' (followed)' : ''}`).join("\n")}\n`
+        : '';
 
-            const timings = day.meals.map(m => {
-                const t = sanitizeInput(String(m.time || ''), 10);
-                const type = sanitizeInput(String(m.mealType || ''), 20);
-                return t ? `${type} @ ${t}` : type;
-            }).join(', ');
-            if (timings) summary += `  Timing: ${timings}\n`;
-        }
+    const historicalContextSummary = historicalContext
+        ? `\n<HISTORICAL_CONTEXT>\n30-day avg food score: ${historicalContext.thirtyDayAvgFoodScore !== undefined ? Math.round(historicalContext.thirtyDayAvgFoodScore * 100) + '%' : 'N/A'}, days logged: ${historicalContext.thirtyDayDaysLogged || 0}. Current streak: ${historicalContext.currentStreak || 0} days.${historicalContext.ninetyDayDaysLogged ? ` 90-day: ${Math.round(historicalContext.ninetyDayAvgFoodScore * 100)}%, ${historicalContext.ninetyDayDaysLogged} days.` : ''}${historicalContext.bestDimension ? ` Strongest dimension: ${historicalContext.bestDimension}.` : ''}${historicalContext.worstDimension ? ` Needs work: ${historicalContext.worstDimension}.` : ''}\n</HISTORICAL_CONTEXT>\n`
+        : '';
 
-        if (day.sleepQuality) {
-            summary += `  Sleep (user): ${sanitizeInput(String(day.sleepQuality), 50)}\n`;
-        }
-        if (day.appleSleepData) {
-            const a = day.appleSleepData;
-            const dur = a.durationHours ? Number(a.durationHours).toFixed(1) + 'h' : 'N/A';
-            const score = a.score !== undefined ? Math.round(Number(a.score)) + '%' : 'N/A';
-            summary += `  Sleep (Apple Watch): Score ${score}, Duration ${dur}\n`;
-        }
-
-        if (day.feeling) {
-            summary += `  Feeling: ${sanitizeInput(String(day.feeling), 100)}\n`;
-        }
-
-        if (day.morningMindCheck && day.morningMindCheck.length > 0) {
-            const todos = day.morningMindCheck.filter(m => m.category === 'To-Do');
-            if (todos.length > 0) {
-                const done = todos.filter(t => t.isAccomplished === true).length;
-                summary += `  Todos: ${done}/${todos.length} completed\n`;
-            }
-        }
-
-        return summary;
-    }).join("\n");
-
-    const prompt = `You are a compassionate wellness coach analyzing ${days.length} days of food, sleep, mood, and productivity data. Follow these rules exactly.
+    const systemCoach = buildSystemPrompt(userContext);
+    const prompt = `${systemCoach} analyzing ${days.length} days of food, sleep, mood, and productivity data. Follow these rules exactly.
 
 RULES: Return ONLY a JSON object (no markdown formatting, no code fences) matching this exact schema:
 {
@@ -533,7 +503,7 @@ GUIDELINES:
 
 <USER_DATA>
 ${dataSummary}
-</USER_DATA>`;
+</USER_DATA>${nudgeHistorySummary}${historicalContextSummary}`;
 
     try {
         const apiStartTime = Date.now();
@@ -551,11 +521,13 @@ ${dataSummary}
             throw new Error("Invalid briefing structure from AI");
         }
 
-        const cards = (data.correlationCards || []).map(c => ({
-            category: c.category || "foodToMood",
-            observation: c.observation || "",
-            confidence: Math.min(1.0, Math.max(0.0, c.confidence || 0.5))
-        }));
+        const cards = (data.correlationCards || [])
+            .filter(c => (c.confidence || 0) >= CONFIDENCE_FLOOR)
+            .map(c => ({
+                category: c.category || "foodToMood",
+                observation: c.observation || "",
+                confidence: Math.min(1.0, Math.max(0.0, c.confidence || 0.5))
+            }));
 
         const briefing = {
             headline: data.headline,

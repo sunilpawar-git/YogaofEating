@@ -7,6 +7,8 @@ struct MorningBriefingCard: View {
     let topCorrelation: String?
     let nudge: String
     let isViewed: Bool
+    /// Time-of-day greeting from the ViewModel (e.g. "Good morning").
+    var greeting: String = Strings.Briefing.cardTitle
     /// Up to 2 weakest wellbeing dimensions — shown as a 1-line subtext below the headline.
     var weakDimensions: [WellbeingDimension] = []
     var onTap: (() -> Void)?
@@ -16,10 +18,11 @@ struct MorningBriefingCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Image(systemName: "sun.and.horizon.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(AppTheme.Briefing.sunAccent)
                         .font(.caption)
 
-                    Text("Morning Briefing")
+                    // Monospaced design is intentional — not a FontTheme violation.
+                    Text(self.greeting)
                         .font(.system(.caption, design: .monospaced))
                         .fontWeight(.bold)
                         .foregroundStyle(.secondary)
@@ -29,7 +32,7 @@ struct MorningBriefingCard: View {
 
                     if !self.isViewed {
                         Circle()
-                            .fill(.orange)
+                            .fill(AppTheme.Briefing.sunAccent)
                             .frame(width: 8, height: 8)
                     }
                 }
@@ -60,7 +63,7 @@ struct MorningBriefingCard: View {
                 HStack(spacing: 4) {
                     Image(systemName: "lightbulb.fill")
                         .font(.system(size: 10))
-                        .foregroundStyle(.yellow)
+                        .foregroundStyle(AppTheme.Briefing.nudgeAccent)
                     Text(self.nudge)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -80,7 +83,7 @@ struct MorningBriefingCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("morning-briefing-card")
-        .accessibilityLabel("Morning Briefing: \(self.headline)")
+        .accessibilityLabel("\(Strings.Briefing.cardTitle): \(self.headline)")
         .accessibilityHint(self.isViewed ? "Tap to review your briefing" : "Tap to read your new briefing")
     }
 }
@@ -90,7 +93,8 @@ struct MorningBriefingCard: View {
         headline: "Protein lunch powered your afternoon focus",
         topCorrelation: "Healthy meals correlate with better evening mood",
         nudge: "Try repeating Tuesday's lunch today",
-        isViewed: false
+        isViewed: false,
+        greeting: "Good morning"
     )
     .padding()
 }
@@ -100,7 +104,8 @@ struct MorningBriefingCard: View {
         headline: "A steady week — small shifts are adding up",
         topCorrelation: nil,
         nudge: "Log your meals to unlock deeper patterns",
-        isViewed: true
+        isViewed: true,
+        greeting: "Good afternoon"
     )
     .padding()
 }

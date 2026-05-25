@@ -29,8 +29,37 @@ enum SnapshotPayloadBuilder {
                 calendar: calendar
             )
             self.appendMindCheck(to: &data, snapshot: snapshot)
+            self.appendTodos(to: &data, snapshot: snapshot)
             return data
         }
+    }
+
+    /// Full Cloud Function payload wrapping the per-day array with optional personalization context.
+    /// - Parameter userContext: When non-nil, appends a top-level `"userContext"` key — omitted for backward compat.
+    /// - Parameter nudgeHistory: When non-empty, appends a top-level `"nudgeHistory"` array — omitted when empty.
+    /// - Parameter historicalSummary: When non-nil, appends a top-level `"historicalContext"` dict (aggregate stats
+    /// only — no raw meal text).
+    static func build(
+        from snapshots: [DailySmileySnapshot],
+        userContext: BriefingUserContext?,
+        nudgeHistory: [NudgeHistoryEntry] = [],
+        historicalSummary: HistoricalSummary? = nil,
+        healthKitSleepData: [Date: SleepData],
+        relativeTo referenceDate: Date
+    ) -> [String: Any] {
+        let days = self.build(from: snapshots, healthKitSleepData: healthKitSleepData, relativeTo: referenceDate)
+        var payload: [String: Any] = ["userData": days]
+        if let ctx = userContext {
+            // userName is user-controlled input — never logged, only serialised
+            payload["userContext"] = ctx.toPayloadDict()
+        }
+        if !nudgeHistory.isEmpty {
+            payload["nudgeHistory"] = self.serializeNudgeHistory(nudgeHistory)
+        }
+        if let summary = historicalSummary {
+            payload["historicalContext"] = self.serializeHistoricalSummary(summary)
+        }
+        return payload
     }
 
     /// Serialises a single `MindCheckEntry` into a Cloud Function payload dict.
@@ -40,7 +69,7 @@ enum SnapshotPayloadBuilder {
             "category": entry.category.displayName
         ]
         if entry.category == .todo {
-            dict["isAccomplished"] = entry.isAccomplished ?? false
+            dict["isAccomplished"] = entry.isAccomplished.map { $0 ? "true" : "false" } ?? "unreviewed"
         }
         return dict
     }
@@ -127,5 +156,43 @@ enum SnapshotPayloadBuilder {
         if let evening = snapshot.eveningMindCheck, !evening.isEmpty {
             data["eveningMindCheck"] = evening.map { self.mindCheckEntryPayload($0) }
         }
+    }
+
+    private static func appendTodos(to data: inout [String: Any], snapshot: DailySmileySnapshot) {
+        guard let todos = snapshot.highlightData?.todos, !todos.isEmpty else { return }
+        data["todos"] = todos.map { entry -> [String: Any] in
+            [
+                "text": entry.text,
+                "isAccomplished": entry.isAccomplished.map { $0 ? "true" : "false" } ?? "unreviewed"
+            ]
+        }
+    }
+
+    private static func serializeNudgeHistory(_ entries: [NudgeHistoryEntry]) -> [[String: Any]] {
+        entries.map { entry in
+            var dict: [String: Any] = [
+                "date": ISO8601DateFormatter().string(from: entry.date),
+                "suggestion": entry.suggestion
+            ]
+            if let followed = entry.wasFollowedThrough {
+                dict["wasFollowedThrough"] = followed
+            }
+            return dict
+        }
+    }
+
+    private static func serializeHistoricalSummary(_ summary: HistoricalSummary) -> [String: Any] {
+        var dict: [String: Any] = [
+            "thirtyDayAvgFoodScore": summary.thirtyDayStats.averageFoodScore,
+            "thirtyDayDaysLogged": summary.thirtyDayStats.daysLogged,
+            "currentStreak": summary.currentStreak
+        ]
+        if let ninety = summary.ninetyDayStats {
+            dict["ninetyDayAvgFoodScore"] = ninety.averageFoodScore
+            dict["ninetyDayDaysLogged"] = ninety.daysLogged
+        }
+        if let best = summary.bestDimension { dict["bestDimension"] = best.displayName }
+        if let worst = summary.worstDimension { dict["worstDimension"] = worst.displayName }
+        return dict
     }
 }

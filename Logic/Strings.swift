@@ -134,11 +134,16 @@ enum Strings {
 
     enum Briefing {
         static let navigationTitle = "Morning Briefing"
+        static let cardTitle = "Today's Compass"
         static let doneButton = "Done"
         static let patternsSection = "Patterns"
         static let nudgeSection = "Today's Nudge"
         static let weeklyTrendSection = "Weekly Trend"
         static let relatedMealPrefix = "Related: "
+        static let greetingMorning = "Good morning"
+        static let greetingAfternoon = "Good afternoon"
+        static let greetingEvening = "Good evening"
+        static let greetingNight = "Good night"
         enum TrendLabel {
             static let food = "Food"
             static let sleep = "Sleep"
@@ -429,6 +434,16 @@ enum Strings {
         static let activityLevelVeryActive = "Very Active"
         /// Footer explaining why activity level matters for the calorie goal.
         static let activityLevelFooter = "Higher activity means a higher daily calorie goal. Exercise calories are added on top."
+
+        // MARK: - Dietary Goal picker
+
+        enum DietaryGoal {
+            static let weightLoss = "Weight Loss"
+            static let maintenance = "Maintenance"
+            static let muscleGain = "Muscle Gain"
+            static let heartHealth = "Heart Health"
+            static let generalWellness = "General Wellness"
+        }
 
         // MARK: - Sign Out
 

@@ -31,16 +31,51 @@ class PersistenceService: PersistenceServiceProtocol {
         let smileyState: SmileyState
         let lastResetDate: Date
         let historicalData: HistoricalData
+        let nudgeHistory: [NudgeHistoryEntry]
+
+        init(
+            meals: [Meal],
+            smileyState: SmileyState,
+            lastResetDate: Date,
+            historicalData: HistoricalData,
+            nudgeHistory: [NudgeHistoryEntry] = []
+        ) {
+            self.meals = meals
+            self.smileyState = smileyState
+            self.lastResetDate = lastResetDate
+            self.historicalData = historicalData
+            self.nudgeHistory = nudgeHistory
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case meals, smileyState, lastResetDate, historicalData, nudgeHistory
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.meals = try container.decode([Meal].self, forKey: .meals)
+            self.smileyState = try container.decode(SmileyState.self, forKey: .smileyState)
+            self.lastResetDate = try container.decode(Date.self, forKey: .lastResetDate)
+            self.historicalData = try container.decode(HistoricalData.self, forKey: .historicalData)
+            self.nudgeHistory = try container.decodeIfPresent([NudgeHistoryEntry].self, forKey: .nudgeHistory) ?? []
+        }
     }
 
     /// Saves the current state of the app including historical data.
     /// Writes are serialized through a background actor to prevent races.
-    func save(meals: [Meal], smileyState: SmileyState, lastResetDate: Date, historicalData: HistoricalData) {
+    func save(
+        meals: [Meal],
+        smileyState: SmileyState,
+        lastResetDate: Date,
+        historicalData: HistoricalData,
+        nudgeHistory: [NudgeHistoryEntry]
+    ) {
         let data = AppData(
             meals: meals,
             smileyState: smileyState,
             lastResetDate: lastResetDate,
-            historicalData: historicalData
+            historicalData: historicalData,
+            nudgeHistory: nudgeHistory
         )
 
         Task(priority: .utility) {
