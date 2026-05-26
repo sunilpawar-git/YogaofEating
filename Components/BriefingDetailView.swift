@@ -20,7 +20,7 @@ struct BriefingDetailView: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(Strings.Briefing.navigationTitle)
+            .navigationTitle(Strings.Briefing.cardTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
