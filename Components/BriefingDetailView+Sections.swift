@@ -4,20 +4,25 @@ import SwiftUI
 
 extension BriefingDetailView {
     func correlationCardRow(_ card: CorrelationCard) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: card.category.icon)
-                .font(.title3)
-                .foregroundStyle(AppTheme.CorrelationCard.color(for: card.category))
-                .frame(width: 32)
+        HStack(alignment: .center, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(AppTheme.CorrelationCard.color(for: card.category).opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: card.category.icon)
+                    .font(.callout)
+                    .foregroundStyle(AppTheme.CorrelationCard.color(for: card.category))
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(card.category.displayName)
-                    .font(.caption)
+                    .font(FontTheme.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
 
                 Text(card.observation)
                     .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 self.confidenceBar(card.confidence)
             }
@@ -31,25 +36,19 @@ extension BriefingDetailView {
     }
 
     func confidenceBar(_ value: Double) -> some View {
-        HStack(spacing: 4) {
-            GeometryReader { geo in
-                Capsule()
-                    .fill(.quaternary)
-                    .overlay(alignment: .leading) {
-                        Capsule()
-                            .fill(
-                                value > 0.7
-                                    ? AppTheme.CorrelationCard.highConfidenceColor
-                                    : AppTheme.CorrelationCard.lowConfidenceColor
-                            )
-                            .frame(width: geo.size.width * value)
-                    }
-            }
-            .frame(height: 4)
+        HStack(spacing: 6) {
+            ProgressView(value: value)
+                .progressViewStyle(.linear)
+                .tint(
+                    value > 0.7
+                        ? AppTheme.CorrelationCard.highConfidenceColor
+                        : AppTheme.CorrelationCard.lowConfidenceColor
+                )
 
             Text("\(Int(value * 100))%")
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: 10, design: .rounded))
                 .foregroundStyle(.secondary)
+                .frame(width: 28, alignment: .trailing)
         }
     }
 
@@ -58,12 +57,13 @@ extension BriefingDetailView {
         if let trend = self.insight.weeklyTrend {
             VStack(alignment: .leading, spacing: 8) {
                 Text(Strings.Briefing.weeklyTrendSection)
-                    .font(.system(.caption, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundStyle(.secondary)
-                    .kerning(1)
+                    .font(FontTheme.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
 
-                HStack(spacing: 20) {
+                HStack(spacing: 0) {
                     self.trendStat(
                         label: Strings.Briefing.TrendLabel.food,
                         value: "\(Int(trend.averageFoodScore * 100))%",
@@ -101,11 +101,12 @@ extension BriefingDetailView {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.system(.caption, design: .monospaced))
+                .font(.system(.subheadline, design: .rounded))
                 .fontWeight(.bold)
             Text(label)
                 .font(FontTheme.caption)
                 .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity)
     }
 }

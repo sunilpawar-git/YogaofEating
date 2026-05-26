@@ -53,8 +53,8 @@ struct BriefingDetailView: View {
             }
 
             Text(self.insight.headline)
-                .font(.system(.title3, design: .rounded))
-                .fontWeight(.semibold)
+                .font(FontTheme.sectionHeader)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 8)
     }
@@ -66,10 +66,11 @@ struct BriefingDetailView: View {
         if !self.insight.correlationCards.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 Text(Strings.Briefing.patternsSection)
-                    .font(.system(.caption, design: .monospaced))
-                    .fontWeight(.bold)
-                    .foregroundStyle(.secondary)
-                    .kerning(1)
+                    .font(FontTheme.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
 
                 ForEach(self.insight.correlationCards) { card in
                     self.correlationCardRow(card)
@@ -83,23 +84,27 @@ struct BriefingDetailView: View {
     private var nudgeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(Strings.Briefing.nudgeSection)
-                .font(.system(.caption, design: .monospaced))
-                .fontWeight(.bold)
-                .foregroundStyle(.secondary)
-                .kerning(1)
+                .font(FontTheme.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+                .tracking(0.5)
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Image(systemName: "lightbulb.fill")
+                        .font(.callout)
                         .foregroundStyle(AppTheme.Briefing.nudgeAccent)
                     Text(self.insight.nudge.suggestion)
                         .font(.subheadline)
-                        .fontWeight(.medium)
+                        .fontWeight(.semibold)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Text(self.insight.nudge.reasoning)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if let meal = self.insight.nudge.relatedMeal {
                     Text(Strings.Briefing.relatedMealPrefix + meal)
