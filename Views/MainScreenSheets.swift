@@ -40,6 +40,11 @@ private struct MainScreenSheetsModifier: ViewModifier {
                     .presentationDragIndicator(.visible)
                 }
             }
+            // Placed on the parent modifier chain (not inside sheet content) so it fires
+            // reliably even during sheet dismiss animation.
+            .onChange(of: self.viewModel.currentInsight) { _, newInsight in
+                self.viewModel.handleInsightGeneratedDuringFallback(newInsight)
+            }
             .sheet(isPresented: Binding(
                 get: { self.viewModel.showBriefingSheet && self.viewModel.currentInsight != nil },
                 set: { self.viewModel.showBriefingSheet = $0 }
@@ -47,6 +52,7 @@ private struct MainScreenSheetsModifier: ViewModifier {
                 if let insight = self.viewModel.currentInsight {
                     BriefingDetailView(
                         insight: insight,
+                        liveBreakdown: self.viewModel.wellbeingBreakdownContract,
                         onDismiss: { self.viewModel.showBriefingSheet = false },
                         onRefresh: {
                             self.viewModel.showBriefingSheet = false

@@ -53,6 +53,37 @@ extension BriefingDetailView {
     }
 
     @ViewBuilder
+    var dimensionBarsSection: some View {
+        if let breakdown = self.liveBreakdown {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(Strings.Briefing.todaysSnapshotSection)
+                    .font(FontTheme.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
+                VStack(spacing: 14) {
+                    ForEach(WellbeingDimension.allCases, id: \.self) { dimension in
+                        WellbeingDimensionBar(
+                            dimension: dimension,
+                            value: dimension.value(in: breakdown.dimensions),
+                            isDominant: dimension == breakdown.dominantDimension,
+                            mealCount: breakdown.mealCount
+                        )
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(.secondarySystemGroupedBackground))
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
     var weeklyTrendSection: some View {
         if let trend = self.insight.weeklyTrend {
             VStack(alignment: .leading, spacing: 8) {

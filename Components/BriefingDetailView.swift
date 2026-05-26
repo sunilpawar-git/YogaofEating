@@ -4,6 +4,7 @@ import SwiftUI
 /// Receives the DailyBriefing via parameter (data-contract pattern).
 struct BriefingDetailView: View {
     let insight: DailyInsight
+    var liveBreakdown: WellbeingBreakdownSheetContract?
     var onDismiss: (() -> Void)?
     var onRefresh: (() -> Void)?
 
@@ -14,6 +15,7 @@ struct BriefingDetailView: View {
                     self.headlineSection
                     self.correlationCardsSection
                     self.nudgeSection
+                    self.dimensionBarsSection
                     self.weeklyTrendSection
                 }
                 .padding(.horizontal, 20)
@@ -21,7 +23,7 @@ struct BriefingDetailView: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(Strings.Briefing.cardTitle)
+            .navigationTitle(Self.insightsTitle(for: self.insight.date))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -124,10 +126,24 @@ struct BriefingDetailView: View {
 
     // MARK: - Helpers
 
+    private static let dayNameFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE"
+        return f
+    }()
+
+    private static let headlineDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMMM d"
+        return f
+    }()
+
+    static func insightsTitle(for date: Date) -> String {
+        String(format: Strings.Briefing.insightsTitleFormat, self.dayNameFormatter.string(from: date))
+    }
+
     private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMMM d"
-        return formatter.string(from: self.insight.date)
+        Self.headlineDateFormatter.string(from: self.insight.date)
     }
 
     func trendIcon(_ direction: TrendDirection) -> String {
@@ -139,38 +155,58 @@ struct BriefingDetailView: View {
     }
 }
 
-#Preview {
+private let _previewInsight = DailyInsight(
+    date: Date(),
+    headline: "Protein lunches power your best afternoons",
+    dimensions: .neutral,
+    dominantInsight: "Your eating patterns are improving your energy.",
+    correlationCards: [
+        CorrelationCard(
+            category: .foodToMood,
+            observation: "Days with healthier meals end with better mood",
+            confidence: 0.85, dataPoints: []
+        ),
+        CorrelationCard(
+            category: .timingPattern,
+            observation: "Regular meal timing improves your sleep quality",
+            confidence: 0.72, dataPoints: []
+        )
+    ],
+    nudge: ActionableNudge(
+        suggestion: "Try repeating Tuesday's grilled chicken salad",
+        reasoning: "It correlated with your best afternoon this week"
+    ),
+    weeklyTrend: WeeklyTrendSnippet(
+        averageFoodScore: 0.72,
+        averageSleepQuality: 0.68,
+        daysLogged: 6,
+        trendDirection: .improving
+    ),
+    causalExplanation: "Physical load is the driver.",
+    textSignals: [],
+    confidence: 0.8
+)
+
+#Preview("No dimension bars") {
+    BriefingDetailView(insight: _previewInsight)
+}
+
+#Preview("With dimension bars") {
     BriefingDetailView(
-        insight: DailyInsight(
-            date: Date(),
-            headline: "Protein lunches power your best afternoons",
-            dimensions: .neutral,
-            dominantInsight: "Your eating patterns are improving your energy.",
-            correlationCards: [
-                CorrelationCard(
-                    category: .foodToMood,
-                    observation: "Days with healthier meals end with better mood",
-                    confidence: 0.85, dataPoints: []
-                ),
-                CorrelationCard(
-                    category: .timingPattern,
-                    observation: "Regular meal timing improves your sleep quality",
-                    confidence: 0.72, dataPoints: []
-                )
-            ],
-            nudge: ActionableNudge(
-                suggestion: "Try repeating Tuesday's grilled chicken salad",
-                reasoning: "It correlated with your best afternoon this week"
+        insight: _previewInsight,
+        liveBreakdown: WellbeingBreakdownSheetContract(
+            dimensions: WellbeingDimensions(
+                physicalLoad: 0.85,
+                emotionalTone: 0.5,
+                cognitiveClarity: 0.31,
+                behavioralMomentum: 0.1
             ),
-            weeklyTrend: WeeklyTrendSnippet(
-                averageFoodScore: 0.72,
-                averageSleepQuality: 0.68,
-                daysLogged: 6,
-                trendDirection: .improving
-            ),
-            causalExplanation: "Physical load is the driver.",
-            textSignals: [],
-            confidence: 0.8
+            dominantDimension: .physicalLoad,
+            causalNarrative: "Physical load is driving your wellbeing today.",
+            weakDimensions: [.behavioralMomentum],
+            mealCount: 3,
+            currentMood: .neutral,
+            overallScore: 0.62
         )
     )
 }

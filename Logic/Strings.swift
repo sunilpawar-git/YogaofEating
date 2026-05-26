@@ -140,6 +140,9 @@ enum Strings {
         static let nudgeSection = "Today's Nudge"
         static let weeklyTrendSection = "Weekly Trend"
         static let relatedMealPrefix = "Related: "
+        static let todaysSnapshotSection = "TODAY'S SCORES"
+        /// Format string for the sheet nav title. Argument: full weekday name (e.g. "Monday").
+        static let insightsTitleFormat = "%@ Insights"
         static let greetingMorning = "Good morning"
         static let greetingAfternoon = "Good afternoon"
         static let greetingEvening = "Good evening"

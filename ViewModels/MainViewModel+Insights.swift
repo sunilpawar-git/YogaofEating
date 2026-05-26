@@ -77,13 +77,27 @@ extension MainViewModel {
     }
 
     func handleSmileyLongPress() {
-        guard self.isViewingToday || self.wellbeingBreakdownContract != nil || self.hasInsightAvailable else { return }
+        let hasFreshInsight = self.currentInsight.map {
+            Calendar.current.isDateInToday($0.date)
+        } ?? false
+        guard self.isViewingToday || hasFreshInsight else { return }
         SensoryService.shared.playNudge(style: .heavy)
-        if self.isViewingToday || self.wellbeingBreakdownContract != nil {
-            self.showBreakdownSheet = true
+        if hasFreshInsight {
+            self.showBriefingSheet = true
         } else {
-            self.showInsightSheet = true
+            self.triggerInsightGeneration()
+            self.showBreakdownSheet = true
         }
+    }
+
+    /// Called by `MainScreenSheets` via `.onChange(of: currentInsight)` on the parent
+    /// view — NOT inside the sheet content — so it fires reliably even during dismiss.
+    /// Guards ensure it only acts when the breakdown fallback is actually showing.
+    func handleInsightGeneratedDuringFallback(_ insight: DailyInsight?) {
+        guard self.showBreakdownSheet else { return }
+        guard let insight, Calendar.current.isDateInToday(insight.date) else { return }
+        self.showBreakdownSheet = false
+        self.showBriefingSheet = true
     }
 
     // MARK: - Briefing Actions

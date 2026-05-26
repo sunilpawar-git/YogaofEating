@@ -187,17 +187,20 @@ final class WellbeingBreakdownSheetTests: XCTestCase {
         XCTAssertEqual(a, b)
     }
 
-    // MARK: - Breakdown Sheet Toggle
+    // MARK: - Breakdown Sheet Toggle (fallback path — no fresh insight)
 
-    func test_handleSmileyLongPress_withBreakdownContract_opensBreakdownSheet() {
+    func test_handleSmileyLongPress_noInsightToday_withMeals_fallsBackToBreakdownSheet() {
+        // No fresh today insight → breakdown sheet is the fallback (not primary path)
+        self.sut.currentInsight = nil
         self.sut.meals = [MealBuilder().build()]
         self.sut.handleSmileyLongPress()
         XCTAssertTrue(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 
-    func test_handleSmileyLongPress_noMealsViewingToday_opensBreakdownSheet() {
-        // No meals but viewing today — breakdown sheet always opens
+    func test_handleSmileyLongPress_noInsightToday_noMeals_fallsBackToBreakdownSheet() {
+        // No fresh today insight, no meals, viewing today → breakdown sheet fallback still opens
+        self.sut.currentInsight = nil
         self.sut.handleSmileyLongPress()
         XCTAssertTrue(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)

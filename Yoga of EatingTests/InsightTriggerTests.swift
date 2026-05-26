@@ -141,12 +141,31 @@ final class InsightTriggerTests: XCTestCase {
 
     // MARK: - Smiley long-press
 
-    func test_handleSmileyLongPress_whenInsightAvailable_alwaysShowsBreakdownSheet() {
-        // Viewing today always opens the breakdown sheet, not the insight sheet
+    func test_handleSmileyLongPress_whenTodayInsightAvailable_opensBriefingSheet() {
+        // Today's fresh insight → opens BriefingDetailView, not breakdown
         self.sut.currentInsight = self.makeInsight()
         self.sut.handleSmileyLongPress()
-        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertTrue(self.sut.showBriefingSheet)
+        XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
+    }
+
+    func test_handleSmileyLongPress_todayNoInsight_opensBreakdownFallback() {
+        // Viewing today but no insight → fallback to breakdown sheet
+        XCTAssertTrue(self.sut.isViewingToday)
+        self.sut.currentInsight = nil
+        self.sut.handleSmileyLongPress()
+        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertFalse(self.sut.showBriefingSheet)
+    }
+
+    func test_handleSmileyLongPress_staleInsight_treatedAsNoInsight() {
+        // currentInsight with yesterday's date → not fresh → fallback
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        self.sut.currentInsight = self.makeInsight(date: yesterday)
+        self.sut.handleSmileyLongPress()
+        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertFalse(self.sut.showBriefingSheet)
     }
 
     func test_handleSmileyLongPress_pastDay_noInsight_doesNotShowSheet() {
@@ -159,6 +178,30 @@ final class InsightTriggerTests: XCTestCase {
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 
+    func test_handleSmileyLongPress_pastDayWithStaleInsight_doesNothing() {
+        // Past day + stale insight (yesterday's date) — guard must reject entirely,
+        // no haptic, no sheet.  Regresses the bug where hasInsightAvailable let the
+        // guard pass even though neither routing branch could fire.
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        self.sut.selectedDate = yesterday
+        self.sut.currentInsight = self.makeInsight(date: yesterday)
+        self.sut.handleSmileyLongPress()
+        XCTAssertFalse(self.sut.showBreakdownSheet)
+        XCTAssertFalse(self.sut.showBriefingSheet)
+        XCTAssertFalse(self.sut.showInsightSheet)
+    }
+
+    func test_handleSmileyLongPress_pastDayWithFreshInsight_opensBriefing() {
+        // Past day but today's insight is loaded — briefing sheet should open
+        // (user on yesterday's timeline, but today's AI summary is ready)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        self.sut.selectedDate = yesterday
+        self.sut.currentInsight = self.makeInsight() // today's date
+        self.sut.handleSmileyLongPress()
+        XCTAssertTrue(self.sut.showBriefingSheet)
+        XCTAssertFalse(self.sut.showBreakdownSheet)
+    }
+
     func test_smileyTap_stillCreatesNewMeal() {
         self.sut.currentInsight = self.makeInsight()
         XCTAssertTrue(self.sut.meals.isEmpty)
@@ -168,9 +211,13 @@ final class InsightTriggerTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func makeInsight(headline: String = "Test", dominant: String = "Test insight") -> DailyInsight {
+    private func makeInsight(
+        headline: String = "Test",
+        dominant: String = "Test insight",
+        date: Date = Date()
+    ) -> DailyInsight {
         DailyInsight(
-            date: Date(),
+            date: date,
             headline: headline,
             dimensions: .neutral,
             dominantInsight: dominant,

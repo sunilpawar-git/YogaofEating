@@ -1,0 +1,357 @@
+# Phase-Wise Plan: Unified Smart Compass (Smiley Long-Press Upgrade)
+
+## Context
+
+The **smiley long-press** currently opens `WellbeingBreakdownSheet` — a sheet with 4 dimension bars and a causal narrative drawn entirely from 12 canned template strings (`CausalNarrativeResolver`). Zero AI.
+
+Meanwhile, `DailyInsight` (AI-generated every morning by `generateDailyBriefing`) contains a personalized headline, correlation cards, nudge, and weekly trend. This content is visible only via the Morning Briefing card → Today's Compass. The smiley long-press never sees it.
+
+**Goal**: Route smiley long-press to the existing `BriefingDetailView` (Today's Compass), extended with the 4 live dimension bars. One scroll gives AI explanation + data breakdown. `WellbeingBreakdownSheet` is soft-deprecated to a fallback for the "no insight yet today" case.
+
+---
+
+## Decisions (user-confirmed)
+
+| Decision | Choice |
+|---|---|
+| AI freshness | Once per day (morning briefing). Dimension bars stay live (local synthesis). |
+| Sheet unification | Upgrade `BriefingDetailView` — smiley long-press routes there |
+| Correlation cards | Surface in merged sheet (already in BriefingDetailView) |
+| Refresh button | Already exists in BriefingDetailView (↻); retained |
+
+---
+
+## What Changes
+
+### New section in BriefingDetailView — Dimension Bars
+
+`BriefingDetailView` gains an optional `liveBreakdown: WellbeingBreakdownSheetContract?` parameter. When non-nil, renders a **"TODAY'S SCORES"** section between `nudgeSection` and `weeklyTrendSection` showing all 4 dimension bars (Physical / Emotional / Clarity / Momentum with %-filled bars).
+
+`DailyInsight.dimensions` is always `.neutral` on the server path — live dimensions must come from `WellbeingBreakdownSheetContract` (synthesis-computed in `MainViewModel+Navigation.wellbeingBreakdownContract`).
+
+### WellbeingDimensionBar extraction
+
+`WellbeingDimensionBar` is currently `private struct` inside `WellbeingBreakdownSheet.swift`. Extract to `Components/WellbeingDimensionBar.swift` (non-private) so both sheets can reuse it.
+
+### Routing change in handleSmileyLongPress()
+
+```swift
+// BEFORE
+if self.isViewingToday || self.wellbeingBreakdownContract != nil {
+    self.showBreakdownSheet = true
+} else {
+    self.showInsightSheet = true
+}
+
+// AFTER
+if self.hasInsightAvailable {
+    self.showBriefingSheet = true          // merged view (AI + dimension bars)
+} else if self.isViewingToday {
+    self.triggerInsightGeneration()
+    self.showBreakdownSheet = true         // fallback: local bars while briefing generates
+}
+// Past day + no insight: guard at top already blocks this
+```
+
+`showBreakdownSheet` and `WellbeingBreakdownSheet` are retained as a fallback — not deleted this sprint. Deletion is a future cleanup task once briefing reliability is validated.
+
+### MainScreenSheets wiring
+
+Pass live breakdown to BriefingDetailView:
+```swift
+BriefingDetailView(
+    insight: insight,
+    liveBreakdown: self.viewModel.wellbeingBreakdownContract,   // ← new
+    onDismiss: { self.viewModel.showBriefingSheet = false },
+    onRefresh: {
+        self.viewModel.showBriefingSheet = false
+        self.viewModel.triggerInsightGeneration(force: true)
+    }
+)
+```
+
+---
+
+## Phase-Wise Execution Plan
+
+### Current State (verified)
+- `WellbeingDimensionBar` — still `private struct` inside `WellbeingBreakdownSheet.swift` (line 143). No standalone file.
+- `Strings.Briefing.todaysSnapshotSection` — does NOT exist in `Logic/Strings.swift`
+- `BriefingDetailView` — no `liveBreakdown` parameter
+- `BriefingDetailView+Sections.swift` — no `dimensionBarsSection`
+- `handleSmileyLongPress()` — still opens `showBreakdownSheet` (old routing)
+- No test files for `WellbeingDimensionBar` or new string resources
+
+---
+
+### Phase 1 — Extract `WellbeingDimensionBar` as shared component
+**Goal**: Make `WellbeingDimensionBar` reusable across both sheets. No UI change visible to the user.
+
+#### RED (write failing tests first)
+File: `Yoga of EatingTests/WellbeingDimensionBarTests.swift` (new file)
+- `test_wellbeingDimensionBar_canBeInstantiatedAsSharedComponent` — will **fail to compile** until struct is non-private
+- `test_wellbeingDimensionBar_accessibilityLabel_allDimensions` — verify all 4 dimensions render correct a11y label
+- `test_wellbeingDimensionBar_subtitle_physicalLoad_singularPlural` — verify "1 meal" vs "2 meals" strings
+- `test_wellbeingDimensionBar_value_clampedAbove1` — value > 1.0 must not crash or overflow bar
+- `test_wellbeingDimensionBar_value_clampedBelow0` — value < 0 must not crash
+
+Build must fail on compilation until GREEN.
+
+#### GREEN (minimum code to pass)
+1. Create `Components/WellbeingDimensionBar.swift` — extract struct verbatim from `WellbeingBreakdownSheet.swift:143-192`, remove `private` keyword
+2. Remove `private struct WellbeingDimensionBar` block from `WellbeingBreakdownSheet.swift`
+3. `WellbeingBreakdownSheet.swift` now references the shared component — no functional change
+
+#### REFACTOR
+- Ensure `WellbeingDimensionBar.swift` has two `#Preview` blocks (normal + dominant)
+- File lengths: `WellbeingBreakdownSheet.swift` must be ≤ 300 lines after extraction
+- Run SwiftLint; zero errors
+
+#### Build + Tests
+```bash
+xcodebuild clean build -scheme "Yoga of Eating" -destination "platform=iOS Simulator,name=iPhone 17"
+xcodebuild test -only-testing:"Yoga of EatingTests/WellbeingDimensionBarTests"
+```
+All green before Phase 2.
+
+#### Tech Debt Incurred → Removed
+| Debt | Removal |
+|---|---|
+| `private struct` blocked reuse | Extracted to own file, non-private |
+| `WellbeingBreakdownSheet.swift` grew with embedded component | File is now ~155 lines, single responsibility |
+
+---
+
+### Phase 2 — Add live dimension bars to `BriefingDetailView`
+**Goal**: `BriefingDetailView` gains an optional "TODAY'S SCORES" section with all 4 dimension bars.
+
+#### RED (write failing tests first)
+File: `Yoga of EatingTests/BriefingStringsTests.swift` — add:
+- `test_strings_briefing_todaysSnapshotSection_isNonEmpty` — fails until string constant added
+
+File: `Yoga of EatingTests/BriefingDetailViewTests.swift` (new or existing) — add:
+- `test_briefingDetailView_withNilLiveBreakdown_hidesScoresSection` — no dimension bars when nil
+- `test_briefingDetailView_withLiveBreakdown_showsAllFourDimensions` — all 4 dimensions rendered when non-nil
+
+Build must fail on compilation for the missing string constant.
+
+#### GREEN (minimum code to pass)
+1. **`Logic/Strings.swift`** — inside `enum Briefing`, add:
+   ```swift
+   static let todaysSnapshotSection = "TODAY'S SCORES"
+   ```
+2. **`Components/BriefingDetailView.swift`** — add parameter:
+   ```swift
+   var liveBreakdown: WellbeingBreakdownSheetContract? = nil
+   ```
+3. **`Components/BriefingDetailView+Sections.swift`** — add `dimensionBarsSection`:
+   ```swift
+   @ViewBuilder
+   var dimensionBarsSection: some View {
+       guard let breakdown = liveBreakdown else { return EmptyView() }
+       // SectionHeader with Strings.Briefing.todaysSnapshotSection
+       // ForEach WellbeingDimension.allCases → WellbeingDimensionBar(...)
+   }
+   ```
+4. **`Components/BriefingDetailView.swift` body** — insert `dimensionBarsSection` between `nudgeSection` and `weeklyTrendSection`
+5. Update `#Preview` in `BriefingDetailView.swift` to pass a mock `WellbeingBreakdownSheetContract`
+
+#### REFACTOR
+- `BriefingDetailView+Sections.swift` ≤ 300 lines
+- All new strings use `Strings.Briefing.*`; no hardcoded text
+- All new colors use `AppTheme.*`; no hardcoded `Color.*`
+- Section header style must match existing `patternsSection` / `nudgeSection` headers (SSOT style)
+
+#### Build + Tests
+```bash
+xcodebuild clean build -scheme "Yoga of Eating" -destination "platform=iOS Simulator,name=iPhone 17"
+xcodebuild test -only-testing:"Yoga of EatingTests/BriefingStringsTests"
+xcodebuild test -only-testing:"Yoga of EatingTests/BriefingDetailViewTests"
+```
+All green before Phase 3.
+
+#### Tech Debt Incurred → Removed
+| Debt | Removal |
+|---|---|
+| `liveBreakdown` wired but nothing passes it yet (dead param) | Resolved in Phase 3 wiring |
+| Section header string not centralised | Added to `Strings.Briefing` immediately (no debt) |
+
+---
+
+### Phase 3 — Route smiley long-press to `BriefingDetailView`
+**Goal**: `handleSmileyLongPress()` opens `BriefingDetailView` when insight available; `WellbeingBreakdownSheet` becomes the fallback.
+
+#### RED (write failing tests first)
+File: `Yoga of EatingTests/InsightTriggerTests.swift` — update/add:
+- Rename `test_handleSmileyLongPress_whenInsightAvailable_alwaysShowsBreakdownSheet` → `test_handleSmileyLongPress_whenInsightAvailable_opensBriefingSheet`
+  - Assert `showBriefingSheet == true`, `showBreakdownSheet == false`
+- Add `test_handleSmileyLongPress_todayNoInsight_opensBreakdownFallback`
+  - `currentInsight = nil`, `isViewingToday = true` → `showBreakdownSheet == true`, `showBriefingSheet == false`
+- Retain existing `test_handleSmileyLongPress_pastDay_noInsight_doesNotShowSheet`
+
+These tests must **fail** against the current routing before any code change.
+
+#### GREEN (minimum code to pass)
+1. **`ViewModels/MainViewModel+Insights.swift`** — rewrite `handleSmileyLongPress()`:
+   ```swift
+   func handleSmileyLongPress() {
+       guard self.isViewingToday || self.hasInsightAvailable else { return }
+       SensoryService.shared.playNudge(style: .heavy)
+       if self.hasInsightAvailable {
+           self.showBriefingSheet = true
+       } else {
+           self.triggerInsightGeneration()
+           self.showBreakdownSheet = true
+       }
+   }
+   ```
+2. **`Views/MainScreenSheets.swift`** — pass `liveBreakdown` to `BriefingDetailView`:
+   ```swift
+   BriefingDetailView(
+       insight: insight,
+       liveBreakdown: self.viewModel.wellbeingBreakdownContract,
+       onDismiss: { self.viewModel.showBriefingSheet = false },
+       onRefresh: { ... }
+   )
+   ```
+
+#### REFACTOR
+- Verify `WellbeingBreakdownSheet` is still wired in `MainScreenSheets.swift` for the fallback path (don't delete)
+- `MainViewModel+Insights.swift` ≤ 300 lines
+- No dead `showInsightSheet` toggle left over (check for orphan code)
+
+#### Build + Tests
+```bash
+xcodebuild clean build -scheme "Yoga of Eating" -destination "platform=iOS Simulator,name=iPhone 17"
+xcodebuild test -only-testing:"Yoga of EatingTests/InsightTriggerTests"
+xcodebuild test -only-testing:"Yoga of EatingTests"
+```
+All green (full suite) before Phase 4.
+
+#### Tech Debt Incurred → Removed
+| Debt | Removal |
+|---|---|
+| `showInsightSheet` path may be orphaned | Audit and remove dead toggles |
+| `WellbeingBreakdownSheet` kept but unlaunched in most paths | Intentional; documented as future cleanup |
+
+---
+
+### Phase 4 — Integration tests + full audit
+**Goal**: End-to-end integration test; SwiftLint + file-length clean; security audit; zero warnings build.
+
+#### Tests to write
+File: `Yoga of EatingTests/SmartCompassIntegrationTests.swift` (new file)
+- `test_smileylongpress_insightAvailable_briefingSheetOpensWithBreakdown`
+  - Create `MainViewModel` with mock insight + synthesis; long-press → assert `showBriefingSheet == true` and `wellbeingBreakdownContract != nil`
+- `test_smileylongpress_noInsight_breakdownFallbackOpens`
+  - `currentInsight = nil` → assert `showBreakdownSheet == true`
+- `test_briefingDetailView_dimensionBars_matchSynthesisValues`
+  - Pass known `WellbeingBreakdownSheetContract`; verify bars reflect exact synthesis scores (not `DailyInsight.dimensions`)
+
+#### Full audit checklist
+- [ ] `swiftlint lint "Yoga of Eating"` — zero errors
+- [ ] All modified files ≤ 300 lines: `BriefingDetailView.swift`, `BriefingDetailView+Sections.swift`, `WellbeingBreakdownSheet.swift`, `WellbeingDimensionBar.swift`, `MainViewModel+Insights.swift`
+- [ ] No hardcoded strings — grep for `Text("` in modified files
+- [ ] No hardcoded colors — grep for `Color(` / `.systemGray` in modified files
+- [ ] No hardcoded fonts — grep for `.system(size:` in modified files
+- [ ] Security: `liveBreakdown` contract contains no PII — verify it only passes synthesis scores, not meal text
+- [ ] `xcodebuild clean build 2>&1 | grep -E "warning:|error:"` — zero warnings
+
+#### Build + Tests
+```bash
+xcodebuild clean build -scheme "Yoga of Eating" -destination "platform=iOS Simulator,name=iPhone 17"
+xcodebuild test -only-testing:"Yoga of EatingTests"
+```
+
+---
+
+## Files Modified
+
+| File | Change |
+|---|---|
+| `Components/BriefingDetailView.swift` | Add `liveBreakdown: WellbeingBreakdownSheetContract? = nil` param |
+| `Components/BriefingDetailView+Sections.swift` | Add `dimensionBarsSection` using `WellbeingDimensionBar` |
+| `Components/WellbeingDimensionBar.swift` | **New file** — extract from WellbeingBreakdownSheet.swift |
+| `Components/WellbeingBreakdownSheet.swift` | Remove `WellbeingDimensionBar` struct (now in own file) |
+| `Logic/Strings.swift` | Add `Strings.Briefing.todaysSnapshotSection = "TODAY'S SCORES"` |
+| `ViewModels/MainViewModel+Insights.swift` | Update `handleSmileyLongPress()` routing logic |
+| `Views/MainScreenSheets.swift` | Pass `liveBreakdown` to BriefingDetailView |
+| `Yoga of EatingTests/InsightTriggerTests.swift` | Update smiley routing tests (see below) |
+
+---
+
+## TDD — Tests First
+
+### RED tests to write before any production code
+
+**In `InsightTriggerTests.swift`** — update/replace existing routing tests:
+
+```swift
+// REPLACES: test_handleSmileyLongPress_whenInsightAvailable_alwaysShowsBreakdownSheet
+func test_handleSmileyLongPress_whenInsightAvailable_opensBriefingSheet() {
+    self.sut.currentInsight = self.makeInsight()
+    self.sut.handleSmileyLongPress()
+    XCTAssertTrue(self.sut.showBriefingSheet)
+    XCTAssertFalse(self.sut.showBreakdownSheet)  // no longer opens breakdown
+}
+
+// NEW: fallback when no insight
+func test_handleSmileyLongPress_todayNoInsight_opensBreakdownFallback() {
+    self.sut.currentInsight = nil
+    // ensure isViewingToday = true (default in tests)
+    self.sut.handleSmileyLongPress()
+    XCTAssertTrue(self.sut.showBreakdownSheet)
+    XCTAssertFalse(self.sut.showBriefingSheet)
+}
+
+// EXISTING retained: past day + no insight → nothing opens
+func test_handleSmileyLongPress_pastDay_noInsight_doesNotShowSheet() { ... }
+```
+
+**In `WellbeingBreakdownSheetTests.swift`** — the 2 existing tests that check `showBreakdownSheet = true` (lines 195, 202) also need updating — they appear to test the same path. Review and adjust to fallback scenario.
+
+---
+
+## Section layout after merge
+
+```
+BriefingDetailView scroll (smiley long-press, today):
+  ┌─────────────────────────────────┐
+  │  ☀  Tuesday, May 26             │  ← headlineSection (existing)
+  │  "Protein lunches power your…"  │
+  ├─────────────────────────────────┤
+  │  PATTERNS                       │  ← correlationCardsSection (existing, AI)
+  │  [card] [card]                  │
+  ├─────────────────────────────────┤
+  │  TODAY'S NUDGE                  │  ← nudgeSection (existing, AI)
+  │  💡 Try repeating Tuesday...    │
+  ├─────────────────────────────────┤
+  │  TODAY'S SCORES        ← NEW    │  ← dimensionBarsSection (new)
+  │  Physical  85% ████████░        │
+  │  Emotional 50% █████░░░         │
+  │  Clarity   31% ███░░░░░         │
+  │  Momentum  10% █░░░░░░░         │
+  ├─────────────────────────────────┤
+  │  Weekly Trend                   │  ← weeklyTrendSection (existing)
+  └─────────────────────────────────┘
+```
+
+---
+
+## Key reuse
+
+- `WellbeingBreakdownSheetContract` — already computed in `wellbeingBreakdownContract` (MainViewModel+Navigation.swift:84). Pass as-is to BriefingDetailView.
+- `WellbeingDimensionBar` — extract, reuse in both sheets
+- `AppTheme.Dimension.color(for:)` — already used in WellbeingBreakdownSheet; use in new section
+- `SynthesisThresholds.weakDimension` — already used for weak dimension chips; can optionally use to highlight bars below threshold
+
+---
+
+## Verification
+
+1. **Build**: `xcodebuild clean build -scheme "Yoga of Eating" -destination "platform=iOS Simulator,name=iPhone 17"` — zero warnings
+2. **Tests**: `xcodebuild test -only-testing:"Yoga of EatingTests"` — all green; specifically `InsightTriggerTests` and `WellbeingBreakdownSheetTests`
+3. **UI**: Long-press smiley → BriefingDetailView opens with AI content + 4 dimension bars visible at bottom of scroll
+4. **Fallback**: Set `currentInsight = nil` on device (force-kill, no morning briefing) → long-press → `WellbeingBreakdownSheet` opens (local scores only, AI content absent)
+5. **↻ refresh**: Tap refresh → sheet closes → `triggerInsightGeneration(force: true)` fires → re-open briefing card → fresh AI content
+6. **SwiftLint**: `swiftlint lint "Yoga of Eating"` — zero errors

@@ -24,4 +24,21 @@ final class BriefingStringsTests: XCTestCase {
     func test_strings_briefing_greetingNight_isNotEmpty() {
         XCTAssertFalse(Strings.Briefing.greetingNight.isEmpty)
     }
+
+    func test_strings_briefing_todaysSnapshotSection_isNonEmpty() {
+        XCTAssertFalse(Strings.Briefing.todaysSnapshotSection.isEmpty)
+    }
+
+    func test_strings_briefing_insightsTitleFormat_containsPlaceholder() {
+        XCTAssertTrue(
+            Strings.Briefing.insightsTitleFormat.contains("%@"),
+            "insightsTitleFormat must contain a %@ placeholder for the day name"
+        )
+    }
+
+    func test_strings_briefing_insightsTitleFormat_producesExpectedOutput() {
+        let result = String(format: Strings.Briefing.insightsTitleFormat, "Monday")
+        XCTAssertTrue(result.contains("Monday"))
+        XCTAssertTrue(result.contains("Insights"))
+    }
 }
