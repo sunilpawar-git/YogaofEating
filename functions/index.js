@@ -17,6 +17,11 @@ const {
     BRIEFING_LOOKBACK_DAYS,
 } = require('./briefingHelpers');
 
+// Initialize Firebase Admin at module load time (required for firebase-functions/v2).
+if (!admin.apps.length) {
+    admin.initializeApp();
+}
+
 // Define the API Key as a secret for security
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
