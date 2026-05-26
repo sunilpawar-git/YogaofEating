@@ -136,22 +136,14 @@ enum Strings {
         static let doneButton = "Done"
         static let refreshButton = "Refresh briefing"
         static let patternsSection = "Patterns"
-        static let nudgeSection = "Today's Nudge"
-        static let weeklyTrendSection = "Weekly Trend"
+        static let tryTodaySection = "Try Today"
         static let relatedMealPrefix = "Related: "
-        static let todaysSnapshotSection = "TODAY'S SCORES"
         /// Format string for the sheet nav title. Argument: full weekday name (e.g. "Monday").
         static let insightsTitleFormat = "%@ Insights"
         static let greetingMorning = "Good morning"
         static let greetingAfternoon = "Good afternoon"
         static let greetingEvening = "Good evening"
         static let greetingNight = "Good night"
-        enum TrendLabel {
-            static let food = "Food"
-            static let sleep = "Sleep"
-            static let days = "Days"
-            static let trend = "Trend"
-        }
     }
 
     // MARK: - Timeline

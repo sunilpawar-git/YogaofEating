@@ -58,6 +58,21 @@ enum CorrelationCategory: String, Codable, CaseIterable {
         case .carryOverLoad: Strings.Correlation.carryOverLoad
         }
     }
+
+    /// The wellbeing dimension most directly referenced by this correlation category.
+    /// Used by `BriefingDetailView` to render an inline dimension bar beneath each pattern card.
+    var relatedDimension: WellbeingDimension {
+        switch self {
+        case .foodToMood, .journalTonePrediction:
+            .emotionalTone
+        case .foodToSleep, .foodDebt, .carryOverLoad:
+            .physicalLoad
+        case .focusToFeeling, .sleepRecoveryCarryover, .sleepMismatch:
+            .cognitiveClarity
+        case .timingPattern, .intentionFollowthrough:
+            .behavioralMomentum
+        }
+    }
 }
 
 // MARK: - Correlation Card
@@ -88,10 +103,6 @@ struct CorrelationCard: Codable, Identifiable, Equatable {
         self.confidence = max(0, min(1, confidence))
         self.dataPoints = dataPoints
         self.dataReferences = dataReferences
-    }
-
-    var isHighConfidence: Bool {
-        self.confidence > 0.7
     }
 }
 

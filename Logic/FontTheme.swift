@@ -25,6 +25,10 @@ enum FontTheme {
     /// Size: 18pt, Semibold weight
     static let sectionHeader = Font.system(size: 18, weight: .semibold, design: .rounded)
 
+    /// Hero headline for the briefing detail view
+    /// Size: 22pt, Bold weight
+    static let briefingHeadline = Font.system(size: 22, weight: .bold, design: .rounded)
+
     /// For body text and descriptions
     /// Size: 16pt, Regular weight
     static let body = Font.system(size: 16, weight: .regular, design: .rounded)

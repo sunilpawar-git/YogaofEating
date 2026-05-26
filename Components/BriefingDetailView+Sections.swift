@@ -3,18 +3,47 @@ import SwiftUI
 // MARK: - BriefingDetailView Section Subviews
 
 extension BriefingDetailView {
-    func correlationCardRow(_ card: CorrelationCard) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(AppTheme.CorrelationCard.color(for: card.category).opacity(0.15))
-                    .frame(width: 36, height: 36)
-                Image(systemName: card.category.icon)
-                    .font(.callout)
-                    .foregroundStyle(AppTheme.CorrelationCard.color(for: card.category))
-            }
+    // MARK: - Shared helpers
 
-            VStack(alignment: .leading, spacing: 4) {
+    func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(FontTheme.caption)
+            .fontWeight(.semibold)
+            .foregroundStyle(.tertiary)
+            .textCase(.uppercase)
+            .tracking(0.5)
+    }
+
+    // MARK: - Correlation Cards
+
+    @ViewBuilder
+    var correlationCardsSection: some View {
+        if !self.insight.correlationCards.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                self.sectionLabel(Strings.Briefing.patternsSection)
+                    .padding(.bottom, 16)
+
+                ForEach(
+                    Array(self.insight.correlationCards.enumerated()),
+                    id: \.element.id
+                ) { index, card in
+                    self.correlationCardRow(card)
+                    if index < self.insight.correlationCards.count - 1 {
+                        Divider().padding(.vertical, 16)
+                    }
+                }
+            }
+        }
+    }
+
+    func correlationCardRow(_ card: CorrelationCard) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: card.category.icon)
+                .font(.body)
+                .foregroundStyle(AppTheme.CorrelationCard.color(for: card.category))
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 6) {
                 Text(card.category.displayName)
                     .font(FontTheme.caption)
                     .fontWeight(.semibold)
@@ -24,120 +53,76 @@ extension BriefingDetailView {
                     .font(.subheadline)
                     .fixedSize(horizontal: false, vertical: true)
 
-                self.confidenceBar(card.confidence)
+                self.inlineDimensionBar(for: card)
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-    }
-
-    func confidenceBar(_ value: Double) -> some View {
-        HStack(spacing: 6) {
-            ProgressView(value: value)
-                .progressViewStyle(.linear)
-                .tint(
-                    value > 0.7
-                        ? AppTheme.CorrelationCard.highConfidenceColor
-                        : AppTheme.CorrelationCard.lowConfidenceColor
-                )
-
-            Text("\(Int(value * 100))%")
-                .font(.system(size: 10, design: .rounded))
-                .foregroundStyle(.secondary)
-                .frame(width: 28, alignment: .trailing)
-        }
+        .padding(.vertical, 4)
     }
 
     @ViewBuilder
-    var dimensionBarsSection: some View {
+    private func inlineDimensionBar(for card: CorrelationCard) -> some View {
         if let breakdown = self.liveBreakdown {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(Strings.Briefing.todaysSnapshotSection)
-                    .font(FontTheme.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.tertiary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
+            let dimension = card.category.relatedDimension
+            let value = dimension.value(in: breakdown.dimensions)
+            HStack(spacing: 8) {
+                Text(dimension.displayName)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 76, alignment: .leading)
+                ProgressView(value: value)
+                    .progressViewStyle(.linear)
+                    .tint(AppTheme.Dimension.color(for: dimension))
+                Text("\(Int(value * 100))%")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, alignment: .trailing)
+            }
+            .padding(.top, 2)
+        }
+    }
 
-                VStack(spacing: 14) {
-                    ForEach(WellbeingDimension.allCases, id: \.self) { dimension in
-                        WellbeingDimensionBar(
-                            dimension: dimension,
-                            value: dimension.value(in: breakdown.dimensions),
-                            isDominant: dimension == breakdown.dominantDimension,
-                            mealCount: breakdown.mealCount
-                        )
-                    }
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(.secondarySystemGroupedBackground))
-                )
+    // MARK: - Nudge
+
+    var nudgeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            self.sectionLabel(Strings.Briefing.tryTodaySection)
+
+            Text(self.insight.nudge.suggestion)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(self.insight.nudge.reasoning)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let meal = self.insight.nudge.relatedMeal {
+                Text(Strings.Briefing.relatedMealPrefix + meal)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .italic()
             }
         }
     }
+
+    // MARK: - Weekly Trend
 
     @ViewBuilder
     var weeklyTrendSection: some View {
         if let trend = self.insight.weeklyTrend {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(Strings.Briefing.weeklyTrendSection)
-                    .font(FontTheme.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.tertiary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-
-                HStack(spacing: 0) {
-                    self.trendStat(
-                        label: Strings.Briefing.TrendLabel.food,
-                        value: "\(Int(trend.averageFoodScore * 100))%",
-                        icon: "fork.knife"
-                    )
-                    self.trendStat(
-                        label: Strings.Briefing.TrendLabel.sleep,
-                        value: "\(Int(trend.averageSleepQuality * 100))%",
-                        icon: "moon.zzz.fill"
-                    )
-                    self.trendStat(
-                        label: Strings.Briefing.TrendLabel.days,
-                        value: "\(trend.daysLogged)",
-                        icon: "calendar"
-                    )
-                    self.trendStat(
-                        label: Strings.Briefing.TrendLabel.trend,
-                        value: trend.trendDirection.rawValue.capitalized,
-                        icon: self.trendIcon(trend.trendDirection)
-                    )
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(.secondarySystemGroupedBackground))
+            HStack(spacing: 6) {
+                Image(systemName: self.trendIcon(trend.trendDirection))
+                    .font(.caption2)
+                Text(
+                    "\(trend.trendDirection.rawValue.capitalized)"
+                        + " · \(Int(trend.averageFoodScore * 100))% food"
+                        + " · \(Int(trend.averageSleepQuality * 100))% sleep"
+                        + " · \(trend.daysLogged)/7 days"
                 )
+                .font(.caption2)
             }
+            .foregroundStyle(.tertiary)
         }
-    }
-
-    func trendStat(label: String, value: String, icon: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.system(.subheadline, design: .rounded))
-                .fontWeight(.bold)
-            Text(label)
-                .font(FontTheme.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }

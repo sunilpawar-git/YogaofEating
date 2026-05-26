@@ -11,18 +11,22 @@ struct BriefingDetailView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 0) {
                     self.headlineSection
+                    Divider().padding(.vertical, 24)
                     self.correlationCardsSection
+                    Divider().padding(.vertical, 24)
                     self.nudgeSection
-                    self.dimensionBarsSection
-                    self.weeklyTrendSection
+                    if self.insight.weeklyTrend != nil {
+                        Divider().padding(.vertical, 16)
+                        self.weeklyTrendSection
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
                 .padding(.bottom, 40)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color(.systemBackground))
             .navigationTitle(Self.insightsTitle(for: self.insight.date))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -45,83 +49,20 @@ struct BriefingDetailView: View {
 
     @ViewBuilder
     private var headlineSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: "sun.and.horizon.fill")
                     .foregroundStyle(AppTheme.Briefing.sunAccent)
                 Text(self.formattedDate)
-                    .font(.caption)
+                    .font(FontTheme.caption)
                     .foregroundStyle(.secondary)
             }
 
             Text(self.insight.headline)
-                .font(FontTheme.sectionHeader)
+                .font(FontTheme.briefingHeadline)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.vertical, 8)
-    }
-
-    // MARK: - Correlation Cards
-
-    @ViewBuilder
-    private var correlationCardsSection: some View {
-        if !self.insight.correlationCards.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(Strings.Briefing.patternsSection)
-                    .font(FontTheme.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.tertiary)
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-
-                ForEach(self.insight.correlationCards) { card in
-                    self.correlationCardRow(card)
-                }
-            }
-        }
-    }
-
-    // MARK: - Nudge
-
-    private var nudgeSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(Strings.Briefing.nudgeSection)
-                .font(FontTheme.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.tertiary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.callout)
-                        .foregroundStyle(AppTheme.Briefing.nudgeAccent)
-                    Text(self.insight.nudge.suggestion)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Text(self.insight.nudge.reasoning)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let meal = self.insight.nudge.relatedMeal {
-                    Text(Strings.Briefing.relatedMealPrefix + meal)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .italic()
-                }
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
-            )
-        }
+        .padding(.vertical, 12)
     }
 
     // MARK: - Helpers

@@ -21,8 +21,8 @@ final class BriefingStringsTests: XCTestCase {
         XCTAssertFalse(Strings.Briefing.greetingNight.isEmpty)
     }
 
-    func test_strings_briefing_todaysSnapshotSection_isNonEmpty() {
-        XCTAssertFalse(Strings.Briefing.todaysSnapshotSection.isEmpty)
+    func test_strings_briefing_patternsSection_isNonEmpty() {
+        XCTAssertFalse(Strings.Briefing.patternsSection.isEmpty)
     }
 
     func test_strings_briefing_insightsTitleFormat_containsPlaceholder() {
