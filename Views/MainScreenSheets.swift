@@ -47,7 +47,11 @@ private struct MainScreenSheetsModifier: ViewModifier {
                 if let insight = self.viewModel.currentInsight {
                     BriefingDetailView(
                         insight: insight,
-                        onDismiss: { self.viewModel.showBriefingSheet = false }
+                        onDismiss: { self.viewModel.showBriefingSheet = false },
+                        onRefresh: {
+                            self.viewModel.showBriefingSheet = false
+                            self.viewModel.triggerInsightGeneration(force: true)
+                        }
                     )
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)

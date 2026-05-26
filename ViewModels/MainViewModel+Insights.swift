@@ -96,28 +96,32 @@ extension MainViewModel {
     }
 
     /// Triggers morning briefing generation via `InsightLifecycleService`.
-    /// Idempotent: skips if an insight already exists for today.
-    func triggerInsightGeneration() {
+    /// Idempotent by default: skips if a valid insight already exists for today.
+    /// Pass `force: true` to bypass both the in-memory and snapshot caches (e.g. pull-to-refresh).
+    func triggerInsightGeneration(force: Bool = false) {
         guard self.authService?.currentUser?.uid != nil else { return }
         guard !self.isInsightGenerationInProgress else { return }
 
         let date = Date()
 
-        if let existing = self.currentInsight,
-           Calendar.current.isDate(existing.date, inSameDayAs: date)
-        {
-            return
+        if !force {
+            if let existing = self.currentInsight,
+               Calendar.current.isDate(existing.date, inSameDayAs: date)
+            {
+                return
+            }
+
+            // Restore from persisted snapshot without triggering a Cloud Function call
+            if let snapshot = self.historicalService.getSnapshot(for: date),
+               let persisted = snapshot.insight,
+               Calendar.current.isDate(persisted.date, inSameDayAs: date)
+            {
+                self.currentInsight = persisted
+                return
+            }
         }
 
-        // Restore from persisted snapshot without triggering a Cloud Function call
-        if let snapshot = self.historicalService.getSnapshot(for: date),
-           let persisted = snapshot.insight,
-           Calendar.current.isDate(persisted.date, inSameDayAs: date)
-        {
-            self.currentInsight = persisted
-            return
-        }
-
+        self.currentInsight = nil
         self.isInsightGenerationInProgress = true
         self.insightTask = Task {
             defer { self.isInsightGenerationInProgress = false }

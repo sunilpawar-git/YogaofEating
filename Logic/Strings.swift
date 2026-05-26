@@ -135,6 +135,7 @@ enum Strings {
     enum Briefing {
         static let cardTitle = "Today's Compass"
         static let doneButton = "Done"
+        static let refreshButton = "Refresh briefing"
         static let patternsSection = "Patterns"
         static let nudgeSection = "Today's Nudge"
         static let weeklyTrendSection = "Weekly Trend"

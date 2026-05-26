@@ -5,6 +5,7 @@ import SwiftUI
 struct BriefingDetailView: View {
     let insight: DailyInsight
     var onDismiss: (() -> Void)?
+    var onRefresh: (() -> Void)?
 
     var body: some View {
         NavigationStack {
@@ -23,6 +24,14 @@ struct BriefingDetailView: View {
             .navigationTitle(Strings.Briefing.cardTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        self.onRefresh?()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .accessibilityLabel(Strings.Briefing.refreshButton)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(Strings.Briefing.doneButton) { self.onDismiss?() }
                 }

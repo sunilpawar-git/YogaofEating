@@ -304,7 +304,7 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
         if (day.morningMindCheck && day.morningMindCheck.length > 0) {
             const todos = day.morningMindCheck.filter(m => m.category === 'To-Do');
             if (todos.length > 0) {
-                const completed = todos.filter(t => t.isAccomplished === true).length;
+                const completed = todos.filter(t => t.isAccomplished === 'true').length;
                 summary += `  - Todos: ${completed}/${todos.length} completed\n`;
             }
             const otherThoughts = day.morningMindCheck
