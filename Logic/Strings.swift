@@ -133,7 +133,6 @@ enum Strings {
     // MARK: - Briefing Detail View
 
     enum Briefing {
-        static let cardTitle = "Today's Compass"
         static let doneButton = "Done"
         static let refreshButton = "Refresh briefing"
         static let patternsSection = "Patterns"

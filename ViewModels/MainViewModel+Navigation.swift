@@ -109,12 +109,6 @@ extension MainViewModel {
         )
     }
 
-    /// Up to 2 weakest dimensions for the MorningBriefingCard subtext.
-    /// Derived from `wellbeingBreakdownContract` to share synthesis computation.
-    var briefingWeakDimensions: [WellbeingDimension] {
-        self.wellbeingBreakdownContract?.weakDimensions ?? []
-    }
-
     // MARK: - Navigation Actions
 
     /// Navigates to a specific date. Future dates are clamped to today.

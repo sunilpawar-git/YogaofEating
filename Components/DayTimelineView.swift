@@ -31,15 +31,6 @@ struct DayTimelineView: View {
     /// Whether an insight is available (for showing red dot indicator)
     var hasInsightAvailable: Bool = false
 
-    /// Data-contract tuple for the morning briefing card (nil hides it).
-    var briefingCardData: (headline: String, topCorrelation: String?, nudge: String, isViewed: Bool, greeting: String)?
-
-    /// Weak dimensions to surface in the briefing card subtext (≤2). Defaults to empty.
-    var briefingWeakDimensions: [WellbeingDimension] = []
-
-    /// Callback when user taps the briefing card
-    var onBriefingTap: (() -> Void)?
-
     /// Grouped meal update actions (reduces callback proliferation)
     var mealActions: MealUpdateActions = .empty
 
@@ -68,20 +59,6 @@ struct DayTimelineView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if self.isToday, let data = self.briefingCardData {
-                MorningBriefingCard(
-                    headline: data.headline,
-                    topCorrelation: data.topCorrelation,
-                    nudge: data.nudge,
-                    isViewed: data.isViewed,
-                    greeting: data.greeting,
-                    weakDimensions: self.briefingWeakDimensions,
-                    onTap: self.onBriefingTap
-                )
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
-            }
-
             let sortedMeals = self.meals.sorted { $0.timestamp < $1.timestamp }
 
             ForEach(Array(sortedMeals.enumerated()), id: \.element.id) { index, meal in

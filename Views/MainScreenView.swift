@@ -82,12 +82,6 @@ struct MainScreenView: View {
                 self.viewModel.handleSmileyLongPress()
             },
             hasInsightAvailable: self.viewModel.hasInsightAvailable,
-            briefingCardData: self.viewModel.briefingCardData,
-            briefingWeakDimensions: self.viewModel.briefingWeakDimensions,
-            onBriefingTap: {
-                self.viewModel.markBriefingViewed()
-                self.viewModel.showBriefingSheet = true
-            },
             mealActions: MealUpdateActions(
                 onUpdate: { mealId, mealType, items in
                     self.viewModel.updateMeal(mealId, mealType: mealType, items: items)

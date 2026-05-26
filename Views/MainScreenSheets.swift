@@ -59,6 +59,7 @@ private struct MainScreenSheetsModifier: ViewModifier {
                             self.viewModel.triggerInsightGeneration(force: true)
                         }
                     )
+                    .onAppear { self.viewModel.markBriefingViewed() }
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                 }

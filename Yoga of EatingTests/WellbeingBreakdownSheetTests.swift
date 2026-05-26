@@ -276,4 +276,21 @@ final class WellbeingBreakdownSheetTests: XCTestCase {
             "Behavioral-low narrative must be encouraging, not punishing"
         )
     }
+
+    // MARK: - WellbeingBreakdownSheetContract Integrity (moved from BriefingCardEnrichmentTests)
+
+    func test_wellbeingBreakdownContract_weakDimensionLabelsMatchDimensions() {
+        self.sut.meals = [MealBuilder().build()]
+        guard let contract = self.sut.wellbeingBreakdownContract else { return }
+        for weakDim in contract.weakDimensions {
+            XCTAssertTrue(WellbeingDimension.allCases.contains(weakDim))
+        }
+    }
+
+    func test_wellbeingBreakdownContract_noDuplicateWeakDimensions() {
+        self.sut.meals = [MealBuilder().build()]
+        guard let contract = self.sut.wellbeingBreakdownContract else { return }
+        let uniqueCount = Set(contract.weakDimensions).count
+        XCTAssertEqual(uniqueCount, contract.weakDimensions.count)
+    }
 }

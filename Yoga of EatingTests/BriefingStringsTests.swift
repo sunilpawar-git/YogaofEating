@@ -5,10 +5,6 @@ import XCTest
 /// These are compile-time SSOT guards — if a key is missing, the module won't build.
 @MainActor
 final class BriefingStringsTests: XCTestCase {
-    func test_strings_briefing_cardTitle_isNotEmpty() {
-        XCTAssertFalse(Strings.Briefing.cardTitle.isEmpty)
-    }
-
     func test_strings_briefing_greetingMorning_isNotEmpty() {
         XCTAssertFalse(Strings.Briefing.greetingMorning.isEmpty)
     }

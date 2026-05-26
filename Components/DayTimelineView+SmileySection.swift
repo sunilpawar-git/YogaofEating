@@ -17,7 +17,7 @@ extension DayTimelineView {
                     value: self.isSmileyPulsing
                 )
                 .overlay(alignment: .topTrailing) {
-                    if self.hasInsightAvailable, self.briefingCardData == nil {
+                    if self.hasInsightAvailable {
                         Circle()
                             .fill(Color.orange)
                             .frame(width: 10, height: 10)

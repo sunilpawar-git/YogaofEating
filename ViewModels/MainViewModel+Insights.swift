@@ -12,12 +12,6 @@ extension MainViewModel {
         self.historicalService.getSnapshot(for: Date())?.insight
     }
 
-    /// Whether the insight card should be shown (unviewed insight available).
-    var showInsightCard: Bool {
-        guard let insight = self.todaysInsight else { return false }
-        return !insight.isViewed
-    }
-
     /// Whether an unread insight is available (drives the smiley red dot).
     var hasUnreadInsight: Bool {
         guard let insight = self.currentInsight else { return false }
@@ -27,24 +21,6 @@ extension MainViewModel {
     /// Whether any insight is available (enables smiley long-press).
     var hasInsightAvailable: Bool {
         self.currentInsight != nil
-    }
-
-    /// Briefing card data contract — minimal fields for `MorningBriefingCard`.
-    var briefingCardData: (
-        headline: String,
-        topCorrelation: String?,
-        nudge: String,
-        isViewed: Bool,
-        greeting: String
-    )? {
-        guard let insight = self.currentInsight else { return nil }
-        return (
-            headline: insight.headline,
-            topCorrelation: insight.topCorrelation?.observation,
-            nudge: insight.nudge.suggestion,
-            isViewed: insight.isViewed,
-            greeting: self.currentGreeting
-        )
     }
 
     // MARK: - Insight Actions
