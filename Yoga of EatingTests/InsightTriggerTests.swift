@@ -199,7 +199,6 @@ final class InsightTriggerTests: XCTestCase {
         self.sut.currentInsight = self.makeInsight()
         self.sut.handleSmileyLongPress()
         XCTAssertTrue(self.sut.showBriefingSheet)
-        XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 
@@ -210,7 +209,6 @@ final class InsightTriggerTests: XCTestCase {
         self.sut.handleSmileyLongPress()
         XCTAssertTrue(self.sut.showInsightPreparingSheet)
         XCTAssertFalse(self.sut.showBriefingSheet)
-        XCTAssertFalse(self.sut.showBreakdownSheet)
     }
 
     func test_handleSmileyLongPress_staleInsight_treatedAsNoInsight_opensPreparingSheet() {
@@ -220,7 +218,6 @@ final class InsightTriggerTests: XCTestCase {
         self.sut.handleSmileyLongPress()
         XCTAssertTrue(self.sut.showInsightPreparingSheet)
         XCTAssertFalse(self.sut.showBriefingSheet)
-        XCTAssertFalse(self.sut.showBreakdownSheet)
     }
 
     func test_handleSmileyLongPress_pastDay_noInsight_doesNotShowSheet() {
@@ -230,7 +227,6 @@ final class InsightTriggerTests: XCTestCase {
         self.sut.currentInsight = nil
         self.sut.handleSmileyLongPress()
         XCTAssertFalse(self.sut.showInsightPreparingSheet)
-        XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 
@@ -242,7 +238,6 @@ final class InsightTriggerTests: XCTestCase {
         self.sut.selectedDate = yesterday
         self.sut.currentInsight = self.makeInsight(date: yesterday)
         self.sut.handleSmileyLongPress()
-        XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showBriefingSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
     }
@@ -255,7 +250,6 @@ final class InsightTriggerTests: XCTestCase {
         self.sut.currentInsight = self.makeInsight() // today's date
         self.sut.handleSmileyLongPress()
         XCTAssertTrue(self.sut.showBriefingSheet)
-        XCTAssertFalse(self.sut.showBreakdownSheet)
     }
 
     // MARK: - Preparing sheet auto-transition

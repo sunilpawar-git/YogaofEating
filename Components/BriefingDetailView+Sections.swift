@@ -3,6 +3,93 @@ import SwiftUI
 // MARK: - BriefingDetailView Section Subviews
 
 extension BriefingDetailView {
+    // MARK: - Wellbeing State
+
+    @ViewBuilder
+    var wellbeingStateSection: some View {
+        if let breakdown = self.liveBreakdown {
+            VStack(alignment: .leading, spacing: 24) {
+                HStack(spacing: 14) {
+                    Text(breakdown.currentMood.emoji)
+                        .font(.system(size: 44))
+                        .accessibilityLabel(
+                            String(
+                                format: Strings.WellbeingBreakdown.heroEmojiAccessibilityFmt,
+                                breakdown.currentMood.displayName
+                            )
+                        )
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(breakdown.currentMood.displayName)
+                            .font(FontTheme.sectionHeader)
+                        Text(breakdown.currentMood.tagline)
+                            .font(FontTheme.body)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                }
+                if let text = WellbeingProgressCalculator.progressText(
+                    mood: breakdown.currentMood, overall: breakdown.overallScore
+                ) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.circle")
+                            .foregroundStyle(AppTheme.Dimension.color(for: breakdown.dominantDimension))
+                        Text(text)
+                            .font(FontTheme.caption)
+                            .foregroundStyle(AppTheme.textSecondary)
+                    }
+                    .accessibilityLabel(text)
+                    .pillStyle()
+                }
+                Divider()
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(Strings.WellbeingBreakdown.whyHeading)
+                        .font(FontTheme.sectionHeader)
+                    Text(breakdown.causalNarrative)
+                        .font(FontTheme.body)
+                        .foregroundStyle(AppTheme.textSecondary)
+                }
+                if !breakdown.weakDimensions.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(Strings.WellbeingBreakdown.worthNurturing)
+                            .font(FontTheme.caption)
+                            .foregroundStyle(AppTheme.textMuted)
+                        HStack(spacing: 8) {
+                            ForEach(breakdown.weakDimensions, id: \.self) { dim in
+                                Text(dim.displayName)
+                                    .font(FontTheme.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(AppTheme.Dimension.color(for: dim).opacity(0.15))
+                                    .foregroundStyle(AppTheme.Dimension.color(for: dim))
+                                    .clipShape(RoundedRectangle(
+                                        cornerRadius: AppTheme.CornerRadius.small,
+                                        style: .continuous
+                                    ))
+                                    .accessibilityLabel(
+                                        String(
+                                            format: Strings.WellbeingBreakdown.weakDimChipAccessibilityFmt,
+                                            dim.displayName
+                                        )
+                                    )
+                            }
+                        }
+                    }
+                }
+                Divider()
+                VStack(spacing: 14) {
+                    ForEach(WellbeingDimension.allCases, id: \.self) { dimension in
+                        WellbeingDimensionBar(
+                            dimension: dimension,
+                            value: dimension.value(in: breakdown.dimensions),
+                            isDominant: dimension == breakdown.dominantDimension,
+                            mealCount: breakdown.mealCount
+                        )
+                    }
+                }
+            }
+            .padding(.vertical, 12)
+        }
+    }
+
     // MARK: - Shared helpers
 
     func sectionLabel(_ text: String) -> some View {

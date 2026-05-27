@@ -39,9 +39,6 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Whether the briefing detail sheet is shown
     @Published var showBriefingSheet: Bool = false
 
-    /// Whether the wellbeing breakdown sheet is shown (opened via smiley long-press)
-    @Published var showBreakdownSheet: Bool = false
-
     /// Whether the insight preparing sheet is shown (replaces stale breakdown fallback)
     @Published var showInsightPreparingSheet: Bool = false
 

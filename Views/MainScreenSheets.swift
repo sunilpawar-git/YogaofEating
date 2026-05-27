@@ -28,18 +28,6 @@ private struct MainScreenSheetsModifier: ViewModifier {
                     .presentationDragIndicator(.visible)
                 }
             }
-            .sheet(isPresented: Binding(
-                get: { self.viewModel.showBreakdownSheet && self.viewModel.wellbeingBreakdownContract != nil },
-                set: { self.viewModel.showBreakdownSheet = $0 }
-            )) {
-                if let contract = self.viewModel.wellbeingBreakdownContract {
-                    WellbeingBreakdownSheet(contract: contract, onDismiss: {
-                        self.viewModel.showBreakdownSheet = false
-                    })
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-                }
-            }
             .sheet(isPresented: self.$viewModel.showInsightPreparingSheet) {
                 InsightPreparingSheet(contract: InsightPreparingSheetContract(
                     weekdayName: Self.currentWeekdayName(),

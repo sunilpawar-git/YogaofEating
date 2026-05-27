@@ -195,7 +195,6 @@ final class WellbeingBreakdownSheetTests: XCTestCase {
         self.sut.meals = [MealBuilder().build()]
         self.sut.handleSmileyLongPress()
         XCTAssertTrue(self.sut.showInsightPreparingSheet)
-        XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 
@@ -204,7 +203,6 @@ final class WellbeingBreakdownSheetTests: XCTestCase {
         self.sut.currentInsight = nil
         self.sut.handleSmileyLongPress()
         XCTAssertTrue(self.sut.showInsightPreparingSheet)
-        XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 

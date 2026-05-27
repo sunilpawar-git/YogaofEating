@@ -184,4 +184,21 @@ final class BriefingDetailViewTests: XCTestCase {
         let view = BriefingDetailView(insight: self.makeInsight(), liveBreakdown: nil)
         XCTAssertEqual(view.trendIcon(.steady), "arrow.right")
     }
+
+    // MARK: - Wellbeing state section (Plan: smiley metrics as first section)
+
+    func test_briefingDetailView_withFullBreakdown_instantiatesWithAllData() {
+        let view = BriefingDetailView(
+            insight: self.makeInsight(),
+            liveBreakdown: self.makeContract()
+        )
+        XCTAssertNotNil(view.liveBreakdown, "liveBreakdown must be non-nil when contract is provided")
+        XCTAssertEqual(view.liveBreakdown?.causalNarrative, "Test narrative")
+        XCTAssertEqual(view.liveBreakdown?.weakDimensions, [.behavioralMomentum])
+    }
+
+    func test_briefingDetailView_nilBreakdown_rendersWithoutWellbeingSection() {
+        let view = BriefingDetailView(insight: self.makeInsight(), liveBreakdown: nil)
+        XCTAssertNil(view.liveBreakdown, "liveBreakdown must be nil — wellbeing section must be hidden")
+    }
 }

@@ -16,6 +16,10 @@ struct BriefingDetailView: View {
                     if self.isLikelyStale {
                         self.staleBanner
                     }
+                    if self.liveBreakdown != nil {
+                        self.wellbeingStateSection
+                        Divider().padding(.vertical, 24)
+                    }
                     self.headlineSection
                     Divider().padding(.vertical, 24)
                     self.correlationCardsSection
