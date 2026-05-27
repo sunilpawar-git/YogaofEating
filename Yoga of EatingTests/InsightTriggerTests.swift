@@ -118,6 +118,59 @@ final class InsightTriggerTests: XCTestCase {
         XCTAssertTrue(self.sut.hasUnreadInsight)
     }
 
+    // MARK: - Proactive generation on app launch
+
+    func test_loadData_whenNoFreshInsight_triggersInsightGeneration() async {
+        // Regression guard: loadData() must call triggerInsightGeneration() so the
+        // briefing is ready before the user long-presses the smiley. Without this,
+        // users see the stale WellbeingBreakdownSheet every morning.
+        self.mockLifecycle.stubbedResult = self.makeInsight()
+        self.mockPersistence.stubbedLoadData = PersistenceService.AppData(
+            meals: [],
+            smileyState: .neutral,
+            lastResetDate: Date(),
+            historicalData: HistoricalData(),
+            nudgeHistory: []
+        )
+
+        self.sut.loadData()
+        if let task = self.sut.insightTask { await task.value }
+
+        XCTAssertTrue(
+            self.mockLifecycle.generateBriefingCalled,
+            "loadData() must trigger insight generation so the briefing is ready on first long-press"
+        )
+    }
+
+    func test_loadData_whenFreshInsightAlreadyPersisted_doesNotCallLifecycleService() async {
+        // Idempotency guard: if a fresh snapshot exists, loadData() must NOT call the
+        // Cloud Function again (triggerInsightGeneration's snapshot guard handles this).
+        let today = Date()
+        let freshInsight = self.makeInsight(date: today)
+        let snapshot = DailySmileySnapshotBuilder()
+            .withDate(today)
+            .withInsight(freshInsight)
+            .build()
+        var historicalData = HistoricalData()
+        historicalData.addOrUpdate(snapshot: snapshot)
+
+        self.mockPersistence.stubbedLoadData = PersistenceService.AppData(
+            meals: [],
+            smileyState: .neutral,
+            lastResetDate: today,
+            historicalData: historicalData,
+            nudgeHistory: []
+        )
+
+        self.sut.loadData()
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertFalse(
+            self.mockLifecycle.generateBriefingCalled,
+            "loadData() must not call lifecycle service when a fresh insight already exists in the snapshot"
+        )
+    }
+
     // MARK: - Idempotency
 
     func test_saveSleepQuality_doesNotRegenerateInsight_ifAlreadyExists() async {

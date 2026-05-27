@@ -53,6 +53,11 @@ extension MainViewModel {
             self.currentInsight = persistedInsight
         }
 
+        // Pre-generate today's briefing in the background so it's already ready when
+        // the user opens it. triggerInsightGeneration is idempotent — it returns early
+        // if a fresh snapshot already exists, so no extra Cloud Function calls are made.
+        self.triggerInsightGeneration()
+
         // Refresh today's activity data for a live TDEE in the calorie pill
         self.refreshActivityDataIfNeeded()
     }
