@@ -158,6 +158,11 @@ enum Strings {
         static let greetingAfternoon = "Good afternoon"
         static let greetingEvening = "Good evening"
         static let greetingNight = "Good night"
+        static let thisWeekSection = "This week"
+        /// Args: capitalized trend direction (%@), food % (%d), sleep % (%d), days logged (%d).
+        static let weeklyTrendFmt = "%@ · %d%% food · %d%% sleep · %d of 7 days"
+        /// Arg: lowercase weekday name (e.g. "wednesday").
+        static let shortHeadlineFmt = "Your %@ insights..."
     }
 
     // MARK: - Timeline
@@ -645,13 +650,20 @@ enum Strings {
         static let done = "Done"
         static let overallLabel = "Overall"
         static let detectedSignalsLabel = "Detected tone:"
+        static let breakdownExplainer = "These four signals shape your smiley — higher is better."
+
+        /// Arg: integer percentage, e.g. 71 → "(avg 71%)"
+        static let weeklyAvgFmt = "(avg %d%%)"
 
         enum DimensionSubtitle {
             static let physicalLoad_fmt = "Meal Quality of %d %@"
             static let physicalLoad_meal = "Meal"
             static let physicalLoad_meals = "Meals"
+            /// Appended to Physical subtitle when exercise bonus > 0.
+            static let physicalExerciseSuffix = " + Exercise"
             static let emotionalTone = "Feelings from your Journal"
-            static let cognitiveClarity = "Sleep Hygiene"
+            /// Updated to reflect that HealthKit sleep also contributes.
+            static let cognitiveClarity = "Sleep & Apple Health"
             static let behavioralMomentum = "To-Do Completions"
         }
     }

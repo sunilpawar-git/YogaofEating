@@ -509,4 +509,137 @@
             XCTAssertNil(loaded?.reflection, "Legacy snapshot should have nil reflection")
         }
     }
+
+    // MARK: - weeklyDimensionAverages (Phase 2 TDD — Red: method not yet on protocol/impl)
+
+    @MainActor
+    final class WeeklyDimensionAveragesTests: XCTestCase {
+        private var sut: HistoricalDataService!
+        private var mockPersistence: MockPersistenceService!
+        private var mockAuth: MockAuthService!
+        private var mockSync: MockCloudSyncService!
+        private let today = Calendar.current.startOfDay(for: Date())
+
+        override func setUp() {
+            super.setUp()
+            self.mockPersistence = MockPersistenceService()
+            self.mockAuth = MockAuthService()
+            self.mockSync = MockCloudSyncService()
+            self.sut = HistoricalDataService(
+                persistenceService: self.mockPersistence,
+                authService: self.mockAuth,
+                syncService: self.mockSync
+            )
+        }
+
+        override func tearDown() {
+            self.sut = nil
+            self.mockPersistence = nil
+            self.mockAuth = nil
+            self.mockSync = nil
+            super.tearDown()
+        }
+
+        func test_weeklyDimensionAverages_emptyHistory_returnsNil() {
+            let result = self.sut.weeklyDimensionAverages(relativeTo: self.today)
+            XCTAssertNil(result, "Empty history must return nil")
+        }
+
+        func test_weeklyDimensionAverages_fewerThan3Days_returnsNil() {
+            self.addSnapshots(count: 2, dims: WellbeingDimensions(
+                physicalLoad: 0.8, emotionalTone: 0.6, cognitiveClarity: 0.7, behavioralMomentum: 0.5
+            ))
+            let result = self.sut.weeklyDimensionAverages(relativeTo: self.today)
+            XCTAssertNil(result, "Fewer than 3 days must return nil")
+        }
+
+        func test_weeklyDimensionAverages_exactly3Days_returnsAverages() {
+            self.addSnapshots(count: 3, dims: WellbeingDimensions(
+                physicalLoad: 0.6, emotionalTone: 0.5, cognitiveClarity: 0.4, behavioralMomentum: 0.3
+            ))
+            let result = self.sut.weeklyDimensionAverages(relativeTo: self.today)
+            XCTAssertNotNil(result, "Exactly 3 days must return averages")
+        }
+
+        func test_weeklyDimensionAverages_7days_computesCorrectPerDimensionAverages() {
+            let dims = WellbeingDimensions(
+                physicalLoad: 0.8, emotionalTone: 0.6, cognitiveClarity: 0.4, behavioralMomentum: 0.5
+            )
+            self.addSnapshots(count: 7, dims: dims)
+            let result = self.sut.weeklyDimensionAverages(relativeTo: self.today)
+            XCTAssertNotNil(result)
+            XCTAssertEqual(result!.physicalLoad, 0.8, accuracy: 0.001)
+            XCTAssertEqual(result!.emotionalTone, 0.6, accuracy: 0.001)
+            XCTAssertEqual(result!.cognitiveClarity, 0.4, accuracy: 0.001)
+            XCTAssertEqual(result!.behavioralMomentum, 0.5, accuracy: 0.001)
+        }
+
+        func test_weeklyDimensionAverages_ignoresDaysWithNilDimensions() {
+            let dims = WellbeingDimensions(
+                physicalLoad: 0.9, emotionalTone: 0.7, cognitiveClarity: 0.5, behavioralMomentum: 0.3
+            )
+            self.addSnapshots(count: 3, dims: dims)
+            let nilDimsSnapshot = DailySmileySnapshotBuilder()
+                .withDate(Calendar.current.date(byAdding: .day, value: -4, to: self.today)!)
+                .withMeals([MealBuilder().withScore(0.5).build()])
+                .build()
+            self.sut.historicalData.addOrUpdate(snapshot: nilDimsSnapshot)
+            let result = self.sut.weeklyDimensionAverages(relativeTo: self.today)
+            XCTAssertNotNil(result)
+            XCTAssertEqual(
+                result!.physicalLoad,
+                0.9,
+                accuracy: 0.001,
+                "Snapshots with nil wellbeingDimensions must be excluded from average"
+            )
+        }
+
+        func test_weeklyDimensionAverages_ignoresSnapshotsBeyond7Days() {
+            let dims = WellbeingDimensions(
+                physicalLoad: 0.8, emotionalTone: 0.6, cognitiveClarity: 0.4, behavioralMomentum: 0.5
+            )
+            self.addSnapshots(count: 7, dims: dims)
+            let oldDims = WellbeingDimensions(
+                physicalLoad: 0.1, emotionalTone: 0.1, cognitiveClarity: 0.1, behavioralMomentum: 0.1
+            )
+            let oldDate = Calendar.current.date(byAdding: .day, value: -8, to: self.today)!
+            let old = DailySmileySnapshotBuilder()
+                .withDate(oldDate)
+                .withWellbeingDimensions(oldDims)
+                .build()
+            self.sut.historicalData.addOrUpdate(snapshot: old)
+            let result = self.sut.weeklyDimensionAverages(relativeTo: self.today)
+            XCTAssertEqual(
+                result?.physicalLoad ?? 0,
+                0.8,
+                accuracy: 0.001,
+                "Snapshots beyond the 7-day window must be excluded"
+            )
+        }
+
+        func test_weeklyDimensionAverages_clampedToValidRange_0to1() {
+            let dims = WellbeingDimensions(
+                physicalLoad: 1.0, emotionalTone: 0.0, cognitiveClarity: 1.0, behavioralMomentum: 0.0
+            )
+            self.addSnapshots(count: 3, dims: dims)
+            let result = self.sut.weeklyDimensionAverages(relativeTo: self.today)
+            XCTAssertNotNil(result)
+            XCTAssertGreaterThanOrEqual(result!.physicalLoad, 0.0)
+            XCTAssertLessThanOrEqual(result!.physicalLoad, 1.0)
+        }
+
+        // MARK: - Helpers
+
+        private func addSnapshots(count: Int, dims: WellbeingDimensions) {
+            for i in 0..<count {
+                let date = Calendar.current.date(byAdding: .day, value: -i, to: self.today)!
+                let snapshot = DailySmileySnapshotBuilder()
+                    .withDate(date)
+                    .withWellbeingDimensions(dims)
+                    .build()
+                self.sut.historicalData.addOrUpdate(snapshot: snapshot)
+            }
+        }
+    }
+
 #endif

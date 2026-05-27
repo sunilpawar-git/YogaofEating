@@ -17,6 +17,17 @@ enum SynthesisWeights {
     static let behavioralMomentum: Double = 0.10
 }
 
+/// SSOT for the exercise bonus tiers applied to physicalLoad.
+/// Bonus is additive on top of the food-based base score and capped at exerciseBonusMax.
+enum ExerciseBonusTiers {
+    static let tier1Threshold: Double = 150 // kcal floor for any bonus
+    static let tier2Threshold: Double = 300
+    static let tier3Threshold: Double = 500 // full bonus floor
+    static let tier1Bonus: Double = 0.05
+    static let tier2Bonus: Double = 0.10
+    static let max: Double = 0.15
+}
+
 /// Smiley scale targets for each mood band. Scale is animated toward these targets.
 enum SynthesisScaleTargets {
     static let serene: Double = 0.85 // shrinks slightly toward calm

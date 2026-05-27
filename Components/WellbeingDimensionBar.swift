@@ -7,6 +7,8 @@ struct WellbeingDimensionBar: View {
     let value: Double
     let isDominant: Bool
     let mealCount: Int
+    var weeklyAverage: Double?
+    var hasExerciseBonus: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -21,8 +23,13 @@ struct WellbeingDimensionBar: View {
                                 .font(.system(size: 10))
                                 .foregroundStyle(AppTheme.Dimension.color(for: self.dimension))
                         }
+                        if let avg = self.weeklyAverage {
+                            Text(String(format: Strings.WellbeingBreakdown.weeklyAvgFmt, Int(avg * 100)))
+                                .font(FontTheme.caption)
+                                .foregroundStyle(AppTheme.textMuted)
+                        }
                     }
-                    Text(self.dimension.subtitle(mealCount: self.mealCount))
+                    Text(self.dimension.subtitle(mealCount: self.mealCount, hasExerciseBonus: self.hasExerciseBonus))
                         .font(FontTheme.caption)
                         .foregroundStyle(AppTheme.textMuted)
                 }

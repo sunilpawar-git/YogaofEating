@@ -257,6 +257,163 @@
             )
             XCTAssertEqual(synthesis.overall, 0.5, accuracy: 0.001)
         }
+
+        // MARK: - Exercise bonus (Phase 1 TDD — Red: calls 6-param synthesize not yet in protocol)
+
+        func test_exerciseBonus_nilCalories_returnsZero() {
+            let meals = [MealBuilder().withScore(0.5).analyzed().build()]
+            let withNil = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+            )
+            let withoutParam = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil
+            )
+            XCTAssertEqual(withNil.dimensions.physicalLoad, withoutParam.dimensions.physicalLoad, accuracy: 0.001)
+        }
+
+        func test_exerciseBonus_100kcal_returnsZero() {
+            let meals = [MealBuilder().withScore(0.5).analyzed().build()]
+            let base = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+            )
+            let with100 = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 100
+            )
+            XCTAssertEqual(
+                with100.dimensions.physicalLoad,
+                base.dimensions.physicalLoad,
+                accuracy: 0.001,
+                "100 kcal is below tier 1 threshold — no bonus"
+            )
+        }
+
+        func test_exerciseBonus_150kcal_returnsSmallBonus_0_05() {
+            let meals = [MealBuilder().withScore(0.5).analyzed().build()]
+            let base = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+            )
+            let with150 = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 150
+            )
+            XCTAssertEqual(
+                with150.dimensions.physicalLoad - base.dimensions.physicalLoad,
+                0.05, accuracy: 0.001,
+                "150 kcal (tier 1) must add exactly +0.05 bonus"
+            )
+        }
+
+        func test_exerciseBonus_300kcal_returnsMediumBonus_0_10() {
+            let meals = [MealBuilder().withScore(0.5).analyzed().build()]
+            let base = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+            )
+            let with300 = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 300
+            )
+            XCTAssertEqual(
+                with300.dimensions.physicalLoad - base.dimensions.physicalLoad,
+                0.10, accuracy: 0.001,
+                "300 kcal (tier 2) must add exactly +0.10 bonus"
+            )
+        }
+
+        func test_exerciseBonus_500kcal_returnsMaxBonus_0_15() {
+            let meals = [MealBuilder().withScore(0.5).analyzed().build()]
+            let base = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+            )
+            let with500 = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 500
+            )
+            XCTAssertEqual(
+                with500.dimensions.physicalLoad - base.dimensions.physicalLoad,
+                0.15, accuracy: 0.001,
+                "500 kcal (tier 3) must add exactly +0.15 max bonus"
+            )
+        }
+
+        func test_exerciseBonus_1000kcal_clampedToMaxBonus() {
+            let meals = [MealBuilder().withScore(0.5).analyzed().build()]
+            let with500 = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 500
+            )
+            let with1000 = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 1000
+            )
+            XCTAssertEqual(
+                with1000.dimensions.physicalLoad, with500.dimensions.physicalLoad, accuracy: 0.001,
+                "1000 kcal must not exceed the max +0.15 bonus"
+            )
+        }
+
+        func test_physicalLoad_noMeals_noExercise_returnsStubScore() {
+            let synthesis = self.sut.synthesize(
+                meals: [], highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+            )
+            XCTAssertEqual(
+                synthesis.dimensions.physicalLoad,
+                0.5,
+                accuracy: 0.001,
+                "No meals + no exercise must return the neutral stub score"
+            )
+        }
+
+        func test_physicalLoad_mealsOnly_noExercise_equalsBaseScore() {
+            let meals = [
+                MealBuilder().withScore(0.6).analyzed().build(),
+                MealBuilder().withScore(0.8).analyzed().build()
+            ]
+            let synthesis = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+            )
+            XCTAssertEqual(
+                synthesis.dimensions.physicalLoad,
+                0.7,
+                accuracy: 0.001,
+                "Meals only (no exercise) must equal the avg meal score"
+            )
+        }
+
+        func test_physicalLoad_mealsAndExercise_baseScorePlusBonus() {
+            let meals = [MealBuilder().withScore(0.6).analyzed().build()]
+            let synthesis = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 350
+            )
+            XCTAssertEqual(
+                synthesis.dimensions.physicalLoad,
+                0.7,
+                accuracy: 0.001,
+                "0.6 base + 0.10 tier-2 bonus = 0.70"
+            )
+        }
+
+        func test_physicalLoad_highFoodHighExercise_clampedToOne() {
+            let meals = [MealBuilder().withScore(0.95).analyzed().build()]
+            let synthesis = self.sut.synthesize(
+                meals: meals, highlightData: nil, reflectData: nil,
+                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 600
+            )
+            XCTAssertLessThanOrEqual(
+                synthesis.dimensions.physicalLoad,
+                1.0,
+                "physicalLoad must never exceed 1.0 even with max exercise bonus"
+            )
+        }
     }
 
 #endif

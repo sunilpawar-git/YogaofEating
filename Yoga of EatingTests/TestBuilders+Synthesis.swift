@@ -11,6 +11,7 @@ final class SynthesisInputBuilder {
     private(set) var reflectData: ReflectData?
     private(set) var appleSleepData: SleepData?
     private(set) var yesterday: DailySmileySnapshot?
+    private(set) var activeCaloriesBurned: Double?
 
     @discardableResult
     func withMeals(_ count: Int, avgScore: Double) -> Self {
@@ -72,6 +73,12 @@ final class SynthesisInputBuilder {
         return self
     }
 
+    @discardableResult
+    func withActiveCalories(_ kcal: Double) -> Self {
+        self.activeCaloriesBurned = kcal
+        return self
+    }
+
     /// Convenience: run the engine directly from this builder's configured inputs.
     func synthesize(with engine: DailySynthesisEngine) -> DailySynthesis {
         engine.synthesize(
@@ -79,7 +86,8 @@ final class SynthesisInputBuilder {
             highlightData: self.highlightData,
             reflectData: self.reflectData,
             appleSleepData: self.appleSleepData,
-            yesterday: self.yesterday
+            yesterday: self.yesterday,
+            activeCaloriesBurned: self.activeCaloriesBurned
         )
     }
 }

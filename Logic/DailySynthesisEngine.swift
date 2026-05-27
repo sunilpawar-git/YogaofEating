@@ -8,8 +8,30 @@ protocol DailySynthesizing {
         highlightData: HighlightData?,
         reflectData: ReflectData?,
         appleSleepData: SleepData?,
-        yesterday: DailySmileySnapshot?
+        yesterday: DailySmileySnapshot?,
+        activeCaloriesBurned: Double?
     ) -> DailySynthesis
+}
+
+// MARK: - Backward-compat shim (omits activeCaloriesBurned → nil)
+
+extension DailySynthesizing {
+    func synthesize(
+        meals: [Meal],
+        highlightData: HighlightData?,
+        reflectData: ReflectData?,
+        appleSleepData: SleepData?,
+        yesterday: DailySmileySnapshot?
+    ) -> DailySynthesis {
+        self.synthesize(
+            meals: meals,
+            highlightData: highlightData,
+            reflectData: reflectData,
+            appleSleepData: appleSleepData,
+            yesterday: yesterday,
+            activeCaloriesBurned: nil
+        )
+    }
 }
 
 // MARK: - Implementation
@@ -20,9 +42,10 @@ final class DailySynthesisEngine: DailySynthesizing {
         highlightData: HighlightData?,
         reflectData: ReflectData?,
         appleSleepData: SleepData?,
-        yesterday _: DailySmileySnapshot?
+        yesterday _: DailySmileySnapshot?,
+        activeCaloriesBurned: Double? = nil
     ) -> DailySynthesis {
-        let physical = self.computePhysicalLoad(from: meals)
+        let physical = self.computePhysicalLoad(from: meals, activeCaloriesBurned: activeCaloriesBurned)
         let emotional = self.computeEmotionalTone(from: reflectData)
         let cognitive = self.computeCognitiveClarity(from: highlightData, appleSleepData: appleSleepData)
         let behavioral = self.computeBehavioralMomentum(from: highlightData)
@@ -80,9 +103,21 @@ final class DailySynthesisEngine: DailySynthesizing {
 
     // MARK: - Dimension Computations
 
-    private func computePhysicalLoad(from meals: [Meal]) -> Double {
-        guard !meals.isEmpty else { return 0.5 }
-        return meals.map(\.healthScore).reduce(0.0, +) / Double(meals.count)
+    private func computePhysicalLoad(from meals: [Meal], activeCaloriesBurned: Double?) -> Double {
+        let base: Double = meals.isEmpty
+            ? 0.5
+            : meals.map(\.healthScore).reduce(0.0, +) / Double(meals.count)
+        return min(base + self.computeExerciseBonus(activeCaloriesBurned), 1.0)
+    }
+
+    private func computeExerciseBonus(_ activeCalories: Double?) -> Double {
+        guard let kcal = activeCalories else { return 0.0 }
+        switch kcal {
+        case ..<ExerciseBonusTiers.tier1Threshold: return 0.0
+        case ..<ExerciseBonusTiers.tier2Threshold: return ExerciseBonusTiers.tier1Bonus
+        case ..<ExerciseBonusTiers.tier3Threshold: return ExerciseBonusTiers.tier2Bonus
+        default: return ExerciseBonusTiers.max
+        }
     }
 
     private func computeEmotionalTone(from reflectData: ReflectData?) -> Double {

@@ -106,6 +106,7 @@ final class SetMainViewModelTrackingService: ObservableObject, HistoricalDataSer
     func updateReflectData(for _: Date, data _: ReflectData) {}
     func updateInsight(for _: Date, insight _: DailyInsight) {}
     func updateWellbeingDimensions(for _: Date, dimensions _: WellbeingDimensions, textSignals _: [TextSignal]) {}
+    func weeklyDimensionAverages(relativeTo _: Date) -> WellbeingDimensions? { nil }
     func incompleteTodosForCarryOver(from _: Date) -> [MindCheckEntry] { [] }
     func foodDebtStartingState(relativeTo _: Date) -> SmileyState { .neutral }
     func computeHistoricalSummary(relativeTo _: Date) -> HistoricalSummary {

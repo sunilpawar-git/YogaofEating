@@ -197,6 +197,14 @@ class MockHistoricalDataService: HistoricalDataServiceProtocol {
         }
     }
 
+    // MARK: - weeklyDimensionAverages stub
+
+    var stubbedWeeklyDimensionAverages: WellbeingDimensions?
+
+    func weeklyDimensionAverages(relativeTo _: Date) -> WellbeingDimensions? {
+        self.stubbedWeeklyDimensionAverages
+    }
+
     // MARK: - WellbeingDimensions spy
 
     var updateWellbeingDimensionsCalled = false

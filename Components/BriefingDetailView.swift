@@ -16,11 +16,12 @@ struct BriefingDetailView: View {
                     if self.isLikelyStale {
                         self.staleBanner
                     }
-                    if self.liveBreakdown != nil {
-                        self.wellbeingStateSection
-                        Divider().padding(.vertical, 24)
-                    }
                     self.headlineSection
+                    if self.liveBreakdown != nil {
+                        Divider().padding(.vertical, 24)
+                        self.moodHeroSection
+                        self.wellbeingBreakdownSection
+                    }
                     Divider().padding(.vertical, 24)
                     self.correlationCardsSection
                     Divider().padding(.vertical, 24)
@@ -35,7 +36,7 @@ struct BriefingDetailView: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
-            .navigationTitle(Self.insightsTitle(for: self.insight.date))
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -66,7 +67,7 @@ struct BriefingDetailView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text(self.insight.headline)
+            Text(String(format: Strings.Briefing.shortHeadlineFmt, self.shortDayName))
                 .font(FontTheme.briefingHeadline)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -104,9 +105,19 @@ struct BriefingDetailView: View {
 
     private static let headlineDateFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "EEEE, MMMM d"
+        f.dateFormat = "MMMM d"
         return f
     }()
+
+    private static let shortDayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE"
+        return f
+    }()
+
+    private var shortDayName: String {
+        Self.shortDayFormatter.string(from: self.insight.date).lowercased()
+    }
 
     static func insightsTitle(for date: Date) -> String {
         String(format: Strings.Briefing.insightsTitleFormat, self.dayNameFormatter.string(from: date))

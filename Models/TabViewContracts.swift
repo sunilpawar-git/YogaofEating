@@ -41,6 +41,32 @@ struct WellbeingBreakdownSheetContract: Equatable, Hashable {
     let currentMood: SmileyMood
     /// Weighted composite score from synthesis, range [0, 1] — drives the progress pill.
     let overallScore: Double
+    /// 7-day rolling per-dimension averages. Nil if fewer than 3 days have stored dimensions.
+    let weeklyAverages: WellbeingDimensions?
+    /// True when activeCaloriesBurned met tier 1 threshold and contributed a bonus to physicalLoad.
+    let hasExerciseBonus: Bool
+
+    init(
+        dimensions: WellbeingDimensions,
+        dominantDimension: WellbeingDimension,
+        causalNarrative: String,
+        weakDimensions: [WellbeingDimension],
+        mealCount: Int,
+        currentMood: SmileyMood,
+        overallScore: Double,
+        weeklyAverages: WellbeingDimensions? = nil,
+        hasExerciseBonus: Bool = false
+    ) {
+        self.dimensions = dimensions
+        self.dominantDimension = dominantDimension
+        self.causalNarrative = causalNarrative
+        self.weakDimensions = weakDimensions
+        self.mealCount = mealCount
+        self.currentMood = currentMood
+        self.overallScore = overallScore
+        self.weeklyAverages = weeklyAverages
+        self.hasExerciseBonus = hasExerciseBonus
+    }
 }
 
 /// Minimal data contract for ReflectView.

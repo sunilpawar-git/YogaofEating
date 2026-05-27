@@ -41,6 +41,10 @@ protocol HistoricalDataServiceProtocol: ObservableObject {
     /// Updates or adds wellbeing dimensions and text signals for a specific date.
     func updateWellbeingDimensions(for date: Date, dimensions: WellbeingDimensions, textSignals: [TextSignal])
 
+    /// Returns per-dimension averages over the 7-day window ending on `date`.
+    /// Returns nil when fewer than 3 days have stored wellbeing dimensions.
+    func weeklyDimensionAverages(relativeTo date: Date) -> WellbeingDimensions?
+
     /// Downloads all snapshots from Firebase and merges them into local storage.
     /// Throws `AppError.syncAuthRequired` when not authenticated.
     /// No-op when the cloud returns no data; saves to disk after a successful restore.
@@ -218,6 +222,26 @@ class HistoricalDataService: HistoricalDataServiceProtocol {
         }
 
         return self.historicalData.snapshots(in: startDate...endDate)
+    }
+
+    // MARK: - Weekly Dimension Averages
+
+    func weeklyDimensionAverages(relativeTo date: Date) -> WellbeingDimensions? {
+        let cal = Calendar.current
+        let start = cal.date(byAdding: .day, value: -6, to: cal.startOfDay(for: date))!
+        let snaps = self.historicalData.dailySnapshots
+            .filter { $0.date >= start && $0.date <= date }
+            .compactMap(\.wellbeingDimensions)
+        guard snaps.count >= 3 else { return nil }
+        func avg(_ kp: KeyPath<WellbeingDimensions, Double>) -> Double {
+            snaps.map { $0[keyPath: kp] }.reduce(0, +) / Double(snaps.count)
+        }
+        return WellbeingDimensions(
+            physicalLoad: avg(\.physicalLoad),
+            emotionalTone: avg(\.emotionalTone),
+            cognitiveClarity: avg(\.cognitiveClarity),
+            behavioralMomentum: avg(\.behavioralMomentum)
+        )
     }
 
     // MARK: - Persistence Methods

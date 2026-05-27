@@ -158,7 +158,8 @@ final class MockDailySynthesisEngine: DailySynthesizing {
         highlightData _: HighlightData?,
         reflectData _: ReflectData?,
         appleSleepData _: SleepData?,
-        yesterday _: DailySmileySnapshot?
+        yesterday _: DailySmileySnapshot?,
+        activeCaloriesBurned _: Double?
     ) -> DailySynthesis {
         self.synthesizeCalled = true
         return self.stubbedSynthesis

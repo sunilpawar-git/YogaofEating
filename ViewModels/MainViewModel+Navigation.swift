@@ -90,7 +90,8 @@ extension MainViewModel {
             highlightData: snapshot?.highlightData,
             reflectData: snapshot?.reflectData,
             appleSleepData: self.appleSleepData,
-            yesterday: nil
+            yesterday: nil,
+            activeCaloriesBurned: self.todayActiveCalories
         )
         let weakDims: [WellbeingDimension] = WellbeingDimension.allCases
             .map { dim in (dim, dim.value(in: synthesis.dimensions)) }
@@ -98,6 +99,8 @@ extension MainViewModel {
             .sorted { $0.1 < $1.1 }
             .prefix(2)
             .map(\.0)
+        let weeklyAvgs = self.historicalService.weeklyDimensionAverages(relativeTo: self.selectedDate)
+        let exerciseBonus = (self.todayActiveCalories ?? 0) >= ExerciseBonusTiers.tier1Threshold
         return WellbeingBreakdownSheetContract(
             dimensions: synthesis.dimensions,
             dominantDimension: synthesis.dominantDimension,
@@ -105,7 +108,9 @@ extension MainViewModel {
             weakDimensions: weakDims,
             mealCount: self.meals.count,
             currentMood: synthesis.smileySuggestion.mood,
-            overallScore: synthesis.overall
+            overallScore: synthesis.overall,
+            weeklyAverages: weeklyAvgs,
+            hasExerciseBonus: exerciseBonus
         )
     }
 

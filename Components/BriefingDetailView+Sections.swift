@@ -3,12 +3,12 @@ import SwiftUI
 // MARK: - BriefingDetailView Section Subviews
 
 extension BriefingDetailView {
-    // MARK: - Wellbeing State
+    // MARK: - Mood Hero
 
     @ViewBuilder
-    var wellbeingStateSection: some View {
+    var moodHeroSection: some View {
         if let breakdown = self.liveBreakdown {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 14) {
                     Text(breakdown.currentMood.emoji)
                         .font(.system(size: 44))
@@ -39,51 +39,29 @@ extension BriefingDetailView {
                     .accessibilityLabel(text)
                     .pillStyle()
                 }
-                Divider()
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(Strings.WellbeingBreakdown.whyHeading)
-                        .font(FontTheme.sectionHeader)
-                    Text(breakdown.causalNarrative)
-                        .font(FontTheme.body)
-                        .foregroundStyle(AppTheme.textSecondary)
-                }
-                if !breakdown.weakDimensions.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(Strings.WellbeingBreakdown.worthNurturing)
-                            .font(FontTheme.caption)
-                            .foregroundStyle(AppTheme.textMuted)
-                        HStack(spacing: 8) {
-                            ForEach(breakdown.weakDimensions, id: \.self) { dim in
-                                Text(dim.displayName)
-                                    .font(FontTheme.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(AppTheme.Dimension.color(for: dim).opacity(0.15))
-                                    .foregroundStyle(AppTheme.Dimension.color(for: dim))
-                                    .clipShape(RoundedRectangle(
-                                        cornerRadius: AppTheme.CornerRadius.small,
-                                        style: .continuous
-                                    ))
-                                    .accessibilityLabel(
-                                        String(
-                                            format: Strings.WellbeingBreakdown.weakDimChipAccessibilityFmt,
-                                            dim.displayName
-                                        )
-                                    )
-                            }
-                        }
-                    }
-                }
-                Divider()
-                VStack(spacing: 14) {
-                    ForEach(WellbeingDimension.allCases, id: \.self) { dimension in
-                        WellbeingDimensionBar(
-                            dimension: dimension,
-                            value: dimension.value(in: breakdown.dimensions),
-                            isDominant: dimension == breakdown.dominantDimension,
-                            mealCount: breakdown.mealCount
-                        )
-                    }
+            }
+            .padding(.vertical, 12)
+        }
+    }
+
+    // MARK: - Wellbeing Breakdown (dimension bars)
+
+    @ViewBuilder
+    var wellbeingBreakdownSection: some View {
+        if let breakdown = self.liveBreakdown {
+            VStack(alignment: .leading, spacing: 14) {
+                Text(Strings.WellbeingBreakdown.breakdownExplainer)
+                    .font(FontTheme.caption)
+                    .foregroundStyle(AppTheme.textMuted)
+                ForEach(WellbeingDimension.allCases, id: \.self) { dimension in
+                    WellbeingDimensionBar(
+                        dimension: dimension,
+                        value: dimension.value(in: breakdown.dimensions),
+                        isDominant: dimension == breakdown.dominantDimension,
+                        mealCount: breakdown.mealCount,
+                        weeklyAverage: breakdown.weeklyAverages.map { dimension.value(in: $0) },
+                        hasExerciseBonus: breakdown.hasExerciseBonus && dimension == .physicalLoad
+                    )
                 }
             }
             .padding(.vertical, 12)
@@ -139,33 +117,9 @@ extension BriefingDetailView {
                 Text(card.observation)
                     .font(.subheadline)
                     .fixedSize(horizontal: false, vertical: true)
-
-                self.inlineDimensionBar(for: card)
             }
         }
         .padding(.vertical, 4)
-    }
-
-    @ViewBuilder
-    private func inlineDimensionBar(for card: CorrelationCard) -> some View {
-        if let breakdown = self.liveBreakdown {
-            let dimension = card.category.relatedDimension
-            let value = dimension.value(in: breakdown.dimensions)
-            HStack(spacing: 8) {
-                Text(dimension.displayName)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 76, alignment: .leading)
-                ProgressView(value: value)
-                    .progressViewStyle(.linear)
-                    .tint(AppTheme.Dimension.color(for: dimension))
-                Text("\(Int(value * 100))%")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 28, alignment: .trailing)
-            }
-            .padding(.top, 2)
-        }
     }
 
     // MARK: - Nudge
@@ -198,18 +152,22 @@ extension BriefingDetailView {
     @ViewBuilder
     var weeklyTrendSection: some View {
         if let trend = self.insight.weeklyTrend {
-            HStack(spacing: 6) {
-                Image(systemName: self.trendIcon(trend.trendDirection))
+            VStack(alignment: .leading, spacing: 8) {
+                self.sectionLabel(Strings.Briefing.thisWeekSection)
+                HStack(spacing: 6) {
+                    Image(systemName: self.trendIcon(trend.trendDirection))
+                        .font(.caption2)
+                    Text(String(
+                        format: Strings.Briefing.weeklyTrendFmt,
+                        trend.trendDirection.rawValue.capitalized,
+                        Int(trend.averageFoodScore * 100),
+                        Int(trend.averageSleepQuality * 100),
+                        trend.daysLogged
+                    ))
                     .font(.caption2)
-                Text(
-                    "\(trend.trendDirection.rawValue.capitalized)"
-                        + " · \(Int(trend.averageFoodScore * 100))% food"
-                        + " · \(Int(trend.averageSleepQuality * 100))% sleep"
-                        + " · \(trend.daysLogged)/7 days"
-                )
-                .font(.caption2)
+                }
+                .foregroundStyle(.tertiary)
             }
-            .foregroundStyle(.tertiary)
         }
     }
 }

@@ -160,6 +160,26 @@ final class BriefingDetailViewTests: XCTestCase {
         )
     }
 
+    func test_strings_wellbeingBreakdown_breakdownExplainer_isNonEmpty() {
+        XCTAssertFalse(
+            Strings.WellbeingBreakdown.breakdownExplainer.isEmpty,
+            "Strings.WellbeingBreakdown.breakdownExplainer must be a non-empty string resource"
+        )
+    }
+
+    func test_strings_briefing_thisWeekSection_isNonEmpty() {
+        XCTAssertFalse(
+            Strings.Briefing.thisWeekSection.isEmpty,
+            "Strings.Briefing.thisWeekSection must be a non-empty string resource"
+        )
+    }
+
+    func test_strings_briefing_weeklyTrendFmt_hasPlaceholders() {
+        let fmt = Strings.Briefing.weeklyTrendFmt
+        XCTAssertTrue(fmt.contains("%@"), "weeklyTrendFmt must contain a %@ placeholder for trend direction")
+        XCTAssertTrue(fmt.contains("%d"), "weeklyTrendFmt must contain %d placeholders for numeric values")
+    }
+
     // MARK: - FontTheme token (Phase 4 TDD)
 
     func test_fontTheme_briefingHeadline_tokenExists() {
@@ -200,5 +220,66 @@ final class BriefingDetailViewTests: XCTestCase {
     func test_briefingDetailView_nilBreakdown_rendersWithoutWellbeingSection() {
         let view = BriefingDetailView(insight: self.makeInsight(), liveBreakdown: nil)
         XCTAssertNil(view.liveBreakdown, "liveBreakdown must be nil — wellbeing section must be hidden")
+    }
+
+    // MARK: - WellbeingBreakdownSheetContract.weeklyAverages (Phase 2 TDD — Red: field not yet on contract)
+
+    func test_wellbeingBreakdownContract_withWeeklyAverages_populatesField() {
+        let weeklyAvgs = WellbeingDimensions(
+            physicalLoad: 0.7, emotionalTone: 0.5, cognitiveClarity: 0.4, behavioralMomentum: 0.6
+        )
+        let contract = WellbeingBreakdownSheetContract(
+            dimensions: WellbeingDimensions(
+                physicalLoad: 0.8, emotionalTone: 0.5, cognitiveClarity: 0.3, behavioralMomentum: 0.2
+            ),
+            dominantDimension: .physicalLoad,
+            causalNarrative: "Test",
+            weakDimensions: [],
+            mealCount: 2,
+            currentMood: .neutral,
+            overallScore: 0.55,
+            weeklyAverages: weeklyAvgs
+        )
+        XCTAssertNotNil(contract.weeklyAverages, "weeklyAverages must be stored on the contract")
+        XCTAssertEqual(contract.weeklyAverages?.physicalLoad ?? 0, 0.7, accuracy: 0.001)
+    }
+
+    func test_wellbeingBreakdownContract_withFewerThan3Days_weeklyAveragesIsNil() {
+        let contract = WellbeingBreakdownSheetContract(
+            dimensions: WellbeingDimensions(
+                physicalLoad: 0.8, emotionalTone: 0.5, cognitiveClarity: 0.3, behavioralMomentum: 0.2
+            ),
+            dominantDimension: .physicalLoad,
+            causalNarrative: "Test",
+            weakDimensions: [],
+            mealCount: 2,
+            currentMood: .neutral,
+            overallScore: 0.55,
+            weeklyAverages: nil
+        )
+        XCTAssertNil(contract.weeklyAverages, "nil weeklyAverages must propagate — fewer than 3 days case")
+    }
+
+    // MARK: - String resources (Phase 3 TDD — Red: strings not yet in Strings.swift)
+
+    func test_strings_wellbeingBreakdown_weeklyAvgFmt_hasPercentPlaceholder() {
+        let fmt = Strings.WellbeingBreakdown.weeklyAvgFmt
+        XCTAssertTrue(fmt.contains("%d"), "weeklyAvgFmt must contain a %d placeholder for the integer percentage")
+        XCTAssertTrue(fmt.contains("%"), "weeklyAvgFmt must contain a literal % for the percent sign")
+    }
+
+    func test_strings_wellbeingBreakdown_claritySubtitle_reflectsHealthKit() {
+        let subtitle = Strings.WellbeingBreakdown.DimensionSubtitle.cognitiveClarity
+        XCTAssertTrue(
+            subtitle.lowercased().contains("health") || subtitle.lowercased().contains("sleep"),
+            "Clarity subtitle must reference HealthKit or Sleep to be accurate"
+        )
+    }
+
+    func test_strings_wellbeingBreakdown_physicalSubtitle_exerciseSuffix_isNonEmpty() {
+        XCTAssertFalse(
+            Strings.WellbeingBreakdown.DimensionSubtitle.physicalExerciseSuffix.isEmpty,
+            "physicalExerciseSuffix must be a non-empty string resource"
+        )
     }
 }
