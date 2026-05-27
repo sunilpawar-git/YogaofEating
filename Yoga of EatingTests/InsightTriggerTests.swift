@@ -203,22 +203,24 @@ final class InsightTriggerTests: XCTestCase {
         XCTAssertFalse(self.sut.showInsightSheet)
     }
 
-    func test_handleSmileyLongPress_todayNoInsight_opensBreakdownFallback() {
-        // Viewing today but no insight → fallback to breakdown sheet
+    func test_handleSmileyLongPress_todayNoInsight_opensPreparingSheet() {
+        // Viewing today but no insight → preparing sheet (not stale breakdown)
         XCTAssertTrue(self.sut.isViewingToday)
         self.sut.currentInsight = nil
         self.sut.handleSmileyLongPress()
-        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertTrue(self.sut.showInsightPreparingSheet)
         XCTAssertFalse(self.sut.showBriefingSheet)
+        XCTAssertFalse(self.sut.showBreakdownSheet)
     }
 
-    func test_handleSmileyLongPress_staleInsight_treatedAsNoInsight() {
-        // currentInsight with yesterday's date → not fresh → fallback
+    func test_handleSmileyLongPress_staleInsight_treatedAsNoInsight_opensPreparingSheet() {
+        // currentInsight with yesterday's date → not fresh → preparing sheet
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
         self.sut.currentInsight = self.makeInsight(date: yesterday)
         self.sut.handleSmileyLongPress()
-        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertTrue(self.sut.showInsightPreparingSheet)
         XCTAssertFalse(self.sut.showBriefingSheet)
+        XCTAssertFalse(self.sut.showBreakdownSheet)
     }
 
     func test_handleSmileyLongPress_pastDay_noInsight_doesNotShowSheet() {
@@ -227,6 +229,7 @@ final class InsightTriggerTests: XCTestCase {
         self.sut.selectedDate = yesterday
         self.sut.currentInsight = nil
         self.sut.handleSmileyLongPress()
+        XCTAssertFalse(self.sut.showInsightPreparingSheet)
         XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showInsightSheet)
     }
@@ -253,6 +256,54 @@ final class InsightTriggerTests: XCTestCase {
         self.sut.handleSmileyLongPress()
         XCTAssertTrue(self.sut.showBriefingSheet)
         XCTAssertFalse(self.sut.showBreakdownSheet)
+    }
+
+    // MARK: - Preparing sheet auto-transition
+
+    func test_insightGeneratedWhilePreparingSheetOpen_switchesToBriefing() {
+        self.sut.showInsightPreparingSheet = true
+        self.sut.handleInsightGeneratedDuringFallback(self.makeInsight())
+        XCTAssertFalse(self.sut.showInsightPreparingSheet)
+        XCTAssertTrue(self.sut.showBriefingSheet)
+    }
+
+    func test_insightGeneratedWhilePreparingSheetNotShowing_doesNotOpenBriefing() {
+        self.sut.showInsightPreparingSheet = false
+        self.sut.handleInsightGeneratedDuringFallback(self.makeInsight())
+        XCTAssertFalse(self.sut.showBriefingSheet)
+    }
+
+    // MARK: - Staleness detection
+
+    func test_isBriefingLikelyStale_whenInsightOlderThan3HoursAndHasAIMeals_returnsTrue() {
+        let staleDate = Date().addingTimeInterval(-4 * 3600)
+        self.sut.currentInsight = self.makeInsight(date: staleDate)
+        self.sut.meals = [
+            MealBuilder().withScore(0.8).analyzed().build(),
+            MealBuilder().withScore(0.7).analyzed().build()
+        ]
+        XCTAssertTrue(self.sut.isBriefingLikelyStale)
+    }
+
+    func test_isBriefingLikelyStale_whenInsightFresh_returnsFalse() {
+        self.sut.currentInsight = self.makeInsight(date: Date())
+        self.sut.meals = [
+            MealBuilder().withScore(0.8).analyzed().build(),
+            MealBuilder().withScore(0.7).analyzed().build()
+        ]
+        XCTAssertFalse(self.sut.isBriefingLikelyStale)
+    }
+
+    func test_isBriefingLikelyStale_whenFewerThan2AIMeals_returnsFalse() {
+        let staleDate = Date().addingTimeInterval(-4 * 3600)
+        self.sut.currentInsight = self.makeInsight(date: staleDate)
+        self.sut.meals = [MealBuilder().withScore(0.8).analyzed().build()]
+        XCTAssertFalse(self.sut.isBriefingLikelyStale)
+    }
+
+    func test_isBriefingLikelyStale_whenNoInsight_returnsFalse() {
+        self.sut.currentInsight = nil
+        XCTAssertFalse(self.sut.isBriefingLikelyStale)
     }
 
     func test_smileyTap_stillCreatesNewMeal() {

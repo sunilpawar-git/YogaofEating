@@ -40,6 +40,18 @@ private struct MainScreenSheetsModifier: ViewModifier {
                     .presentationDragIndicator(.visible)
                 }
             }
+            .sheet(isPresented: self.$viewModel.showInsightPreparingSheet) {
+                InsightPreparingSheet(contract: InsightPreparingSheetContract(
+                    weekdayName: Self.currentWeekdayName(),
+                    isGenerating: self.viewModel.isInsightGenerationInProgress,
+                    mealCount: self.viewModel.meals.count,
+                    averageScore: Self.averageScore(meals: self.viewModel.meals),
+                    onRefresh: { self.viewModel.triggerInsightGeneration(force: true) },
+                    onDismiss: { self.viewModel.showInsightPreparingSheet = false }
+                ))
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
             // Placed on the parent modifier chain (not inside sheet content) so it fires
             // reliably even during sheet dismiss animation.
             .onChange(of: self.viewModel.currentInsight) { _, newInsight in
@@ -53,6 +65,7 @@ private struct MainScreenSheetsModifier: ViewModifier {
                     BriefingDetailView(
                         insight: insight,
                         liveBreakdown: self.viewModel.wellbeingBreakdownContract,
+                        isLikelyStale: self.viewModel.isBriefingLikelyStale,
                         onDismiss: { self.viewModel.showBriefingSheet = false },
                         onRefresh: {
                             self.viewModel.showBriefingSheet = false
@@ -64,6 +77,20 @@ private struct MainScreenSheetsModifier: ViewModifier {
                     .presentationDragIndicator(.visible)
                 }
             }
+    }
+
+    // MARK: - Helpers
+
+    private static func currentWeekdayName() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: Date())
+    }
+
+    private static func averageScore(meals: [Meal]) -> Double? {
+        let scores = meals.map(\.healthScore)
+        guard !scores.isEmpty else { return nil }
+        return scores.reduce(0, +) / Double(scores.count)
     }
 }
 

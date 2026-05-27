@@ -120,6 +120,20 @@ enum Strings {
                 "You rated sleep as great, but your clarity pattern suggests otherwise — check your sleep environment"
         }
 
+        static let staleInsightBanner = "Generated earlier today — refresh for the latest"
+
+        enum Preparing {
+            /// Format: weekday name e.g. "Wednesday"
+            static let preparingTitleFmt = "Preparing your %@ insight…"
+            static let preparingSubtitle = "This takes a few seconds"
+            static let noInsightTitle = "Your insight isn't ready yet"
+            static let noInsightBody = "Tap Refresh to generate your personalized briefing based on today's meals and patterns."
+            static let refreshButton = "Refresh"
+            /// Format: meal count, avg percentage e.g. "3 meals · Avg. 86%"
+            static let statsSummaryFmt = "%d meals · Avg. %d%%"
+            static let todaySoFarLabel = "Today so far"
+        }
+
         // Default nudge suggestions shown when no correlation cards are available
         enum NudgeSuggestion {
             static let physical = "Log your meals mindfully today"

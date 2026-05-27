@@ -62,21 +62,23 @@ final class SmartCompassIntegrationTests: XCTestCase {
 
     // MARK: - Routing: no insight fallback
 
-    func test_smileyLongPress_noInsight_breakdownFallbackOpens() {
+    func test_smileyLongPress_noInsight_preparingSheetOpens() {
         XCTAssertTrue(self.sut.isViewingToday)
         self.sut.currentInsight = nil
         self.sut.handleSmileyLongPress()
-        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertTrue(self.sut.showInsightPreparingSheet)
+        XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showBriefingSheet)
     }
 
     // MARK: - Routing: stale insight
 
-    func test_smileyLongPress_staleInsight_fallbackOpens() {
+    func test_smileyLongPress_staleInsight_preparingSheetOpens() {
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
         self.sut.currentInsight = self.makeInsight(date: yesterday)
         self.sut.handleSmileyLongPress()
-        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertTrue(self.sut.showInsightPreparingSheet)
+        XCTAssertFalse(self.sut.showBreakdownSheet)
         XCTAssertFalse(self.sut.showBriefingSheet)
     }
 
@@ -107,36 +109,36 @@ final class SmartCompassIntegrationTests: XCTestCase {
         XCTAssertNotEqual(insight.dimensions.physicalLoad, 0.85)
     }
 
-    // MARK: - Auto-transition (fallback → briefing when insight generates)
+    // MARK: - Auto-transition (preparing sheet → briefing when insight generates)
 
-    func test_insightGeneratedWhileFallbackOpen_switchesToBriefing() {
-        // Breakdown sheet is showing (fallback state) → insight arrives → must switch
-        self.sut.showBreakdownSheet = true
+    func test_insightGeneratedWhilePreparingSheetOpen_switchesToBriefing() {
+        // Preparing sheet is showing → insight arrives → must switch to briefing
+        self.sut.showInsightPreparingSheet = true
         self.sut.handleInsightGeneratedDuringFallback(self.makeInsight())
-        XCTAssertFalse(self.sut.showBreakdownSheet)
+        XCTAssertFalse(self.sut.showInsightPreparingSheet)
         XCTAssertTrue(self.sut.showBriefingSheet)
     }
 
-    func test_insightGeneratedWhileBreakdownNotShown_doesNotOpenBriefing() {
-        // No fallback sheet open → insight arriving must NOT auto-open briefing
-        self.sut.showBreakdownSheet = false
+    func test_insightGeneratedWhilePreparingSheetNotShowing_doesNotOpenBriefing() {
+        // No preparing sheet open → insight arriving must NOT auto-open briefing
+        self.sut.showInsightPreparingSheet = false
         self.sut.handleInsightGeneratedDuringFallback(self.makeInsight())
         XCTAssertFalse(self.sut.showBriefingSheet)
     }
 
-    func test_staleInsightGeneratedWhileFallbackOpen_doesNotSwitch() {
-        // Yesterday's insight arrives while fallback is open → must NOT transition
+    func test_staleInsightGeneratedWhilePreparingSheetOpen_doesNotSwitch() {
+        // Yesterday's insight arrives while preparing sheet is open → must NOT transition
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-        self.sut.showBreakdownSheet = true
+        self.sut.showInsightPreparingSheet = true
         self.sut.handleInsightGeneratedDuringFallback(self.makeInsight(date: yesterday))
-        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertTrue(self.sut.showInsightPreparingSheet)
         XCTAssertFalse(self.sut.showBriefingSheet)
     }
 
-    func test_nilInsightWhileFallbackOpen_doesNotSwitch() {
-        self.sut.showBreakdownSheet = true
+    func test_nilInsightWhilePreparingSheetOpen_doesNotSwitch() {
+        self.sut.showInsightPreparingSheet = true
         self.sut.handleInsightGeneratedDuringFallback(nil)
-        XCTAssertTrue(self.sut.showBreakdownSheet)
+        XCTAssertTrue(self.sut.showInsightPreparingSheet)
         XCTAssertFalse(self.sut.showBriefingSheet)
     }
 

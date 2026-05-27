@@ -62,18 +62,27 @@ extension MainViewModel {
             self.showBriefingSheet = true
         } else {
             self.triggerInsightGeneration()
-            self.showBreakdownSheet = true
+            self.showInsightPreparingSheet = true
         }
     }
 
     /// Called by `MainScreenSheets` via `.onChange(of: currentInsight)` on the parent
     /// view — NOT inside the sheet content — so it fires reliably even during dismiss.
-    /// Guards ensure it only acts when the breakdown fallback is actually showing.
+    /// Guards ensure it only acts when the preparing sheet is actually showing.
     func handleInsightGeneratedDuringFallback(_ insight: DailyInsight?) {
-        guard self.showBreakdownSheet else { return }
+        guard self.showInsightPreparingSheet else { return }
         guard let insight, Calendar.current.isDateInToday(insight.date) else { return }
-        self.showBreakdownSheet = false
+        self.showInsightPreparingSheet = false
         self.showBriefingSheet = true
+    }
+
+    /// True when today's briefing was generated before the user had meaningful AI-analyzed
+    /// meal data — signals that a refresh would produce more personalized content.
+    var isBriefingLikelyStale: Bool {
+        guard let insight = self.currentInsight else { return false }
+        let ageHours = Date().timeIntervalSince(insight.date) / 3600
+        let aiAnalyzedCount = self.meals.filter(\.isAIAnalyzed).count
+        return ageHours > 3 && aiAnalyzedCount >= 2
     }
 
     // MARK: - Briefing Actions

@@ -42,6 +42,9 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// Whether the wellbeing breakdown sheet is shown (opened via smiley long-press)
     @Published var showBreakdownSheet: Bool = false
 
+    /// Whether the insight preparing sheet is shown (replaces stale breakdown fallback)
+    @Published var showInsightPreparingSheet: Bool = false
+
     /// Suggested sleep quality from Apple HealthKit (if available)
     @Published var suggestedSleepQuality: SleepQuality?
 
@@ -68,8 +71,8 @@ class MainViewModel: ObservableObject, MainViewModelProtocol {
     /// never holds a direct reference to MainViewModel (DIP-compliant).
     let aiCoordinator: any AIAnalysisCoordinating
 
-    /// Prevents concurrent insight generation calls.
-    var isInsightGenerationInProgress: Bool = false
+    /// Prevents concurrent insight generation calls. @Published so preparing sheet can show spinner.
+    @Published var isInsightGenerationInProgress: Bool = false
 
     /// Tracked task for background sleep badge fetching. Stored so it can be observed in tests
     /// and cancelled if the VM is deallocated before the request completes.

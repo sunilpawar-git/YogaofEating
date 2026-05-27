@@ -5,6 +5,7 @@ import SwiftUI
 struct BriefingDetailView: View {
     let insight: DailyInsight
     var liveBreakdown: WellbeingBreakdownSheetContract?
+    var isLikelyStale: Bool = false
     var onDismiss: (() -> Void)?
     var onRefresh: (() -> Void)?
 
@@ -12,6 +13,9 @@ struct BriefingDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    if self.isLikelyStale {
+                        self.staleBanner
+                    }
                     self.headlineSection
                     Divider().padding(.vertical, 24)
                     self.correlationCardsSection
@@ -63,6 +67,27 @@ struct BriefingDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 12)
+    }
+
+    // MARK: - Stale Banner
+
+    private var staleBanner: some View {
+        Button(action: { self.onRefresh?() }) {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 12, weight: .medium))
+                Text(Strings.Insight.staleInsightBanner)
+                    .font(FontTheme.caption)
+            }
+            .foregroundColor(.secondary)
+            .padding(.horizontal, AppTheme.Spacing.medium)
+            .padding(.vertical, AppTheme.Spacing.small)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppTheme.cardBackground)
+            .cornerRadius(AppTheme.CornerRadius.small)
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, AppTheme.Spacing.small)
     }
 
     // MARK: - Helpers
