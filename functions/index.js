@@ -68,6 +68,53 @@ const GEMINI_CONFIG = {
 
 const MACRO_CAPS = { protein: 150, carbs: 400, fat: 200 };
 
+// Remote Config key used by all 4 AI-calling functions.
+// Set to "false" in Firebase Console → all Gemini calls return graceful fallbacks instantly.
+const RC_KEY_AI_ENABLED = 'ai_analysis_enabled';
+
+// Per-instance cache for Remote Config. Avoids a fetch on every function invocation.
+// TTL: 5 minutes — kill switch change propagates to all instances within 5 minutes.
+const RC_CACHE_TTL_MS = 5 * 60 * 1000;
+let _rcCache = { template: null, fetchedAt: 0 };
+
+/**
+ * Reads a boolean flag from Firebase Remote Config with a 5-minute cache.
+ *
+ * Fails open: returns `defaultValue` on any fetch/parse error so a Remote Config
+ * outage never disables AI features. Export only for testability (DIP).
+ *
+ * @param {string}  key          — Remote Config parameter name
+ * @param {boolean} defaultValue — returned when key is absent or fetch fails
+ * @returns {Promise<boolean>}
+ */
+async function getRemoteConfigBool(key, defaultValue = true) {
+    const now = Date.now();
+    if (now - _rcCache.fetchedAt < RC_CACHE_TTL_MS && _rcCache.template !== null) {
+        return _parseRcBool(_rcCache.template, key, defaultValue);
+    }
+    try {
+        const template = await admin.remoteConfig().getTemplate();
+        _rcCache = { template, fetchedAt: now };
+        return _parseRcBool(template, key, defaultValue);
+    } catch (err) {
+        console.warn(`[RemoteConfig] fetch failed for "${key}", defaulting to ${defaultValue}:`, err.message);
+        return defaultValue;
+    }
+}
+
+/** Parses a Remote Config parameter as a boolean. Pure helper. */
+function _parseRcBool(template, key, defaultValue) {
+    const raw = template.parameters?.[key]?.defaultValue?.value;
+    if (raw === 'true') return true;
+    if (raw === 'false') return false;
+    return defaultValue;
+}
+
+/** Resets the RC cache. Call ONLY in tests to ensure isolation between test cases. */
+function _resetRcCacheForTesting() {
+    _rcCache = { template: null, fetchedAt: 0 };
+}
+
 // Returns null when the raw value is absent; logs a warning when clamped.
 function clampMacro(raw, max, name) {
     if (raw == null || typeof raw !== 'number') return null;
@@ -163,7 +210,13 @@ exports.analyzeMeal = onCall({ secrets: [geminiApiKey] }, async (request) => {
 
     const sanitizedDescription = sanitizeInput(description);
 
-    // 2. Initialize Model with Key
+    // 2. Kill switch — returns stub immediately if Gemini is disabled in Remote Config
+    if (!await getRemoteConfigBool(RC_KEY_AI_ENABLED, true)) {
+        return { healthScore: 0.5, mood: 'neutral', sound: 'tink', insight: null,
+                 protein: null, carbs: null, fat: null, estimatedCalories: null };
+    }
+
+    // 3. Initialize Model with Key
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
     const { modelId, generationConfig } = GEMINI_CONFIG.mealAnalysis;
     const model = genAI.getGenerativeModel({ model: modelId, generationConfig });
@@ -232,7 +285,13 @@ exports.getMealInsight = onCall({ secrets: [geminiApiKey] }, async (request) => 
     const sanitizedItems = mealItems.map(item => sanitizeInput(String(item), 200));
     const sanitizedMealType = sanitizeInput(String(mealType || "unspecified"), 50);
 
-    // 2. Initialize Model with Key
+    // 2. Kill switch
+    if (!await getRemoteConfigBool(RC_KEY_AI_ENABLED, true)) {
+        return { summary: 'AI insights are temporarily unavailable. Please try again shortly.',
+                 nutritionHighlights: [], tip: null, category: 'unknown' };
+    }
+
+    // 3. Initialize Model with Key
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
     const model = genAI.getGenerativeModel({ model: GEMINI_CONFIG.mealInsight.modelId, generationConfig: GEMINI_CONFIG.mealInsight.generationConfig });
 
@@ -301,13 +360,18 @@ exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) =>
     // 1. Auth guard — prevents unauthenticated Gemini quota abuse
     requireAuth(request);
 
-    // 2. Validate Input
+    // 2. Kill switch
+    if (!await getRemoteConfigBool(RC_KEY_AI_ENABLED, true)) {
+        throw new HttpsError('unavailable', 'AI insights are temporarily disabled. Please try again later.');
+    }
+
+    // 3. Validate Input
     const userData = request.data.userData;
     if (!userData || !Array.isArray(userData) || userData.length === 0) {
         throw new HttpsError('invalid-argument', 'The function must be called with a "userData" array containing daily snapshots.');
     }
 
-    // 2. Initialize Model with Key
+    // 4. Initialize Model with Key
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
     const model = genAI.getGenerativeModel({ model: GEMINI_CONFIG.dailyInsight.modelId });
 
@@ -487,6 +551,12 @@ Example Response:
  */
 exports.generateDailyBriefing = onCall({ secrets: [geminiApiKey] }, async (request) => {
     requireAuth(request);
+
+    // Kill switch — check before logging generation start to avoid phantom metrics
+    if (!await getRemoteConfigBool(RC_KEY_AI_ENABLED, true)) {
+        throw new HttpsError('unavailable', 'AI briefing is temporarily disabled. Please try again later.');
+    }
+
     const userId = request.auth.uid;
     await BriefingPerformanceMetrics.logGenerationStart(userId);
 
@@ -665,3 +735,5 @@ exports.getBriefingMetrics = onCall(async (request) => {
 // These are pure values/functions with no Firebase side effects; safe to import in Jest.
 exports.GEMINI_CONFIG = GEMINI_CONFIG;
 exports.buildAnalyzeMealPrompt = buildAnalyzeMealPrompt;
+exports.getRemoteConfigBool = getRemoteConfigBool;
+exports._resetRcCacheForTesting = _resetRcCacheForTesting;
