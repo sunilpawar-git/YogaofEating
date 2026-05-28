@@ -65,6 +65,16 @@ YogaOfEatingApp (entry point)
 
 All extensions are logically part of the same class but split for readability and code organization.
 
+## SettingsViewModel Organization
+
+`SettingsViewModel` follows the same split pattern:
+
+| File | Responsibility |
+|------|---|
+| `SettingsViewModel.swift` | User profile, appearance, notification, sensory prefs; all `@Published` properties |
+| `SettingsViewModel+Sync.swift` | Cloud sync logic, network monitoring |
+| `SettingsViewModel+Restore.swift` | Manual restore flow, backup listing |
+
 ## Centralized Resources & Theming
 
 ### String Resources (Logic/Strings.swift)
@@ -158,6 +168,31 @@ Never hardcode field length limits in Views or ViewModels.
 ### Timing Constants (Logic/TimingConstants.swift)
 
 All async delays, debounce intervals, and polling periods live in `TimingConstants`. Never hardcode nanosecond or millisecond literals outside this file.
+
+### UserDefaults Keys (Logic/StorageKeys.swift)
+
+All `UserDefaults` key strings are centralized in `StorageKeys`. Never pass raw string literals to `UserDefaults.standard.set/value(forKey:)`.
+
+### Cross-ViewModel Signals (Logic/AppNotification.swift)
+
+Decoupled inter-ViewModel communication uses `NotificationCenter` with typed names from `AppNotification`. Example: `AppNotification.healthProfileDidChange` lets `SettingsViewModel` notify `MainViewModel` without a direct reference. Add new notification names here rather than posting raw string literals.
+
+### Logging (Logic/Logging.swift)
+
+All `Logger` instances are defined in `AppLoggers`. Never create ad-hoc `Logger(subsystem:category:)` calls inline — use `AppLoggers.insight`, `AppLoggers.healthKit`, `AppLoggers.app`, `AppLoggers.auth`. Mark sensitive data with `privacy: .private`.
+
+### Unified Error Type (Logic/AppError.swift)
+
+All service layers throw `AppError` instead of ad-hoc `NSError` or raw `Error`. User-facing `errorDescription` values never expose internals; detailed context lives in `failureReason` for server-side logging only.
+
+### Strings Extensions
+
+`Strings.swift` holds the main enum. Feature-specific additions use separate extension files to keep the file under the 300-line limit:
+- `Strings+CaloriePill.swift` — calorie pill / macro display strings
+- `Strings+Macros.swift` — macros section strings
+- `Strings+WellbeingCoach.swift` — wellbeing breakdown / smiley mood strings
+
+When a feature's strings grow large, extract them to a new `Strings+<Feature>.swift` extension file.
 
 ## Commands
 
@@ -345,7 +380,19 @@ Each behaviour area gets its own test file:
 - `PersistenceServiceTests.swift` — JSON encode/decode round-trips
 - `HistoricalDataSyncTests.swift` — Firestore sync with mock cloud service
 - `SecurityAndAuthTests.swift` — auth guard clauses, encryption, data protection
-- `E2ETests.swift` — UI-level smoke tests (launch, basic meal log, app restart)
+
+UI tests live in the separate **`Yoga of EatingUITests`** target:
+- `E2ETests.swift` — smoke tests (launch, basic meal log, app restart)
+- `MainFlowUITests.swift`, `SettingsUITests.swift`, `YearlyCalendarUITests.swift`, etc.
+
+Run UI tests separately:
+```bash
+xcodebuild test \
+  -project "Yoga of Eating.xcodeproj" \
+  -scheme "Yoga of Eating" \
+  -destination "platform=iOS Simulator,name=iPhone 17" \
+  -only-testing:"Yoga of EatingUITests"
+```
 
 ### What to mock vs. what to test real
 
@@ -359,13 +406,19 @@ Each behaviour area gets its own test file:
 
 Never let a test touch the real filesystem, Firebase, or HealthKit. Use mocks at those boundaries.
 
-### Mocks live in `Mocks.swift`
+### Mocks are split across three files
 
-Shared mocks (`MockAILogicService`, `MockPersistenceService`, `MockHistoricalDataService`, etc.) are in `Yoga of EatingTests/Mocks.swift`. Add new shared mocks there. Test-local mocks (e.g. `SlowMockAILogicService`) can live inline in the test file.
+| File | Contents |
+|---|---|
+| `Yoga of EatingTests/Mocks.swift` | Core service mocks: `MockAILogicService`, `MockPersistenceService`, `MockHistoricalDataService`, etc. |
+| `Yoga of EatingTests/Mocks+Auth.swift` | Auth mocks: `MockAuthService`, `MockAuthUser`, `MockAuthCoreProvider` |
+| `Yoga of EatingTests/Mocks+Services.swift` | Auxiliary service mocks added over time |
+
+Add new shared mocks to the file whose scope matches. Test-local mocks (e.g. `SlowMockAILogicService`) can live inline in the test file.
 
 ### Test fixtures use `TestBuilders.swift`
 
-`Yoga of EatingTests/TestBuilders.swift` provides fluent builder classes (e.g. `MealBuilder`) for constructing test data without boilerplate. Use these instead of ad-hoc `Meal(id: UUID(), ...)` literals in test files.
+`Yoga of EatingTests/TestBuilders.swift` provides fluent builder classes (e.g. `MealBuilder`) for constructing test data without boilerplate. Use these instead of ad-hoc `Meal(id: UUID(), ...)` literals in test files. `TestBuilders+Synthesis.swift` extends this with synthesis-specific builders.
 
 ### `MainViewModelProtocol.swift`
 
