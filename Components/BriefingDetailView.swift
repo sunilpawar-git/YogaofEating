@@ -80,11 +80,11 @@ struct BriefingDetailView: View {
         Button(action: { self.onRefresh?() }) {
             HStack(spacing: 6) {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(FontTheme.caption.weight(.medium))
                 Text(Strings.Insight.staleInsightBanner)
                     .font(FontTheme.caption)
             }
-            .foregroundColor(.secondary)
+            .foregroundStyle(.secondary)
             .padding(.horizontal, AppTheme.Spacing.medium)
             .padding(.vertical, AppTheme.Spacing.small)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -109,14 +109,8 @@ struct BriefingDetailView: View {
         return f
     }()
 
-    private static let shortDayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE"
-        return f
-    }()
-
     private var shortDayName: String {
-        Self.shortDayFormatter.string(from: self.insight.date).lowercased()
+        Self.dayNameFormatter.string(from: self.insight.date).lowercased()
     }
 
     static func insightsTitle(for date: Date) -> String {

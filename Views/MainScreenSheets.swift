@@ -69,10 +69,14 @@ private struct MainScreenSheetsModifier: ViewModifier {
 
     // MARK: - Helpers
 
+    private static let weekdayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE"
+        return f
+    }()
+
     private static func currentWeekdayName() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE"
-        return formatter.string(from: Date())
+        self.weekdayFormatter.string(from: Date())
     }
 
     private static func averageScore(meals: [Meal]) -> Double? {

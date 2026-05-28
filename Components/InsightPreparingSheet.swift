@@ -60,7 +60,7 @@ struct InsightPreparingSheet: View {
                 .multilineTextAlignment(.center)
             Text(Strings.Insight.Preparing.preparingSubtitle)
                 .font(FontTheme.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
     }
@@ -68,23 +68,23 @@ struct InsightPreparingSheet: View {
     private var refreshPromptState: some View {
         VStack(spacing: AppTheme.Spacing.medium) {
             Image(systemName: "sparkles")
-                .font(.system(size: 40))
-                .foregroundColor(.secondary)
+                .font(FontTheme.preparingIcon)
+                .foregroundStyle(.secondary)
                 .padding(.bottom, AppTheme.Spacing.small)
             Text(Strings.Insight.Preparing.noInsightTitle)
                 .font(FontTheme.sectionHeader)
                 .multilineTextAlignment(.center)
             Text(Strings.Insight.Preparing.noInsightBody)
                 .font(FontTheme.body)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Button(action: self.contract.onRefresh) {
                 Text(Strings.Insight.Preparing.refreshButton)
                     .font(FontTheme.body.weight(.semibold))
                     .padding(.horizontal, AppTheme.Spacing.large)
                     .padding(.vertical, AppTheme.Spacing.small)
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
+                    .background(AppTheme.Briefing.refreshButtonBackground)
+                    .foregroundStyle(.white)
                     .cornerRadius(AppTheme.CornerRadius.medium)
             }
             .padding(.top, AppTheme.Spacing.small)
@@ -95,14 +95,14 @@ struct InsightPreparingSheet: View {
         HStack(spacing: AppTheme.Spacing.small) {
             Text(Strings.Insight.Preparing.todaySoFarLabel)
                 .font(FontTheme.caption)
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             Text(String(
                 format: Strings.Insight.Preparing.statsSummaryFmt,
                 mealCount,
                 Int(avg * 100)
             ))
             .font(FontTheme.caption.weight(.medium))
-            .foregroundColor(.primary)
+            .foregroundStyle(.primary)
         }
         .padding(.horizontal, AppTheme.Spacing.medium)
         .padding(.vertical, AppTheme.Spacing.small)

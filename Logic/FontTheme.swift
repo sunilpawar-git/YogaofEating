@@ -49,6 +49,14 @@ enum FontTheme {
     /// Size: 11pt, Semibold weight
     static let iconSmall = Font.system(size: 11, weight: .semibold, design: .rounded)
 
+    /// For the mood/wellbeing emoji in BriefingDetailView+Sections hero row
+    /// Size: 44pt — large enough to read as an expressive emoji
+    static let moodEmoji = Font.system(size: 44)
+
+    /// For decorative icons in InsightPreparingSheet (sparkle, etc.)
+    /// Size: 40pt — prominent but not overwhelming in an empty-state layout
+    static let preparingIcon = Font.system(size: 40)
+
     // MARK: - Semantic Convenience Methods
 
     /// Returns the appropriate text entry font for a given context

@@ -41,7 +41,6 @@ enum Strings {
             static let gratitude = "Grateful for"
             static let thinking = "Thinking about"
             static let accomplished = "Accomplished"
-            static let gratefulFor = "Grateful for"
             static let letGo = "Let go of"
         }
 

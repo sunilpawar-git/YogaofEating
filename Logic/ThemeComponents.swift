@@ -193,6 +193,8 @@ extension AppTheme {
     enum Briefing {
         static let sunAccent: Color = .orange
         static let nudgeAccent: Color = .yellow
+        /// Background for the primary refresh/generate action button in InsightPreparingSheet.
+        static let refreshButtonBackground: Color = .accentColor
     }
 
     // MARK: - Cloud Sync / Restore Status Backgrounds

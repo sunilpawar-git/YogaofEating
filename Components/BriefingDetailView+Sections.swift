@@ -11,7 +11,7 @@ extension BriefingDetailView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 14) {
                     Text(breakdown.currentMood.emoji)
-                        .font(.system(size: 44))
+                        .font(FontTheme.moodEmoji)
                         .accessibilityLabel(
                             String(
                                 format: Strings.WellbeingBreakdown.heroEmojiAccessibilityFmt,
