@@ -10,7 +10,6 @@ final class SynthesisInputBuilder {
     private(set) var highlightData: HighlightData?
     private(set) var reflectData: ReflectData?
     private(set) var appleSleepData: SleepData?
-    private(set) var yesterday: DailySmileySnapshot?
     private(set) var activeCaloriesBurned: Double?
 
     @discardableResult
@@ -68,12 +67,6 @@ final class SynthesisInputBuilder {
     }
 
     @discardableResult
-    func withYesterday(_ snapshot: DailySmileySnapshot) -> Self {
-        self.yesterday = snapshot
-        return self
-    }
-
-    @discardableResult
     func withActiveCalories(_ kcal: Double) -> Self {
         self.activeCaloriesBurned = kcal
         return self
@@ -86,7 +79,6 @@ final class SynthesisInputBuilder {
             highlightData: self.highlightData,
             reflectData: self.reflectData,
             appleSleepData: self.appleSleepData,
-            yesterday: self.yesterday,
             activeCaloriesBurned: self.activeCaloriesBurned
         )
     }

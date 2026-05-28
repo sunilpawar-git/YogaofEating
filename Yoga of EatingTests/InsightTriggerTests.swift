@@ -270,28 +270,35 @@ final class InsightTriggerTests: XCTestCase {
     // MARK: - Staleness detection
 
     func test_isBriefingLikelyStale_whenInsightOlderThan3HoursAndHasAIMeals_returnsTrue() {
+        // Insight generated 4 hours ago; both meals timestamped AFTER it → stale
         let staleDate = Date().addingTimeInterval(-4 * 3600)
+        let mealTime = staleDate.addingTimeInterval(30 * 60) // 30 min after generation
         self.sut.currentInsight = self.makeInsight(date: staleDate)
         self.sut.meals = [
-            MealBuilder().withScore(0.8).analyzed().build(),
-            MealBuilder().withScore(0.7).analyzed().build()
+            MealBuilder().withScore(0.8).analyzed().withTimestamp(mealTime).build(),
+            MealBuilder().withScore(0.7).analyzed().withTimestamp(mealTime).build()
         ]
         XCTAssertTrue(self.sut.isBriefingLikelyStale)
     }
 
     func test_isBriefingLikelyStale_whenInsightFresh_returnsFalse() {
-        self.sut.currentInsight = self.makeInsight(date: Date())
+        // Insight generated just now; meals timestamped before it → not stale
+        let now = Date()
+        let mealTime = now.addingTimeInterval(-60) // logged 1 minute before generation
+        self.sut.currentInsight = self.makeInsight(date: now)
         self.sut.meals = [
-            MealBuilder().withScore(0.8).analyzed().build(),
-            MealBuilder().withScore(0.7).analyzed().build()
+            MealBuilder().withScore(0.8).analyzed().withTimestamp(mealTime).build(),
+            MealBuilder().withScore(0.7).analyzed().withTimestamp(mealTime).build()
         ]
         XCTAssertFalse(self.sut.isBriefingLikelyStale)
     }
 
     func test_isBriefingLikelyStale_whenFewerThan2AIMeals_returnsFalse() {
+        // Only 1 AI meal after generation — threshold requires 2
         let staleDate = Date().addingTimeInterval(-4 * 3600)
+        let mealTime = staleDate.addingTimeInterval(30 * 60)
         self.sut.currentInsight = self.makeInsight(date: staleDate)
-        self.sut.meals = [MealBuilder().withScore(0.8).analyzed().build()]
+        self.sut.meals = [MealBuilder().withScore(0.8).analyzed().withTimestamp(mealTime).build()]
         XCTAssertFalse(self.sut.isBriefingLikelyStale)
     }
 
@@ -328,6 +335,139 @@ final class InsightTriggerTests: XCTestCase {
             textSignals: [],
             confidence: 0.8
         )
+    }
+
+    // MARK: - dismissInsight viewed-state persistence (Phase 1 Bug Fix TDD)
+
+    func test_dismissInsight_marksInsightViewedBeforeSave() {
+        // Arrange: give the VM a fresh, unviewed insight
+        let insight = DailyInsight(
+            date: Date(),
+            headline: "Test",
+            dimensions: .neutral,
+            dominantInsight: "Test",
+            correlationCards: [],
+            nudge: ActionableNudge(suggestion: "S", reasoning: "R"),
+            causalExplanation: "",
+            textSignals: [],
+            confidence: 0.8
+        )
+        self.sut.currentInsight = insight
+        self.sut.showInsightSheet = true
+
+        // Act
+        self.sut.dismissInsight()
+
+        // Assert: insight must be marked viewed (not still false after save)
+        XCTAssertEqual(
+            self.sut.currentInsight?.isViewed,
+            true,
+            "dismissInsight must mark insight as viewed"
+        )
+        // Assert: saveData is called after markAsViewed (persistence sees viewed=true).
+        // We verify indirectly: mockPersistence.saveCallCount reflects save happened after viewed.
+        XCTAssertGreaterThan(
+            self.mockPersistence.saveCallCount,
+            0,
+            "dismissInsight must call saveData to persist the viewed state"
+        )
+    }
+
+    func test_dismissInsight_saveCalledWithViewedInsight() {
+        // Arrange
+        let insight = DailyInsight(
+            date: Date(),
+            headline: "Test",
+            dimensions: .neutral,
+            dominantInsight: "Test",
+            correlationCards: [],
+            nudge: ActionableNudge(suggestion: "S", reasoning: "R"),
+            causalExplanation: "",
+            textSignals: [],
+            confidence: 0.8
+        )
+        self.sut.currentInsight = insight
+
+        // Capture what insight state is visible at save time
+        var capturedViewedAtSave: Bool?
+        self.mockPersistence.onSave = { [weak self] in
+            capturedViewedAtSave = self?.sut.currentInsight?.isViewed
+        }
+
+        // Act
+        self.sut.dismissInsight()
+
+        // Assert: when save is called, currentInsight must already be marked viewed
+        XCTAssertEqual(
+            capturedViewedAtSave,
+            true,
+            "saveData must be called AFTER markAsViewed so the persisted insight has isViewed = true"
+        )
+    }
+
+    // MARK: - isBriefingLikelyStale logic (Phase 1 Bug Fix TDD)
+
+    func test_isBriefingLikelyStale_mealsLoggedBeforeGeneration_isFalse() {
+        // Arrange: insight generated 4 hours ago, 2 AI meals timestamped BEFORE generation.
+        // Current (buggy) logic would return true (age > 3h AND aiCount >= 2).
+        // Fixed logic returns false: no new meals arrived after generation.
+        let generatedAt = Date().addingTimeInterval(-4 * 3600)
+        let insight = DailyInsight(
+            date: generatedAt,
+            headline: "Test",
+            dimensions: .neutral,
+            dominantInsight: "",
+            correlationCards: [],
+            nudge: ActionableNudge(suggestion: "S", reasoning: "R"),
+            causalExplanation: "",
+            textSignals: [],
+            confidence: 0.8
+        )
+        self.sut.currentInsight = insight
+        // Meals timestamped 30 min BEFORE the insight was generated
+        let mealTime = generatedAt.addingTimeInterval(-30 * 60)
+        let meal1 = MealBuilder().withScore(0.7).analyzed().withTimestamp(mealTime).build()
+        let meal2 = MealBuilder().withScore(0.6).analyzed().withTimestamp(mealTime).build()
+        self.sut.meals = [meal1, meal2]
+
+        // Assert: meals were present BEFORE generation — briefing is not stale
+        XCTAssertFalse(
+            self.sut.isBriefingLikelyStale,
+            "Briefing is NOT stale when all AI meals predate the generation timestamp"
+        )
+    }
+
+    func test_isBriefingLikelyStale_mealsAddedAfterGeneration_isTrue() {
+        // Arrange: insight generated 4 hours ago, 2 AI-analyzed meals added AFTER it
+        let generatedAt = Date().addingTimeInterval(-4 * 3600)
+        let insight = DailyInsight(
+            date: generatedAt,
+            headline: "Test",
+            dimensions: .neutral,
+            dominantInsight: "",
+            correlationCards: [],
+            nudge: ActionableNudge(suggestion: "S", reasoning: "R"),
+            causalExplanation: "",
+            textSignals: [],
+            confidence: 0.8
+        )
+        self.sut.currentInsight = insight
+        // Meals added AFTER the insight was generated
+        let mealTime = generatedAt.addingTimeInterval(30 * 60) // 30 min after generation
+        let meal1 = MealBuilder().withScore(0.7).analyzed().withTimestamp(mealTime).build()
+        let meal2 = MealBuilder().withScore(0.6).analyzed().withTimestamp(mealTime).build()
+        self.sut.meals = [meal1, meal2]
+
+        // Assert: meals arrived after generation — briefing is stale
+        XCTAssertTrue(
+            self.sut.isBriefingLikelyStale,
+            "Briefing IS stale when ≥2 AI meals have timestamps after the generation date"
+        )
+    }
+
+    func test_isBriefingLikelyStale_noInsight_isFalse() {
+        self.sut.currentInsight = nil
+        XCTAssertFalse(self.sut.isBriefingLikelyStale)
     }
 
     private func setupHistoricalDataForInsight() {

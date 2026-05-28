@@ -99,7 +99,6 @@ extension MainViewModel {
                 highlightData: snapshot?.highlightData,
                 reflectData: snapshot?.reflectData,
                 appleSleepData: self.appleSleepData,
-                yesterday: nil,
                 activeCaloriesBurned: self.todayActiveCalories
             )
 

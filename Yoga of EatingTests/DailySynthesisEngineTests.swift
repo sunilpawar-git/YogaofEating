@@ -16,8 +16,7 @@
                 meals: meals,
                 highlightData: nil,
                 reflectData: nil,
-                appleSleepData: nil,
-                yesterday: nil
+                appleSleepData: nil
             )
             // physicalLoad reflects the meal average; other dimensions default to neutral (0.5)
             XCTAssertEqual(synthesis.dimensions.physicalLoad, 0.7, accuracy: 0.01)
@@ -29,7 +28,7 @@
             let meals = [MealBuilder().withScore(0.9).analyzed().build()]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertEqual(synthesis.smileySuggestion.mood, .serene)
         }
@@ -38,7 +37,7 @@
             let meals = [MealBuilder().withScore(0.2).analyzed().build()]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertEqual(synthesis.smileySuggestion.mood, .overwhelmed)
         }
@@ -47,7 +46,7 @@
             let meals = [MealBuilder().withScore(0.55).analyzed().build()]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertEqual(synthesis.smileySuggestion.mood, .neutral)
         }
@@ -63,11 +62,11 @@
 
             let withSleep = self.sut.synthesize(
                 meals: meals, highlightData: highlight, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             let withoutSleep = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
 
             XCTAssertLessThan(withSleep.dimensions.overall, withoutSleep.dimensions.overall)
@@ -80,11 +79,11 @@
 
             let withSleep = self.sut.synthesize(
                 meals: meals, highlightData: highlight, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             let withoutSleep = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
 
             XCTAssertGreaterThan(withSleep.dimensions.overall, withoutSleep.dimensions.overall)
@@ -96,7 +95,7 @@
             let reflect = ReflectData(feeling: .great)
             let synthesis = self.sut.synthesize(
                 meals: [], highlightData: nil, reflectData: reflect,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertGreaterThan(synthesis.dimensions.emotionalTone, 0.5)
         }
@@ -105,7 +104,7 @@
             let reflect = ReflectData(feeling: .heavy)
             let synthesis = self.sut.synthesize(
                 meals: [], highlightData: nil, reflectData: reflect,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertLessThan(synthesis.dimensions.emotionalTone, 0.5)
         }
@@ -115,7 +114,7 @@
         func test_noData_overall_isNeutral() {
             let synthesis = self.sut.synthesize(
                 meals: [], highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertEqual(synthesis.dimensions.overall, 0.5, accuracy: 0.01)
         }
@@ -124,7 +123,7 @@
             let meals = [MealBuilder().withScore(1.5).analyzed().build()]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertGreaterThanOrEqual(synthesis.dimensions.physicalLoad, 0.0)
             XCTAssertLessThanOrEqual(synthesis.dimensions.physicalLoad, 1.0)
@@ -136,7 +135,7 @@
             let meals = [MealBuilder().withScore(0.9).analyzed().build()]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertEqual(synthesis.dominantDimension, .physicalLoad)
         }
@@ -148,7 +147,7 @@
 
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: highlight, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             // With great sleep and neutral meals, cognitive should be the standout dimension
             XCTAssertNotNil(synthesis.dominantDimension)
@@ -160,7 +159,7 @@
             let meals = [MealBuilder().withScore(0.7).analyzed().build()]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertFalse(synthesis.causalNarrative.isEmpty)
         }
@@ -171,7 +170,7 @@
             let meals = [MealBuilder().withScore(0.4).analyzed().build()]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             // 0.4 is between thoughtful (0.35) and neutral (0.45) thresholds
             XCTAssertEqual(synthesis.smileySuggestion.mood, .thoughtful)
@@ -189,7 +188,7 @@
 
             let synthesis = self.sut.synthesize(
                 meals: [], highlightData: highlight, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertGreaterThan(synthesis.dimensions.behavioralMomentum, 0.5)
         }
@@ -202,7 +201,7 @@
 
             let synthesis = self.sut.synthesize(
                 meals: [], highlightData: highlight, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertLessThan(synthesis.dimensions.behavioralMomentum, 0.5)
         }
@@ -264,11 +263,11 @@
             let meals = [MealBuilder().withScore(0.5).analyzed().build()]
             let withNil = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+                appleSleepData: nil, activeCaloriesBurned: nil
             )
             let withoutParam = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil
+                appleSleepData: nil
             )
             XCTAssertEqual(withNil.dimensions.physicalLoad, withoutParam.dimensions.physicalLoad, accuracy: 0.001)
         }
@@ -277,11 +276,11 @@
             let meals = [MealBuilder().withScore(0.5).analyzed().build()]
             let base = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+                appleSleepData: nil, activeCaloriesBurned: nil
             )
             let with100 = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 100
+                appleSleepData: nil, activeCaloriesBurned: 100
             )
             XCTAssertEqual(
                 with100.dimensions.physicalLoad,
@@ -295,11 +294,11 @@
             let meals = [MealBuilder().withScore(0.5).analyzed().build()]
             let base = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+                appleSleepData: nil, activeCaloriesBurned: nil
             )
             let with150 = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 150
+                appleSleepData: nil, activeCaloriesBurned: 150
             )
             XCTAssertEqual(
                 with150.dimensions.physicalLoad - base.dimensions.physicalLoad,
@@ -312,11 +311,11 @@
             let meals = [MealBuilder().withScore(0.5).analyzed().build()]
             let base = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+                appleSleepData: nil, activeCaloriesBurned: nil
             )
             let with300 = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 300
+                appleSleepData: nil, activeCaloriesBurned: 300
             )
             XCTAssertEqual(
                 with300.dimensions.physicalLoad - base.dimensions.physicalLoad,
@@ -329,11 +328,11 @@
             let meals = [MealBuilder().withScore(0.5).analyzed().build()]
             let base = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+                appleSleepData: nil, activeCaloriesBurned: nil
             )
             let with500 = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 500
+                appleSleepData: nil, activeCaloriesBurned: 500
             )
             XCTAssertEqual(
                 with500.dimensions.physicalLoad - base.dimensions.physicalLoad,
@@ -346,11 +345,11 @@
             let meals = [MealBuilder().withScore(0.5).analyzed().build()]
             let with500 = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 500
+                appleSleepData: nil, activeCaloriesBurned: 500
             )
             let with1000 = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 1000
+                appleSleepData: nil, activeCaloriesBurned: 1000
             )
             XCTAssertEqual(
                 with1000.dimensions.physicalLoad, with500.dimensions.physicalLoad, accuracy: 0.001,
@@ -361,7 +360,7 @@
         func test_physicalLoad_noMeals_noExercise_returnsStubScore() {
             let synthesis = self.sut.synthesize(
                 meals: [], highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+                appleSleepData: nil, activeCaloriesBurned: nil
             )
             XCTAssertEqual(
                 synthesis.dimensions.physicalLoad,
@@ -378,7 +377,7 @@
             ]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: nil
+                appleSleepData: nil, activeCaloriesBurned: nil
             )
             XCTAssertEqual(
                 synthesis.dimensions.physicalLoad,
@@ -392,7 +391,7 @@
             let meals = [MealBuilder().withScore(0.6).analyzed().build()]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 350
+                appleSleepData: nil, activeCaloriesBurned: 350
             )
             XCTAssertEqual(
                 synthesis.dimensions.physicalLoad,
@@ -406,7 +405,7 @@
             let meals = [MealBuilder().withScore(0.95).analyzed().build()]
             let synthesis = self.sut.synthesize(
                 meals: meals, highlightData: nil, reflectData: nil,
-                appleSleepData: nil, yesterday: nil, activeCaloriesBurned: 600
+                appleSleepData: nil, activeCaloriesBurned: 600
             )
             XCTAssertLessThanOrEqual(
                 synthesis.dimensions.physicalLoad,

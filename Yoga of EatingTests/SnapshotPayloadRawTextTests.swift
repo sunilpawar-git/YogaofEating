@@ -62,8 +62,7 @@
                 meals: [],
                 highlightData: highlight,
                 reflectData: nil,
-                appleSleepData: nil,
-                yesterday: nil
+                appleSleepData: nil
             )
             XCTAssert(synthesis.textSignals.contains(.stressed), "Local synthesis must preserve keyword signals")
             XCTAssert(synthesis.textSignals.contains(.grateful), "Local synthesis must preserve keyword signals")

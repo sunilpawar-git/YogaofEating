@@ -7,7 +7,10 @@ import Foundation
 class MockPersistenceService: PersistenceServiceProtocol {
     var savedData: PersistenceService.AppData?
     var saveCalled = false
+    var saveCallCount = 0
     var deleteAllCalled = false
+    /// Called synchronously inside save() — lets tests inspect ViewModel state at save time.
+    var onSave: (() -> Void)?
 
     /// Stub the return value of `load()`. nil by default (simulates fresh install / missing file).
     var stubbedLoadData: PersistenceService.AppData?
@@ -24,6 +27,8 @@ class MockPersistenceService: PersistenceServiceProtocol {
         nudgeHistory: [NudgeHistoryEntry]
     ) {
         self.saveCalled = true
+        self.saveCallCount += 1
+        self.onSave?()
         self.savedData = PersistenceService.AppData(
             meals: meals,
             smileyState: smileyState,
@@ -158,7 +163,6 @@ final class MockDailySynthesisEngine: DailySynthesizing {
         highlightData _: HighlightData?,
         reflectData _: ReflectData?,
         appleSleepData _: SleepData?,
-        yesterday _: DailySmileySnapshot?,
         activeCaloriesBurned _: Double?
     ) -> DailySynthesis {
         self.synthesizeCalled = true

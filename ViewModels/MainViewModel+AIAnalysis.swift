@@ -189,7 +189,6 @@ extension MainViewModel {
             highlightData: snapshot?.highlightData,
             reflectData: snapshot?.reflectData,
             appleSleepData: self.appleSleepData,
-            yesterday: nil,
             activeCaloriesBurned: self.todayActiveCalories
         )
         withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {

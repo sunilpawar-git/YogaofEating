@@ -26,7 +26,9 @@ extension MainViewModel {
     // MARK: - Insight Actions
 
     func dismissInsight() {
-        if let insight = self.currentInsight {
+        if var insight = self.currentInsight {
+            insight.markAsViewed()
+            self.currentInsight = insight
             let entry = NudgeHistoryEntry(date: Date(), suggestion: insight.nudge.suggestion)
             self.nudgeHistory.append(entry)
             if self.nudgeHistory.count > ValidationLimits.nudgeHistoryMaxEntries {
@@ -35,10 +37,6 @@ extension MainViewModel {
             self.saveData()
         }
         self.showInsightSheet = false
-        if var insight = self.currentInsight {
-            insight.markAsViewed()
-            self.currentInsight = insight
-        }
     }
 
     func markNudgeFollowedThrough(id: UUID) {
@@ -76,13 +74,14 @@ extension MainViewModel {
         self.showBriefingSheet = true
     }
 
-    /// True when today's briefing was generated before the user had meaningful AI-analyzed
-    /// meal data — signals that a refresh would produce more personalized content.
+    /// True when ≥2 AI-analyzed meals arrived AFTER the briefing was generated —
+    /// signals the content is out-of-date and a refresh would produce better results.
     var isBriefingLikelyStale: Bool {
         guard let insight = self.currentInsight else { return false }
-        let ageHours = Date().timeIntervalSince(insight.date) / 3600
-        let aiAnalyzedCount = self.meals.filter(\.isAIAnalyzed).count
-        return ageHours > 3 && aiAnalyzedCount >= 2
+        let newAIAnalyzedCount = self.meals.count(where: {
+            $0.isAIAnalyzed && $0.timestamp > insight.date
+        })
+        return newAIAnalyzedCount >= 2
     }
 
     // MARK: - Briefing Actions

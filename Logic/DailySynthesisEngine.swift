@@ -8,30 +8,8 @@ protocol DailySynthesizing {
         highlightData: HighlightData?,
         reflectData: ReflectData?,
         appleSleepData: SleepData?,
-        yesterday: DailySmileySnapshot?,
         activeCaloriesBurned: Double?
     ) -> DailySynthesis
-}
-
-// MARK: - Backward-compat shim (omits activeCaloriesBurned → nil)
-
-extension DailySynthesizing {
-    func synthesize(
-        meals: [Meal],
-        highlightData: HighlightData?,
-        reflectData: ReflectData?,
-        appleSleepData: SleepData?,
-        yesterday: DailySmileySnapshot?
-    ) -> DailySynthesis {
-        self.synthesize(
-            meals: meals,
-            highlightData: highlightData,
-            reflectData: reflectData,
-            appleSleepData: appleSleepData,
-            yesterday: yesterday,
-            activeCaloriesBurned: nil
-        )
-    }
 }
 
 // MARK: - Implementation
@@ -42,7 +20,6 @@ final class DailySynthesisEngine: DailySynthesizing {
         highlightData: HighlightData?,
         reflectData: ReflectData?,
         appleSleepData: SleepData?,
-        yesterday _: DailySmileySnapshot?,
         activeCaloriesBurned: Double? = nil
     ) -> DailySynthesis {
         let physical = self.computePhysicalLoad(from: meals, activeCaloriesBurned: activeCaloriesBurned)
