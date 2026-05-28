@@ -93,7 +93,7 @@ class PersistenceService: PersistenceServiceProtocol {
                 let encoded = try JSONEncoder().encode(data)
                 try await self.writer.write(encoded, to: url)
             } catch {
-                logger.error("PersistenceService: save failed — \(error.localizedDescription, privacy: .public)")
+                logger.error("PersistenceService: save failed — \(error.localizedDescription, privacy: .private)")
             }
         }
     }
@@ -123,7 +123,7 @@ class PersistenceService: PersistenceServiceProtocol {
                 // Both the current and legacy format failed — data is unreadable.
                 // Log at fault level so this appears in Crashlytics if Firebase is configured.
                 logger.fault(
-                    "PersistenceService: all decode attempts failed — primary: \(primaryError.localizedDescription, privacy: .public), migration: \(migrationError.localizedDescription, privacy: .public)"
+                    "PersistenceService: all decode attempts failed — primary: \(primaryError.localizedDescription, privacy: .private), migration: \(migrationError.localizedDescription, privacy: .private)"
                 )
                 return nil
             }
@@ -144,7 +144,7 @@ class PersistenceService: PersistenceServiceProtocol {
         do {
             try FileManager.default.removeItem(at: url)
         } catch {
-            logger.error("PersistenceService: deleteAll failed — \(error.localizedDescription, privacy: .public)")
+            logger.error("PersistenceService: deleteAll failed — \(error.localizedDescription, privacy: .private)")
         }
     }
 }

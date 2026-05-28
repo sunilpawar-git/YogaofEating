@@ -261,7 +261,7 @@ exports.analyzeMeal = onCall({ secrets: [geminiApiKey], enforceAppCheck: true },
         };
 
     } catch (error) {
-        console.error("AI Analysis Error:", error);
+        console.error("AI Analysis Error:", { message: error.message, code: error.code ?? "unknown" });
         // Return neutral fallback
         return {
             healthScore: 0.5,
@@ -350,7 +350,7 @@ Example Response:
         };
 
     } catch (error) {
-        console.error("Meal Insight Error:", error);
+        console.error("Meal Insight Error:", { message: error.message, code: error.code ?? "unknown" });
         // Return helpful fallback
         return {
             summary: "This meal contributes to your daily nutrition. Keep tracking to see patterns!",
@@ -543,7 +543,7 @@ Example Response:
         };
 
     } catch (error) {
-        console.error("Insight Generation Error:", error);
+        console.error("Insight Generation Error:", { message: error.message, code: error.code ?? "unknown" });
         // Return encouraging fallback
         return {
             insightText: "Keep logging your meals and sleep to discover patterns in your wellbeing. Every day of data helps build a clearer picture!",
@@ -692,7 +692,7 @@ ${dataSummary}
         return briefing;
 
     } catch (error) {
-        console.error("Daily Briefing Generation Error:", error);
+        console.error("Daily Briefing Generation Error:", { message: error.message, code: error.code ?? "unknown" });
         await BriefingPerformanceMetrics.logGenerationError(
             userId,
             error.message,
@@ -737,7 +737,7 @@ exports.getBriefingMetrics = onCall(async (request) => {
             ...metrics,
         };
     } catch (error) {
-        console.error('Error fetching briefing metrics:', error);
+        console.error('Error fetching briefing metrics:', { message: error.message, code: error.code ?? "unknown" });
         throw new HttpsError('internal', 'Failed to fetch metrics: ' + error.message);
     }
 });

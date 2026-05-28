@@ -59,7 +59,7 @@ class CloudSyncService: CloudSyncServiceProtocol {
         } catch {
             syncLogger
                 .error(
-                    "Upload failed for \(dateString, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                    "Upload failed for \(dateString, privacy: .public): \(error.localizedDescription, privacy: .private)"
                 )
             throw error
         }
@@ -90,7 +90,7 @@ class CloudSyncService: CloudSyncServiceProtocol {
                 try await batch.commit()
                 syncLogger.debug("Batch \(index + 1) committed successfully with \(chunk.count) snapshots")
             } catch {
-                syncLogger.error("Batch \(index + 1) commit failed: \(error.localizedDescription, privacy: .public)")
+                syncLogger.error("Batch \(index + 1) commit failed: \(error.localizedDescription, privacy: .private)")
                 throw error
             }
         }

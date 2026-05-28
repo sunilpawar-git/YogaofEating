@@ -186,7 +186,7 @@ extension MainViewModel {
                 }
             } catch {
                 highlightLogger
-                    .info("Sleep data unavailable for Highlight: \(error.localizedDescription, privacy: .public)")
+                    .info("Sleep data unavailable for Highlight: \(error.localizedDescription, privacy: .private)")
             }
         }
     }

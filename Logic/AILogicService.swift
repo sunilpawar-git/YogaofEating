@@ -78,7 +78,7 @@ class AILogicService: AIAnalysisProvider {
         let parsed = Self.parseAnalysisResponse(data)
         aiServiceLogger
             .debug(
-                "Parsed response — score: \(parsed.score, privacy: .public), mood: \(parsed.mood.rawValue, privacy: .public)"
+                "Parsed response — score: \(parsed.score, privacy: .private), mood: \(parsed.mood.rawValue, privacy: .private)"
             )
         return parsed
     }
@@ -148,7 +148,7 @@ class AILogicService: AIAnalysisProvider {
         guard value > maxValue else { return value }
         aiServiceLogger
             .warning(
-                "Macro '\(name, privacy: .public)' value \(value, privacy: .public) exceeds cap \(maxValue, privacy: .public) — clamping"
+                "Macro '\(name, privacy: .private)' value \(value, privacy: .private) exceeds cap \(maxValue, privacy: .private) — clamping"
             )
         return maxValue
     }
@@ -217,7 +217,7 @@ extension AILogicService: MealInsightProvider {
         let tip = data["tip"] as? String
         let category = data["category"] as? String ?? "moderate"
 
-        aiServiceLogger.debug("Received detailed insight — category: \(category, privacy: .public)")
+        aiServiceLogger.debug("Received detailed insight — category: \(category, privacy: .private)")
 
         return DetailedMealInsight(
             summary: summary,

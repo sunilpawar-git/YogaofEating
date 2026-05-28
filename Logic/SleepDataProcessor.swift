@@ -154,7 +154,7 @@ enum SleepDataProcessor {
         let sessions = self.identifySleepSessions(from: samples)
 
         if enableLogging {
-            sleepLogger.debug("Found \(sessions.count, privacy: .public) sleep session(s)")
+            sleepLogger.debug("Found \(sessions.count, privacy: .private) sleep session(s)")
         }
 
         // Use the most recent (last) session
@@ -166,12 +166,12 @@ enum SleepDataProcessor {
         }
 
         if enableLogging {
-            sleepLogger.debug("Using most recent session with \(lastSession.count, privacy: .public) samples")
+            sleepLogger.debug("Using most recent session with \(lastSession.count, privacy: .private) samples")
             for sample in lastSession {
                 let durationMinutes = Int(sample.duration / 60)
                 sleepLogger
                     .debug(
-                        "Sample stage: \(sample.sleepStage, privacy: .public), duration: \(durationMinutes, privacy: .public)m"
+                        "Sample stage: \(sample.sleepStage, privacy: .private), duration: \(durationMinutes, privacy: .private)m"
                     )
             }
         }
@@ -182,8 +182,8 @@ enum SleepDataProcessor {
         if enableLogging {
             let asleepHours = asleepDuration / 3600.0
             let inBedHours = inBedDuration / 3600.0
-            sleepLogger.debug("Session ASLEEP: \(String(format: "%.1f", asleepHours), privacy: .public)h")
-            sleepLogger.debug("Session IN-BED: \(String(format: "%.1f", inBedHours), privacy: .public)h")
+            sleepLogger.debug("Session ASLEEP: \(String(format: "%.1f", asleepHours), privacy: .private)h")
+            sleepLogger.debug("Session IN-BED: \(String(format: "%.1f", inBedHours), privacy: .private)h")
         }
 
         // Require actual sleep time
@@ -198,7 +198,7 @@ enum SleepDataProcessor {
         let score = self.calculateSleepScore(sleepDuration: asleepDuration, timeInBed: inBedDuration)
 
         if enableLogging {
-            sleepLogger.debug("Calculated sleep score: \(score ?? 0, privacy: .public)")
+            sleepLogger.debug("Calculated sleep score: \(score ?? 0, privacy: .private)")
         }
 
         return SleepData(

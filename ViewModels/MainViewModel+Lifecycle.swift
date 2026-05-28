@@ -91,12 +91,12 @@ extension MainViewModel {
                     self.appleSleepData = sleepData
                     lifecycleLogger
                         .info(
-                            "Loaded Apple sleep data for badge: \(sleepData.formattedDuration, privacy: .public)"
+                            "Loaded Apple sleep data for badge: \(sleepData.formattedDuration, privacy: .private)"
                         )
                 }
             } catch {
                 // Non-critical: badge simply won't show Apple metrics. Log at .info for debuggability.
-                lifecycleLogger.info("Sleep badge fetch unavailable: \(error.localizedDescription, privacy: .public)")
+                lifecycleLogger.info("Sleep badge fetch unavailable: \(error.localizedDescription, privacy: .private)")
             }
         }
     }
@@ -158,7 +158,7 @@ extension MainViewModel {
                 _ = try await HealthKitService.shared.requestAuthorization()
                 await self.loadTodayActivityData()
             } catch {
-                lifecycleLogger.info("Activity auth unavailable: \(error.localizedDescription, privacy: .public)")
+                lifecycleLogger.info("Activity auth unavailable: \(error.localizedDescription, privacy: .private)")
             }
         }
 

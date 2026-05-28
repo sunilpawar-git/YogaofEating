@@ -182,7 +182,7 @@ final class InsightLifecycleService: InsightLifecycling {
                 confidence: cards.first?.confidence ?? 0.5
             )
         } catch {
-            lifecycleLogger.error("Briefing server call failed: \(error.localizedDescription, privacy: .public)")
+            lifecycleLogger.error("Briefing server call failed: \(error.localizedDescription, privacy: .private)")
             return nil
         }
     }

@@ -46,7 +46,7 @@ extension HealthKitService: ActivityDataProvider {
                 options: .cumulativeSum
             ) { _, result, error in
                 if let error {
-                    activityLogger.info("Energy query failed: \(error.localizedDescription, privacy: .public)")
+                    activityLogger.info("Energy query failed: \(error.localizedDescription, privacy: .private)")
                     continuation.resume(returning: nil)
                     return
                 }

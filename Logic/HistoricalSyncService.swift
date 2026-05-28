@@ -132,7 +132,7 @@ final class HistoricalSyncService {
                 lastError = error
                 if attempt < TimingConstants.syncMaxRetryAttempts {
                     syncLogger.warning(
-                        "Attempt \(attempt)/\(TimingConstants.syncMaxRetryAttempts) failed: \(error.localizedDescription, privacy: .public). Retrying."
+                        "Attempt \(attempt)/\(TimingConstants.syncMaxRetryAttempts) failed: \(error.localizedDescription, privacy: .private). Retrying."
                     )
                     try? await Task.sleep(nanoseconds: self.retryDelayNanoseconds)
                 }

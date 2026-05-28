@@ -40,7 +40,7 @@ class NotificationManager {
             if granted {
                 notifLogger.info("Notification permissions granted")
             } else if let error {
-                notifLogger.error("Notification permission error: \(error.localizedDescription, privacy: .public)")
+                notifLogger.error("Notification permission error: \(error.localizedDescription, privacy: .private)")
             }
         }
     }

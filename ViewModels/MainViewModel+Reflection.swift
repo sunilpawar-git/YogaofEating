@@ -72,7 +72,7 @@ extension MainViewModel {
                 }
             } catch {
                 reflectionLogger.error(
-                    "Failed to fetch HealthKit sleep data: \(error.localizedDescription, privacy: .public)"
+                    "Failed to fetch HealthKit sleep data: \(error.localizedDescription, privacy: .private)"
                 )
             }
         }

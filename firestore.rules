@@ -17,6 +17,15 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Analytics collections — written exclusively by Cloud Functions (admin SDK).
+    // No client read or write is ever permitted.
+    match /briefing_metrics/{document=**} {
+      allow read, write: if false;
+    }
+    match /notification_events/{document=**} {
+      allow read, write: if false;
+    }
+
     // Deny all other access by default
     match /{document=**} {
       allow read, write: if false;

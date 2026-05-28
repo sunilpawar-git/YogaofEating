@@ -61,7 +61,7 @@ extension SettingsViewModel {
         let userMessage = (error as? AppError)?.errorDescription
             ?? Strings.Settings.restoreFailedGeneric
         self.restoreStatus = .error(userMessage)
-        restoreLogger.error("Manual cloud restore failed: \(error.localizedDescription, privacy: .public)")
+        restoreLogger.error("Manual cloud restore failed: \(error.localizedDescription, privacy: .private)")
 
         #if canImport(UIKit)
             UINotificationFeedbackGenerator().notificationOccurred(.error)

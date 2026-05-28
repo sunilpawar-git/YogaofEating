@@ -187,7 +187,7 @@ class AuthService: ObservableObject, AuthServiceProtocol {
                 _ = try await self.provider.restorePreviousSignIn()
                 authLogger.info("Previous session restored successfully")
             } catch {
-                authLogger.info("No previous session to restore: \(error.localizedDescription, privacy: .public)")
+                authLogger.info("No previous session to restore: \(error.localizedDescription, privacy: .private)")
             }
         }
     }
@@ -244,7 +244,7 @@ class AuthService: ObservableObject, AuthServiceProtocol {
             try self.provider.signOut()
             self.currentUser = nil
         } catch {
-            authLogger.error("Sign out failed: \(error.localizedDescription, privacy: .public)")
+            authLogger.error("Sign out failed: \(error.localizedDescription, privacy: .private)")
             self.isExplicitlySigningOut = false
         }
     }
