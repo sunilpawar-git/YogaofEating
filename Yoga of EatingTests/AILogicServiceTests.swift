@@ -179,8 +179,10 @@
             XCTAssertEqual(result.estimatedCalories, 600)
         }
 
-        func test_parseAnalysisResponse_macroCaloriesOverrideDirectCalories() {
-            // When macros are present, derived calories take precedence over Firebase's estimatedCalories
+        func test_parseAnalysis_bothPresent_directHigher_usesDirectCalories() {
+            // Phase 4 safeguard: when direct estimate exceeds macro-derived, take the max.
+            // Prevents silent underreporting when Gemini underestimates individual macros.
+            // Old behaviour (macros always win): returned 165. New behaviour: 999.
             let data: [String: Any] = [
                 "healthScore": 0.7,
                 "protein": 10,
@@ -189,8 +191,37 @@
                 "estimatedCalories": 999
             ]
             let result = AILogicService.parseAnalysisResponse(data)
-            // 10*4 + 20*4 + 5*9 = 40 + 80 + 45 = 165
-            XCTAssertEqual(result.estimatedCalories, 165)
+            // 10*4 + 20*4 + 5*9 = 40 + 80 + 45 = 165; max(165, 999) = 999
+            XCTAssertEqual(result.estimatedCalories, 999)
+        }
+
+        func test_parseAnalysis_bothPresent_macrosHigher_usesMacroCalories() {
+            // When macros derive a higher figure than the direct estimate, macros win (max).
+            let data: [String: Any] = [
+                "healthScore": 0.8,
+                "protein": 42,
+                "carbs": 130,
+                "fat": 28,
+                "estimatedCalories": 500
+            ]
+            let result = AILogicService.parseAnalysisResponse(data)
+            // 42*4 + 130*4 + 28*9 = 168 + 520 + 252 = 940; max(940, 500) = 940
+            XCTAssertEqual(result.estimatedCalories, 940)
+        }
+
+        func test_parseAnalysis_macrosPresent_noDirectCalories_usesMacroCalories() {
+            // When no direct estimate is available, macro-derived calories are used.
+            let data: [String: Any] = ["healthScore": 0.7, "protein": 20, "carbs": 80, "fat": 20]
+            let result = AILogicService.parseAnalysisResponse(data)
+            // 20*4 + 80*4 + 20*9 = 80 + 320 + 180 = 580
+            XCTAssertEqual(result.estimatedCalories, 580)
+        }
+
+        func test_parseAnalysis_noMacros_directPresent_usesDirectCalories() {
+            // When macros are absent, the direct calorie estimate is used as-is.
+            let data: [String: Any] = ["healthScore": 0.6, "estimatedCalories": 750]
+            let result = AILogicService.parseAnalysisResponse(data)
+            XCTAssertEqual(result.estimatedCalories, 750)
         }
 
         func test_parseAnalysisResponse_clampsProteinAboveMaximum() {

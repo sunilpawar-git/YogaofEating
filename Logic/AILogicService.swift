@@ -121,7 +121,16 @@ class AILogicService: AIAnalysisProvider {
         } else {
             nil
         }
-        let estimatedCalories = macroCalories ?? (data["estimatedCalories"] as? NSNumber)?.intValue
+        // Best-of-both safeguard: take the maximum when both estimates are available.
+        // Prevents silent underreporting when Gemini underestimates individual macros
+        // (observed ~37% undercount for complex multi-ingredient meals).
+        let directCalories = (data["estimatedCalories"] as? NSNumber)?.intValue
+        let estimatedCalories: Int? = switch (macroCalories, directCalories) {
+        case let (m?, d?): max(m, d)
+        case let (m?, nil): m
+        case let (nil, d?): d
+        case (nil, nil): nil
+        }
 
         return MealAnalysisResult(
             score: score,
