@@ -9,6 +9,7 @@ struct BriefingUserContext: Codable {
     let dietaryGoal: DietaryGoal?
 
     /// Returns `nil` if no health profile exists — briefing still works without personalization.
+    @MainActor
     static func build(
         from profile: UserHealthProfile?,
         authService: (any AuthServiceProtocol)?
