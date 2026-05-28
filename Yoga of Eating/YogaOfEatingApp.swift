@@ -1,3 +1,4 @@
+import FirebaseAppCheck
 import FirebaseCore
 import GoogleSignIn
 import OSLog
@@ -46,6 +47,10 @@ struct YogaOfEatingApp: App {
         // and guarantees Firebase is ready before any @StateObject or service singleton accesses it.
         let isCIForFirebase = ProcessInfo.processInfo.environment["CI"] == "true"
         if !isCIForFirebase, FirebaseApp.app() == nil {
+            // App Check: Device Attestation on real devices, DeviceCheck fallback on simulator.
+            // This is the mobile equivalent of CAPTCHA — only attested app binaries can call
+            // Cloud Functions. Enable enforcement in Firebase Console → App Check → Apps.
+            AppCheck.setAppCheckProviderFactory(YogaAppCheckProviderFactory())
             FirebaseApp.configure()
             appLogger.info("Firebase initialized (App.init)")
         }
@@ -110,7 +115,7 @@ struct YogaOfEatingApp: App {
                 try FileManager.default.removeItem(at: dataFileURL)
                 appLogger.debug("Removed persisted data file for UI test run")
             } catch {
-                appLogger.error("Failed to remove persisted data file: \(error.localizedDescription, privacy: .public)")
+                appLogger.error("Failed to remove persisted data file: \(error.localizedDescription, privacy: .private)")
             }
         }
     }
@@ -124,6 +129,19 @@ struct YogaOfEatingApp: App {
         default:
             nil
         }
+    }
+}
+
+/// App Check provider factory.
+/// Uses App Attest on real devices; falls back to DeviceCheck on simulator/macOS.
+/// Register via `AppCheck.setAppCheckProviderFactory` before `FirebaseApp.configure()`.
+private final class YogaAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
+    func createProvider(with app: FirebaseApp) -> (any AppCheckProvider)? {
+        #if targetEnvironment(simulator)
+            return DeviceCheckProvider(app: app)
+        #else
+            return AppAttestProvider(app: app)
+        #endif
     }
 }
 

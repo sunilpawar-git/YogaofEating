@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		104615A32F08154E001B6807 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 104615A22F08154E001B6807 /* GoogleService-Info.plist */; };
 		10461E3F2F0BDB4E001B6807 /* mindful_quotes.json in Resources */ = {isa = PBXBuildFile; fileRef = 10461E3E2F0BDB4E001B6807 /* mindful_quotes.json */; };
+		6D78BDDB12284AAF96A0F095 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = FCBE5A833BB14C3091F07B9B /* FirebaseAppCheck */; };
 		109B2C5C2F013C0800CFD6AA /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5B2F013C0800CFD6AA /* FirebaseAI */; };
 		109B2C5E2F013C0800CFD6AA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5D2F013C0800CFD6AA /* FirebaseAuth */; };
 		109B2C602F013C0800CFD6AA /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 109B2C5F2F013C0800CFD6AA /* FirebaseCore */; };
@@ -92,6 +93,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6D78BDDB12284AAF96A0F095 /* FirebaseAppCheck in Frameworks */,
 				109B2C5C2F013C0800CFD6AA /* FirebaseAI in Frameworks */,
 				109B2C622F013C0800CFD6AA /* FirebaseFirestore in Frameworks */,
 				109B2C6D2F01420500CFD6AA /* GoogleSignInSwift in Frameworks */,
@@ -763,6 +765,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		FCBE5A833BB14C3091F07B9B /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 109B2C5A2F013C0800CFD6AA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
+		};
 		109B2C5B2F013C0800CFD6AA /* FirebaseAI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 109B2C5A2F013C0800CFD6AA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

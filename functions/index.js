@@ -16,6 +16,7 @@ const {
     HEADLINE_MAX_WORDS,
     BRIEFING_LOOKBACK_DAYS,
 } = require('./briefingHelpers');
+const { checkRateLimit } = require('./rateLimiter');
 
 // Initialize Firebase Admin at module load time (required for firebase-functions/v2).
 if (!admin.apps.length) {
@@ -198,8 +199,12 @@ function requireAdmin(request) {
 /**
  * Analyzes a single meal description and provides a basic insight
  */
-exports.analyzeMeal = onCall({ secrets: [geminiApiKey] }, async (request) => {
-    // 1. Validate Input
+exports.analyzeMeal = onCall({ secrets: [geminiApiKey], enforceAppCheck: true }, async (request) => {
+    // 1. Auth guard + rate limit
+    requireAuth(request);
+    await checkRateLimit(request.auth.uid, 'analyzeMeal');
+
+    // 2. Validate Input
     const description = request.data.description;
     if (!description || typeof description !== 'string') {
         throw new HttpsError('invalid-argument', 'The function must be called with a "description" string.');
@@ -275,8 +280,12 @@ exports.analyzeMeal = onCall({ secrets: [geminiApiKey] }, async (request) => {
  * Gets detailed meal insight on-demand (called when user taps score badge)
  * Provides comprehensive nutritional breakdown and personalized tips
  */
-exports.getMealInsight = onCall({ secrets: [geminiApiKey] }, async (request) => {
-    // 1. Validate Input
+exports.getMealInsight = onCall({ secrets: [geminiApiKey], enforceAppCheck: true }, async (request) => {
+    // 1. Auth guard + rate limit
+    requireAuth(request);
+    await checkRateLimit(request.auth.uid, 'getMealInsight');
+
+    // 2. Validate Input
     const { mealItems, mealType, healthScore } = request.data;
     if (!mealItems || !Array.isArray(mealItems) || mealItems.length === 0) {
         throw new HttpsError('invalid-argument', 'The function must be called with "mealItems" array.');
@@ -356,9 +365,10 @@ Example Response:
  * Generates personalized insights from user's wellbeing data (last 1-3 days)
  * Uses Gemini AI to analyze patterns in meals, sleep, feelings, and mind checks
  */
-exports.generateInsight = onCall({ secrets: [geminiApiKey] }, async (request) => {
+exports.generateInsight = onCall({ secrets: [geminiApiKey], enforceAppCheck: true }, async (request) => {
     // 1. Auth guard — prevents unauthenticated Gemini quota abuse
     requireAuth(request);
+    await checkRateLimit(request.auth.uid, 'generateInsight');
 
     // 2. Kill switch
     if (!await getRemoteConfigBool(RC_KEY_AI_ENABLED, true)) {
@@ -549,8 +559,9 @@ Example Response:
  * an actionable nudge, and an optional weekly trend snippet.
  * Intended to be called once per day after the user logs sleep quality.
  */
-exports.generateDailyBriefing = onCall({ secrets: [geminiApiKey] }, async (request) => {
+exports.generateDailyBriefing = onCall({ secrets: [geminiApiKey], enforceAppCheck: true }, async (request) => {
     requireAuth(request);
+    await checkRateLimit(request.auth.uid, 'generateDailyBriefing');
 
     // Kill switch — check before logging generation start to avoid phantom metrics
     if (!await getRemoteConfigBool(RC_KEY_AI_ENABLED, true)) {

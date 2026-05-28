@@ -39,7 +39,7 @@ extension SettingsViewModel {
 
                 syncLogger.info("HealthKit sync successful")
             } catch {
-                syncLogger.error("HealthKit sync failed: \(error.localizedDescription, privacy: .public)")
+                syncLogger.error("HealthKit sync failed: \(error.localizedDescription, privacy: .private)")
                 self.isHealthSyncEnabled = false
             }
         }
@@ -74,7 +74,7 @@ extension SettingsViewModel {
             self.authError = nil
             syncLogger.info("Google sign-in succeeded")
         } catch {
-            syncLogger.error("Google sign-in failed: \(error.localizedDescription, privacy: .public)")
+            syncLogger.error("Google sign-in failed: \(error.localizedDescription, privacy: .private)")
             self.authError = AppError.authProviderFailed(underlying: error).errorDescription
         }
     }

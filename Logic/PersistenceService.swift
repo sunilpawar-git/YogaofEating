@@ -7,6 +7,12 @@ private let logger = Logger(subsystem: "com.yogaofeating", category: "Persistenc
 private actor PersistenceWriter {
     func write(_ data: Data, to url: URL) throws {
         try data.write(to: url, options: .atomic)
+        // Require device unlock to read this file (Data Protection class Complete).
+        // Redundant on modern iOS but explicit in the app's threat model.
+        try? FileManager.default.setAttributes(
+            [.protectionKey: FileProtectionType.complete],
+            ofItemAtPath: url.path
+        )
     }
 }
 

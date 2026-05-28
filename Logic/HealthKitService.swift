@@ -158,7 +158,7 @@ class HealthKitService {
         }
 
         if self.enableSleepLogging, let age = self.sleepCoalescer.cacheAge(for: date) {
-            healthKitLogger.debug("Sleep data served from cache (age: \(Int(age), privacy: .public)s)")
+            healthKitLogger.debug("Sleep data served from cache (age: \(Int(age), privacy: .private)s)")
         }
 
         return try await self.sleepCoalescer.fetch(for: date) { [weak self] in
@@ -182,7 +182,7 @@ class HealthKitService {
             let formatter = DateFormatter()
             formatter.dateFormat = "MMM d, HH:mm"
             healthKitLogger.debug(
-                "Sleep query window: \(formatter.string(from: windowStart), privacy: .public) to \(formatter.string(from: windowEnd), privacy: .public)"
+                "Sleep query window: \(formatter.string(from: windowStart), privacy: .private) to \(formatter.string(from: windowEnd), privacy: .private)"
             )
         }
 
@@ -243,7 +243,7 @@ class HealthKitService {
     /// Processes HKCategorySamples into SleepData.
     private func processSamples(_ samples: [HKCategorySample]) -> SleepData? {
         if self.enableSleepLogging {
-            healthKitLogger.debug("Found \(samples.count, privacy: .public) total sleep samples")
+            healthKitLogger.debug("Found \(samples.count, privacy: .private) total sleep samples")
         }
 
         // Group by source and select preferred
@@ -252,7 +252,7 @@ class HealthKitService {
         }
 
         if self.enableSleepLogging {
-            healthKitLogger.debug("Sources found: \(samplesBySource.keys.joined(separator: ", "), privacy: .public)")
+            healthKitLogger.debug("Sources found: \(samplesBySource.keys.joined(separator: ", "), privacy: .private)")
         }
 
         guard let preferredSource = SleepDataProcessor.selectPreferredSource(from: Array(samplesBySource.keys)) else {
@@ -260,13 +260,13 @@ class HealthKitService {
         }
 
         if self.enableSleepLogging {
-            healthKitLogger.debug("Using preferred source: \(preferredSource, privacy: .public)")
+            healthKitLogger.debug("Using preferred source: \(preferredSource, privacy: .private)")
         }
 
         let sourceSamples = samplesBySource[preferredSource] ?? samples
 
         if self.enableSleepLogging {
-            healthKitLogger.debug("Processing \(sourceSamples.count, privacy: .public) samples from preferred source")
+            healthKitLogger.debug("Processing \(sourceSamples.count, privacy: .private) samples from preferred source")
         }
 
         // Convert HKCategorySamples to SleepSampleData
