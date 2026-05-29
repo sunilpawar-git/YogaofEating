@@ -115,7 +115,8 @@ struct YogaOfEatingApp: App {
                 try FileManager.default.removeItem(at: dataFileURL)
                 appLogger.debug("Removed persisted data file for UI test run")
             } catch {
-                appLogger.error("Failed to remove persisted data file: \(error.localizedDescription, privacy: .private)")
+                appLogger
+                    .error("Failed to remove persisted data file: \(error.localizedDescription, privacy: .private)")
             }
         }
     }
@@ -133,12 +134,19 @@ struct YogaOfEatingApp: App {
 }
 
 /// App Check provider factory.
-/// Uses App Attest on real devices; falls back to DeviceCheck on simulator/macOS.
+/// - DEBUG builds (simulator or real device): `AppCheckDebugProvider` — prints a local debug
+///   token to the console on first run. Register that token in Firebase Console →
+///   App Check → Apps → iOS → Manage debug tokens. This is required because App Attest
+///   only validates signed release binaries; debug builds always fail attestation.
+/// - Release builds on real devices: `AppAttestProvider` (production-grade device attestation).
 /// Register via `AppCheck.setAppCheckProviderFactory` before `FirebaseApp.configure()`.
 private final class YogaAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
     func createProvider(with app: FirebaseApp) -> (any AppCheckProvider)? {
-        #if targetEnvironment(simulator)
-            return DeviceCheckProvider(app: app)
+        #if DEBUG
+            // Debug token is printed to console on first run:
+            // "[Firebase/AppCheck] App Check debug token: <UUID>"
+            // Add that UUID in Firebase Console → App Check → iOS app → Manage debug tokens.
+            return AppCheckDebugProvider(app: app)
         #else
             return AppAttestProvider(app: app)
         #endif
